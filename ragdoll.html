@@ -318,6 +318,15 @@
 <script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
 <script>
 (() => {
+  // ---- test harness (migration step 0): ?seed=N makes Math.random repeat; ?fixed steps the clock by exactly 1/60 s a frame;
+  // ?autotest=demo|boss&frames=N runs N frames headless (fixed clock, seed 1 unless given) and puts hashes of the game state
+  // and of the 2D frame in the page title and in window.__autotest. A refactor that keeps both hashes changed nothing.
+  const QS = new URLSearchParams(location.search), AUTOTEST = QS.get('autotest'), FIXED = QS.has('fixed') || !!AUTOTEST;
+  const SEED = QS.has('seed') ? +QS.get('seed') >>> 0 : AUTOTEST ? 1 : null;
+  if (SEED != null) {   // mulberry32
+    let a = SEED;
+    Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  }
   const W = 2800, H = 320, GROUND = 280;      // world size and ground line, in world pixels
   // canvas: 640 px wide (25% zoom shows world pixels 1:1, 100% shows 160 px at 4x); its height follows the stage's shape; world scale 22 px = 1 m
   const CW = 640, CHMAX = 480;
@@ -5554,7 +5563,7 @@
   let scale = 3;
   let Three3D = null;   // filled in below; declared here so fit()'s initial call (before that point) can safely no-op
   function fit() {   // the view fills the window; a window too tall or too wide for it gets black bars
-    const vw = innerWidth || 960, vh = innerHeight || 540;
+    const vw = AUTOTEST ? 960 : innerWidth || 960, vh = AUTOTEST ? 540 : innerHeight || 540;   // (the autotest frames a fixed 16:9 view)
     const ch = clamp(Math.round(CW * vh / vw), 240, CHMAX);
     if (ch !== CH) { CH = ch; cv.height = CH; ctx.imageSmoothingEnabled = false; }
     let w = vw, h = w * CH / CW; if (h > vh) { h = vh; w = h * CW / CH; }
@@ -7833,7 +7842,7 @@
   // ---------- loop ----------
   const LABELS = { squat: 'Squatting', idle: 'Idle', walk: 'Walking', run: 'Running', jump: 'Jumping', fight: 'Fighting', air: 'Airborne', rag: 'Ragdoll', ko: 'Knocked out', getup: 'Getting up' };
   const statusEl = document.getElementById('status'), speedEl = document.getElementById('r-speed'), hitsEl = document.getElementById('r-hits'), bagEl = document.getElementById('r-bag'), zoomEl = document.getElementById('r-zoom');
-  let acc = 0, last = performance.now(), shown = {};
+  let acc = 0, last = FIXED ? 0 : performance.now(), shown = {}, fixedT = 0;
   // pixel icons for the HUD weapon badge, painted once on a 16x16 canvas each
   const WICON = (() => {
     const out = [];
@@ -7883,6 +7892,7 @@
   const ammoEl = document.getElementById('ammo'), hpFill = document.getElementById('hp-fill'), bossBar = document.getElementById('bossbar'), bossFill = document.getElementById('boss-fill');
   function show(key, el, v) { if (shown[key] !== v) { shown[key] = v; el.textContent = v; } }
   function frame(now) {
+    if (FIXED) now = (fixedT += 1000 / 60);   // (test harness: the same clock every run)
     const rdt = clamp((now - last) / 1000, 0, 0.05); last = now;   // (never negative: a clock that steps back would poison the easing)
     const sdt = rdt * timeScale; simTime += sdt;
     if (!demo) { input.dir = (keys.right || touch.right ? 1 : 0) - (keys.left || touch.left ? 1 : 0); input.run = (runAlways ? !keys.shift : keys.shift) || runToggle; }   // (the menu can make running the default: Shift walks)
@@ -7995,7 +8005,34 @@
     if (boss) { bossFill.style.width = (Math.max(0, boss.hp / boss.maxHp * 100) * bossBarK).toFixed(1) + '%'; show('bname', bossNameEl, boss.name.toUpperCase()); }
     const tgt = null;
     if (tgt && false) { show('tname', tNameEl, tgt.dead ? tgt.name + ' — down' : tgt.name); tFill.style.width = Math.max(0, tgt.hp / tgt.maxHp * 100).toFixed(0) + '%'; }
-    requestAnimationFrame(frame);
+    if (!AUTOTEST) requestAnimationFrame(frame);
+  }
+  // the autotest: run the frames in chunks (the page stays responsive), then hash what the simulation and the 2D view hold
+  function runAutotest(kind, frames) {
+    const fnv = () => { let h = 0x811c9dc5; return { add(v) { h = Math.imul(h ^ (v | 0), 0x01000193) >>> 0; }, get hex() { return h.toString(16).padStart(8, '0'); } }; };
+    const q = v => Math.round(v * 1000);   // (positions to 1/1000 px)
+    let n = 0;
+    const chunk = () => {
+      for (let k = 0; k < 200 && n < frames; k++, n++) frame(0);
+      document.title = `AUTOTEST ${kind} ${n}/${frames}`;
+      if (n < frames) { setTimeout(chunk, 0); return; }
+      const st = fnv(), bf = fnv();
+      st.add(q(ctl.x)); st.add(q(ctl.y)); st.add(q(playerHp)); for (const p of P) { st.add(q(p.x)); st.add(q(p.y)); }
+      for (const e of enemies) { st.add(q(e.x)); st.add(q(e.y)); st.add(q(e.hp)); st.add(e.dead ? 1 : 0); }
+      for (const o of objs) { st.add(q(o.x)); st.add(q(o.y)); }
+      st.add(kills.length); st.add(q(simTime));
+      let g = 0; for (let i = 0; i < GORE.length; i += 7) g = (g + (GORE[i] & 0xffffff)) >>> 0; st.add(g);
+      for (let i = 0; i < buf.length; i++) bf.add(buf[i]);
+      window.__autotest = { kind, frames, seed: SEED, state: st.hex, buf: bf.hex, hero: Math.round(ctl.x), enemies: enemies.length, kills: kills.length };
+      document.title = `AUTOTEST ${kind} f=${frames} seed=${SEED} state=${st.hex} buf=${bf.hex}`;
+      console.log('[autotest]', JSON.stringify(window.__autotest));
+    };
+    setTimeout(chunk, 0);
+  }
+  if (AUTOTEST) {   // (no saved settings: the run must not depend on this browser's choices)
+    if (AUTOTEST === 'boss') { setDemo(true); skipToBoss(); } else startAttract();
+    runAutotest(AUTOTEST, +QS.get('frames') || 1800);
+    return;
   }
   loadSettings();   // the view, run and camera choices from last time
   if (DEV) { setDemo(true); skipToBoss(); }   // ?dev: open on the boss level, to test it
