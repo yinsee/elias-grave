@@ -7258,6 +7258,7 @@
     if (on) Three3D.resize();
   }
   b3d?.addEventListener('click', () => setMode3D(!mode3D));
+  window._t3test = c => eval(c);   // TEMP-TEST
 
   // ---------- pointer: drag and hit ----------
   const toWorld = e => { const r = cv.getBoundingClientRect(); return { x: camX + (e.clientX - r.left) / r.width * VW, y: camY + (e.clientY - r.top) / r.height * VH }; };
