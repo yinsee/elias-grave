@@ -3263,8 +3263,9 @@
   }
   function startFall() {
     ctl.air = true; ctl.vu = 0; ctl.jumps = Math.max(ctl.jumps, 1); ctl.baseY = ctl.y; ctl.cap = MAX_AIR;
-    if (!MOVES[act]) { act = 'air'; actT = 0; }
+    if (!MOVES[act] && !rollingNow()) { act = 'air'; actT = 0; }   // a roll off a ledge keeps rolling through the drop
   }
+  const rollingNow = () => act === 'dash' && ctl.dashK === 'roll';
   function landOn(s, fv) {
     ctl.y = s.y - 2; ctl.airDash = false; coyT = 0;
     if (s.bouncy && !input.downHeld) {   // trampoline: each bounce beats the landing that made it; hold S to stop
@@ -3287,6 +3288,7 @@
     if (plunge) slam(ctl.x + 9 * ctl.face, s.y, 40, 1.6);   // axe plunge lands
     ctl.air = false; ctl.jumps = 0; ctl.flipT = -1; ctl.spin = 0; ctl.surf = s;
     if (!input.dir && act !== 'dash') ctl.spd *= 0.35;   // [feel] the feet grip on landing: no long slide off a ledge
+    if (rollingNow()) { dust(ctl.x - 3, s.y - 1, 3); dust(ctl.x + 3, s.y - 1, 3); return; }   // rolled off a ledge: it lands still rolling and rolls on
     act = 'land'; actT = 0; queued = null;
     ctl.landDip = clamp(fv / 30, 3, 7); ctl.landDur = fv > 150 ? 0.3 : 0.22;
     if (fv < TRN.soft) { ctl.landDip = clamp(fv / 60, 0.8, 2); ctl.landDur = 0.14; }   // hop: small dip
@@ -3591,7 +3593,7 @@
     if (ctl.air && act !== 'climb') {
       let gAir = ctl.vu > 0 ? G_UP : G_FALL;   // a tap rises fully: the jump height does not depend on a quick release
       ctl.hiT = -1;   // (no held high jump: a person cannot jump higher by holding on)
-      if (act === 'dash') { gAir = actT < DASH.airDur * 0.7 ? 0 : G_FALL * 0.5; if (gAir === 0) ctl.vu = Math.max(0, ctl.vu * 0.8); }
+      if (act === 'dash' && !rollingNow()) { gAir = actT < DASH.airDur * 0.7 ? 0 : G_FALL * 0.5; if (gAir === 0) ctl.vu = Math.max(0, ctl.vu * 0.8); }   // (the air dash hangs; a roll off a ledge falls)
       const prevFoot = ctl.y + 2;
       ctl.y -= ctl.vu * dt; ctl.vu -= gAir * dt;
       if (ctl.baseY - ctl.y > ctl.cap && ctl.vu > 0) ctl.vu = 0;
@@ -3820,7 +3822,7 @@
     settleT = grabIdx < 0 && mv < 20 ? settleT + dt : 0;
     ragT = grabIdx < 0 ? ragT + dt : 0;
     if (settleT > (ko ? 1.8 : 0.45) || (ragT > 5 && mv < 80)) {   // something jiggling on the body must not keep it down
-      if (ko && DIF().perma) { if (!wasted) showWasted(); } else startGetup();   // Wicked: no getting up
+      if (playerHp <= 0 && DIF().perma) { if (!wasted) showWasted(); } else startGetup();   // Wicked: no getting up after a real K.O. (ko alone is also a hard knock to the head)
     }
   }
 
