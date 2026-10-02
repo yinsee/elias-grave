@@ -1,3 +1,7 @@
+import { clamp, lerp, smooth, norm, snap, lerpA, segDist, smoothDamp } from './core/math.js';
+import { C, eShade } from './core/color.js';
+import { rng } from './core/rng.js';
+
 (() => {
   'use strict';
   // ---- test harness (migration step 0): ?seed=N makes Math.random repeat; ?fixed steps the clock by exactly 1/60 s a frame;
@@ -40,11 +44,6 @@
   let jumpEnd = typeof location !== 'undefined' && /[?&]ending\b/.test(location.search);   // ?ending: start at the boss, drop him at once, and play the ending (to test it)
   if (DEV) document.body?.classList.add('dev');
 
-  const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
-  const lerp = (a, b, t) => a + (b - a) * t;
-  const smooth = u => u * u * (3 - 2 * u);
-  const norm = (x, y) => { const d = Math.hypot(x, y) || 1; return [x / d, y / d]; };
-  const C = h => { const n = parseInt(h.slice(1), 16); return ((255 << 24) | ((n & 255) << 16) | (n & 0xff00) | (n >> 16 & 255)) >>> 0; };
   const PAL = {
     out: C('#1b1226'), skin: C('#e8b28a'), skinB: C('#c08a68'), hair: C('#1f191c'), hairL: C('#3d3439'), hairD: C('#120d10'), stub: C('#8c6450'),
     shirt: C('#1c1a24'), shirtB: C('#15131b'), shirtL: C('#2e2c3a'), rim: C('#5a4a4a'), pants: C('#1e1c27'), pantsB: C('#16151e'),
@@ -69,7 +68,6 @@
     if (pickOn) { pickMask[y * CW + x] = 1; if (x < pkX0) pkX0 = x; if (x > pkX1) pkX1 = x; if (y < pkY0) pkY0 = y; if (y > pkY1) pkY1 = y; }
   };
   const plotV = (x, y, c) => { if (x < 0 || y < 0 || x >= VW || y >= VH) return; buf[y * CW + x] = c; };   // view coordinates
-  const snap = v => Math.floor(v) + 0.5;
   function disc(cx, cy, r, c) {
     const r2 = r * r;
     for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++)
@@ -89,7 +87,6 @@
     let e = dx + dy;
     for (;;) { plot(x0, y0, c); if (x0 === x1 && y0 === y1) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x0 += sx; } if (e2 <= dx) { e += dx; y0 += sy; } }
   }
-  function rng(seed) { return () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 
   // ---------- level: a long tutorial yard, left to right ----------
   // zones: 1 moving (0-520), 2 bare hands (520-900), 3 katana, 4 axe, 5 shotgun, 6 machine gun, 7 the mattress pile and the club roof (2150-2400)
@@ -801,7 +798,6 @@
   // pose params: rx, ry (pelvis height), lean, head, f0x, f0y, f1x, f1y (feet: forward, lift), a0s, a0e, a1s, a1e (arm swing, elbow bend), wr (wrist turn of a held blade), yw (blade swing through depth: 0 = in the picture, pi/2 = pointing at the viewer)
   const NAMES = ['rx', 'ry', 'lean', 'head', 'f0x', 'f0y', 'f1x', 'f1y', 'a0s', 'a0e', 'a1s', 'a1e', 'wr', 'yw'];
   const mod = (base, o) => { const q = base.slice(); for (const k in o) q[NAMES.indexOf(k)] = o[k]; return q; };
-  const lerpA = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
 
   function ik(h, t, face) {
     let dx = t[0] - h[0], dy = t[1] - h[1], d = Math.hypot(dx, dy) || 1e-6;
@@ -1560,10 +1556,6 @@
   }
 
   // ---------- weapons ----------
-  function segDist(ax, ay, bx, by, cx, cy) {
-    const ex = bx - ax, ey = by - ay, t = clamp(((cx - ax) * ex + (cy - ay) * ey) / (ex * ex + ey * ey || 1), 0, 1);
-    return Math.hypot(cx - ax - ex * t, cy - ay - ey * t);
-  }
   // a blade sits in the front hand, pointed by the forearm (plus the blade angle, wrist turn and swing through depth).
   // a gun is held at the shoulder: x, y is the butt of the stock and the hands grip it (see holdGun)
   const wBack = () => mode === 'anim' && !!WEAPONS[weapon].melee && !!MOVES[act] && MOVES[act].hand === 0 && actT >= (MOVES[act].swapAt || 0) && actT < MOVES[act].dur - 0.04;   // passed hand to hand where the grips meet   // the blade is in the back hand
@@ -1875,7 +1867,6 @@
   const ZROLES = { 1: ['brawler', 'brawler'], 2: ['brawler', 'knife', 'brawler'], 3: ['knife', 'thrower', 'pipe'], 4: ['machete', 'pistol', 'thrower', 'brawler'], 5: ['pistol', 'pipe', 'thrower', 'machete'] };
   const AROLES = ['brawler', 'knife', 'brawler', 'thrower', 'pipe', 'knife', 'pistol', 'machete'], AMIX = ['knife', 'pipe', 'machete', 'thrower', 'pistol', 'brawler'];
   const pick = a => a[Math.floor(Math.random() * a.length)];
-  const eShade = (c, k) => ((c & 0xff000000) | (Math.round((c >> 16 & 255) * k) << 16) | (Math.round((c >> 8 & 255) * k) << 8) | Math.round((c & 255) * k)) >>> 0;
   // s = size; poise = damage needed to stagger; cd = seconds between attacks
   const ETYPE = {
     goon: { s: 1, hp: 50, m: 1, speed: 30, reach: 17, dmg: 8, heavyDmg: 14, cd: [0.9, 1.7], poise: 0, windup: 0.22 },
@@ -5205,13 +5196,6 @@
     }
     const run = mode === 'anim' ? clamp((Math.abs(ctl.spd) - WALK) / (RUN - WALK), 0, 1) : 0;
     return 0.4 - 0.15 * run;
-  }
-  // critically damped spring (ease out, no overshoot): moves the value toward the target, keeping its velocity smooth
-  function smoothDamp(cur, target, st, key, T, dt) {
-    const w = 2 / T, x = w * dt, e = 1 / (1 + x + 0.48 * x * x + 0.235 * x * x * x), c = cur - target;
-    const tmp = (st[key] + w * c) * dt;
-    st[key] = (st[key] - w * tmp) * e;
-    return target + (c + tmp) * e;
   }
   const camV = { x: 0, y: 0, z: 0 };
   function updateCamera(rdt) {
