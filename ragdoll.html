@@ -55,10 +55,12 @@
   }
   .tut h2 { font: 700 14px/1.2 var(--display); letter-spacing: .04em; margin: 0 0 4px; color: var(--accent); }
   .tut ul { list-style: none; margin: 0; padding: 0; }
-  .tut li { padding-left: 1.3em; text-indent: -1.3em; color: var(--muted); }
-  .tut li::before { content: "○ "; }
-  .tut li.done { color: var(--ok); }
-  .tut li.done::before { content: "✓ "; }
+  .tut li { padding-left: 1.3em; text-indent: -1.3em; color: var(--text); }
+  .tut li::before { content: "○ "; color: var(--accent); }
+  .tut li.done { color: var(--muted); text-decoration: line-through; opacity: .7; }
+  .tut li.done::before { content: "✓ "; color: var(--ok); }
+  .tut .stage-n { display: block; font: 10px/1.2 var(--mono); color: var(--muted); margin-bottom: 2px; }
+  .tut .gate { margin-top: 4px; color: var(--ko); }
   .tut .next { margin-top: 4px; color: var(--accent); }
   .tut .count { float: right; color: var(--muted); font-size: 11px; margin-left: 12px; }
   .toast {
@@ -1055,7 +1057,7 @@
   // sends them dark. The light fades out, and fades back in a while after it is over (w.lv: 0 dark .. 1 lit; both views read it).
   let fightX = -999, fightT = -99;
   const noise = x => { fightX = x; fightT = simTime; };   // the neighbours notice
-  const WIN_OUT = 2.2, WIN_IN = 0.8, WIN_PEEK = 0.35;   // fade speeds (per s): off in about half a second, on in about 1.2 s; a peeker dims to 35 %
+  const WIN_OUT = 2.2, WIN_IN = 0.8, WIN_PEEK = 0.45;   // fade speeds (per s): off in about half a second, on in about 1.2 s; a peeker dims to 45 %
   function houseWinStep(dt) {
     const near = x => (simTime - fightT < 3.5 && Math.abs(fightX - x) < 180) || enemies.some(e => !e.dead && e.zone !== 'arena' && Math.abs(e.x - x) < 150 && Math.abs(e.x - P[2].x) < 120);
     for (const w of HOUSEWIN) {
@@ -1084,7 +1086,7 @@
       if (lv < 1) {   // the light going (or coming back): the pane fades toward dark glass, which reflects the street once it is mostly dark
         for (let y = w.y0; y <= w.y1; y++) for (let x = w.x0; x <= w.x1; x++) if (glass(x, y)) {
           plot(x, y, dim(stat[y * W + x]));
-          const vx = x - camX, vy = y - camY; if (lv < 0.4 && vx >= 0 && vy >= 0 && vx < VW && vy < VH) glassMask[vy * CW + vx] = 1;
+          const vx = x - camX, vy = y - camY; if (lv < 0.4 && !w.peek && vx >= 0 && vy >= 0 && vx < VW && vy < VH) glassMask[vy * CW + vx] = 1;   // (a peeker's pane is a lit room, not a mirror)
         }
         if (lv < 0.5 && !w.peek) continue;   // too dark to see anyone (the peeker at the curtain still shows)
       }
@@ -3180,7 +3182,7 @@
         continue;
       }
       t.t += dt; t.vy += G * t.g * dt; t.x += t.vx * dt; t.y += t.vy * dt; t.a += t.av * dt;
-      if (!weapon && !ctl.carry && mode === 'anim' && t.t > 0.2 && Math.abs(t.x - ctl.x) < 14 && t.y > ctl.y - 56 && t.y < ctl.y + 4) {   // (a hand reaches up over the head too)   // it bounced back to him: bare hands snatch it out of the air
+      if (!weapon && !ctl.carry && mode === 'anim' && t.t > 0.2 && !(WEAPONS[t.w].gun && !t.drop) && Math.abs(t.x - ctl.x) < 14 && t.y > ctl.y - 56 && t.y < ctl.y + 4) {   // (a hand reaches up over the head too)   // it bounced back to him: bare hands snatch it out of the air
         thrown.splice(i, 1); equip(t.w, t.ch); tut('catch'); sparks.push({ x: t.x, y: t.y, t: 0.05 }); continue;
       }
       const tipx = t.x + Math.cos(t.a) * t.len * 0.5, tipy = t.y + Math.sin(t.a) * t.len * 0.5;
@@ -4127,8 +4129,10 @@
   const TOTAL = ZONES.reduce((n, z) => n + z.tasks.length, 0);
   const TUTKEYS = new Set(ZONES.flatMap(z => z.tasks.map(([k]) => k)));   // only these count: side events (tosshit, pocket, ammo...) are not lessons
   const done = new Set();
-  const pickups = PEDESTALS.map((x, i) => ({ w: i + 1, x, y: GROUND - 16, taken: false }));
-  pickups.push({ w: 4, x: 2486, y: GROUND - 16, taken: false, rack: true });   // a loaded machine gun on the rack inside the club door
+  const REST_LOW = { katana: 1, axe: 6, shotgun: 2, mg: 6 };   // how far each weapon's shape reaches below its grip line (px): it rests on the seat at GROUND - 7
+  const restY = w => GROUND - 8 - REST_LOW[WEAPONS[w].id];
+  const pickups = PEDESTALS.map((x, i) => ({ w: i + 1, x, y: restY(i + 1), taken: false }));
+  pickups.push({ w: 4, x: 2486, y: restY(4), taken: false, rack: true });   // a loaded machine gun lying on the dais inside the club door
   const WAVES = { 1: [770, 815], 2: [1060, 1120, 1190], 3: [1340, 1410, 1570], 4: [1720, 1790, 1850, 1880], 5: [1990, 2060, 2110, 2135] };
   const spawned = new Set(), zoneTs = {};   // the stages whose goons are out; the time spent in each stage
   const tutEl = document.getElementById('tut'), toastEl = document.getElementById('toast');
@@ -4136,6 +4140,43 @@
   const toastQ = [], cleared = new Set(), pickToasted = new Set(), wavePend = new Set();
   let toastSoft = false, softT = -9;
   function tut(ev) { if (openT >= 0) return; if (TUTKEYS.has(ev) && !done.has(ev)) { done.add(ev); tutDirty = true; } }
+  // the gate: a stage's lessons must all be done before the street opens on to the next one (the demo walks free).
+  // A lesson that cannot be done any more is made possible again: a sparring goon when the stage's goons are down,
+  // a fresh crate, stack, bin, can or bottle when the stage has none left.
+  const GOON_TASKS = new Set(['bash', 'pockethit', 'kw', 'kh', 'aw', 'ah', 'throwhit']);   // these need a goon in reach
+  const PROP_TASKS = { smash: ['crate', 'bigcrate'], split: ['stack'], lift: [...LIFTABLE], toss: [...LIFTABLE], pocket: ['can', 'bottle'], pockethit: ['can', 'bottle'] };
+  let gateT = 0, gateToastT = -9;
+  const stageDone = i => ZONES[i].tasks.every(([k]) => done.has(k));
+  const openStage = () => { for (let i = 0; i < ZONES.length; i++) if (!stageDone(i)) return i; return ZONES.length - 1; };
+  function tutGate(rdt) {
+    if (demo || attract || endPh || openT >= 0) return;
+    const i = openStage(); if (i + 1 >= ZONES.length) return;
+    const wall = ZONES[i + 1].x0 - 6;
+    if (P[2].x > wall) {   // pushed back to the stage line (walking, or flying there as a ragdoll)
+      const dx = wall - P[2].x;
+      for (const p of P) { p.x += dx; p.px = Math.min(p.px + dx, p.x); }
+      if (mode === 'anim') { ctl.x += dx; ctl.spd = Math.min(ctl.spd, 0); }
+      if (simTime - gateToastT > 6) { gateToastT = simTime; toast(`Stage ${i + 1} is not done`, 'Finish every lesson on the list to go on', true); }
+    }
+    if ((gateT += rdt) < 1) return;
+    gateT = 0;
+    const Z = ZONES[i], x1 = ZONES[i + 1].x0, todo = Z.tasks.map(([k]) => k).filter(k => !done.has(k));
+    if (P[2].x < Z.x0 || mode !== 'anim') return;   // (only while he is in the stage)
+    if (WAVES[i] && spawned.has(i) && !(zoneAlive[i] > 0) && todo.some(k => GOON_TASKS.has(k))) {
+      const x = clamp(P[2].x + 110, Z.x0 + 20, x1 - 20), g = spawnEnemy('goon', x, i); g.cdT = Math.max(g.cdT, 1.5);
+      toast('A sparring partner', 'Another goon to practise on', true);
+    }
+    for (const k of todo) {
+      const kinds = PROP_TASKS[k]; if (!kinds) continue;
+      if (k === 'pockethit' && pocket.length) continue;
+      if (objs.some(o => kinds.includes(o.kind) && o.x >= Z.x0 && o.x < x1) || (ctl.carry && kinds.includes(ctl.carry.kind))) continue;
+      const src = OBJ_START.filter(([kind, x]) => kinds.includes(kind) && x >= Z.x0 && x < x1);
+      for (const [kind, x, top] of src.length ? src : [[kinds[0], clamp(P[2].x + 40, Z.x0 + 10, x1 - 10), GROUND]]) {
+        const o = makeObj(kind, x, top - KINDS[kind].r - 12); o.safeT = 0.5;   // it drops in from just above
+        puff(x, top - 1);
+      }
+    }
+  }
   // toasts: a soft one (pickups, goons coming, ammo) shows only when nothing else is up, at most one per 4 s, and is never queued;
   // a hard one (stage clear, K.O., boss states) replaces a soft one at once, and waits its turn behind another hard one that only just came up
   function toast(title, sub, soft) {
@@ -4152,6 +4193,7 @@
   function resetRun() {
     Object.assign(runS, { t: 0, kills: 0, dmg: 0, hp: 100, down: false, streak: 0, seen: new WeakSet(), endT: -1, koUp: false });
     kos = 0; toastQ.length = 0; cleared.clear(); pickToasted.clear(); wavePend.clear(); resultsEl.hidden = true;
+    kills.length = 0; landed = 0; feedDirty = true;   // (the demo's or the last run's kills do not carry over)
   }
   let wasted = false;   // Wicked: knocked out, the run is over
   function showWasted() {
@@ -4171,7 +4213,7 @@
     resultsEl.hidden = false; toastEl.hidden = true; toastT = 0; toastQ.length = 0;
   }
   // knocked out: you get up with full health, and the fighters around you are thrown back so you are not hit again at once.
-  // a third knock-out in the boss arena clears its goons and staggers the boss
+  // a second knock-out in a row in the boss arena clears its goons and staggers the boss
   function secondWind() {
     invT = Math.max(invT, 1.2);
     waves.push({ x: ctl.x, y: ctl.y + 1, t: 0 }); dust(ctl.x - 4, ctl.y + 1, 6); dust(ctl.x + 4, ctl.y + 1, 6);
@@ -4196,8 +4238,8 @@
     if (mode !== 'rag') runS.down = false;
     if (mode === 'getup' && runS.prevMode !== 'getup' && runS.koUp) { runS.koUp = false; secondWind(); }
     runS.prevMode = mode;
-    if (bossBeaten && endPh === null) { endPh = 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card
-    if (bossBeaten && runS.endT < 0 && endPh === 'done') runS.endT = 0.4;
+    if (bossBeaten && endPh === null && !wasted) { endPh = 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card (not after a Wicked K.O.)
+    if (bossBeaten && runS.endT < 0 && endPh === 'done' && !wasted) runS.endT = 0.4;
     if (runS.endT > 0 && (runS.endT -= rdt) <= 0) showResults();
   }
   function tutTick(rdt) {
@@ -4210,7 +4252,7 @@
     if (mode === 'anim') {
       if (ctl.spd > 5 && ctl.spd < WALK + 6) tut('walk');
       if (ctl.spd > WALK + 20 && !ctl.air) tut('run');
-      for (const k of pickups) if (!endPh && !k.taken && !ctl.carry && Math.abs(ctl.x - k.x) < 9 && ctl.y > GROUND - 12) {   // walk into a pickup
+      for (const k of pickups) if (!endPh && !k.taken && !ctl.carry && (!weapon || k.w >= weapon || input.downHeld) && Math.abs(ctl.x - k.x) < 9 && ctl.y > GROUND - 12) {   // walk into a pickup (walking back past a lesser weapon keeps yours; squat to swap)
         k.taken = true; equip(k.w, fullCharge(k.w)); tut('pick' + k.w);
         sparks.push({ x: k.x, y: k.y, t: 0 }); waves.push({ x: k.x, y: GROUND - 1, t: 0 });
         if (!pickToasted.has(k.w)) { pickToasted.add(k.w); toast(`${WEAPONS[k.w].name} acquired`, WEAPONS[k.w].gun ? 'Q fire · empty: Q throws it' : `tap Q ${WEAPONS[k.w].labels[0].toLowerCase()} · hold Q ${WEAPONS[k.w].labels[1].toLowerCase()}`, true); }
@@ -4218,7 +4260,9 @@
     }
     // the stage panel switches with hysteresis: 24 px past a stage line going right, 24 px back over it going left, and never while the old stage's goons stand
     let zc = 0; while (zc + 1 < ZONES.length && P[2].x >= ZONES[zc + 1].x0) zc++;
-    let z = tutZone < 0 ? zc : tutZone;
+    const onRoof = ctl.surf === GOAL && stageDone(ZONES.length - 2);   // up on the club roof with stage 7 done: the red carpet is stage 8
+    if (onRoof) zc = ZONES.length - 1;
+    let z = tutZone < 0 ? zc : onRoof ? zc : tutZone;
     if (tutZone >= 0 && zc !== tutZone && !(zoneAlive[tutZone] > 0)) {
       if (zc > tutZone && P[2].x >= ZONES[zc].x0 + 24) z = zc;
       else if (zc < tutZone && P[2].x < ZONES[tutZone].x0 - 24) z = zc;
@@ -4258,6 +4302,7 @@
       for (const d of dancers) { d.mood = 'shock'; d.t = 2.6; d.home0 = d.home; d.home = clamp(d.home + (d.home > boss.introX ? 18 : -18), CLUB_X + 34, W - 24); }
       toastEl.hidden = true; toastT = 0; toastQ.length = 0;
     }
+    tutGate(rdt);
     if (!tutDirty) return;
     tutDirty = false;
     ZONES.forEach((Zc, i) => {   // a stage with every lesson done: say so, and point on
@@ -4265,13 +4310,15 @@
       cleared.add(i); runS.streak = 0;
       if (i + 1 < ZONES.length) toast(`Stage ${i + 1} clear`, `Next: ${ZONES[i + 1].title.replace(/^\d+ · /, '')} →`);
     });
+    // the stage's whole lesson list: done ones struck through; the way on stays shut until all are done
     const Z = ZONES[z], left = Z.tasks.filter(([k]) => !done.has(k)).length;
     const next = done.has('boss') ? 'The street is yours.' : left ? '' : z + 1 < ZONES.length ? 'All done here. Keep going right →' : '';
-    const todo = Z.tasks.filter(([k]) => !done.has(k)).slice(0, 2);   // only the next one or two things to do
-    tutEl.innerHTML = `<span class="count">${done.size}/${TOTAL}</span><h2>${Z.title}</h2>${todo.length ? `<ul>${todo.map(([, t]) => `<li>${t}</li>`).join('')}</ul>` : ''}${next ? `<div class="next">${next}</div>` : ''}`;
+    const shut = left && z + 1 < ZONES.length ? `<div class="gate">Finish every lesson to open stage ${z + 2}</div>` : '';
+    tutEl.innerHTML = `<span class="count">${done.size}/${TOTAL}</span><span class="stage-n">Stage ${z + 1} of ${ZONES.length} · ${Z.tasks.length - left}/${Z.tasks.length} done</span><h2>${Z.title}</h2>`
+      + `<ul>${Z.tasks.map(([k, t]) => `<li${done.has(k) ? ' class="done"' : ''}>${t}</li>`).join('')}</ul>${shut}${next ? `<div class="next">${next}</div>` : ''}`;
   }
   // a soft gold ring round every pickable: a bright 1-px edge and a faint second ring, pulsing (added on top of the light pass)
-  const PICK_GLOW = [255, 205, 110];
+  const PICK_GLOW = [255, 205, 110], PICK_Z = 9;   // PICK_Z: in 3D, pickables lying in the street stand this far in front of the front lane (past its crates)
   function pickGlow() {
     if (pkX1 < 0) return;
     const x0 = Math.max(0, pkX0 - 2), x1 = Math.min(VW - 1, pkX1 + 2), y0 = Math.max(0, pkY0 - 2), y1 = Math.min(VH - 1, pkY1 + 2), M = pickMask;
@@ -4291,7 +4338,7 @@
   function drawPickups() {
     for (const k of pickups) {
       if (k.taken) continue;
-      const bob = Math.round(Math.sin(simTime * 3 + k.w) * 1.5), y = k.y + bob, id = WEAPONS[k.w].id;
+      const bob = -Math.round(Math.abs(Math.sin(simTime * 1.5 + k.w)) * 1.5), y = k.y + bob, id = WEAPONS[k.w].id;   // (it lifts off the seat and settles back)
       if (Math.floor(simTime * 6 + k.w) % 3 === 0) plot(k.x + ((k.w * 7 + Math.floor(simTime * 6)) % 13) - 6, y - 6, PAL.white);   // glint
       const len = WEAPONS[k.w].len, g = { x: k.x - len / 2 + (id === 'katana' || id === 'axe' ? 2 : 0), y, dx: 1, dy: 0, s: 1, len };
       drawWeaponShape(id, g, 0);
@@ -4924,7 +4971,7 @@
     rain.drops.length = 0; rain.splash.length = 0;
   }
   function clubTick(rdt) {
-    if (!club && fadeDir === 0 && mode === 'anim' && ctl.surf === GOAL && !ctl.air && ctl.x >= KIOSK_X - 4) { fadeDir = 1; tut('enter'); }   // walk through the side door
+    if (!club && fadeDir === 0 && mode === 'anim' && ctl.surf === GOAL && !ctl.air && ctl.x >= KIOSK_X - 4 && (demo || stageDone(ZONES.length - 2))) { fadeDir = 1; tut('enter'); }   // walk through the side door (once stage 7 is done)
     if (fadeDir === 1) { input.dir = 1; if ((fade += rdt * 2.2) >= 1) { fade = 1; enterClub(); fadeDir = -1; } }
     else if (fadeDir === -1 && (fade -= rdt * 1.6) <= 0) { fade = 0; fadeDir = 0; }
     if (club) {
@@ -5480,7 +5527,7 @@
     const want = zoomMode === 'auto' ? autoZoom() : zoomMode;
     // the zoom glides: out over about a second, back in a little slower so it never pumps (it eases on the scale, so 100 -> 25 % feels even)
     const cx0 = camXf + VW / 2, cy0 = camYf + VH / 2;   // zoom about the view centre
-    const lz = smoothDamp(Math.log(zoom), Math.log(want), camV, 'z', want < zoom ? 0.9 : 1.3, rdt);
+    const lz = smoothDamp(Math.log(zoom), Math.log(want), camV, 'z', want < zoom ? 0.9 : zoomMode === 'auto' && cinematic() ? 0.35 : 1.3, rdt);   // (a cinematic is short: it closes in fast)
     zoom = clamp(Math.exp(lz), 0.25, 1);
     // [feel] even view sizes: the centre stays on the same pixel as the view grows, so a zoom never jitters by 1 px
     VW = Math.min(CW, 2 * Math.round(80 / zoom)); VH = Math.min(CHMAX, 2 * Math.round(VW * CH / CW / 2));   // (taller than the world when far out: the sky fills the top)
@@ -5516,7 +5563,7 @@
     cv.style.height = `${h}px`;
     if (Three3D) Three3D.resize();
   }
-  addEventListener('resize', fit); document.addEventListener('fullscreenchange', fit); fit();
+  addEventListener('resize', fit); document.addEventListener('fullscreenchange', () => { fit(); if (menuShown) drawMenu(); }); fit();
 
   // ---------- Three3D: the same game, drawn in 3D ----------
   // The 2D frame stays the source of truth. This view reads the same state and re-uses the 2D art:
@@ -6211,11 +6258,11 @@
         while (stack.length) {
           const i = stack.pop(), px = i % W, py = (i - px) / W;
           Z.x0 = Math.min(Z.x0, px); Z.x1 = Math.max(Z.x1, px); Z.y0 = Math.min(Z.y0, py); Z.y1 = Math.max(Z.y1, py);
-          for (const j of [i - 1, i + 1, i - W, i + W]) if (j >= 0 && j < W * GROUND && Math.abs((j % W) - px) <= 1 && LIFT[j] && zone[j] < 0) { zone[j] = id; stack.push(j); }
+          for (const j of [i - 1, i + 1, i - W, i + W, i - W - 1, i - W + 1, i + W - 1, i + W + 1]) if (j >= 0 && j < W * GROUND && Math.abs((j % W) - px) <= 1 && LIFT[j] && zone[j] < 0) { zone[j] = id; stack.push(j); }   // (8 ways: a diagonal brace stays with its scaffold)
         }
         let k = PLATS.findIndex((s, n) => n < ZD.length && s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 && s.y <= Z.y1);
         if (k < 0 && Z.x1 - Z.x0 > 14 && Z.y1 > GROUND - 45) k = PLATS.findIndex((s, n) => n < ZD.length && s.x0 - 40 <= Z.x1 && s.x1 + 40 >= Z.x0);   // a pickup's cab beside its bed
-        if (Z.x1 - Z.x0 <= 14) { Z.z0 = -12; Z.z1 = -8; }   // a street lamp: a thin post at the kerb
+        if (Z.x1 - Z.x0 <= 14 && Z.y1 - Z.y0 >= 40) { Z.z0 = -12; Z.z1 = -8; }   // a street lamp: a tall thin post at the kerb
         else if (k >= 0) { Z.z0 = ZF; Z.z1 = ZF + ZD[k]; }
         else { Z.z0 = ZF; Z.z1 = ZF + 8; }
         for (const s of PLATS) if (s !== GOAL && s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 - 1 && s.y <= Z.y1) this.frontZ.set(s, Math.max(this.frontZ.get(s) ?? -99, Z.z1));   // every ledge on this block
@@ -6827,7 +6874,7 @@
       const tw = 2.6 * s * bw, cut = top === 'coat' ? 1 : 0.7, mx = { x: nk.x + (pl.x - nk.x) * cut, y: nk.y + (pl.y - nk.y) * cut };
       this.seg(nk.x, nk.y, mx.x, mx.y, 0, tw, s, pal.top, TZ);
       if (cut < 1) this.seg(mx.x, mx.y, pl.x, pl.y, 0, tw, s, pal.pants, TZ);
-      if (bare || e.type === 'boss') { const [ux, uy] = norm(pl.x - nk.x, pl.y - nk.y); this.seg(mx.x - ux * 0.8 * s, mx.y - uy * 0.8 * s, mx.x + ux * 0.8 * s, mx.y + uy * 0.8 * s, 0, tw + 0.25, 0.4, pal.belt, TZ); }   // the belt
+      if (bare || e.type === 'boss') { const [ux, uy] = norm(pl.x - nk.x, pl.y - nk.y); this.seg(mx.x - ux * 0.35 * s, mx.y - uy * 0.35 * s, mx.x + ux * 0.35 * s, mx.y + uy * 0.35 * s, 0, tw + 0.15, 0, pal.belt, TZ); }   // the belt: a thin line, as drawEnemy draws it
       {   // the chest: the vest's open front, the jacket's collar, the tank's neckline (as drawEnemy draws them)
         const [tx, ty] = norm(pl.x - nk.x, pl.y - nk.y), nx = ty * f, ny = -tx * f, fz = tw * TZ * 0.85;
         if (top === 'vest') this.seg(nk.x + nx * tw * 0.55, nk.y + ny * tw * 0.55, mx.x + nx * tw * 0.45, mx.y + ny * tw * 0.45, fz, 0.6 * s, 0, pal.skin, 0.4);
@@ -6926,8 +6973,16 @@
       const C = this.gcache ||= new WeakMap();
       let g = C.get(geo); if (g) return g;
       geo.computeBoundingBox(); const c = geo.boundingBox.getCenter(new THREE.Vector3());
-      g = geo.clone(); const a = g.attributes.position, d = 0.7, sg = v => v > 1e-4 ? 1 : v < -1e-4 ? -1 : 0;
+      g = geo.index ? geo.toNonIndexed() : geo.clone(); const a = g.attributes.position, d = 0.7, sg = v => v > 1e-4 ? 1 : v < -1e-4 ? -1 : 0;
       for (let i = 0; i < a.count; i++) a.setXYZ(i, a.getX(i) + sg(a.getX(i) - c.x) * d, a.getY(i) + sg(a.getY(i) - c.y) * d, a.getZ(i) + sg(a.getZ(i) - c.z) * d);
+      // some models wind their outline shells inward: turn every triangle to face away from the centre (the shell shows its back faces)
+      const A = new THREE.Vector3(), B = new THREE.Vector3(), Cc = new THREE.Vector3(), N = new THREE.Vector3(), M = new THREE.Vector3();
+      for (let t = 0; t + 2 < a.count; t += 3) {
+        A.fromBufferAttribute(a, t); B.fromBufferAttribute(a, t + 1); Cc.fromBufferAttribute(a, t + 2);
+        N.subVectors(B, A).cross(M.subVectors(Cc, A)); M.copy(A).add(B).add(Cc).divideScalar(3).sub(c);
+        if (N.dot(M) < 0) { const bx = B.x, by = B.y, bz = B.z; a.setXYZ(t + 1, Cc.x, Cc.y, Cc.z); a.setXYZ(t + 2, bx, by, bz); }
+      }
+      g.deleteAttribute('normal'); g.deleteAttribute('color'); g.computeVertexNormals();
       C.set(geo, g); return g;
     },
     glow(m) {   // a gold shell round a pickable's model, as the 2D view rings it (its back faces, added on top)
@@ -7000,18 +7055,18 @@
       for (const o of objs) { const m = this.obj(o, o.x, o.y, o.a, this.ease(o, this.laneZ[objLane(o) ?? LANE.FRONT]), 1); if (o.pocket && !o.carried) this.glow(m); }
       for (const k of pickups) {   // the weapons waiting on the benches
         if (k.taken) continue;
-        const bob = Math.round(Math.sin(simTime * 3 + k.w) * 1.5), id = WEAPONS[k.w].id, len = WEAPONS[k.w].len;
+        const bob = -Math.round(Math.abs(Math.sin(simTime * 1.5 + k.w)) * 1.5), id = WEAPONS[k.w].id, len = WEAPONS[k.w].len;   // (as drawPickups bobs it)
         this.glow(this.weapon(id, { x: k.x - len / 2 + (id === 'katana' || id === 'axe' ? 2 : 0), y: k.y + bob, dx: 1, dy: 0, s: 1 }, 0, this.benchZ, 0));
       }
       for (const t of thrown) {   // thrown or dropped weapons: spinning, stuck in the floor, or lying flat
         const dx = Math.cos(t.a), dy = Math.sin(t.a), k = t.stuck && !t.flat ? 0.85 : 0.5;
-        const m = this.weapon(WEAPONS[t.w].id, { x: t.x - dx * t.len * k, y: t.y - dy * t.len * k - (t.stuck && t.flat ? 2 : 0), dx, dy, s: t.face }, 0, this.ease(t, this.laneZ[t.lane ?? LANE.FIGHT]), 0);
+        const m = this.weapon(WEAPONS[t.w].id, { x: t.x - dx * t.len * k, y: t.y - dy * t.len * k - (t.stuck && t.flat ? 2 : 0), dx, dy, s: t.face }, 0, t.stuck ? this.ease(t, this.laneZ[LANE.FRONT] + PICK_Z) : this.ease(t, this.laneZ[t.lane ?? LANE.FIGHT]), 0);
         if (t.stuck) this.glow(m);   // lying there to pick up
       }
       for (const q of tossed) this.obj({ kind: q.k, r: 3, flash: 0 }, q.x, q.y, q.a, this.laneZ[LANE.FRONT], 0.6);   // cans and bottles the crowd throws (the front lane, as the 2D view draws them)
       for (const b of ammoBoxes) {
         if (b.life < 3 && Math.floor(b.life * 8) % 2) continue;   // blink before it goes
-        const m = this.model(b.band ? this.bandGeo : this.ammoGeo); m.position.set(Math.floor(b.x) - 3 + 3.5, -(Math.floor(b.y) - 3 + 2.5), this.ease(b, this.laneZ[b.lane ?? LANE.FIGHT])); this.glow(m);
+        const m = this.model(b.band ? this.bandGeo : this.ammoGeo); m.position.set(Math.floor(b.x) - 3 + 3.5, -(Math.floor(b.y) - 3 + 2.5), this.ease(b, this.laneZ[LANE.FRONT] + PICK_Z)); this.glow(m);
       }
       for (const b of boards) {   // splinters off a broken crate
         if (b.life < 0.6 && Math.floor(b.life * 16) % 2) continue;
@@ -7260,7 +7315,6 @@
     if (on) Three3D.resize();
   }
   b3d?.addEventListener('click', () => setMode3D(!mode3D));
-  window._t3test = c => eval(c);   // TEMP-TEST
 
   // ---------- pointer: drag and hit ----------
   const toWorld = e => { const r = cv.getBoundingClientRect(); return { x: camX + (e.clientX - r.left) / r.width * VW, y: camY + (e.clientY - r.top) / r.height * VH }; };
@@ -7353,8 +7407,8 @@
     const c = e.code;
     if (menuKey(e)) { e.preventDefault(); return; }   // the menu has the keys while it is open (the title screen, or Esc in a game)
     if (openT >= 0) { if ((c === 'Escape' || c === 'Enter') && !e.repeat) endOpening(); return; }
-    if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) endFinish(); return; }
-    if (wasted) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) reset(); return; }   // Wicked, knocked out: only a restart (Esc opens the menu above)   // the ending: Esc or Enter jumps to the card   // the opening plays out: Esc or Enter skips it, other keys wait
+    if (wasted || (endPh === 'done' && !resultsEl.hidden)) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) reset(); return; }   // the Wasted or Club cleared card: only a restart (Esc opens the menu above)
+    if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) endFinish(); return; }   // the ending: Esc or Enter jumps to the card
     // the keys: arrows move (up jumps, down squats), Q punches, W kicks, Space rolls, Shift runs
     if (c === 'ArrowLeft') { keys.left = true; takeOver(); }
     else if (c === 'ArrowRight') { keys.right = true; takeOver(); }
@@ -7442,6 +7496,7 @@
   function skipToBoss() {
     reset();
     for (const Z of ZONES.slice(0, ZONES.length - 1)) for (const [k] of Z.tasks) done.add(k);
+    for (const k in WAVES) { spawned.add(+k); cleared.add(+k); }   // the street's goons are behind him: their waves do not come out now
     tutDirty = true;
     for (const k of pickups) k.taken = !k.rack;
     equip(4, WEAPONS[4].ammo);
@@ -7466,10 +7521,10 @@
     for (const st of hair) for (const p of st) { p.x += dx; p.px += dx; }
     if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; }
     const e = spawnEnemy('goon', OPEN.enter + 14, null);   // thrown from off screen: he comes in limp, lands, and lies still
-    const k0 = kills.length, a0 = ammoBoxes.length;
+    const k0 = kills.length, a0 = ammoBoxes.length, t0 = thrown.length;
     noBleed = true; killEnemy(e, 1, OPEN.throwP, 0.7); noBleed = false;   // he was beaten elsewhere: no spray in the air, only a pool where he lands
     { const vx = OPEN.throwP * 0.5 / e.m, vy = -OPEN.throwP * 0.7 * 0.4 / e.m - 60; for (const p of e.pts) { p.px = p.x - vx * DT; p.py = p.y - vy * DT; } }   // (thrown in from off screen: a long toss, unlike a blow)
-    kills.length = k0; ammoBoxes.length = a0; feedDirty = true;   // not one of yours on the kill list, and nothing to pick up
+    kills.length = k0; ammoBoxes.length = a0; thrown.length = t0; feedDirty = true;   // not one of yours on the kill list, and nothing to pick up (no ammo, bandage or weapon)
     e.pts.forEach((p, i) => { const k = i <= 1 ? 90 : i >= 7 ? -70 : 0; p.px -= k * DT; p.py += (i >= 7 ? 40 : 0) * DT; });   // the head leads, the feet trail: he tumbles through the air
     openBody = e; openBled = false;
   }
@@ -7921,7 +7976,7 @@
     if (ammoFlash > 0) ammoFlash -= rdt;
     { const Wp = WEAPONS[weapon], full = fullCharge(weapon), c = charge[weapon];
       show('wname', wNameEl, Wp.name.toUpperCase());
-      { const key = pocket.join(','); if (shown.pocket !== key) { shown.pocket = key; pocketEl.innerHTML = pocket.map(k => `<img src="${PICON[k]}" alt="${k}" title="${k}: hold J to throw">`).join(''); } }   // the throwables, as icons
+      { const key = pocket.join(','); if (shown.pocket !== key) { shown.pocket = key; pocketEl.innerHTML = pocket.map(k => `<img src="${PICON[k]}" alt="${k}" title="${k}: hold Q to throw">`).join(''); } }   // the throwables, as icons
       if (shown.wicon !== weapon) { shown.wicon = weapon; if (WICON[weapon]) wIconEl.src = WICON[weapon]; }
       show('ammo', ammoEl, !full ? '' : Wp.ammo ? `${c} / ${full}` : `${'▮'.repeat(Math.min(6, Math.ceil(c / full * 6)))}${'▯'.repeat(Math.max(0, 6 - Math.ceil(c / full * 6)))}`);
       ammoEl.className = 'ammo' + (ammoFlash > 0 ? ' gain' : full && c / full < 0.25 ? ' low' : ''); }
