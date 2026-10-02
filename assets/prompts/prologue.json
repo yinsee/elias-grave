@@ -1,0 +1,78 @@
+[
+ {
+  "out": "assets/art-src/panels/prologue/prologue_intro_01.png",
+  "seed": 101,
+  "post": {
+   "out": "assets/art/panels/prologue/prologue_intro_01.png"
+  },
+  "prompt": "Wide high-angle shot of a narrow old European town street at night in heavy rain. {elias} walks under a streetlamp with {nero} at his heel, toward a small watch shop whose window glows amber, full of clocks"
+ },
+ {
+  "out": "assets/art-src/panels/prologue/prologue_intro_02.png",
+  "seed": 202,
+  "post": {
+   "out": "assets/art/panels/prologue/prologue_intro_02.png"
+  },
+  "prompt": "Interior of a warm cluttered watchmaker's workshop, walls covered in ticking clocks, amber lamplight. {bell} puts a steaming bowl of soup on the workbench in front of {elias}, who sits with his wet coat still on. {nero} lies on the floor",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/prologue/prologue_intro_03.png",
+  "seed": 103,
+  "face": "bell",
+  "post": {
+   "out": "assets/art/panels/prologue/prologue_intro_03.png"
+  },
+  "prompt": "Close-up of the face of {bell}, half in shadow, pipe smoke curling, serious eyes looking at the viewer, clocks blurred behind him"
+ },
+ {
+  "out": "assets/art-src/panels/prologue/prologue_intro_04.png",
+  "seed": 104,
+  "post": {
+   "out": "assets/art/panels/prologue/prologue_intro_04.png"
+  },
+  "prompt": "Night, low angle outside a small watch shop in the rain. A black car idles at the curb with its wipers moving. In the foreground a gloved hand strikes a silver tuning fork against the wooden shop door frame"
+ },
+ {
+  "out": "assets/art-src/panels/prologue/prologue_intro_05.png",
+  "seed": 205,
+  "post": {
+   "out": "assets/art/panels/prologue/prologue_intro_05.png"
+  },
+  "prompt": "A small watch shop explodes behind them into the rainy night street, orange fire, flying glass and clock faces. In the foreground a man in a black suit lies dazed on the wet pavement while {nero} bites his coat collar and drags him away from the flames"
+ },
+ {
+  "out": "assets/art-src/panels/prologue/prologue_end_01.png",
+  "seed": 211,
+  "post": {
+   "out": "assets/art/panels/prologue/prologue_end_01.png"
+  },
+  "prompt": "Grey rainy dawn outside a burned-out watch shop. Two firemen in helmets and coats carry a stretcher with a body under a white sheet; a burned hand wearing a gold signet ring hangs from under the sheet. {nero} sniffs the hand, then turns away calmly"
+ },
+ {
+  "out": "assets/art-src/panels/prologue/prologue_end_02.png",
+  "seed": 112,
+  "post": {
+   "out": "assets/art/panels/prologue/prologue_end_02.png"
+  },
+  "prompt": "Close-up of a man's hands in black suit sleeves holding a half-burned ledger page with charred edges, rain drops on the paper, smoke behind"
+ },
+ {
+  "out": "assets/art-src/panels/prologue/prologue_end_03.png",
+  "seed": 113,
+  "face": "elias",
+  "post": {
+   "out": "assets/art/panels/prologue/prologue_end_03.png"
+  },
+  "prompt": "{elias} kneels in the rain at grey dawn and pulls a silver tuning fork out of a charred door frame, rain running down his face, {nero} sitting beside him with ears up"
+ },
+ {
+  "out": "assets/art-src/panels/prologue/prologue_end_04.png",
+  "seed": 214,
+  "post": {
+   "out": "assets/art/panels/prologue/prologue_end_04.png"
+  },
+  "prompt": "Split view at night in the rain: on the left a corner payphone with its receiver lifted by a hand in a black suit sleeve; on the right {hale} talks into the phone inside a lit glass phone booth across town, face hidden by his hat brim"
+ }
+]
