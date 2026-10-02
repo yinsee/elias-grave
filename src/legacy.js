@@ -1,4 +1,5 @@
 (() => {
+  'use strict';
   // ---- test harness (migration step 0): ?seed=N makes Math.random repeat; ?fixed steps the clock by exactly 1/60 s a frame;
   // ?autotest=demo|boss&frames=N runs N frames headless (fixed clock, seed 1 unless given) and puts hashes of the game state
   // and of the 2D frame in the page title and in window.__autotest. A refactor that keeps both hashes changed nothing.
