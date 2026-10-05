@@ -1,0 +1,78 @@
+/* layout: one reading column of level dossiers; each level is a case file with a to-scale beat strip along its world x-axis */
+:root {
+  --ink: #0e0c14; --panel: #17141f; --rule: #2c2638; --fg: #ebe4d8; --muted: #a197ae;
+  --choir: #d23a44; --amber: #f2bf55; --glass: #7fd3e0; --ok: #8fd18b; --slow: #c792ff;
+  --display: 'Pixelify Sans', 'Courier New', monospace; --body: 'IBM Plex Sans', system-ui, sans-serif; --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+body { background: var(--ink); color: var(--fg); font: 15px/1.6 var(--body); margin: 0; padding-inline: 16px; }
+.wrap { max-width: 1060px; margin: 0 auto; padding-block: 40px 80px; }
+header.top { display: grid; gap: 10px; margin-bottom: 28px; }
+.kicker { font: 500 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+h1 { font: 700 clamp(44px, 9vw, 84px)/0.95 var(--display); letter-spacing: .04em; margin: 0; color: var(--fg); text-shadow: 3px 3px 0 var(--choir); }
+.lede { max-width: 66ch; color: var(--muted); margin: 0; }
+h2 { font: 700 clamp(26px, 4.5vw, 38px)/1.05 var(--display); margin: 0; text-wrap: balance; letter-spacing: .02em; }
+h3 { font: 600 13px/1.2 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+code { font: 13px var(--mono); color: var(--amber); }
+a { color: var(--amber); }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+/* the Choir ladder: who answers to whom */
+.ladder { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 22px; }
+.rung { display: flex; align-items: baseline; gap: 8px; padding: 6px 10px; border: 1px solid var(--rule); background: var(--panel); text-decoration: none; color: var(--fg); min-width: 0; }
+.rung small { font: 11px var(--mono); color: var(--choir); letter-spacing: .08em; text-transform: uppercase; }
+.rung span { font: 600 13px var(--body); }
+.rung.done { opacity: .55 }
+nav.chips { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; display: flex; flex-wrap: wrap; gap: 6px; padding-block: 10px; background: var(--ink); border-bottom: 1px solid var(--rule); margin-bottom: 26px; }
+nav.chips a { font: 600 13px var(--display); padding: 4px 10px; border: 1px solid var(--rule); color: var(--fg); text-decoration: none; letter-spacing: .03em; }
+nav.chips a:hover { border-color: var(--amber); color: var(--amber); }
+section.level, section.prologue { border-top: 2px solid var(--rule); padding-block: 34px 12px; display: grid; gap: 22px; scroll-margin-top: 60px; }
+.lvhead { display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; align-items: end; }
+.lvnum { font: 700 clamp(56px, 10vw, 96px)/.8 var(--display); color: var(--choir); }
+.lvhead p { margin: 0; color: var(--muted); grid-column: 2; }
+.facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+.fact { background: var(--panel); padding: 12px 14px; min-width: 0; }
+.fact dt { font: 500 11px/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+.fact dd { margin: 0; font-size: 14px; }
+.fact.hook dd { color: var(--amber); }
+/* beat strip, to scale along the level's world x */
+.strip { position: relative; height: 34px; background: var(--panel); border: 1px solid var(--rule); }
+.strip .seg { position: absolute; top: 4px; bottom: 4px; border-left: 1px solid var(--ink); display: flex; align-items: center; justify-content: center; font: 600 12px var(--mono); color: var(--ink); overflow: hidden; }
+.axis { display: flex; justify-content: space-between; font: 11px var(--mono); color: var(--muted); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font: 12px var(--mono); color: var(--muted); }
+.legend i, .beat .tag i { display: inline-block; width: 10px; height: 10px; margin-right: 6px; vertical-align: -1px; }
+.k-fight { background: #8a7f9a } .k-elite { background: var(--amber) } .k-boss { background: var(--choir) } .k-slow { background: var(--slow) }
+.k-glass { background: var(--glass) } .k-breather { background: var(--ok) } .k-scene { background: #c9c2b4 }
+ol.beats { list-style: none; margin: 0; padding: 0; display: grid; gap: 1px; background: var(--rule); border: 1px solid var(--rule); }
+.beat { background: var(--panel); padding: 12px 14px; display: grid; grid-template-columns: 2.4em 1fr; gap: 2px 12px; }
+.beat .n { font: 700 22px/1 var(--display); color: var(--muted); grid-row: span 2; }
+.beat .hd { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; min-width: 0; }
+.beat .hd b { font-weight: 600; }
+.beat .meta { font: 12px var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.beat .tag { font: 12px var(--mono); color: var(--muted); }
+.beat p { margin: 0; font-size: 14px; color: #cfc7bb; min-width: 0; }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; }
+.boss { background: var(--panel); border: 1px solid var(--rule); border-left: 3px solid var(--choir); padding: 14px 16px; min-width: 0; }
+.boss .name { font: 700 22px/1.1 var(--display); margin: 0 0 4px; }
+.boss .rank { font: 12px var(--mono); color: var(--choir); letter-spacing: .1em; text-transform: uppercase; }
+.boss ul, .feats ul { margin: 10px 0 0; padding-left: 18px; }
+.boss li, .feats li { margin: 4px 0; font-size: 14px; }
+.portraits { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.portraits figure { margin: 0; display: grid; gap: 4px; }
+.portraits img { width: 104px; height: 128px; image-rendering: pixelated; image-rendering: crisp-edges; border: 1px solid var(--rule); }
+.portraits figcaption { font: 11px var(--mono); color: var(--muted); }
+.feats li b { color: var(--glass); font-weight: 600; }
+details.ascii { border: 1px solid var(--rule); background: var(--panel); }
+details.ascii summary { cursor: pointer; padding: 10px 14px; font: 600 13px var(--mono); color: var(--muted); }
+details.ascii .sc { overflow-x: auto; }
+details.ascii pre { margin: 0; padding: 0 14px 14px; font: 12px/1.35 var(--mono); color: #d8d0c4; }
+/* prologue gallery: comic panels at their native pixel size, scaled with crisp pixels */
+.panels { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.panel { margin: 0; display: grid; gap: 6px; min-width: 0; }
+.panel img { width: 100%; aspect-ratio: 16 / 9; image-rendering: pixelated; image-rendering: crisp-edges; border: 1px solid var(--rule); background: #000; }
+.panel figcaption { font-size: 13px; color: #cfc7bb; }
+.panel figcaption .who { font: 600 11px var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--amber); margin-right: 6px; }
+.subhead { font: 600 13px/1.2 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin: 6px 0 0; }
+footer { color: var(--muted); font-size: 13px; margin-top: 40px; border-top: 1px solid var(--rule); padding-top: 16px; }
+@media (prefers-reduced-motion: no-preference) { nav.chips a, .rung { transition: border-color .15s, color .15s } }
+@media (max-width: 520px) { .lvhead { grid-template-columns: 1fr } .lvhead p { grid-column: 1 } .strip .seg { font-size: 0 } }
