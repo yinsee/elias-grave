@@ -36,7 +36,7 @@
  },
  {
   "out": "assets/art-src/panels/prologue/prologue_intro_05.png",
-  "seed": 205,
+  "seed": 305,
   "post": {
    "out": "assets/art/panels/prologue/prologue_intro_05.png"
   },
@@ -69,7 +69,7 @@
  },
  {
   "out": "assets/art-src/panels/prologue/prologue_end_04.png",
-  "seed": 214,
+  "seed": 315,
   "post": {
    "out": "assets/art/panels/prologue/prologue_end_04.png"
   },

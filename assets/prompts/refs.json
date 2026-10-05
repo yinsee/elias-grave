@@ -1,4 +1,22 @@
 [
- {"out": "assets/art/characters/bell/ref.png", "style": "comic", "lora": null, "trigger": "", "seed": 41, "w": 832, "h": 1024,
-  "prompt": "Portrait of {bell}, three-quarter view, warm lamplight in a workshop full of clocks, calm knowing expression, pipe smoke"}
+ {
+  "out": "assets/art/characters/bell/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 41,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {bell}, three-quarter view, warm lamplight in a workshop full of clocks, calm knowing expression, pipe smoke"
+ },
+ {
+  "out": "assets/art/characters/marchetti/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 51,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {marchetti}, three-quarter view, cold blue light in a fish auction hall, frost in the air, a meat cleaver on his shoulder"
+ }
 ]

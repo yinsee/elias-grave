@@ -1,0 +1,67 @@
+[
+ {
+  "out": "assets/art-src/portraits/marchetti_amused.png",
+  "seed": 161,
+  "w": 832,
+  "h": 1024,
+  "face": "marchetti",
+  "post": {
+   "out": "assets/art/portraits/marchetti_amused.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Extreme close-up head-and-shoulders portrait of {marchetti}, amused grin, wiping a meat cleaver with a rag, face filling the frame, cold blue freezer light, dark background"
+ },
+ {
+  "out": "assets/art-src/portraits/marchetti_smug.png",
+  "seed": 162,
+  "w": 832,
+  "h": 1024,
+  "face": "marchetti",
+  "post": {
+   "out": "assets/art/portraits/marchetti_smug.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Extreme close-up head-and-shoulders portrait of {marchetti}, smug half-smile, chin raised, face filling the frame, cold blue freezer light, dark background"
+ },
+ {
+  "out": "assets/art-src/portraits/marchetti_furious.png",
+  "seed": 163,
+  "w": 832,
+  "h": 1024,
+  "face": "marchetti",
+  "post": {
+   "out": "assets/art/portraits/marchetti_furious.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Extreme close-up head-and-shoulders portrait of {marchetti}, furious shouting face, veins on his neck, face filling the frame, cold blue freezer light, dark background"
+ },
+ {
+  "out": "assets/art-src/portraits/elias_cold.png",
+  "seed": 71,
+  "w": 832,
+  "h": 1024,
+  "face": "elias",
+  "post": {
+   "out": "assets/art/portraits/elias_cold.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Bust portrait of {elias}, cold calm stare at the viewer, rain on his face, dark background with a red rim light"
+ },
+ {
+  "out": "assets/art-src/portraits/elias_angry.png",
+  "seed": 72,
+  "w": 832,
+  "h": 1024,
+  "face": "elias",
+  "post": {
+   "out": "assets/art/portraits/elias_angry.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Bust portrait of {elias}, jaw clenched in quiet anger, blood on his cheek, rain, dark background with a red rim light"
+ }
+]
