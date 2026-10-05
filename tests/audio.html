@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elias Grave: audio test bench</title>
+<style>
+  :root { --bg: #111214; --panel: #1b1d21; --line: #2c2f35; --text: #d8d6d0; --dim: #8b8a86; --red: #c0392b; --amber: #d9a441; --ok: #6fae6f; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font: 14px/1.4 ui-monospace, Menlo, monospace; }
+  h1 { font-size: 18px; margin: 0 0 4px; color: var(--amber); }
+  h2 { font-size: 15px; margin: 24px 0 8px; border-bottom: 1px solid var(--line); padding-bottom: 4px; }
+  p.note { color: var(--dim); margin: 0 0 12px; }
+  .bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 8px 0; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 6px; }
+  button { background: var(--panel); color: var(--text); border: 1px solid var(--line); border-radius: 4px; padding: 7px 8px; font: inherit; cursor: pointer; text-align: left; }
+  button:hover { border-color: var(--amber); }
+  button.on { border-color: var(--red); color: #fff; }
+  table { border-collapse: collapse; width: 100%; }
+  td, th { border-bottom: 1px solid var(--line); padding: 5px 6px; vertical-align: top; text-align: left; }
+  th { color: var(--dim); font-weight: normal; }
+  td.num { white-space: nowrap; color: var(--dim); }
+  .bad { color: var(--red); } .good { color: var(--ok); }
+  .pick { color: var(--amber); }
+  #log { color: var(--dim); white-space: pre-wrap; }
+  .scroll { overflow-x: auto; }
+  label { color: var(--dim); }
+</style>
+</head>
+<body>
+<h1>Elias Grave: audio test bench</h1>
+<p class="note">Serve the repo root (<code>python3 -m http.server 8765</code>) and open /tests/audio.html. Click once to unlock audio.</p>
+
+<h2>Sound effects (procedural, src/audio/sfx.js)</h2>
+<div class="bar">
+  <label>vol <input id="vol" type="range" min="0" max="1.5" step="0.05" value="1"></label>
+  <label>pan <input id="pan" type="range" min="-1" max="1" step="0.1" value="0"></label>
+  <label>pitch <input id="pitch" type="range" min="0.4" max="1.6" step="0.05" value="1"> <span id="pitchv">1.00</span></label>
+  <button id="analyse">Analyse all (offline render)</button>
+</div>
+<div id="sfx" class="grid"></div>
+<div class="scroll"><table id="sfxStats"></table></div>
+
+<h2>Music (ACE-Step candidates, assets/audio/music/)</h2>
+<div class="bar">
+  <button id="stop">Stop music</button>
+  <button id="slowmo">Slow motion: off</button>
+  <span class="note">"seam" plays the last 4 s of a loop, then its start, to test the loop point.</span>
+</div>
+<div class="scroll"><table id="music"></table></div>
+
+<h2>Voice lines (F5-TTS, assets/audio/voice/)</h2>
+<div class="bar"><button id="playAll">Play the boss intro dialog</button></div>
+<div class="scroll"><table id="voice"></table></div>
+
+<h2>Log</h2>
+<div id="log"></div>
+
+<script type="module">
+import { createAudio } from '../src/audio/audio.js';
+import { createSfx } from '../src/audio/sfx.js';
+import { MUSIC } from '../src/audio/manifest.js';
+
+const audio = createAudio({ base: '../' });
+const $ = (id) => document.getElementById(id);
+const log = (s) => { $('log').textContent = s + '\n' + $('log').textContent; };
+document.addEventListener('pointerdown', () => audio.unlock(), { once: true });
+$('pitch').oninput = () => { $('pitchv').textContent = (+$('pitch').value).toFixed(2); };
+
+// ---- sfx buttons
+for (const name of audio.sfx.names) {
+  const b = document.createElement('button');
+  b.textContent = name; b.dataset.sfx = name;
+  b.onclick = () => { audio.unlock(); audio.sfx.play(name, { vol: +$('vol').value, pan: +$('pan').value, pitch: +$('pitch').value }); };
+  $('sfx').append(b);
+}
+
+// Offline render of every sound: length, peak and RMS, so a silent or clipping sound shows up without listening.
+async function analyse() {
+  const rows = [];
+  for (const name of audio.sfx.names) {
+    const sr = 44100, oc = new OfflineAudioContext(2, sr * 2.5, sr);
+    createSfx(oc, { vary: false }).play(name);
+    const buf = await oc.startRendering();
+    const d = buf.getChannelData(0);
+    let peak = 0, sum = 0, last = 0;
+    for (let i = 0; i < d.length; i++) { const a = Math.abs(d[i]); if (a > peak) peak = a; sum += d[i] * d[i]; if (a > 0.003) last = i; }
+    const dur = last / sr, rms = Math.sqrt(sum / Math.max(1, last));
+    rows.push({ name, dur: +dur.toFixed(2), peak_db: +(20 * Math.log10(peak || 1e-9)).toFixed(1), rms_db: +(20 * Math.log10(rms || 1e-9)).toFixed(1) });
+  }
+  $('sfxStats').innerHTML = '<tr><th>sound</th><th>length s</th><th>peak dBFS</th><th>RMS dBFS</th></tr>' +
+    rows.map((r) => `<tr><td>${r.name}</td><td class="num">${r.dur}</td><td class="num ${r.peak_db > -0.1 || r.peak_db < -30 ? 'bad' : ''}">${r.peak_db}</td><td class="num">${r.rms_db}</td></tr>`).join('');
+  window.sfxStats = rows;
+  log('analysed ' + rows.length + ' sounds');
+  return rows;
+}
+$('analyse').onclick = analyse;
+window.analyseSfx = analyse;
+
+// ---- music candidates
+let cur = null;
+function stopMusic() { if (cur) { try { cur.stop(); } catch (e) {} cur = null; } document.querySelectorAll('#music button.on').forEach((b) => b.classList.remove('on')); }
+async function playFile(file, btn, { loop = false, offset = 0, seam = false } = {}) {
+  audio.unlock(); stopMusic(); audio.music.stop(0.1);
+  const buf = await audio.load(file);
+  const src = audio.ctx.createBufferSource();
+  src.buffer = buf; src.loop = loop || seam;
+  src.playbackRate.value = slow ? 2 / 3 : 1;
+  src.connect(audio.buses.music);
+  src.start(0, seam ? Math.max(0, buf.duration - 4) : offset);
+  cur = src; btn.classList.add('on');
+  src.onended = () => btn.classList.remove('on');
+  log(`play ${file} (${buf.duration.toFixed(1)} s${seam ? ', seam test' : ''})`);
+}
+let slow = false;
+$('stop').onclick = stopMusic;
+$('slowmo').onclick = () => {
+  slow = !slow; $('slowmo').textContent = 'Slow motion: ' + (slow ? 'on' : 'off');
+  audio.music.slowmo(slow);
+  if (cur) cur.playbackRate.setTargetAtTime(slow ? 2 / 3 : 1, audio.ctx.currentTime, 0.12);
+};
+
+async function loadJson(url) { try { const r = await fetch(url); return r.ok ? r.json() : []; } catch (e) { return []; } }
+
+const music = await loadJson('../assets/audio/music/index.json');
+$('music').innerHTML = '<tr><th>track</th><th>use</th><th>length</th><th>peak / RMS dB</th><th></th></tr>';
+for (const m of music) {
+  const tr = document.createElement('tr');
+  const base = `${m.id}_s${m.seed}`, picked = MUSIC[m.id] && MUSIC[m.id].pick === base;
+  tr.innerHTML = `<td>${base}${m.loop ? '.loop' : ''} ${picked ? '<span class="pick">(picked)</span>' : ''}</td><td>${m.use || ''}</td>
+    <td class="num">${m.dur} s</td><td class="num">${m.peak_db} / ${m.rms_db}</td><td></td>`;
+  const b = document.createElement('button'); b.textContent = m.loop ? 'loop' : 'play';
+  b.onclick = () => playFile('assets/audio/music/' + base + (m.loop ? '.loop.ogg' : '.ogg'), b, { loop: m.loop });
+  tr.lastElementChild.append(b);
+  if (m.loop) {
+    const s = document.createElement('button'); s.textContent = 'seam';
+    s.onclick = () => playFile('assets/audio/music/' + base + '.loop.ogg', s, { seam: true });
+    tr.lastElementChild.append(' ', s);
+  }
+  $('music').append(tr);
+}
+if (!music.length) $('music').insertAdjacentHTML('beforeend', '<tr><td colspan="5">No music/index.json yet (run tools/music.py).</td></tr>');
+
+// ---- voice lines
+const lines = await loadJson('../assets/audio/voice/index.json');
+$('voice').innerHTML = '<tr><th>id</th><th>speaker / mood</th><th>line</th><th>whisper heard</th><th>WER</th><th></th></tr>';
+for (const v of lines) {
+  const tr = document.createElement('tr');
+  tr.innerHTML = `<td>${v.id}</td><td>${v.speaker} / ${v.mood || ''}</td><td>${v.text}</td><td>${v.heard}</td>
+    <td class="num ${v.wer > 0.2 ? 'bad' : 'good'}">${v.wer}</td><td class="num">${v.dur} s </td>`;
+  const b = document.createElement('button'); b.textContent = 'play';
+  b.onclick = () => { audio.unlock(); audio.voice.play(v.id); log('voice ' + v.id); };
+  tr.lastElementChild.append(b);
+  $('voice').append(tr);
+}
+if (!lines.length) $('voice').insertAdjacentHTML('beforeend', '<tr><td colspan="6">No voice/index.json yet (run tools/voice.py).</td></tr>');
+$('playAll').onclick = async () => {
+  audio.unlock();
+  for (const v of lines.filter((l) => l.scene === 'marchetti_intro')) { await audio.voice.play(v.id); await new Promise((r) => setTimeout(r, 250)); }
+};
+window.audio = audio;
+log('ready: ' + audio.sfx.names.length + ' sfx, ' + music.length + ' music files, ' + lines.length + ' voice lines');
+</script>
+</body>
+</html>
