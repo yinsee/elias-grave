@@ -7,9 +7,9 @@ export const VOICE_DIR = 'assets/audio/voice/';
 
 export const MUSIC = {
   title:          { pick: 'title_s1101',          alts: ['title_s1101', 'title_s1102'],                   loop: true },
-  prologue:       { pick: 'prologue_s2101',       alts: ['prologue_s2101', 'prologue_s2102'],             loop: false },
+  prologue:       { pick: 'prologue_s2102',       alts: ['prologue_s2102', 'prologue_s3101'],             loop: false },
   docks_explore:  { pick: 'docks_explore_s3101',  alts: ['docks_explore_s3101', 'docks_explore_s3102'],   loop: true },
-  boss_marchetti: { pick: 'boss_marchetti_s4101', alts: ['boss_marchetti_s4101', 'boss_marchetti_s4102'], loop: true },
+  boss_marchetti: { pick: 'boss_marchetti_s4101', alts: ['boss_marchetti_s4101', 'boss_marchetti_s5102'], loop: true },
 };
 
 // Game music cue -> music id. Level data uses 'music:docks_explore' style ids (docs/levels/01-pier9.md 9.3).

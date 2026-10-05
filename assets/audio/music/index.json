@@ -1,0 +1,156 @@
+[
+ {
+  "id": "title",
+  "seed": 1101,
+  "loop": false,
+  "use": "Title screen theme. Nine Inch Nails-like: piano motif over distorted synth bass and mechanical drums.",
+  "file": "assets/audio/music/title_s1101.ogg",
+  "dur": 84.21,
+  "peak_db": -2.7,
+  "rms_db": -18.3,
+  "silent_pct": 1.4
+ },
+ {
+  "id": "title",
+  "seed": 1101,
+  "loop": true,
+  "use": "Title screen theme. Nine Inch Nails-like: piano motif over distorted synth bass and mechanical drums.",
+  "file": "assets/audio/music/title_s1101.loop.ogg",
+  "dur": 80.21,
+  "peak_db": -2.6,
+  "rms_db": -18.1,
+  "silent_pct": 0.0
+ },
+ {
+  "id": "title",
+  "seed": 1102,
+  "loop": false,
+  "use": "Title screen theme. Nine Inch Nails-like: piano motif over distorted synth bass and mechanical drums.",
+  "file": "assets/audio/music/title_s1102.ogg",
+  "dur": 84.6,
+  "peak_db": -1.9,
+  "rms_db": -19.9,
+  "silent_pct": 0.8
+ },
+ {
+  "id": "title",
+  "seed": 1102,
+  "loop": true,
+  "use": "Title screen theme. Nine Inch Nails-like: piano motif over distorted synth bass and mechanical drums.",
+  "file": "assets/audio/music/title_s1102.loop.ogg",
+  "dur": 80.6,
+  "peak_db": -1.8,
+  "rms_db": -19.7,
+  "silent_pct": 0.0
+ },
+ {
+  "id": "prologue",
+  "seed": 2102,
+  "loop": false,
+  "use": "Prologue cutscene ('Three Nights Later'): grief. Sparse piano, rain hiss, distant drone.",
+  "file": "assets/audio/music/prologue_s2102.ogg",
+  "dur": 54.76,
+  "peak_db": -4.5,
+  "rms_db": -20.4,
+  "silent_pct": 2.7
+ },
+ {
+  "id": "prologue",
+  "seed": 3101,
+  "loop": false,
+  "use": "Prologue cutscene ('Three Nights Later'): grief. Sparse piano, rain hiss, distant drone.",
+  "file": "assets/audio/music/prologue_s3101.ogg",
+  "dur": 54.95,
+  "peak_db": -1.4,
+  "rms_db": -17.6,
+  "silent_pct": 3.8
+ },
+ {
+  "id": "docks_explore",
+  "seed": 3101,
+  "loop": false,
+  "use": "Level 1 Pier 9 exploration loop: dawn docks in sleet. Cello drone in D minor, sparse metal hits, foghorn.",
+  "file": "assets/audio/music/docks_explore_s3101.ogg",
+  "dur": 84.99,
+  "peak_db": -2.9,
+  "rms_db": -19.2,
+  "silent_pct": 0.4
+ },
+ {
+  "id": "docks_explore",
+  "seed": 3101,
+  "loop": true,
+  "use": "Level 1 Pier 9 exploration loop: dawn docks in sleet. Cello drone in D minor, sparse metal hits, foghorn.",
+  "file": "assets/audio/music/docks_explore_s3101.loop.ogg",
+  "dur": 79.99,
+  "peak_db": -3.0,
+  "rms_db": -19.2,
+  "silent_pct": 0.0
+ },
+ {
+  "id": "docks_explore",
+  "seed": 3102,
+  "loop": false,
+  "use": "Level 1 Pier 9 exploration loop: dawn docks in sleet. Cello drone in D minor, sparse metal hits, foghorn.",
+  "file": "assets/audio/music/docks_explore_s3102.ogg",
+  "dur": 84.91,
+  "peak_db": -1.5,
+  "rms_db": -18.2,
+  "silent_pct": 1.3
+ },
+ {
+  "id": "docks_explore",
+  "seed": 3102,
+  "loop": true,
+  "use": "Level 1 Pier 9 exploration loop: dawn docks in sleet. Cello drone in D minor, sparse metal hits, foghorn.",
+  "file": "assets/audio/music/docks_explore_s3102.loop.ogg",
+  "dur": 79.91,
+  "peak_db": -1.5,
+  "rms_db": -18.1,
+  "silent_pct": 0.0
+ },
+ {
+  "id": "boss_marchetti",
+  "seed": 4101,
+  "loop": false,
+  "use": "Level 1 boss 'Market Close' (Sal Marchetti): heavy, brutal, menacing.",
+  "file": "assets/audio/music/boss_marchetti_s4101.ogg",
+  "dur": 84.67,
+  "peak_db": -3.8,
+  "rms_db": -18.6,
+  "silent_pct": 0.8
+ },
+ {
+  "id": "boss_marchetti",
+  "seed": 4101,
+  "loop": true,
+  "use": "Level 1 boss 'Market Close' (Sal Marchetti): heavy, brutal, menacing.",
+  "file": "assets/audio/music/boss_marchetti_s4101.loop.ogg",
+  "dur": 81.67,
+  "peak_db": -3.9,
+  "rms_db": -18.5,
+  "silent_pct": 0.0
+ },
+ {
+  "id": "boss_marchetti",
+  "seed": 5102,
+  "loop": false,
+  "use": "Level 1 boss 'Market Close' (Sal Marchetti): heavy, brutal, menacing.",
+  "file": "assets/audio/music/boss_marchetti_s5102.ogg",
+  "dur": 84.46,
+  "peak_db": -1.6,
+  "rms_db": -19.2,
+  "silent_pct": 0.7
+ },
+ {
+  "id": "boss_marchetti",
+  "seed": 5102,
+  "loop": true,
+  "use": "Level 1 boss 'Market Close' (Sal Marchetti): heavy, brutal, menacing.",
+  "file": "assets/audio/music/boss_marchetti_s5102.loop.ogg",
+  "dur": 81.46,
+  "peak_db": -1.6,
+  "rms_db": -19.1,
+  "silent_pct": 0.0
+ }
+]

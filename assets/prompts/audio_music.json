@@ -1,0 +1,47 @@
+{
+  "_doc": "Music jobs for tools/music.py (ACE-Step v1 3.5B via ComfyUI). Each seed gives one candidate: assets/audio/music/<id>_s<seed>.ogg (+ .loop.ogg when loop is true). The director picks one seed per id in src/audio/manifest.js.",
+  "jobs": [
+    {
+      "id": "title",
+      "use": "Title screen theme. Nine Inch Nails-like: piano motif over distorted synth bass and mechanical drums.",
+      "tags": "industrial rock, dark electronic, nine inch nails style, melancholic piano motif, distorted analog synth bass, mechanical drum machine, noise textures, glitch, D minor, 95 bpm, brooding, instrumental",
+      "lyrics": "[intro]\n[instrumental]\n\n[verse]\n[instrumental]\n\n[chorus]\n[instrumental]\n\n[outro]\n[instrumental]",
+      "seconds": 85,
+      "seeds": [1101, 1102],
+      "loop": true,
+      "xfade": 4.0
+    },
+    {
+      "id": "prologue",
+      "use": "Prologue cutscene ('Three Nights Later'): grief. Sparse piano, rain hiss, distant drone.",
+      "tags": "dark ambient, sparse solo piano, sad, grief, slow, reverb, tape hiss, rain noise, low drone, ticking clock, minimal, 60 bpm, A minor, instrumental",
+      "lyrics": "[instrumental]",
+      "seconds": 55,
+      "seeds": [3101, 2102],
+      "_rejected_seeds": [2101],
+      "loop": false,
+      "fade_out": 5.0
+    },
+    {
+      "id": "docks_explore",
+      "use": "Level 1 Pier 9 exploration loop: dawn docks in sleet. Cello drone in D minor, sparse metal hits, foghorn.",
+      "tags": "dark industrial ambient, low cello drone, D minor, slow distorted sub bass pulse, sparse metallic percussion, chains, hammered steel, foghorn, wind, cold, desolate, 80 bpm, instrumental",
+      "lyrics": "[instrumental]",
+      "seconds": 85,
+      "seeds": [3101, 3102],
+      "loop": true,
+      "xfade": 5.0
+    },
+    {
+      "id": "boss_marchetti",
+      "use": "Level 1 boss 'Market Close' (Sal Marchetti): heavy, brutal, menacing.",
+      "tags": "aggressive industrial metal, heavy distorted synth bass, pounding mechanical drums, brass stabs, distorted accordion, hammered metal, noise, menacing, brutal, driving, D minor, 140 bpm, instrumental",
+      "lyrics": "[intro]\n[instrumental]\n\n[verse]\n[instrumental]\n\n[chorus]\n[instrumental]\n\n[bridge]\n[instrumental]",
+      "seconds": 85,
+      "seeds": [4101, 5102],
+      "_rejected_seeds": [4102],
+      "loop": true,
+      "xfade": 3.0
+    }
+  ]
+}
