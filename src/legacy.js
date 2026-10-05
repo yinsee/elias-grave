@@ -618,7 +618,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
   }
   function drawBackdrop() {
-    if (club) {
+    if (flags.club) {
       drawClub();
       drawDancers();   // the crowd at the back: bar, speakers and fighters are all in front of it
       for (let vy = 0; vy < cam.vh; vy++) {
@@ -746,7 +746,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     for (const w of HOUSEWIN) {
       if (w.cx < cam.x - 200 || w.cx > cam.x + cam.vw + 200) continue;
       const lane = w.wl && Math.abs(P[2].x - w.cx) < (w.wr || 22);   // its light falls on the hero's lane: that one stays on
-      const danger = !club && near(w.cx) && !lane;
+      const danger = !flags.club && near(w.cx) && !lane;
       if (w.keep) {   // about one in three only dims the light: a curious neighbour pulls the curtain aside to watch
         if (danger !== w.peek) { if ((w.t += dt) > (w.peek ? w.delay + 2.5 : w.delay)) { w.peek = danger; w.t = 0; } } else w.t = 0;
         continue;
@@ -1143,7 +1143,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   let crowdTossT = 4;
   const tossed = [];
   function crowdToss(dt) {
-    if (!club || !enc.boss || enc.boss.dead || !slamDone) return;
+    if (!flags.club || !enc.boss || enc.boss.dead || !slamDone) return;
     if ((crowdTossT -= dt) > 0) return;
     crowdTossT = 6 + Math.random() * 5;
     if (objs.filter(o => o.pocket).length >= 3) return;
@@ -1496,9 +1496,9 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
     if (x >= 0 && y >= 0 && x < W && y < H) {
       const i = y * W + x;
-      const v = PROPS[i] && !club ? vehAt(x) : -1;
+      const v = PROPS[i] && !flags.club ? vehAt(x) : -1;
       if (v >= 0) { if (VCAP[v] >= 12) return; VCAP[v]++; gore(i, BLOOD_D); return; }   // a vehicle: single pixels of the darkest blood, no runs, 12 at most
-      if (club && !PROPS[i]) { const ci = (y >> 4) * BCW + (x >> 4); if (BCAP[ci] >= 14) return; BCAP[ci]++; gore(i, BLOOD_D); return; }   // the club: a few dark spots
+      if (flags.club && !PROPS[i]) { const ci = (y >> 4) * BCW + (x >> 4); if (BCAP[ci] >= 14) return; BCAP[ci]++; gore(i, BLOOD_D); return; }   // the club: a few dark spots
       // walls, lamp posts and the scaffold: dark splashes, never bright paint; many run down to the street, leaving a light stain
       gore(i, Math.random() < 0.5 ? BLOOD[1] : BLOOD_D);
       if (Math.random() < 0.45 && drips.length < 900) drips.push({ x, y, a: 0, vol: 0.5 + Math.random() * 0.9, wall: !PROPS[i] });
@@ -1526,8 +1526,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       if (f <= 0) continue;
       if (f >= 1 || !stat[i]) {   // gone: the vehicle and club caps free a place again
         GORE[i] = 0; gIn[i] = 0; gList[k] = gList[gList.length - 1]; gList.pop();
-        const x = i % W, y = (i - x) / W, v = PROPS[i] && !club ? vehAt(x) : -1;
-        if (v >= 0) VCAP[v] = Math.max(0, VCAP[v] - 1); else if (club && !PROPS[i]) { const ci = (y >> 4) * BCW + (x >> 4); BCAP[ci] = Math.max(0, BCAP[ci] - 1); }
+        const x = i % W, y = (i - x) / W, v = PROPS[i] && !flags.club ? vehAt(x) : -1;
+        if (v >= 0) VCAP[v] = Math.max(0, VCAP[v] - 1); else if (flags.club && !PROPS[i]) { const ci = (y >> 4) * BCW + (x >> 4); BCAP[ci] = Math.max(0, BCAP[ci] - 1); }
         continue;
       }
       const a = gCol[i], b = stat[i];   // blend the stain toward the surface under it
@@ -1582,9 +1582,11 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
     for (let x = 0; x < W; x++) BPOOL[x] = BPOOL[W + x];   // the kerb's lip shows the first row
   }
-  let noBleed = false;   // (the opening's body: no blood in the air)
+  // flags: noBleed = the opening's body (no blood in the air); wasted = Wicked: knocked out, the run is over; demo = the demo drives the fighter;
+  // club = the fight is inside Club Noir; attract = the title screen's attract demo
+  const flags = { noBleed: false, wasted: false, demo: false, club: false, attract: false };
   function bleed(x, y, dirx, n, force = 1) {
-    if (noBleed) return;
+    if (flags.noBleed) return;
     for (let i = 0; i < n; i++) particles.push({ x, y, vx: dirx * (30 + Math.random() * 110) * force + (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 100 * force,
       life: 1.6, c: BLOOD[Math.floor(Math.random() * 3)], blood: true });
     for (let i = 0; i < n * 0.5 * force; i++) {   // the spray that reaches the wall behind: a splash of dark drops, flung outward
@@ -1596,7 +1598,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // (GORE_HOLD, GORE_FADE, washed faster in the rain), thinning out spot by spot. Both views draw them.
   const BSEG = [[1, 2, 1], [1, 5, 0.5], [5, 6, 0.5], [2, 9, 0.6], [9, 10, 0.6]], BS_MAX = 48;   // [a, b, half-width / tw]: the torso and the near limbs (the far ones are behind him)
   function bodyStain(e, x, y, n) {
-    const J = e.dead ? e.pts : e.J; if (!J || noBleed) return;
+    const J = e.dead ? e.pts : e.J; if (!J || flags.noBleed) return;
     e.bs ??= [];
     for (let k = 0; k < n; k++) {
       const px = x + (Math.random() - 0.5) * 6 * e.s, py = y + (Math.random() - 0.3) * 8 * e.s;
@@ -1668,7 +1670,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // difficulty: the goons' aggression doubles at each step (A = 1, 2, 4, 8). They rest 1/A as long between attacks, more of them
   // swing at once, they close in faster and back off less. The regen drops with it; on Wicked a K.O. ends the run. The demo plays Hard.
   let diffSel = 1;
-  const DIF = () => DIFFS[demo ? 2 : diffSel], dLv = () => Math.log2(DIF().A);   // dLv: 0 .. 3
+  const DIF = () => DIFFS[flags.demo ? 2 : diffSel], dLv = () => Math.log2(DIF().A);   // dLv: 0 .. 3
   // enc: the encounter. eTokN / eTokMax / eShotN = melee / ranged attack tokens in use; eSideT = side re-plan timer; eHitKind: 1 = melee hit, 2 = bullet;
   // boss, bossBeaten; arena = the boss arena; spawnT, arenaSpawned = the arena's spawn clock and count; introT = seconds since the boss entrance's lights cut (-1: none)
   const enc = { eTokN: 0, eTokMax: 2, eShotN: 0, eSideT: 0, eHitKind: 0, boss: null, bossBeaten: false, arena: null, spawnT: 0, arenaSpawned: 0, introT: -1 };
@@ -2147,7 +2149,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       // a bullet coming at him: half the time he reads it and ducks under it
       // [feel] the duck starts by time to impact (fast shots too), early enough to be down when the bullet arrives
       if (b.k === 'b' && b.duck === undefined && hero.mode === 'anim' && Math.sign(P[2].x - b.x) === Math.sign(b.vx) && Math.abs(P[2].x - b.x) / Math.max(1, Math.abs(b.vx)) < 0.24 && Math.abs(P[2].y - b.y) < 30) {
-        b.duck = demo && !ctl.air && !MOVES[hero.act] && hero.act !== 'dash' && Math.random() < 0.5;   // only the demo ducks by itself; a player ducks with S
+        b.duck = flags.demo && !ctl.air && !MOVES[hero.act] && hero.act !== 'dash' && Math.random() < 0.5;   // only the demo ducks by itself; a player ducks with S
         if (b.duck) ctl.duckT = 0.5;
       }
       if (!dead && !b.duck && (hitsPlayer(b.x, b.y, 1) || hitsPlayer((b.x + b.px) / 2, (b.y + b.py) / 2, 1))) { hurtPlayer(b.dmg, b.x, b.y, Math.sign(b.vx) || 1, false); dead = true; }
@@ -2909,7 +2911,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (ctl.push > 0.5) { ctl.x -= ctl.face * ctl.push * dt; ctl.push *= Math.exp(-(ctl.pushK || 9) * dt); } else { ctl.push = 0; ctl.pushK = 0; }
     if ((ctl.x < 10 && openT < 0) || ctl.x > W - 10) { ctl.x = clamp(ctl.x, 10, W - 10); ctl.spd = 0; }
     if (enc.arena && (ctl.x < enc.arena.x0 || ctl.x > enc.arena.x1)) { ctl.x = clamp(ctl.x, enc.arena.x0, enc.arena.x1); ctl.spd = 0; }
-    if (!club && ctl.y < GOAL.y + 4 && ctl.x > KIOSK_X - 2 && ctl.x < GOAL.x1 + 30) { ctl.x = KIOSK_X - 2; ctl.spd = 0; }   // the kiosk wall: nobody walks off the roof's right end
+    if (!flags.club && ctl.y < GOAL.y + 4 && ctl.x > KIOSK_X - 2 && ctl.x < GOAL.x1 + 30) { ctl.x = KIOSK_X - 2; ctl.spd = 0; }   // the kiosk wall: nobody walks off the roof's right end
     if (ctl.surf && (ctl.surf.landing || (ctl.surf.step && ctl.surf.y < GROUND - 6)) && (ctl.x < STAIR_X0 || ctl.x > STAIR_X1) && xPrev >= STAIR_X0 && xPrev <= STAIR_X1 && (!ctl.air || ctl.y + 2 > railTop(ctl.x > STAIR_X1 ? 1 : -1, ctl.surf))) {   // the rails: they stop a walk; a jump goes over once the feet clear the rail top; once outside, nothing pulls him back
       ctl.x = clamp(ctl.x, STAIR_X0, STAIR_X1); if (!ctl.air) ctl.spd = 0;
     }
@@ -2935,7 +2937,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
 
     // presses wait in a short buffer until the fighter can act on them
     if (input.jump) { input.jump = false; if (hero.act !== 'crouch') ibuf.jump = BUF; }   // a press during the take-off squat is the same jump
-    if (!demo) btnTick(dt);
+    if (!flags.demo) btnTick(dt);
     if (input.attack) { ibuf.atk = input.attack; ibuf.atkT = BUF; input.attack = null; }
     if (input.dash) { input.dash = false; ibuf.dash = BUF; }
     if (ibuf.dash > 0 && input.downHeld && !ctl.air && ctl.surf !== GROUND_S && !ctl.surf.box && (!locked || cancelOK())) {   // squat + Space up on a ledge: drop through it
@@ -3228,7 +3230,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     settleT = grabIdx < 0 && mv < 20 ? settleT + dt : 0;
     ragT = grabIdx < 0 ? ragT + dt : 0;
     if (settleT > (hero.ko ? 1.8 : 0.45) || (ragT > 5 && mv < 80)) {   // something jiggling on the body must not keep it down
-      if (hero.hp <= 0 && DIF().perma) { if (!wasted) showWasted(); } else startGetup();   // Wicked: no getting up after a real K.O. (ko alone is also a hard knock to the head)
+      if (hero.hp <= 0 && DIF().perma) { if (!flags.wasted) showWasted(); } else startGetup();   // Wicked: no getting up after a real K.O. (ko alone is also a hard knock to the head)
     }
   }
 
@@ -3442,7 +3444,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     dripStep(dt); goreFade(dt);
     crowdStep(dt);
     // the street ends at the wall; the club's left wall is its shut door
-    if (!club) { if (ctl.x > STREET_END) { ctl.x = STREET_END; ctl.spd = Math.min(ctl.spd, 0); } for (const p of P) if (p.x > STREET_END + 6) p.x = STREET_END + 6; }
+    if (!flags.club) { if (ctl.x > STREET_END) { ctl.x = STREET_END; ctl.spd = Math.min(ctl.spd, 0); } for (const p of P) if (p.x > STREET_END + 6) p.x = STREET_END + 6; }
     else { if (ctl.x < DOOR_X + 6) { ctl.x = DOOR_X + 6; ctl.spd = Math.max(ctl.spd, 0); } for (const p of P) if (p.x < DOOR_X + 2) p.x = DOOR_X + 2; }
   }
 
@@ -3495,7 +3497,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (openT >= 0) endOpening();
     endPh = null; endT = 0; endCam = null; dog = null; ctl.bottle = false; jumpEnd = false;
     releaseGrab();
-    hero.mode = 'anim'; hero.ko = false; wasted = false; hero.bandT = 0; hero.act = null; queued = null; wAct = 0; settleT = 0; ignoreS = null;
+    hero.mode = 'anim'; hero.ko = false; flags.wasted = false; hero.bandT = 0; hero.act = null; queued = null; wAct = 0; settleT = 0; ignoreS = null;
     Object.assign(ctl, { x: START_X, y: GROUND - 2, face: 1, spd: 0, air: false, vu: 0, jumps: 0, flipT: -1, spin: 0, surf: GROUND_S });
     const j = fk(IDLE, ctl.x, ctl.y, 1);
     P.forEach((p, i) => { p.x = p.px = j[i][0]; p.y = p.py = j[i][1]; });
@@ -3503,7 +3505,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     resetObjs();
     particles.length = 0; sparks.length = 0; waves.length = 0; quakes.length = 0;
     ctl.bounces = 0; ctl.tramp = false; ctl.carry = null; pocket.length = 0; tossed.length = 0; crowdTossT = 4;
-    club = false; clubT = 0; fade = 0; fadeDir = 0; slamDone = false;
+    flags.club = false; clubT = 0; fade = 0; fadeDir = 0; slamDone = false;
     cam.xf = START_X - 80; cam.yf = GROUND - 60; cam.v.x = cam.v.y = cam.v.z = 0; cam.zoom = 1;   // [feel] a restart cuts to the start, it does not fly the camera back
     resetTutorial();
   }
@@ -3553,7 +3555,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const stageDone = i => ZONES[i].tasks.every(([k]) => done.has(k));
   const openStage = () => { for (let i = 0; i < ZONES.length; i++) if (!stageDone(i)) return i; return ZONES.length - 1; };
   function tutGate(rdt) {
-    if (demo || attract || endPh || openT >= 0) return;
+    if (flags.demo || flags.attract || endPh || openT >= 0) return;
     const i = openStage(); if (i + 1 >= ZONES.length) return;
     const wall = ZONES[i + 1].x0 - 6;
     if (P[2].x > wall) {   // pushed back to the stage line (walking, or flying there as a ragdoll)
@@ -3585,7 +3587,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // a hard one (stage clear, K.O., boss states) replaces a soft one at once, and waits its turn behind another hard one that only just came up
   function toast(title, sub, soft) {
     if (openT >= 0 || (endPh && endPh !== 'done')) return;   // the opening and the ending play without captions
-    if (soft) { if (toastT > 0 || simTime - softT < 4 || enc.introT >= 0 || attract) return; softT = simTime; }
+    if (soft) { if (toastT > 0 || simTime - softT < 4 || enc.introT >= 0 || flags.attract) return; softT = simTime; }
     else if (toastT > 1.8 && !toastSoft) { if (toastQ.length < 4 && !toastQ.some(q => q[0] === title)) toastQ.push([title, sub]); return; }
     toastEl.innerHTML = `${title}<small>${sub}</small>`; toastEl.hidden = false; toastT = 2.6; toastSoft = !!soft;
     return true;
@@ -3599,16 +3601,15 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     kos = 0; toastQ.length = 0; cleared.clear(); pickToasted.clear(); wavePend.clear(); resultsEl.hidden = true;
     kills.length = 0; landed = 0; feedDirty = true;   // (the demo's or the last run's kills do not carry over)
   }
-  let wasted = false;   // Wicked: knocked out, the run is over
   function showWasted() {
-    wasted = true;
+    flags.wasted = true;
     const t = Math.round(runS.t), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
     resultsEl.innerHTML = `<h2>Wasted</h2><dl><dt>Difficulty</dt><dd>${DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${runS.kills}</dd>`
       + `<dt>Hits landed</dt><dd>${landed}</dd></dl><small>Enter or R to play again · Esc for the menu</small>`;
     resultsEl.hidden = false; toastEl.hidden = true; toastT = 0; toastQ.length = 0;
   }
   function showResults() {
-    if (attract) return;
+    if (flags.attract) return;
     const t = Math.round(runS.t), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
     const rank = kos === 0 && runS.dmg < 60 ? 'S' : kos === 0 && runS.dmg < 160 ? 'A' : kos <= 2 ? 'B' : 'C';
     resultsEl.innerHTML = `<h2>Club cleared</h2><dl><dt>Difficulty</dt><dd>${DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${runS.kills}</dd>`
@@ -3642,8 +3643,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (hero.mode !== 'rag') runS.down = false;
     if (hero.mode === 'getup' && runS.prevMode !== 'getup' && runS.koUp) { runS.koUp = false; secondWind(); }
     runS.prevMode = hero.mode;
-    if (enc.bossBeaten && endPh === null && !wasted) { endPh = 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card (not after a Wicked K.O.)
-    if (enc.bossBeaten && runS.endT < 0 && endPh === 'done' && !wasted) runS.endT = 0.4;
+    if (enc.bossBeaten && endPh === null && !flags.wasted) { endPh = 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card (not after a Wicked K.O.)
+    if (enc.bossBeaten && runS.endT < 0 && endPh === 'done' && !flags.wasted) runS.endT = 0.4;
     if (runS.endT > 0 && (runS.endT -= rdt) <= 0) showResults();
   }
   function tutTick(rdt) {
@@ -3676,11 +3677,11 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     // each stage's goons come out by where the hero really is (not by the stage panel, which waits while goons stand):
     // once its moves are learned (so each is taught in peace first), after 30 s in it, past its middle, near its exit, or at once
     // if he runs in (skipping the lessons: he wants a fight). A runner meets them ahead of him, not behind.
-    if (hero.mode === 'anim' && !club && !demo) for (const key in WAVES) {
+    if (hero.mode === 'anim' && !flags.club && !flags.demo) for (const key in WAVES) {
       const i = +key; if (spawned.has(i) || P[2].x < ZONES[i].x0) continue;
       zoneTs[i] = (zoneTs[i] || 0) + (zc === i ? rdt * timeScale : 0);
       const learned = ZONES[i].tasks.every(([k]) => k.startsWith('kill') || done.has(k)), x1 = ZONES[i + 1].x0, mid = (ZONES[i].x0 + x1) / 2;
-      const rushing = !demo && ctl.spd > WALK + 10 && ctl.face > 0, go = learned || zoneTs[i] > 30 || (!demo && P[2].x > mid) || P[2].x > x1 - (demo ? 50 : 120) || rushing || zc > i;   // (the demo keeps to the lessons-first order)
+      const rushing = !flags.demo && ctl.spd > WALK + 10 && ctl.face > 0, go = learned || zoneTs[i] > 30 || (!flags.demo && P[2].x > mid) || P[2].x > x1 - (flags.demo ? 50 : 120) || rushing || zc > i;   // (the demo keeps to the lessons-first order)
       if (!go || zoneTs[i] < 0.3 && !(zc > i)) continue;
       spawned.add(i); wavePend.add(i);
       const used = new Set(), hx = P[2].x;
@@ -3698,7 +3699,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         g.cdT = Math.max(g.cdT, 0.9);
       });
     }
-    if (!enc.boss && !enc.bossBeaten && hero.mode === 'anim' && club && slamDone) {   // inside the club, the door shut: the entrance
+    if (!enc.boss && !enc.bossBeaten && hero.mode === 'anim' && flags.club && slamDone) {   // inside the club, the door shut: the entrance
       // the room goes dark but for one white spot; the crowd flinches back; the boss walks out of the far doorway to his mark under the light
       enc.arena = { x0: 2440, x1: W - 12 }; enc.spawnT = 6; enc.arenaSpawned = 0;
       enc.boss = spawnEnemy('boss', CLUB_DOORS[0], 'boss'); enc.boss.intro = true; enc.boss.introX = CLUB_DOORS[0] + 56; enc.boss.face = 1;
@@ -3904,11 +3905,11 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     // 7 · trampoline, then onto the flag ledge
     LES('top', [{ to: STAIR_X0 - 4, run: true, max: 14 }, { tick: climbTick, max: 40 }, { dur: 0.6 }]),
     // 8 · boss
-    { tag: 'club', dir: 1, until: () => club, max: 8 }, { until: () => slamDone, max: 3 },
+    { tag: 'club', dir: 1, until: () => flags.club, max: 8 }, { until: () => slamDone, max: 3 },
     { dir: 1, until: () => ctl.x >= 2490, max: 12 }, { dir: 1, until: () => enc.bossBeaten, max: 170 },
     { until: () => endPh === 'done', max: 45 }, { dur: 4 },   // the ending plays out, then the card
   ];
-  let demo = false, di = 0, dk = 0, dTry = 0, dT = 0, dStarted = false, demoAtkT = 0, dAtk0 = 0;
+  let di = 0, dk = 0, dTry = 0, dT = 0, dStarted = false, demoAtkT = 0, dAtk0 = 0;
   function demoAttack(sdt, Wp) {
     if (Wp.auto) { input.fireHeld = true; if (!gun.want) input.attack = 'lp'; return; }
     if ((demoAtkT -= sdt) > 0) return;
@@ -4071,7 +4072,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
   const demoBtn = document.getElementById('b-demo');
   function setDemo(on) {
-    demo = on; di = 0; dk = 0; dTry = 0; dStarted = false; demoBtn.setAttribute('aria-pressed', String(on));
+    flags.demo = on; di = 0; dk = 0; dTry = 0; dStarted = false; demoBtn.setAttribute('aria-pressed', String(on));
     if (!on) { input.dir = 0; input.run = false; input.jumpHeld = false; input.downHeld = false; input.fireHeld = false; }
   }
   let demoWdX = 0, demoWdT = 0;   // watchdog: stuck in one spot with nobody near, move on to the next step
@@ -4080,11 +4081,11 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   let demoGoalX = 420, demoRunning = false, demoPauseT = 0, demoSpawnT = 2.5;
   function demoTick(sdt) {
     demoSmash = false;
-    if (!demo) return;
+    if (!flags.demo) return;
     if (hero.mode !== 'anim') { input.dir = 0; input.fireHeld = false; return; }   // knocked down: wait until the fighter is up again
     if ((demoSpawnT -= sdt) <= 0) {   // a goon or two now and then, from off screen on either side
       demoSpawnT = 3 + Math.random() * 5;
-      if (!club && enemies.filter(e => !e.dead).length < 3) for (let k = 0, n = Math.random() < 0.4 ? 2 : 1; k < n; k++) {
+      if (!flags.club && enemies.filter(e => !e.dead).length < 3) for (let k = 0, n = Math.random() < 0.4 ? 2 : 1; k < n; k++) {
         const side = Math.random() < 0.5 ? -1 : 1, x = clamp(ctl.x + side * (cam.vw / 2 + 20 + k * 18), 40, STREET_END - 60);
         const g = spawnEnemy('goon', x, 1 + Math.floor(Math.random() * 5)); g.cdT = Math.max(g.cdT, 0.8);
       }
@@ -4221,7 +4222,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     seg(nk.x, nk.y, sx, sy, 4.0, PAL.out); seg(sx, sy, pl.x, pl.y, 3.4, PAL.out);   // a man's build: broad in the shoulders, narrow in the hips
     seg(nk.x, nk.y, sx, sy, 3.0, PAL.shirt); seg(sx, sy, mx, my, 2.5, PAL.shirt); seg(mx, my, pl.x, pl.y, 2.3, PAL.pants);
     {   // a 1-px warm rim on the side of the suit that faces the nearest light (a street lamp, or a club spot)
-      const lxs = club ? clubSpots().map(q => q.x) : LAMPS; let lx = lxs[0]; for (const q of lxs) if (Math.abs(q - nk.x) < Math.abs(lx - nk.x)) lx = q;
+      const lxs = flags.club ? clubSpots().map(q => q.x) : LAMPS; let lx = lxs[0]; for (const q of lxs) if (Math.abs(q - nk.x) < Math.abs(lx - nk.x)) lx = q;
       const rd = lx > nk.x ? 1 : -1, [tx, ty] = norm(pl.x - nk.x, pl.y - nk.y), ox = ty * rd * 1.5, oy = -tx * rd * 1.5;
       seg(nk.x + ox, nk.y + oy + 1, mx + ox, my + oy, 0.8, PAL.shirtL); seg(mx + ox, my + oy, pl.x + ox * 0.8, pl.y + oy * 0.8, 0.6, PAL.rim);
     }
@@ -4360,12 +4361,12 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     for (let x = Math.max(Math.floor(lo - 2 + shrink), s.x0); x <= Math.min(Math.ceil(hi + 2 - shrink), s.x1); x++) plot(x, y, c);
   }
   // ---------- the club: balcony door, fade, door slam ----------
-  let club = false, clubT = 0, fade = 0, fadeDir = 0, slamDone = false;
+  let clubT = 0, fade = 0, fadeDir = 0, slamDone = false;
   let bossBarK = 1, cardT = 0;   // the boss bar's fill, the name card's time left
   const cardEl = document.getElementById('card');
   function enterClub() {
     const dx = DOOR_X + 16 - ctl.x, dy = GROUND - 2 - ctl.y;
-    club = true; clubT = 0; slamDone = false;
+    flags.club = true; clubT = 0; slamDone = false;
     Object.assign(ctl, { x: ctl.x + dx, y: ctl.y + dy, face: 1, spd: 0, air: false, vu: 0, jumps: 0, flipT: -1, spin: 0, surf: GROUND_S, bounces: 0, tramp: false });
     hero.act = null; queued = null;
     for (const p of P) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
@@ -4375,10 +4376,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     rain.drops.length = 0; rain.splash.length = 0;
   }
   function clubTick(rdt) {
-    if (!club && fadeDir === 0 && hero.mode === 'anim' && ctl.surf === GOAL && !ctl.air && ctl.x >= KIOSK_X - 4 && (demo || stageDone(ZONES.length - 2))) { fadeDir = 1; tut('enter'); }   // walk through the side door (once stage 7 is done)
+    if (!flags.club && fadeDir === 0 && hero.mode === 'anim' && ctl.surf === GOAL && !ctl.air && ctl.x >= KIOSK_X - 4 && (flags.demo || stageDone(ZONES.length - 2))) { fadeDir = 1; tut('enter'); }   // walk through the side door (once stage 7 is done)
     if (fadeDir === 1) { input.dir = 1; if ((fade += rdt * 2.2) >= 1) { fade = 1; enterClub(); fadeDir = -1; } }
     else if (fadeDir === -1 && (fade -= rdt * 1.6) <= 0) { fade = 0; fadeDir = 0; }
-    if (club) {
+    if (flags.club) {
       clubT += rdt;
       if (!slamDone && clubT > 0.75) {   // the door slams shut behind him
         slamDone = true; if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.3);
@@ -4419,7 +4420,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
   }
   function drawDoor() {
-    if (!club) return;
+    if (!flags.club) return;
     const k = clamp((clubT - 0.45) / 0.3, 0, 1), w = Math.round(2 + 10 * k * k);   // the panel swings shut toward us
     for (let y = GROUND - 36; y < GROUND; y++) for (let x = DOOR_X - 10; x < DOOR_X; x++) plot(x, y, x === DOOR_X - 10 ? PAL.out : C('#120c18'));   // the dark doorway
     for (let y = GROUND - 36; y < GROUND; y++) for (let x = DOOR_X - w; x < DOOR_X; x++)
@@ -4435,7 +4436,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   };
   const SIGN = { x0: 2176, x1: 2330, y0: GOAL.y - 100, y1: GOAL.y - 60 };   // 2.7 m clear above the roof: the hero walks under it
   function drawSign() {
-    if (club || cam.x > SIGN.x1 + 40 || cam.x + cam.vw < SIGN.x0 - 40) return;
+    if (flags.club || cam.x > SIGN.x1 + 40 || cam.x + cam.vw < SIGN.x0 - 40) return;
     const t = simTime, { x0, x1, y0, y1 } = SIGN;
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) plot(x, y, x === x0 || x === x1 || y === y0 || y === y1 ? PAL.out : x === x0 + 1 || x === x1 - 1 || y === y0 + 1 || y === y1 - 1 ? C('#3a3a48') : C('#160d1c'));
     let k = 0;   // chasing bulbs round the frame
@@ -4465,7 +4466,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // at the foot of the fire escape: a blade sign (a neon cocktail over NOIR) hangs off the corner of the club, and three chevrons on the wall climb toward the roof
   const BLADE = { x0: 2163, x1: 2179, y0: 116, y1: 194 }, CHEV_X = STAIR_X0 + 10;
   function drawStairSign() {
-    if (club || cam.x > STAIR_X0 + 60 || cam.x + cam.vw < BLADE.x0 - 20) return;
+    if (flags.club || cam.x > STAIR_X0 + 60 || cam.x + cam.vw < BLADE.x0 - 20) return;
     const t = simTime, { x0, x1, y0, y1 } = BLADE, iron = C('#2a2a34'), ironL = C('#4a4a58');
     // two iron arms hold the blade off the wall
     for (const ay of [y0 + 6, y1 - 6]) { for (let x = x0 - 4; x < x0; x++) { plot(x, ay, iron); plot(x, ay + 1, ironL); } plot(x0 - 4, ay - 1, iron); plot(x0 - 4, ay + 2, iron); }
@@ -4511,7 +4512,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     flush(); return out;
   })();
   function drawStairRails() {
-    if (club || cam.x > STAIR_X1 + 20 || cam.x + cam.vw < STAIR_X0 - 20) return;
+    if (flags.club || cam.x > STAIR_X1 + 20 || cam.x + cam.vw < STAIR_X0 - 20) return;
     const top = C('#7c7c96'), post = C('#34343f');
     for (const [ax, ay, bx, by, run] of RAILSEG) {
       if (run) run.forEach((st, i) => { if (i % 4 === 0 && i) { const px = st.dir > 0 ? st.x0 : st.x1; for (let y = st.y - RAIL_H + 1; y < st.y; y++) plot(px, y, post); } });   // a post on every 4th tread
@@ -4519,7 +4520,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
   }
   function drawSearchlights() {   // two beams from the roof corners sweep the sky
-    if (club || cam.x > GOAL.x1 + 60 || cam.x + cam.vw < GOAL.x0 - 60) return;
+    if (flags.club || cam.x > GOAL.x1 + 60 || cam.x + cam.vw < GOAL.x0 - 60) return;
     for (const [bx, ph, by] of [[GOAL.x0 + 8, 0, GOAL.y - 2], [GOAL.x1 - 8, 2.2, GOAL.y - 70]]) {   // one on the parapet, one on the kiosk roof
       const a = Math.sin(simTime * 0.5 + ph) * 0.5;
       for (let y = by; y > by - 220; y--) {
@@ -4543,7 +4544,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const dancers = Array.from({ length: 9 }, (_, i) => ({ home: CLUB_X + 70 + i * 32 + (i * 17) % 11, x: CLUB_X + 70 + i * 32, style: i % 4, ph: i * 0.37,
     top: DCOL[i % DCOL.length], legs: DCOL[(i * 4 + 2) % DCOL.length], skin: DSKIN[i % DSKIN.length], hairC: DHAIR[(i * 5) % DHAIR.length], long: i % 3 === 1, h: 0.94 + (i % 3) * 0.05, mood: 'dance', t: 0 }));
   function crowdReact(x, power, all) {
-    if (!club) return;
+    if (!flags.club) return;
     for (const d of dancers) {
       const dist = Math.abs(d.x - x);
       if (all) { d.mood = 'cheer'; d.t = (all === 'big' ? 4 : 1.6) + Math.random(); continue; }   // a death or a big knock: the whole room cheers
@@ -4553,7 +4554,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
   }
   function crowdStep(dt) {
-    if (!club) return;
+    if (!flags.club) return;
     const fighters = [P[2].x, ...enemies.filter(e => !e.dead).map(e => e.x)];
     for (const d of dancers) {
       if ((d.t -= dt) <= 0) d.mood = 'dance';
@@ -4569,7 +4570,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     for (const d of dancers) d.x = clamp(d.x, CLUB_X + 34, W - 24);
   }
   function drawDancers() {   // the crowd on the back dais: 1.7-1.8 m figures with a shaded side, round heads, hair, hands; posed by mood and dance style
-    if (!club) return;
+    if (!flags.club) return;
     const beat = simTime * 2.1 * Math.PI * 2;
     for (const d of dancers) {
       const s = d.h, gy = GROUND - 8, ph = beat + d.ph * 6, hop = d.mood === 'cheer' || d.style === 2 ? Math.max(0, Math.sin(ph)) * 3 * s : 0;
@@ -4619,7 +4620,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     rain.k += (rain.goal - rain.k) * (1 - Math.exp(-0.4 * dt));
     if (rain.flash > 0) rain.flash -= dt;
     else if (rain.k > 0.55 && Math.random() < dt * 0.05) rain.flash = 0.3;   // lightning over the roofs
-    const want = club ? 0 : Math.round(rain.k * 170);
+    const want = flags.club ? 0 : Math.round(rain.k * 170);
     while (rain.drops.length < want) rain.drops.push({ x: cam.x + Math.random() * (cam.vw + 60), y: cam.y - Math.random() * cam.vh, v: 250 + Math.random() * 90 });
     if (rain.drops.length > want) rain.drops.length = want;
     for (const d of rain.drops) {
@@ -4662,16 +4663,16 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
   // the scene's light: an ambient tint, and pools [x, y (view), radius², r, g, b weights, glow] from lamps, lit windows, signs, club spots
   function lightList() {
-    const strobe = club && !reduceMotion && enc.boss && !enc.boss.dead && enc.introT < 0 && (simTime * 6 % 1) < 0.12 && Math.floor(simTime * 6) % 4 === 0 ? 1.7 : 1;
-    const cut = club && enc.introT >= 0 ? 1 - 0.72 * clamp(enc.introT / 0.25, 0, 1) : 1;   // the entrance: the house lights drop to a quarter
-    const fl = club ? strobe : rain.flash > 0 ? 1 + Math.max(0, Math.sin(rain.flash * 40)) * 0.9 * (rain.flash / 0.3) : 1, dim = club ? cut : 1 - rain.k * 0.12;
-    const aR = (club ? 0.52 : 0.5) * dim * fl, aG = (club ? 0.44 : 0.54) * dim * fl, aB = (club ? 0.66 : 0.7) * dim * fl;
+    const strobe = flags.club && !reduceMotion && enc.boss && !enc.boss.dead && enc.introT < 0 && (simTime * 6 % 1) < 0.12 && Math.floor(simTime * 6) % 4 === 0 ? 1.7 : 1;
+    const cut = flags.club && enc.introT >= 0 ? 1 - 0.72 * clamp(enc.introT / 0.25, 0, 1) : 1;   // the entrance: the house lights drop to a quarter
+    const fl = flags.club ? strobe : rain.flash > 0 ? 1 + Math.max(0, Math.sin(rain.flash * 40)) * 0.9 * (rain.flash / 0.3) : 1, dim = flags.club ? cut : 1 - rain.k * 0.12;
+    const aR = (flags.club ? 0.52 : 0.5) * dim * fl, aG = (flags.club ? 0.44 : 0.54) * dim * fl, aB = (flags.club ? 0.66 : 0.7) * dim * fl;
     const ls = [];   // x, y (view), radius², r, g, b weights, glow
-    if (!club) {
+    if (!flags.club) {
       for (const lx of LAMPS) if (lx > cam.x - 100 && lx < cam.x + cam.vw + 100) ls.push([lx + 7 - cam.x, GROUND - 75 - cam.y, 100 * 100, 1.5, 1.18, 0.6, 55]);
       for (const [wx, wy, wr] of WINL) if (wx > cam.x - wr && wx < cam.x + cam.vw + wr) ls.push([wx - cam.x, wy - cam.y, wr * wr, 0.55, 0.4, 0.14, 0]);   // window spill
       if (cam.x < SIGN.x1 + 120 && cam.x + cam.vw > SIGN.x0 - 120) ls.push([(SIGN.x0 + SIGN.x1) / 2 - cam.x, SIGN.y1 - cam.y, 120 * 120, 1.0, 0.4, 0.95, 0], [GOAL.x1 - 8 - cam.x, GOAL.y - 20 - cam.y, 50 * 50, 0.3, 1.0, 1.1, 0]);   // the sign bathes the roof pink, the door glows cyan
-      if (!club && cam.x < STAIR_X0 + 120 && cam.x + cam.vw > BLADE.x0 - 120) ls.push([(BLADE.x0 + BLADE.x1) / 2 - cam.x, (BLADE.y0 + BLADE.y1) / 2 - cam.y, 46 * 46, 1.0, 0.35, 0.8, 0], [CHEV_X - cam.x, GROUND - 40 - cam.y, 30 * 30, 0.3, 0.95, 1.1, 0]);   // the blade sign glows pink on the wall, the chevrons cyan
+      if (!flags.club && cam.x < STAIR_X0 + 120 && cam.x + cam.vw > BLADE.x0 - 120) ls.push([(BLADE.x0 + BLADE.x1) / 2 - cam.x, (BLADE.y0 + BLADE.y1) / 2 - cam.y, 46 * 46, 1.0, 0.35, 0.8, 0], [CHEV_X - cam.x, GROUND - 40 - cam.y, 30 * 30, 0.3, 0.95, 1.1, 0]);   // the blade sign glows pink on the wall, the chevrons cyan
     }
     else {
       for (const sp of clubSpots()) ls.push([sp.x - cam.x, GROUND - 14 - cam.y, 64 * 64, sp.c[0], sp.c[1], sp.c[2], 0]);
@@ -4689,7 +4690,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     return out;
   }
   function drawBeams() {   // light cones from the fixtures to the pools, added on top
-    if (!club) return;
+    if (!flags.club) return;
     for (const sp of clubSpots()) {
       const y0 = GROUND - 144, y1 = GROUND - 2, cr = sp.c[0] * 40, cg = sp.c[1] * 40, cb = sp.c[2] * 40;
       for (let y = y0; y < y1; y++) {
@@ -4707,20 +4708,20 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // stronger toward the kerb and in the rain; the dark joints between stones stay dry; stepped in quarters with a 2 x 2 dither
   const WET = { w: 0.1, k0: 0.18, kRain: 0.3, kClub: 0.5, step: 0.055, dry: [0.08, 0.25] };
   function reflectPass() {
-    const t = simTime, rk = rain.k, ls = lightList()[3], wk = club ? WET.kClub : WET.k0 + rk * WET.kRain;
+    const t = simTime, rk = rain.k, ls = lightList()[3], wk = flags.club ? WET.kClub : WET.k0 + rk * WET.kRain;
     { const vy = GROUND - cam.y; if (vy >= 0 && vy < cam.vh) for (let vx = 0; vx < cam.vw; vx++) { const bp = BPOOL[vx + cam.x]; if (bp > 0.025) buf[vy * CW + vx] = bp > 0.2 ? C('#8a1420') : C('#6a1018'); } }   // a pool's lip on the curb
     for (let d = 1; d <= STREET; d++) {
       const vy = GROUND + d - cam.y; if (vy < 0 || vy >= cam.vh) continue;
       const svy = GROUND - 1 - d * 3 - cam.y, row = vy * CW, mrow = d * W;
       for (let vx = 0; vx < cam.vw; vx++) {
         const wx = vx + cam.x, bp = BPOOL[mrow + wx], bpool = bp > 0.025, pud = PUDDLE[mrow + wx] || bpool;
-        const a = club ? 0.38 * (1 - d / (STREET + 6)) : pud ? 0.75 : 0.32 * (0.6 + rk * 0.6) * (1 - d / (STREET + 4));
+        const a = flags.club ? 0.38 * (1 - d / (STREET + 6)) : pud ? 0.75 : 0.32 * (0.6 + rk * 0.6) * (1 - d / (STREET + 4));
         if (svy < 0) continue;
-        const sx = vx + (pud && !club ? Math.round(Math.sin(d * 1.9 + t * (3 + rk * 8) + wx * 0.21) * (0.4 + rk * 1.3)) : 0);
+        const sx = vx + (pud && !flags.club ? Math.round(Math.sin(d * 1.9 + t * (3 + rk * 8) + wx * 0.21) * (0.4 + rk * 1.3)) : 0);
         if (sx < 0 || sx >= cam.vw) continue;
         const sc = buf[svy * CW + sx], c = buf[row + vx];
         let r = (c & 255) * (1 - a) + (sc & 255) * a * 0.92, g = (c >> 8 & 255) * (1 - a) + (sc >> 8 & 255) * a * 0.94, b = (c >> 16 & 255) * (1 - a) + Math.min(255, (sc >> 16 & 255) * a * 1.05 + a * 10);
-        const bk = (bpool ? Math.min(0.95, 0.6 + bp * 0.4) : pud && !club ? PUD_BLOOD[wx] : 0) * (club ? 0.5 : 1);   // the mirrored club floor keeps half the red
+        const bk = (bpool ? Math.min(0.95, 0.6 + bp * 0.4) : pud && !flags.club ? PUD_BLOOD[wx] : 0) * (flags.club ? 0.5 : 1);   // the mirrored club floor keeps half the red
         if (bk > 0.01) { r = Math.min(255, r * (1 - bk * 0.4) + 70 * bk); g *= 1 - bk * 0.85; b *= 1 - bk * 0.8; }   // a bloody puddle: the reflection turns red
         {
           let sr = 0, sg = 0, sb = 0;
@@ -4735,7 +4736,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       }
     }
     const rc = C('#9aa6c4');
-    if (!club) for (const p of rain.rip) {   // rings on the wet stones
+    if (!flags.club) for (const p of rain.rip) {   // rings on the wet stones
       const w = 1 + p.t * 12, y = GROUND + p.d, x = Math.floor(p.x);
       if (PUDDLE[p.d * W + x] || p.t < 0.15) { plot(Math.floor(p.x - w), y, rc); plot(Math.floor(p.x + w), y, rc); }
     }
@@ -4747,7 +4748,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     buf[i] = (255 << 24 | ((c >> 16 & 255) * (1 - a) + b * a) << 16 | ((c >> 8 & 255) * (1 - a) + g * a) << 8 | ((c & 255) * (1 - a) + r * a)) >>> 0;
   }
   function drawRain() {
-    if (!rain.drops.length || club) return;
+    if (!rain.drops.length || flags.club) return;
     for (const d of rain.drops) {   // thin, see-through slanted streaks; the slower ones are farther away and fainter
       const x = Math.floor(d.x), y = Math.floor(d.y), far = d.v < 290, n = far ? 3 : 5;
       for (let k = 0; k < n; k++) blendPlot(x + Math.floor(k / 3), y - k, 170, 185, 220, far ? 0.14 : k ? 0.26 : 0.42);
@@ -4760,7 +4761,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (mode3D) return;   // the 3D view draws its own picture; the 2D one under it is not shown
     drawBackdrop();   // (the club crowd is drawn inside it, behind the bar and speakers)
     drawSpawnFx();
-    if (!club) bgSnap.set(buf);   // the scene without people, to find them again for the glass reflections
+    if (!flags.club) bgSnap.set(buf);   // the scene without people, to find them again for the glass reflections
     drawSign();
     drawStairSign();
     drawTramp();
@@ -4780,7 +4781,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       if (L === LANE.PLAT) drawStairRails();   // the fire escape's outer rail: in front of anyone on the stairs, behind the street
     }
     pickOn = true; drawPickups(); drawThrown('lying'); drawAmmo(); pickOn = false;   // weapons, ammo and bandages waiting to be picked up: on top, always in sight
-    if (!club) glassReflect();
+    if (!flags.club) glassReflect();
     drawGroundFx();
     lightPass();
     reflectPass();
@@ -4912,7 +4913,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const cinematic = () => openT >= 0 || !!endPh || !!(enc.boss && enc.boss.intro);   // the opening, the ending, the boss's entrance
   function autoZoom() {
     if (cinematic()) return 1;
-    const px = P[2].x, fight = club || enemies.some(e => !e.dead && Math.abs(e.x - px) < 190 && e.zone !== 'arena' || (!e.dead && e === enc.boss && Math.abs(e.x - px) < 260));
+    const px = P[2].x, fight = flags.club || enemies.some(e => !e.dead && Math.abs(e.x - px) < 190 && e.zone !== 'arena' || (!e.dead && e === enc.boss && Math.abs(e.x - px) < 260));
     if (fight) {
       const bx = sceneBox();
       return clamp(Math.min(1, 160 / (bx.x1 - bx.x0 + 24), 160 * CH / CW / (bx.y1 - bx.y0 + 20)), 0.4, 0.6);
@@ -4938,7 +4939,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     ty = bx.y1 - bx.y0 <= cam.vh - 10 ? clamp(ty, bx.y1 - cam.vh / 2 + 5, bx.y0 + cam.vh / 2 - 5) : (bx.y0 + bx.y1) / 2;
     let cx = smoothDamp(cx0, tx, cam.v, 'x', 0.32, rdt), cy = smoothDamp(cy0, ty, cam.v, 'y', 0.4, rdt);
     cam.xf = cx - cam.vw / 2; cam.yf = cy - cam.vh / 2;
-    const lo = club ? CLUB_X : 0, hi = club ? W - cam.vw : Math.min(W, CLUB_X) - cam.vw;
+    const lo = flags.club ? CLUB_X : 0, hi = flags.club ? W - cam.vw : Math.min(W, CLUB_X) - cam.vw;
     if (cam.xf < lo || cam.xf > hi) { cam.xf = clamp(cam.xf, lo, hi); cam.v.x *= 0.5; }
     if (cam.vh >= H) { cam.yf = H - cam.vh; cam.v.y = 0; }
     else if (cam.yf < 0 || cam.yf > H - cam.vh) { cam.yf = clamp(cam.yf, 0, H - cam.vh); cam.v.y *= 0.5; }
@@ -6335,7 +6336,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       for (const e of enemies) if (e.dead) this.enemyRig(e);
       for (const e of enemies) if (!e.dead) this.enemyRig(e);
       this.playerRig();
-      if (dog && !club) this.dogRig();
+      if (dog && !flags.club) this.dogRig();
       const nC = Math.min(this.nC, 1200), nS = Math.min(this.nS, 2400);
       for (const m of [this.cylF, this.cylO]) { m.count = nC; m.instanceMatrix.needsUpdate = true; }
       for (const m of [this.sphF, this.sphO]) { m.count = nS; m.instanceMatrix.needsUpdate = true; }
@@ -6533,13 +6534,13 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     },
     updateLayers() {
       const { ZF } = T3;
-      if (club) this.layer(this.lClub, () => { drawClub(); drawDancers(); }, { glow: true, z: ZF - 0.6 }); else this.lClub.mesh.visible = false;
-      this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); }, { glow: true, z: club ? ZF - 0.3 : ZF + 0.3 });
+      if (flags.club) this.layer(this.lClub, () => { drawClub(); drawDancers(); }, { glow: true, z: ZF - 0.6 }); else this.lClub.mesh.visible = false;
+      this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); }, { glow: true, z: flags.club ? ZF - 0.3 : ZF + 0.3 });
       this.layer(this.lSign, drawSign, { glow: true, z: ZF + 5.05 });
       this.layer(this.lBlade, drawStairSign, { glow: true, z: ZF + 4.05 });
-      if (!club && cam.x < STAIR_X1 + 160 && cam.x + cam.vw > STAIR_X0 - 160) this.layer(this.lRail, drawStairRails, { z: ZF + T3.STAIR + 0.4 }); else this.lRail.mesh.visible = false;
-      this.lFloor.mesh.visible = club;
-      if (club) {   // drawClubFloor in camera-sized strips across the sheet
+      if (!flags.club && cam.x < STAIR_X1 + 160 && cam.x + cam.vw > STAIR_X0 - 160) this.layer(this.lRail, drawStairRails, { z: ZF + T3.STAIR + 0.4 }); else this.lRail.mesh.visible = false;
+      this.lFloor.mesh.visible = flags.club;
+      if (flags.club) {   // drawClubFloor in camera-sized strips across the sheet
         const F = this.lFloor, S = STREET + 1, sx = cam.x, sy = cam.y, sw = cam.vw, sh = cam.vh, step = 256;
         for (let ox = 0; ox < F.w; ox += step) {
           cam.x = F.x0 + ox; cam.y = GROUND; cam.vw = step; cam.vh = S;
@@ -6573,7 +6574,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     },
     // the far scene, exactly as the 2D view draws it (sky, moon, clouds, far town, or the club's back wall and crowd), lit the same way
     updateBackground() {
-      if (club) { this.scene.background = this.clubBg || (this.clubBg = t3rgb(C('#0d0913'))); return; }   // the club's wall is a layer in the world (updateLayers)
+      if (flags.club) { this.scene.background = this.clubBg || (this.clubBg = t3rgb(C('#0d0913'))); return; }   // the club's wall is a layer in the world (updateLayers)
       this.scene.background = this.bgTex;
       buf.fill(0);
       drawSky();
@@ -6602,7 +6603,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       m.scale.set(r1, len, r1); m.material.color.setRGB(...rgb); m.material.opacity = op; m.visible = true;
     },
     updateFx() {
-      const p = this.rain.geometry.attributes.position, n = club ? 0 : Math.min(rain.drops.length, this.rainMax);
+      const p = this.rain.geometry.attributes.position, n = flags.club ? 0 : Math.min(rain.drops.length, this.rainMax);
       for (let i = 0; i < n; i++) {
         const d = rain.drops[i], far = d.v < 290, l = far ? 3 : 5, onProp = floorBelow(d.x, d.y, 0) !== GROUND_S;
         const z = onProp ? T3.ZF + 2 + (i * 7 % 15) : far ? -10 - (i * 7 % 9) : (i * 37 % 41) - 12;   // over a car or a scaffold: the drops fall onto it, not in front of it
@@ -6610,7 +6611,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       }
       p.needsUpdate = true; this.rain.geometry.setDrawRange(0, n * 2);
       for (const b of this.beams) b.visible = false;
-      if (club) clubSpots().forEach((sp, i) => this.beam(i, sp.fx, GROUND - 144, sp.x, GROUND - 2, 13, -3, sp.c.map(v => Math.min(1, v / 1.4)), 0.13));
+      if (flags.club) clubSpots().forEach((sp, i) => this.beam(i, sp.fx, GROUND - 144, sp.x, GROUND - 2, 13, -3, sp.c.map(v => Math.min(1, v / 1.4)), 0.13));
       else if (cam.x < GOAL.x1 + 60 && cam.x + cam.vw > GOAL.x0 - 60) [[GOAL.x0 + 8, 0, GOAL.y - 2], [GOAL.x1 - 8, 2.2, GOAL.y - 70]].forEach(([bx, ph, by], i) => {
         const a = Math.sin(simTime * 0.5 + ph) * 0.5;
         this.beam(i, bx, by, bx + Math.tan(a) * 220, by - 220, 13, T3.ZF + 2, [0.55, 0.55, 0.5], 0.09);
@@ -6626,11 +6627,11 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         if (q) {
           T3U.lp.value[i].set(q[0] + cam.x, q[1] + cam.y, q[2], q[6]); T3U.lc.value[i].set(q[3], q[4], q[5]);
           const key = Math.abs(q[0] + cam.x - P[2].x) < 0.01 && Math.abs(q[1] + cam.y - (P[2].y - 12)) < 0.01;   // the key light follows the hero
-          T3U.lz.value[i] = key ? (this.zw.get(this.hero) ?? 0) : club ? 0 : q[6] > 0 ? -10 : T3.ZF + 2;
+          T3U.lz.value[i] = key ? (this.zw.get(this.hero) ?? 0) : flags.club ? 0 : q[6] > 0 ? -10 : T3.ZF + 2;
         }
         else T3U.lp.value[i].set(0, 0, 0, 0);
       }
-      T3U.cam.value.set(cam.x, rain.k, club ? 1 : 0, simTime); T3U.view.value = cam.vw;
+      T3U.cam.value.set(cam.x, rain.k, flags.club ? 1 : 0, simTime); T3U.view.value = cam.vw;
     },
     updateCamera() {
       // a shifted lens instead of a tilt: the camera stands above the view and looks straight at the wall, so verticals stay
@@ -6726,7 +6727,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
   cv.addEventListener('pointerdown', e => {
     e.preventDefault();
-    if (attract) return;   // (the title screen starts from its menu)
+    if (flags.attract) return;   // (the title screen starts from its menu)
     const pos = toWorld(e), i = nearest(pos);
     if (i >= 0) {
       toRag();
@@ -6757,7 +6758,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   let runToggle = false;
   const runBtn = document.getElementById('c-run'), slowBtn = document.getElementById('b-slow'), skelBtn = document.getElementById('b-skel');
   const zoomBtns = [...document.querySelectorAll('.zoom')];
-  const takeOver = () => { if (attract) endAttract(); else if (demo) setDemo(false); };
+  const takeOver = () => { if (flags.attract) endAttract(); else if (flags.demo) setDemo(false); };
   const doJump = () => { takeOver(); input.jump = true; };
   const doAttack = a => { takeOver(); input.attack = a; };
   // one button punches (or swings the weapon), one kicks. A tap (let go before HOLD_T) is the light move. Held to HOLD_T the
@@ -6804,7 +6805,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     const c = e.code;
     if (menuKey(e)) { e.preventDefault(); return; }   // the menu has the keys while it is open (the title screen, or Esc in a game)
     if (openT >= 0) { if ((c === 'Escape' || c === 'Enter') && !e.repeat) endOpening(); return; }
-    if (wasted || (endPh === 'done' && !resultsEl.hidden)) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) reset(); return; }   // the Wasted or Club cleared card: only a restart (Esc opens the menu above)
+    if (flags.wasted || (endPh === 'done' && !resultsEl.hidden)) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) reset(); return; }   // the Wasted or Club cleared card: only a restart (Esc opens the menu above)
     if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) endFinish(); return; }   // the ending: Esc or Enter jumps to the card
     // the keys: arrows move (up jumps, down squats), Q punches, W kicks, Space rolls, Shift runs
     if (c === 'ArrowLeft') { keys.left = true; takeOver(); }
@@ -6835,7 +6836,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     else if (c === 'KeyQ') releaseBtn('p');
     else if (c === 'KeyW') releaseBtn('k');
     else if (c === 'Space') input.dashHeld = false;
-    else if (c === 'ArrowUp') { if (!demo) input.jumpHeld = false; }
+    else if (c === 'ArrowUp') { if (!flags.demo) input.jumpHeld = false; }
   });
   addEventListener('blur', () => { btn.p.down = btn.k.down = false; input.fireHeld = false; keys.left = keys.right = keys.shift = false; touch.left = touch.right = false; input.downHeld = false; });
 
@@ -6903,10 +6904,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     for (const st of hair) for (const p of st) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     cam.xf = ctl.x - 80; cam.yf = ctl.y - 60; cam.v.x = cam.v.y = cam.v.z = 0;
-    if (demo) { di = Math.max(0, DEMO.findIndex(st => st.tag === 'club')); dk = 0; dTry = 0; dStarted = false; }
+    if (flags.demo) { di = Math.max(0, DEMO.findIndex(st => st.tag === 'club')); dk = 0; dTry = 0; dStarted = false; }
     else autoWalk = true;
   }
-  function toggleDemo() { if (demo) setDemo(false); else { setDemo(true); } }
+  function toggleDemo() { if (flags.demo) setDemo(false); else { setDemo(true); } }
   // ---------- the opening: a dead goon flies in from the left and hits the street; he walks in after it and asks for his dog ----------
   const OPEN = { camX: 40, enter: 18, walkAt: 0.85, throwP: 150, line: 'Where is my dog?', sayFor: 3.4 };
   let openBody = null, openStopT = -1, openBled = false;
@@ -6919,7 +6920,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; }
     const e = spawnEnemy('goon', OPEN.enter + 14, null);   // thrown from off screen: he comes in limp, lands, and lies still
     const k0 = kills.length, a0 = ammoBoxes.length, t0 = thrown.length;
-    noBleed = true; killEnemy(e, 1, OPEN.throwP, 0.7); noBleed = false;   // he was beaten elsewhere: no spray in the air, only a pool where he lands
+    flags.noBleed = true; killEnemy(e, 1, OPEN.throwP, 0.7); flags.noBleed = false;   // he was beaten elsewhere: no spray in the air, only a pool where he lands
     { const vx = OPEN.throwP * 0.5 / e.m, vy = -OPEN.throwP * 0.7 * 0.4 / e.m - 60; for (const p of e.pts) { p.px = p.x - vx * DT; p.py = p.y - vy * DT; } }   // (thrown in from off screen: a long toss, unlike a blow)
     kills.length = k0; ammoBoxes.length = a0; thrown.length = t0; feedDirty = true;   // not one of yours on the kill list, and nothing to pick up (no ammo, bandage or weapon)
     e.pts.forEach((p, i) => { const k = i <= 1 ? 90 : i >= 7 ? -70 : 0; p.px -= k * DT; p.py += (i >= 7 ? 40 : 0) * DT; });   // the head leads, the feet trail: he tumbles through the air
@@ -6930,7 +6931,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function endGo(ph) { endPh = ph; endT = 0; }
   function endFinish() { endGo('done'); endCam = null; fade = 1; hero.act = null; ctl.bottle = false; }
   function endStreet() {   // cut to the street outside the club: the dog sits waiting by the wall
-    club = false; ctl.bottle = false;
+    flags.club = false; ctl.bottle = false;
     for (let i = enemies.length - 1; i >= 0; i--) if (!enemies[i].dead) enemies.splice(i, 1);   // the street is quiet now
     const dx = END.out - ctl.x, dy = GROUND - 2 - ctl.y;
     Object.assign(ctl, { x: END.out, y: GROUND - 2, face: 1, spd: 0, air: false, vu: 0, surf: GROUND_S }); hero.act = null;
@@ -7043,7 +7044,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     return { hind: false, root, mid: [ex, ey], low: wrist, toe: [paw[0] + 0.5 * f, paw[1] - 0.6], paw };
   }
   function drawDog() {
-    if (!dog || club) return;
+    if (!dog || flags.club) return;
     const P = dogPose(dog), f = P.f, px = new Map();
     const TAN = C('#b97a3c'), TANL = C('#d9a05e'), TAND = C('#7a4e24'), BLK = C('#1c171a'), BLKL = C('#3b3238'), EYE = C('#0a0809');
     const put = (x, y, c) => px.set(Math.round(x) + ',' + Math.round(y), c);
@@ -7101,7 +7102,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     for (const [k, c] of px) { const [x, y] = k.split(',').map(Number); plot(x, y, c); }
   }
   function drawDogHeart() {   // a small heart floats up over the dog while he pets it (drawn over everyone)
-    if (!dog || club || !(dog.heart >= 0 && dog.heart < 1.8)) return;
+    if (!dog || flags.club || !(dog.heart >= 0 && dog.heart < 1.8)) return;
     const ry = GROUND - 24 - Math.round(dog.heart * 7), rx = Math.round(dog.x) + dog.face * 4, pink = C('#ff5a8a');
     for (const [x, y] of [[-1, -1], [0, -1], [2, -1], [3, -1], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [-1, 1], [0, 1], [1, 1], [2, 1], [3, 1], [0, 2], [1, 2], [2, 2], [1, 3]]) plot(rx + x, ry + y, pink);
     plot(rx - 1, ry - 1, C('#ffd0dc'));
@@ -7155,7 +7156,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const toggleFull = () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch (err) {} };
   function menuItems() {
     const items = [
-      { label: attract ? 'Start game' : 'Resume', act: () => attract ? endAttract() : hideMenu() },
+      { label: flags.attract ? 'Start game' : 'Resume', act: () => flags.attract ? endAttract() : hideMenu() },
       { label: 'Difficulty', value: () => DIFFS[diffSel].name, change: d => { diffSel = (diffSel + d + DIFFS.length) % DIFFS.length; charge.forEach((c, w) => { charge[w] = Math.min(c, fullCharge(w)); }); saveSettings(); } },
       { label: 'View', value: () => mode3D ? '3D' : '2D', change: () => { setMode3D(!mode3D); saveSettings(); } },
       { label: 'Shift', value: () => runAlways ? 'to walk' : 'to run', change: () => { runAlways = !runAlways; saveSettings(); } },
@@ -7163,7 +7164,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       { label: 'Full screen', value: () => document.fullscreenElement ? 'On' : 'Off', change: toggleFull },
       { label: 'Controls', act: () => { document.getElementById('cc-run').textContent = runAlways ? 'walk (you run by default)' : 'run'; ccEl.hidden = false; } },
     ];
-    if (!attract) items.push({ label: 'Restart', act: () => { hideMenu(); reset(); } }, { label: 'Quit to title', act: () => { hideMenu(); reset(); startAttract(); } });
+    if (!flags.attract) items.push({ label: 'Restart', act: () => { hideMenu(); reset(); } }, { label: 'Quit to title', act: () => { hideMenu(); reset(); startAttract(); } });
     return items;
   }
   function drawMenu() {
@@ -7185,7 +7186,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
   function showMenu(title) {
     menuShown = true; menuEl.hidden = false; menuSel = 0; ccEl.hidden = true;
-    if (!title && !attract && menuPauseTS === null) { menuPauseTS = timeScale; timeScale = 0; }   // a game pauses under the menu
+    if (!title && !flags.attract && menuPauseTS === null) { menuPauseTS = timeScale; timeScale = 0; }   // a game pauses under the menu
     drawMenu();
   }
   function hideMenu() {
@@ -7195,7 +7196,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function menuKey(e) {   // true: the key was the menu's
     const c = e.code;
     if (!menuShown) {
-      if (c === 'Escape' && !e.repeat && !attract && openT < 0 && !(endPh && endPh !== 'done')) { showMenu(false); return true; }
+      if (c === 'Escape' && !e.repeat && !flags.attract && openT < 0 && !(endPh && endPh !== 'done')) { showMenu(false); return true; }
       return false;
     }
     if (!ccEl.hidden) { if (c === 'Escape' || c === 'Enter' || c === 'Space') ccEl.hidden = true; return true; }
@@ -7205,22 +7206,21 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     else if (c === 'ArrowLeft') menuDo(-1);
     else if (c === 'ArrowRight') menuDo(1);
     else if ((c === 'Enter' || c === 'Space') && !e.repeat) menuDo(0);
-    else if (c === 'Escape' && !attract && !e.repeat) hideMenu();
+    else if (c === 'Escape' && !flags.attract && !e.repeat) hideMenu();
     return true;
   }
   // attract mode: the page opens on the demo playing from the street start under a title card and the menu; Start game begins at lesson 1
-  let attract = false;
   const titleEl = document.getElementById('title');
   let titleFadeT = null;
   function startAttract() {
-    attract = true; showMenu(true); titleEl.hidden = false; titleEl.classList.remove('faded'); document.body?.classList.add('attract'); setDemo(true);
-    clearTimeout(titleFadeT); titleFadeT = setTimeout(() => { if (attract) titleEl.classList.add('faded'); }, 2500);   // the card fades out after 2.5 s; the demo plays on
+    flags.attract = true; showMenu(true); titleEl.hidden = false; titleEl.classList.remove('faded'); document.body?.classList.add('attract'); setDemo(true);
+    clearTimeout(titleFadeT); titleFadeT = setTimeout(() => { if (flags.attract) titleEl.classList.add('faded'); }, 2500);   // the card fades out after 2.5 s; the demo plays on
   }
-  function endAttract() { hideMenu(); attract = false; clearTimeout(titleFadeT); titleEl.classList.remove('faded'); titleEl.hidden = true; document.body?.classList.remove('attract'); setDemo(false); reset(); startOpening(); }
+  function endAttract() { hideMenu(); flags.attract = false; clearTimeout(titleFadeT); titleEl.classList.remove('faded'); titleEl.hidden = true; document.body?.classList.remove('attract'); setDemo(false); reset(); startOpening(); }
   demoBtn.addEventListener('click', toggleDemo);
   document.getElementById('b-boss').addEventListener('click', () => { takeOver(); skipToBoss(); });
   // the scenes: play the opening again, or jump to the ending (the boss drops as the fight starts; ?ending in the address)
-  function leaveTitle() { hideMenu(); attract = false; clearTimeout(titleFadeT); titleEl.classList.remove('faded'); titleEl.hidden = true; document.body?.classList.remove('attract'); }
+  function leaveTitle() { hideMenu(); flags.attract = false; clearTimeout(titleFadeT); titleEl.classList.remove('faded'); titleEl.hidden = true; document.body?.classList.remove('attract'); }
   function playEnding() { leaveTitle(); setDemo(false); skipToBoss(); autoWalk = true; jumpEnd = true; }
   function playOpening() { leaveTitle(); setDemo(false); reset(); startOpening(); }
   slowBtn.addEventListener('click', toggleSlow);
@@ -7283,8 +7283,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (FIXED) now = (fixedT += 1000 / 60);   // (test harness: the same clock every run)
     const rdt = clamp((now - last) / 1000, 0, 0.05); last = now;   // (never negative: a clock that steps back would poison the easing)
     const sdt = rdt * timeScale; simTime += sdt;
-    if (!demo) { input.dir = (keys.right || touch.right ? 1 : 0) - (keys.left || touch.left ? 1 : 0); input.run = (runAlways ? !keys.shift : keys.shift) || runToggle; }   // (the menu can make running the default: Shift walks)
-    if (autoWalk) { if (club || input.dir) autoWalk = false; else input.dir = 1; }   // skip-to-boss: walk the carpet in
+    if (!flags.demo) { input.dir = (keys.right || touch.right ? 1 : 0) - (keys.left || touch.left ? 1 : 0); input.run = (runAlways ? !keys.shift : keys.shift) || runToggle; }   // (the menu can make running the default: Shift walks)
+    if (autoWalk) { if (flags.club || input.dir) autoWalk = false; else input.dir = 1; }   // skip-to-boss: walk the carpet in
     demoTick(sdt);
     if (openT >= 0) openTick(rdt);
     if (endPh && endPh !== 'done') endTick(rdt);
