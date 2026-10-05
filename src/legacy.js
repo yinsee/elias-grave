@@ -923,7 +923,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (p.y > p.fl) p.y = p.fl;
     if (p.y < -200) p.y = -200;
     if (p.x < p.r) p.x = p.r; else if (p.x > W - p.r) p.x = W - p.r;
-    if (arena && p.x < arena.x0 - 4) p.x = arena.x0 - 4;   // the shut gate holds a ragdoll in too
+    if (enc.arena && p.x < enc.arena.x0 - 4) p.x = enc.arena.x0 - 4;   // the shut gate holds a ragdoll in too
   };
 
   // ---------- punching bag ----------
@@ -1143,7 +1143,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   let crowdTossT = 4;
   const tossed = [];
   function crowdToss(dt) {
-    if (!club || !boss || boss.dead || !slamDone) return;
+    if (!club || !enc.boss || enc.boss.dead || !slamDone) return;
     if ((crowdTossT -= dt) > 0) return;
     crowdTossT = 6 + Math.random() * 5;
     if (objs.filter(o => o.pocket).length >= 3) return;
@@ -1669,12 +1669,13 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // swing at once, they close in faster and back off less. The regen drops with it; on Wicked a K.O. ends the run. The demo plays Hard.
   let diffSel = 1;
   const DIF = () => DIFFS[demo ? 2 : diffSel], dLv = () => Math.log2(DIF().A);   // dLv: 0 .. 3
-  let eTokN = 0, eTokMax = 2, eShotN = 0, eSideT = 0, eHitKind = 0;   // melee / ranged attack tokens in use; side re-plan timer; 1 = melee hit, 2 = bullet
+  // enc: the encounter. eTokN / eTokMax / eShotN = melee / ranged attack tokens in use; eSideT = side re-plan timer; eHitKind: 1 = melee hit, 2 = bullet;
+  // boss, bossBeaten; arena = the boss arena; spawnT, arenaSpawned = the arena's spawn clock and count; introT = seconds since the boss entrance's lights cut (-1: none)
+  const enc = { eTokN: 0, eTokMax: 2, eShotN: 0, eSideT: 0, eHitKind: 0, boss: null, bossBeaten: false, arena: null, spawnT: 0, arenaSpawned: 0, introT: -1 };
   const enemies = [], zoneAlive = {}, zoneN = {}, eshots = [], spawnFx = [];   // spawnFx: a door that just opened for a goon (kind, x, t)
   // hero: the fighter's own state. hp; invT = time hits still miss; mode = 'anim' | 'rag' | 'getup'; ko; act / actT = the move or
   // transition playing and its clock; atkId = a count of attacks (one hit per enemy per attack); weapon = index into WEAPONS; bandT = bandage regen time left
   const hero = { hp: 100, invT: 0, mode: 'anim', ko: false, act: null, actT: 0, atkId: 0, weapon: 0, bandT: 0 };
-  let boss = null, bossBeaten = false, arena = null, spawnT = 0, arenaSpawned = 0;
   const capsule = J => [J[0].x, J[0].y, (J[8].x + J[10].x) / 2, (J[8].y + J[10].y) / 2];
   // every goon gets a gangster name; the boss's name never changes
   const NM_FIRST = ['Vinnie', 'Sal', 'Tony', 'Paulie', 'Carmine', 'Frankie', 'Nicky', 'Joey', 'Lou', 'Rocco', 'Mickey', 'Benny', 'Dino', 'Gino', 'Sonny', 'Luca', 'Enzo', 'Bruno', 'Sergei', 'Viktor', 'Dmitri', 'Klaus', 'Jacques', 'Fritz', 'Seamus', 'Eddie', 'Marcel', 'Otto'];
@@ -1793,7 +1794,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const Q = e.pts; let mv = 0;
       for (const p of Q) if (p.y >= p.fl - 0.6) p.px = p.x - (p.x - p.px) * Math.exp(-9 * dt);   // the body scrapes to a stop on the floor
       for (const p of Q) mv = Math.max(mv, Math.hypot(p.x - p.px, p.y - p.py) / dt);
-      e.x = clamp(Q[2].x, arena && e.zone === 'arena' || e === boss ? 2440 : 8, W - 10); e.y = floorBelow(e.x, Q[2].y, 0).y - 2; e.J = Q;
+      e.x = clamp(Q[2].x, enc.arena && e.zone === 'arena' || e === enc.boss ? 2440 : 8, W - 10); e.y = floorBelow(e.x, Q[2].y, 0).y - 2; e.J = Q;
       if ((e.downT > 0.9 && mv < 15) || e.downT > 2.2) {   // settled: fit the pose (unscaled about the feet) and get up
         const s = e.s; e.gu = makeGetup(Q.map(p => [e.x + (p.x - e.x) / s, e.y + (p.y - e.y) / s]), e.x, e.y, e.face);
       }
@@ -1849,9 +1850,9 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
   }
   function damageEnemy(e, dmg, dirx, power, up, x, y, blade) {
-    if (e === boss) dmg = Math.max(1, Math.round(dmg * (eHitKind === 2 ? 0.8 : 0.75)));   // the boss shrugs off part of every hit (guns no worse than fists)
+    if (e === enc.boss) dmg = Math.max(1, Math.round(dmg * (enc.eHitKind === 2 ? 0.8 : 0.75)));   // the boss shrugs off part of every hit (guns no worse than fists)
     // a raised guard stops light melee from the front: chip damage, a spark, no stagger, and often a counter
-    if (e.guardT > 0 && eHitKind === 1 && power < 250 && e.face === -dirx && !e.act && !e.air && hitCtx !== 'sweep' && hitCtx !== 'slk') {   // (a low kick goes under the guard)
+    if (e.guardT > 0 && enc.eHitKind === 1 && power < 250 && e.face === -dirx && !e.act && !e.air && hitCtx !== 'sweep' && hitCtx !== 'slk') {   // (a low kick goes under the guard)
       dmg = Math.max(1, Math.round(dmg * 0.25)); e.hp -= dmg; e.flash = 0.04; landed++;
       sparks.push({ x, y, t: 0 }); hitStop = Math.max(hitStop, 0.05);
       e.vx += dirx * power / e.m * 0.25; e.guardT = Math.max(e.guardT, 0.35);
@@ -1862,7 +1863,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
     // jab spam: a goon reads a string of light hits; the 4th quick one in a row he catches on his guard, shoves off and often counters.
     // (heavies break the guard, low kicks go under it, blades and guns are not light hits)
-    if (eHitKind === 1 && e.type !== 'boss' && !e.air && !e.down) {
+    if (enc.eHitKind === 1 && e.type !== 'boss' && !e.air && !e.down) {
       const light = power < 200 && !blade && hitCtx !== 'slk' && hitCtx !== 'sweep';
       e.lightN = light && simTime - (e.lightT || -9) < 0.8 ? (e.lightN || 0) + 1 : light ? 1 : 0; e.lightT = simTime;
       if (e.lightN >= 4) {
@@ -1873,19 +1874,19 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         return;
       }
     }
-    const broke = e.guardT > 0 && eHitKind === 1 && power >= 250;   // a heavy smashes the guard open
+    const broke = e.guardT > 0 && enc.eHitKind === 1 && power >= 250;   // a heavy smashes the guard open
     if (e.recT > 0) dmg = Math.round(dmg * 1.3);   // gassed after a big move: hits land harder
     // where it landed: the head snaps back and hurts more, the body doubles over, the legs buckle and slow him
     const zone = !e.J ? 'body' : y < e.J[1].y + 1 ? 'head' : y > e.J[2].y + 2 ? 'legs' : 'body';
     e.fkZone = zone;
     if (zone === 'head') dmg = Math.round(dmg * 1.35); else if (zone === 'legs') { dmg = Math.max(1, Math.round(dmg * 0.8)); e.limpT = 0.8; }
     e.hp -= dmg; e.flash = 0.08; landed++;
-    const bare = !blade && eHitKind === 1 && !hero.weapon;   // a punch or a kick only splits the skin
+    const bare = !blade && enc.eHitKind === 1 && !hero.weapon;   // a punch or a kick only splits the skin
     bleed(x, y, dirx, bare ? Math.round(1 + dmg / 10) : Math.round(4 + dmg / (blade ? 2 : 3)), blade ? 1.3 : bare ? 0.6 : 1);
     bodyStain(e, x, y, bare ? 1 : Math.round(2 + dmg / (blade ? 4 : 6)));
     if (e.hp <= 0) { killEnemy(e, dirx, power, up, x, y); return; }
     const stag = !e.sp && !(e.ctrArmor > 0 && power < 200) && (broke || dmg >= (e.recT > 0 ? e.poise * 0.4 : e.poise));   // big moves have armor; so does a counter against light hits
-    const ctx = eHitKind === 1 && hitCtx, mv = ctx && MOVES[ctx], pushK = (mv && mv.push) || 1;
+    const ctx = enc.eHitKind === 1 && hitCtx, mv = ctx && MOVES[ctx], pushK = (mv && mv.push) || 1;
     e.fkV += 48 * clamp(power / 260, 0.3, 1.1) * (e.type === 'boss' ? 0.8 : 1);   // the flinch spring
     if ((stag || (ctx === 'sweep' && !e.sp)) && e.type !== 'boss' && ctx && KD_MOVES.test(ctx)) { knockDown(e, dirx, power * pushK, ctx); return; }   // a sweep always takes the legs out
     if (stag) {
@@ -1902,7 +1903,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const kills = []; let killBy = null, feedDirty = true;
   function killEnemy(e, dirx, power, up, hx, hy) {
     crowdReact(e.x, 0, true);   // somebody goes down: the crowd roars
-    if (e !== boss) { kills.push({ name: e.name, w: killBy != null ? killBy : hero.weapon, t: simTime }); feedDirty = true; }
+    if (e !== enc.boss) { kills.push({ name: e.name, w: killBy != null ? killBy : hero.weapon, t: simTime }); feedDirty = true; }
     e.dead = true; e.deadT = 0; e.act = null; e.down = false; e.diedAt = simTime;
     // the blow drives the body from where it landed: that part moves most (a head shot snaps the head back, a leg shot takes
     // the legs), the feet keep their grip on the floor, so he topples back over them; the strength sets how hard (1-3.5 m/s),
@@ -1914,17 +1915,17 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const vx = e.vx * 0.5 + dirx * v * w * (foot ? 0.12 : knee ? 0.5 : 1), vy = Math.min(0, e.vy) * 0.5 - lift * w * (foot ? 0.3 : 1);
       return { x: j.x, y: j.y, px: j.x - vx * DT, py: j.y - vy * DT, im: IM[i], r: RAD[i] * e.s, fl: GROUND };
     });
-    bleed(e.J[1].x, e.J[1].y, dirx, e.type === 'boss' ? 60 : !hero.weapon && killBy == null && eHitKind === 1 ? 7 : 24, 1.4);   // beaten down with fists: less blood
-    bodyStain(e, hx ?? e.J[1].x, hy ?? e.J[1].y + 3, !hero.weapon && killBy == null && eHitKind === 1 ? 4 : 10);
+    bleed(e.J[1].x, e.J[1].y, dirx, e.type === 'boss' ? 60 : !hero.weapon && killBy == null && enc.eHitKind === 1 ? 7 : 24, 1.4);   // beaten down with fists: less blood
+    bodyStain(e, hx ?? e.J[1].x, hy ?? e.J[1].y + 3, !hero.weapon && killBy == null && enc.eHitKind === 1 ? 4 : 10);
     // sometimes an enemy drops an ammo box; you have to walk over it to load it
-    const nBox = e === boss ? 3 : Math.random() < (WEAPONS[hero.weapon].ammo ? 0.55 : 0.35) ? 1 : 0;
+    const nBox = e === enc.boss ? 3 : Math.random() < (WEAPONS[hero.weapon].ammo ? 0.55 : 0.35) ? 1 : 0;
     for (let i = 0; i < nBox; i++) ammoBoxes.push({ x: e.x, y: e.y - 12 * e.s, vx: dirx * 30 + (Math.random() - 0.5) * 70, vy: -110 - Math.random() * 50, life: 30 });
-    if ((e === boss || Math.random() < BAND_P) && ammoBoxes.filter(b => b.band).length < BAND_MAX)   // and a bandage now and then: walk over it for 30 s of regen
+    if ((e === enc.boss || Math.random() < BAND_P) && ammoBoxes.filter(b => b.band).length < BAND_MAX)   // and a bandage now and then: walk over it for 30 s of regen
       ammoBoxes.push({ band: true, x: e.x, y: e.y - 12 * e.s, vx: -dirx * 20 + (Math.random() - 0.5) * 60, vy: -120 - Math.random() * 40, life: 30 });
-    if (e !== boss && Math.random() < DROP_P) dropWeapon(e);   // and often a weapon, lying by the body
+    if (e !== enc.boss && Math.random() < DROP_P) dropWeapon(e);   // and often a weapon, lying by the body
     if (e.zone != null && --zoneAlive[e.zone] === 0 && typeof e.zone === 'number') tut('kill' + e.zone);
-    if (e === boss) {
-      bossBeaten = true; arena = null; tut('boss'); crowdReact(e.x, 0, 'big');
+    if (e === enc.boss) {
+      enc.bossBeaten = true; enc.arena = null; tut('boss'); crowdReact(e.x, 0, 'big');
       toast('Boss defeated', 'Club Noir is yours. The street is yours.');
       for (const g of enemies) if (!g.dead && g.zone === 'arena') killEnemy(g, Math.sign(g.x - e.x) || 1, 200, 0.5);
     }
@@ -1944,7 +1945,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       if (!hit && e.pendAtk === hero.atkId) { hit = true; hx = e.pendX; hy = e.pendY; }
       if (!hit) continue;
       e.hitBy = hero.atkId; any = any || { x: hx, y: hy };
-      eHitKind = 1; damageEnemy(e, Math.round(m.power / 10 * (wg ? 1.4 : 1)), ctl.face, m.power, m.up, hx, hy, !!wg); eHitKind = 0;
+      enc.eHitKind = 1; damageEnemy(e, Math.round(m.power / 10 * (wg ? 1.4 : 1)), ctl.face, m.power, m.up, hx, hy, !!wg); enc.eHitKind = 0;
     }
     if (any) hitFx(m.power);
     return any;
@@ -1956,7 +1957,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const [ax, ay, bx, by] = capsule(e.J), rr = 4 * e.s + 1;
       if (segDist(ax, ay, bx, by, b.x, b.y) < rr || segDist(ax, ay, bx, by, (b.x + b.px) / 2, (b.y + b.py) / 2) < rr) {
         bHit.n++; bHit.x = b.x; bHit.y = b.y; bHit.d = b.vx > 0 ? 1 : -1;
-        eHitKind = 2; damageEnemy(e, Math.round(b.power / 9), b.vx > 0 ? 1 : -1, b.power * 0.8, 0.15, b.x, b.y, false); eHitKind = 0;
+        enc.eHitKind = 2; damageEnemy(e, Math.round(b.power / 9), b.vx > 0 ? 1 : -1, b.power * 0.8, 0.15, b.x, b.y, false); enc.eHitKind = 0;
         return true;
       }
     }
@@ -1997,7 +1998,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (EMOVES[a].heavy) e.mark = windup;   // heavy moves flash a '!' over the head
   }
   function eHop(e, vx, vy) { e.vx = vx; e.vy = vy; e.air = true; dust(e.x, e.y + 1, 3); }
-  function eRelease(e, cd) { if (e.tok) eTokN--; e.tok = false; e.tokT = 0; e.combo = null; e.punish = 0; if (cd != null) e.cdT = cd; }
+  function eRelease(e, cd) { if (e.tok) enc.eTokN--; e.tok = false; e.tokT = 0; e.combo = null; e.punish = 0; if (cd != null) e.cdT = cd; }
   // balance goons on both sides of the player; slot = place in the queue on that side, so they never stack
   function ePlanSides(px, py) {
     let nL = 0, nR = 0;
@@ -2082,9 +2083,9 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       e.punId = hero.atkId;
       if (Math.random() < 0.45 + 0.45 * e.agg) e.punish = 0.5;
     }
-    let free = eTokN < eTokMax;   // a few attackers per side (by difficulty): pressure from both ways, never a pile-up
-    if (free && eTokN) { let n = 0; for (const f of enemies) if (f.tok && !f.dead && f !== e && Math.sign(f.x - px) === Math.sign(e.x - px)) n++; if (n >= DIF().side) free = false; }
-    if (!e.tok && (e.punish > 0 || (e.cdT <= 0 && free))) { e.tok = true; e.tokT = 0; eTokN++; }
+    let free = enc.eTokN < enc.eTokMax;   // a few attackers per side (by difficulty): pressure from both ways, never a pile-up
+    if (free && enc.eTokN) { let n = 0; for (const f of enemies) if (f.tok && !f.dead && f !== e && Math.sign(f.x - px) === Math.sign(e.x - px)) n++; if (n >= DIF().side) free = false; }
+    if (!e.tok && (e.punish > 0 || (e.cdT <= 0 && free))) { e.tok = true; e.tokT = 0; enc.eTokN++; }
     if (e.tok && e.tokT > 3 / Math.sqrt(DIF().A) && e.punish <= 0) eRelease(e, 0.6 / DIF().A);   // could not land it: let another goon try
     if (e.tok) {
       const canHit = level && !ctl.air && hero.mode === 'anim';
@@ -2116,12 +2117,12 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     const [r0, r1] = e.R.ranged, side = Math.sign(e.x - px) || e.side, dyl = Math.abs(ctl.y - e.y);
     const want = r0 + (r1 - r0) * (0.25 + 0.5 * (1 - e.agg)) + 8 * Math.sin(simTime * 1.3 + e.seed * 7);
     e.tx = px + side * want; e.run = adx < r0 * 0.7 ? 1.15 : 0.7;
-    const lo = arena && e.zone === 'arena' ? 2450 : 18, cornered = (side < 0 && e.x < lo + 4) || (side > 0 && e.x > W - 22);
+    const lo = enc.arena && e.zone === 'arena' ? 2450 : 18, cornered = (side < 0 && e.x < lo + 4) || (side > 0 && e.x > W - 22);
     if (adx < e.reach + 1 && level && !ctl.air && hero.mode === 'anim' && (cornered || e.cdT <= 0)) {   // pressed close: a pistol-whip or an elbow
       e.combo = CMB[0]; e.ci = 0; eStart(e, 'jab', e.windup); return;
     }
-    if (e.cdT <= 0 && eShotN < (DIF().A >= 4 ? 2 : 1) && dyl < 34 && adx > 28 && adx < 175 && hero.mode === 'anim') {
-      eShotN++; e.combo = null; e.ci = 0; eStart(e, e.R.w === 'pistol' ? 'shoot' : 'throw', e.R.aim); if (e.R.w === 'pistol') e.mark = e.R.aim;   // (no tell for a knife throw) e.ay = P[1].y + 1;
+    if (e.cdT <= 0 && enc.eShotN < (DIF().A >= 4 ? 2 : 1) && dyl < 34 && adx > 28 && adx < 175 && hero.mode === 'anim') {
+      enc.eShotN++; e.combo = null; e.ci = 0; eStart(e, e.R.w === 'pistol' ? 'shoot' : 'throw', e.R.aim); if (e.R.w === 'pistol') e.mark = e.R.aim;   // (no tell for a knife throw) e.ay = P[1].y + 1;
     }
   }
   // a throwing knife arcs to where the player stood at release; a pistol shot flies straight at the height locked during the aim
@@ -2211,23 +2212,23 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
   function enemyStep(dt) {
     if (hero.invT > 0) hero.invT -= dt;
-    if (boss && !boss.dead && arena && arenaSpawned < 10 && (spawnT -= dt) <= 0) {   // the boss calls in his crew: one every 3 s (4.5 s once enraged), 10 in all
-      spawnT = boss.ph > 1 ? 4.5 : 3;
+    if (enc.boss && !enc.boss.dead && enc.arena && enc.arenaSpawned < 10 && (enc.spawnT -= dt) <= 0) {   // the boss calls in his crew: one every 3 s (4.5 s once enraged), 10 in all
+      enc.spawnT = enc.boss.ph > 1 ? 4.5 : 3;
       if (enemies.filter(g => !g.dead && g.zone === 'arena').length < 4) {
-        arenaSpawned++;
-        const dx = CLUB_DOORS[arenaSpawned % 2];   // out of a staff doorway in the back wall: by the entrance speaker stack, or behind the far one
-        const g = spawnEnemy('goon', clamp(dx, arena.x0 + 6, arena.x1 - 4), 'arena');
+        enc.arenaSpawned++;
+        const dx = CLUB_DOORS[enc.arenaSpawned % 2];   // out of a staff doorway in the back wall: by the entrance speaker stack, or behind the far one
+        const g = spawnEnemy('goon', clamp(dx, enc.arena.x0 + 6, enc.arena.x1 - 4), 'arena');
         g.cdT = Math.max(g.cdT, 0.8); spawnFx.push({ kind: 'club', x: dx, t: 0 });
       }
     }
     const px = P[2].x, py = hero.mode === 'anim' ? ctl.y : P[2].y + 15, pm = hero.mode === 'anim' ? MOVES[hero.act] : null;
-    eTokN = 0; eShotN = 0; for (const e of enemies) if (!e.dead) { if (e.tok) eTokN++; if (e.act === 'shoot' || e.act === 'throw') eShotN++; }
+    enc.eTokN = 0; enc.eShotN = 0; for (const e of enemies) if (!e.dead) { if (e.tok) enc.eTokN++; if (e.act === 'shoot' || e.act === 'throw') enc.eShotN++; }
     eShotStep(dt);
-    eTokMax = boss && !boss.dead && Math.abs(boss.x - px) < 160 ? (DIF().A >= 4 ? 2 : 1) : DIF().tok;   // with the boss close, fewer goons swing at once
-    if ((eSideT -= dt) <= 0) { eSideT = 0.5; ePlanSides(px, py); }
+    enc.eTokMax = enc.boss && !enc.boss.dead && Math.abs(enc.boss.x - px) < 160 ? (DIF().A >= 4 ? 2 : 1) : DIF().tok;   // with the boss close, fewer goons swing at once
+    if ((enc.eSideT -= dt) <= 0) { enc.eSideT = 0.5; ePlanSides(px, py); }
     {   // the street keeps its dead, up to BODY_MAX: past that the oldest body is cleared away (first in, first out)
       let nDead = 0, oi = -1;
-      for (let i = 0; i < enemies.length; i++) { const e = enemies[i]; if (!e.dead || e === boss) continue; nDead++; if (oi < 0 || e.diedAt < enemies[oi].diedAt) oi = i; }
+      for (let i = 0; i < enemies.length; i++) { const e = enemies[i]; if (!e.dead || e === enc.boss) continue; nDead++; if (oi < 0 || e.diedAt < enemies[oi].diedAt) oi = i; }
       if (nDead > BODY_MAX) enemies.splice(oi, 1);
     }
     for (let i = enemies.length - 1; i >= 0; i--) {
@@ -2268,7 +2269,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       e.vy += G * 1.3 * dt; e.x += e.vx * dt; e.y += e.vy * dt;
       const fl = floorBelow(e.x, pf - 0.5, 0);
       if (e.y + 2 >= fl.y) { if (e.vy > 120) dust(e.x, fl.y - 1, 3); e.y = fl.y - 2; e.vy = 0; e.air = false; } else e.air = true;
-      e.x = clamp(e.x, arena && e.zone === 'arena' || e === boss ? 2440 : 8, W - 10);
+      e.x = clamp(e.x, enc.arena && e.zone === 'arena' || e === enc.boss ? 2440 : 8, W - 10);
       if (e.sp === 'jslam' && e.leapt && !e.air && e.spT > 0.1) {   // landing: a shockwave both ways, then a long gasp
         e.sp = null; e.recT = 0.9; e.vx = 0;
         waves.push({ x: e.x - 8, y: e.y + 1, t: 0 }); waves.push({ x: e.x + 8, y: e.y + 1, t: 0 });
@@ -2454,7 +2455,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     for (const e of enemies) if (e.dead && inL(e)) drawEnemy(e);
     for (const e of enemies) if (!e.dead && inL(e)) drawEnemy(e);
   }
-  function drawGate() { if (arena) for (let y = GROUND - 44; y < GROUND; y += 3) { plot(2429, y, BLOOD[2]); plot(2429, y + 1, BLOOD[1]); } }   // the gate is shut
+  function drawGate() { if (enc.arena) for (let y = GROUND - 44; y < GROUND; y += 3) { plot(2429, y, BLOOD[2]); plot(2429, y + 1, BLOOD[1]); } }   // the gate is shut
   function drawEShots(knives = true) {
     for (const b of eshots) {   // enemy shots: red tracers, spinning knives
       if (b.k === 'b') { line1(b.x - b.vx * 0.025, b.y - b.vy * 0.025, b.x, b.y, BLOOD[2]); plot(Math.floor(b.x), Math.floor(b.y), PAL.white); }
@@ -2463,7 +2464,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
   function clearEnemies() {
     enemies.length = 0; eshots.length = 0; for (const k in zoneAlive) delete zoneAlive[k]; for (const k in zoneN) delete zoneN[k];
-    boss = null; bossBeaten = false; arena = null; hero.hp = 100; hero.invT = 0;
+    enc.boss = null; enc.bossBeaten = false; enc.arena = null; hero.hp = 100; hero.invT = 0;
     GORE.fill(0); PUD_BLOOD.fill(0); BPOOL.fill(0); drips.length = 0; for (const i of gList) gIn[i] = 0; gList.length = 0; BCAP.fill(0); VCAP.fill(0); spawnFx.length = 0;
   }
 
@@ -2498,7 +2499,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const b = ammoBoxes[i];
       if ((b.life -= dt) <= 0) { ammoBoxes.splice(i, 1); continue; }
       b.vy += G * dt; b.x += b.vx * dt; b.y += b.vy * dt;
-      if (arena) b.x = clamp(b.x, arena.x0 + 4, arena.x1 - 4);
+      if (enc.arena) b.x = clamp(b.x, enc.arena.x0 + 4, enc.arena.x1 - 4);
       const fl = floorBelow(b.x, b.y - 3, 0);
       if (b.vy > 0 && b.y >= fl.y - 2) { b.y = fl.y - 2; b.vy = Math.abs(b.vy) > 60 ? -b.vy * 0.35 : 0; b.vx *= 0.6; }
       if (b.band) {   // a bandage: walk over it, 30 s of regen (a new one starts the clock again)
@@ -2638,7 +2639,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       }
       if (gone) continue;
       if (!t.hit && bagTouch(t.x, t.y)) { bagHit(t.x, t.y, Math.sign(t.vx) || 1, 200); t.hit = true; t.vx *= -0.2; }
-      const lo = arena ? arena.x0 + 4 : 4, hi = arena ? arena.x1 - 4 : W - 4;
+      const lo = enc.arena ? enc.arena.x0 + 4 : 4, hi = enc.arena ? enc.arena.x1 - 4 : W - 4;
       if (t.x < lo || t.x > hi) { t.x = clamp(t.x, lo, hi); t.vx *= -0.3; t.hit = true; }
       let fl = GROUND_S;   // weapons come to rest only on the street, a scaffold deck or the club roof: never on a car, a van or a crate
       for (const q of SURF) if (WEAPON_REST(q) && t.x >= q.x0 && t.x <= q.x1 && t.y - 4 <= q.y + 0.5 && q.y < fl.y) fl = q;
@@ -2907,7 +2908,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     ctl.x += ctl.face * ctl.spd * dt;
     if (ctl.push > 0.5) { ctl.x -= ctl.face * ctl.push * dt; ctl.push *= Math.exp(-(ctl.pushK || 9) * dt); } else { ctl.push = 0; ctl.pushK = 0; }
     if ((ctl.x < 10 && openT < 0) || ctl.x > W - 10) { ctl.x = clamp(ctl.x, 10, W - 10); ctl.spd = 0; }
-    if (arena && (ctl.x < arena.x0 || ctl.x > arena.x1)) { ctl.x = clamp(ctl.x, arena.x0, arena.x1); ctl.spd = 0; }
+    if (enc.arena && (ctl.x < enc.arena.x0 || ctl.x > enc.arena.x1)) { ctl.x = clamp(ctl.x, enc.arena.x0, enc.arena.x1); ctl.spd = 0; }
     if (!club && ctl.y < GOAL.y + 4 && ctl.x > KIOSK_X - 2 && ctl.x < GOAL.x1 + 30) { ctl.x = KIOSK_X - 2; ctl.spd = 0; }   // the kiosk wall: nobody walks off the roof's right end
     if (ctl.surf && (ctl.surf.landing || (ctl.surf.step && ctl.surf.y < GROUND - 6)) && (ctl.x < STAIR_X0 || ctl.x > STAIR_X1) && xPrev >= STAIR_X0 && xPrev <= STAIR_X1 && (!ctl.air || ctl.y + 2 > railTop(ctl.x > STAIR_X1 ? 1 : -1, ctl.surf))) {   // the rails: they stop a walk; a jump goes over once the feet clear the rail top; once outside, nothing pulls him back
       ctl.x = clamp(ctl.x, STAIR_X0, STAIR_X1); if (!ctl.air) ctl.spd = 0;
@@ -3584,7 +3585,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // a hard one (stage clear, K.O., boss states) replaces a soft one at once, and waits its turn behind another hard one that only just came up
   function toast(title, sub, soft) {
     if (openT >= 0 || (endPh && endPh !== 'done')) return;   // the opening and the ending play without captions
-    if (soft) { if (toastT > 0 || simTime - softT < 4 || introT >= 0 || attract) return; softT = simTime; }
+    if (soft) { if (toastT > 0 || simTime - softT < 4 || enc.introT >= 0 || attract) return; softT = simTime; }
     else if (toastT > 1.8 && !toastSoft) { if (toastQ.length < 4 && !toastQ.some(q => q[0] === title)) toastQ.push([title, sub]); return; }
     toastEl.innerHTML = `${title}<small>${sub}</small>`; toastEl.hidden = false; toastT = 2.6; toastSoft = !!soft;
     return true;
@@ -3622,27 +3623,27 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     waves.push({ x: ctl.x, y: ctl.y + 1, t: 0 }); dust(ctl.x - 4, ctl.y + 1, 6); dust(ctl.x + 4, ctl.y + 1, 6);
     for (const e of enemies) if (!e.dead && Math.abs(e.x - ctl.x) < 60 && Math.abs(e.y - ctl.y) < 30) {
       const d = Math.sign(e.x - ctl.x) || 1;
-      e.act = null; e.hurtT = e === boss ? 0.5 : 0.6; e.vx = d * (e === boss ? 90 : 160); e.cdT = Math.max(e.cdT, 0.8);
+      e.act = null; e.hurtT = e === enc.boss ? 0.5 : 0.6; e.vx = d * (e === enc.boss ? 90 : 160); e.cdT = Math.max(e.cdT, 0.8);
     }
-    if (arena && boss && !boss.dead && runS.streak >= 2) {
-      spawnT = Math.max(spawnT, 8);   // and a breather before his crew comes again
+    if (enc.arena && enc.boss && !enc.boss.dead && runS.streak >= 2) {
+      enc.spawnT = Math.max(enc.spawnT, 8);   // and a breather before his crew comes again
       runS.streak = 0;
       for (const g of enemies) if (!g.dead && g.zone === 'arena') killEnemy(g, Math.sign(g.x - ctl.x) || 1, 200, 0.5);
-      boss.act = null; boss.hurtT = 1; boss.vx = (Math.sign(boss.x - ctl.x) || 1) * 160; boss.cdT = 1.5;
+      enc.boss.act = null; enc.boss.hurtT = 1; enc.boss.vx = (Math.sign(enc.boss.x - ctl.x) || 1) * 160; enc.boss.cdT = 1.5;
       toast('Second wind', 'The goons are down. Catch your breath and go again.');
     }
   }
   function runTick(rdt) {
-    if (!bossBeaten) runS.t += rdt * timeScale;
-    for (const e of enemies) if (e.dead && !runS.seen.has(e)) { runS.seen.add(e); if (e !== boss) runS.kills++; }
+    if (!enc.bossBeaten) runS.t += rdt * timeScale;
+    for (const e of enemies) if (e.dead && !runS.seen.has(e)) { runS.seen.add(e); if (e !== enc.boss) runS.kills++; }
     if (hero.hp < runS.hp) runS.dmg += runS.hp - hero.hp;
     runS.hp = hero.hp;
     if (hero.hp <= 0 && !runS.down && hero.mode === 'rag') { runS.down = true; kos++; runS.streak++; runS.koUp = true; }
     if (hero.mode !== 'rag') runS.down = false;
     if (hero.mode === 'getup' && runS.prevMode !== 'getup' && runS.koUp) { runS.koUp = false; secondWind(); }
     runS.prevMode = hero.mode;
-    if (bossBeaten && endPh === null && !wasted) { endPh = 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card (not after a Wicked K.O.)
-    if (bossBeaten && runS.endT < 0 && endPh === 'done' && !wasted) runS.endT = 0.4;
+    if (enc.bossBeaten && endPh === null && !wasted) { endPh = 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card (not after a Wicked K.O.)
+    if (enc.bossBeaten && runS.endT < 0 && endPh === 'done' && !wasted) runS.endT = 0.4;
     if (runS.endT > 0 && (runS.endT -= rdt) <= 0) showResults();
   }
   function tutTick(rdt) {
@@ -3697,12 +3698,12 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         g.cdT = Math.max(g.cdT, 0.9);
       });
     }
-    if (!boss && !bossBeaten && hero.mode === 'anim' && club && slamDone) {   // inside the club, the door shut: the entrance
+    if (!enc.boss && !enc.bossBeaten && hero.mode === 'anim' && club && slamDone) {   // inside the club, the door shut: the entrance
       // the room goes dark but for one white spot; the crowd flinches back; the boss walks out of the far doorway to his mark under the light
-      arena = { x0: 2440, x1: W - 12 }; spawnT = 6; arenaSpawned = 0;
-      boss = spawnEnemy('boss', CLUB_DOORS[0], 'boss'); boss.intro = true; boss.introX = CLUB_DOORS[0] + 56; boss.face = 1;
-      introT = 0; bossBarK = 0; spawnFx.push({ kind: 'club', x: CLUB_DOORS[0], t: 0 });
-      for (const d of dancers) { d.mood = 'shock'; d.t = 2.6; d.home0 = d.home; d.home = clamp(d.home + (d.home > boss.introX ? 18 : -18), CLUB_X + 34, W - 24); }
+      enc.arena = { x0: 2440, x1: W - 12 }; enc.spawnT = 6; enc.arenaSpawned = 0;
+      enc.boss = spawnEnemy('boss', CLUB_DOORS[0], 'boss'); enc.boss.intro = true; enc.boss.introX = CLUB_DOORS[0] + 56; enc.boss.face = 1;
+      enc.introT = 0; bossBarK = 0; spawnFx.push({ kind: 'club', x: CLUB_DOORS[0], t: 0 });
+      for (const d of dancers) { d.mood = 'shock'; d.t = 2.6; d.home0 = d.home; d.home = clamp(d.home + (d.home > enc.boss.introX ? 18 : -18), CLUB_X + 34, W - 24); }
       toastEl.hidden = true; toastT = 0; toastQ.length = 0;
     }
     tutGate(rdt);
@@ -3904,7 +3905,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     LES('top', [{ to: STAIR_X0 - 4, run: true, max: 14 }, { tick: climbTick, max: 40 }, { dur: 0.6 }]),
     // 8 · boss
     { tag: 'club', dir: 1, until: () => club, max: 8 }, { until: () => slamDone, max: 3 },
-    { dir: 1, until: () => ctl.x >= 2490, max: 12 }, { dir: 1, until: () => bossBeaten, max: 170 },
+    { dir: 1, until: () => ctl.x >= 2490, max: 12 }, { dir: 1, until: () => enc.bossBeaten, max: 170 },
     { until: () => endPh === 'done', max: 45 }, { dur: 4 },   // the ending plays out, then the card
   ];
   let demo = false, di = 0, dk = 0, dTry = 0, dT = 0, dStarted = false, demoAtkT = 0, dAtk0 = 0;
@@ -3971,7 +3972,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // boss arena: read the wind-ups, jump the ground slam, keep a gun at range, and clear the goons that come close first
   let demoKite = false, demoJ2 = -1;
   function demoBoss(sdt) {
-    const B = boss;
+    const B = enc.boss;
     input.downHeld = false;
     const Wp = WEAPONS[hero.weapon], shoot = demoShoots(Wp), sameLevel = e => Math.abs(e.y - ctl.y) < 14 * e.s;
     if (ctl.air) {   // airborne: second jump on the way over, keep shooting what is in front
@@ -3983,7 +3984,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
     demoJ2 = -1; input.jumpHeld = false;
     const bd = B.x - ctl.x, abd = Math.abs(bd), toward = Math.sign(bd) || ctl.face, away = -toward;
-    const wall = away < 0 ? ctl.x - arena.x0 : arena.x1 - ctl.x;
+    const wall = away < 0 ? ctl.x - enc.arena.x0 : enc.arena.x1 - ctl.x;
     const hop = (dir, over) => { input.dir = dir; input.run = true; input.jump = true; input.jumpHeld = true; input.fireHeld = false; demoJ2 = over ? 0.2 : -1; demoKite = false; return true; };
     const locked = !!MOVES[hero.act] || hero.act === 'rise' || hero.act === 'hero' || hero.act === 'roll';
     // 1 · the ground slam hurts anyone standing near it: be in the air when the fists land
@@ -4030,10 +4031,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     input.dir = Math.sign(o.x - ctl.x) || 1; input.run = true; input.fireHeld = false; return true;
   }
   function demoFight(sdt) {
-    const Wh = WEAPONS[hero.weapon], bossOn = boss && !boss.dead && arena;
+    const Wh = WEAPONS[hero.weapon], bossOn = enc.boss && !enc.boss.dead && enc.arena;
     if (demoLost && hero.weapon === demoLost) demoLost = 0;
     if (!ctl.air && hero.mode === 'anim' && !MOVES[hero.act]) {
-      const safe = x => !bossOn || Math.abs(x - boss.x) > 40 * boss.s / 1.75;
+      const safe = x => !bossOn || Math.abs(x - enc.boss.x) > 40 * enc.boss.s / 1.75;
       const band = hero.hp < 70 && ammoBoxes.find(b => b.band && !demoGaveUp.has(b) && Math.abs(b.x - ctl.x) < 120 && Math.abs(b.y - ctl.y) < 14 && safe(b.x));
       if (band && chase(band, sdt)) return true;   // hurt: go for a bandage
       const box = ammoBoxes.find(b => !b.band && !demoGaveUp.has(b) && Math.abs(b.x - ctl.x) < (bossOn ? 220 : 90) && Math.abs(b.y - ctl.y) < 14 && safe(b.x));
@@ -4045,9 +4046,9 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       if (foe) { input.dir = 0; input.attack = 'tw'; demoLost = 1; return true; }   // show off a throw at a goon
     }
     if (bossOn && !ctl.air && hero.mode === 'anim' && !MOVES[hero.act]) {
-      const it = pocket.length < 3 && objs.find(o => o.pocket && o.safeT <= 0 && !demoGaveUp.has(o) && Math.abs(o.x - ctl.x) < 110 && Math.abs(o.x - boss.x) > 40 * boss.s / 1.75);
+      const it = pocket.length < 3 && objs.find(o => o.pocket && o.safeT <= 0 && !demoGaveUp.has(o) && Math.abs(o.x - ctl.x) < 110 && Math.abs(o.x - enc.boss.x) > 40 * enc.boss.s / 1.75);
       if (it && chase(it, sdt)) return true;   // pick up what the crowd threw
-      const bd = boss.x - ctl.x;
+      const bd = enc.boss.x - ctl.x;
       if (pocket.length && Math.abs(bd) < 150 && Math.abs(bd) > 30) { if (ctl.face !== Math.sign(bd)) { input.dir = Math.sign(bd); return true; } input.dir = 0; input.attack = 'tw'; return true; }
     }
     if (bossOn) return demoBoss(sdt);
@@ -4345,7 +4346,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       if (e.dead) continue;
       const sx = e.x - cam.x, side = sx < 0 ? -1 : sx >= cam.vw ? 1 : 0;
       if (!side || Math.abs(sx - cam.vw / 2) > 380) continue;
-      const tip = side < 0 ? 0 : cam.vw - 1, vy = Math.round(clamp(e.y - 14 * e.s - cam.y, 4, cam.vh - 5)), c = e === boss ? PAL.gold : BLOOD[2];
+      const tip = side < 0 ? 0 : cam.vw - 1, vy = Math.round(clamp(e.y - 14 * e.s - cam.y, 4, cam.vh - 5)), c = e === enc.boss ? PAL.gold : BLOOD[2];
       for (let k = 0; k < 4; k++) for (let j = -k; j <= k; j++) {
         const vx = tip - side * (k + 1);
         plotV(vx, vy + j, k === 3 || Math.abs(j) === k ? PAL.out : c);
@@ -4360,7 +4361,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
   // ---------- the club: balcony door, fade, door slam ----------
   let club = false, clubT = 0, fade = 0, fadeDir = 0, slamDone = false;
-  let introT = -1, bossBarK = 1, cardT = 0;   // the boss entrance: seconds since the lights cut (-1: none), the boss bar's fill, the name card's time left
+  let bossBarK = 1, cardT = 0;   // the boss bar's fill, the name card's time left
   const cardEl = document.getElementById('card');
   function enterClub() {
     const dx = DOOR_X + 16 - ctl.x, dy = GROUND - 2 - ctl.y;
@@ -4383,13 +4384,13 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         slamDone = true; if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.3);
         dust(DOOR_X + 4, GROUND - 1, 8); sparks.push({ x: DOOR_X + 8, y: GROUND - 20, t: 0.05 });
       }
-      if (introT >= 0) {   // the entrance, 1.7 s: spot and walk, the name card at 0.5 s, the boss bar fills from 0.7 s, then the fight
-        introT += rdt;
-        if (introT > 0.5 && cardT <= 0 && cardEl.hidden) { cardEl.innerHTML = `<b>${BOSS_NAME}</b><small>Owner of Club Noir</small>`; cardEl.hidden = false; cardT = 3.2; toastEl.hidden = true; toastT = 0; }
-        bossBarK = clamp((introT - 0.7) / 1, 0, 1);
-        if (introT >= 1.7 || !boss || boss.dead) {
-          introT = -1; bossBarK = 1; spawnT = 3;
-          if (boss) { boss.intro = false; boss.cdT = 0.6; }
+      if (enc.introT >= 0) {   // the entrance, 1.7 s: spot and walk, the name card at 0.5 s, the boss bar fills from 0.7 s, then the fight
+        enc.introT += rdt;
+        if (enc.introT > 0.5 && cardT <= 0 && cardEl.hidden) { cardEl.innerHTML = `<b>${BOSS_NAME}</b><small>Owner of Club Noir</small>`; cardEl.hidden = false; cardT = 3.2; toastEl.hidden = true; toastT = 0; }
+        bossBarK = clamp((enc.introT - 0.7) / 1, 0, 1);
+        if (enc.introT >= 1.7 || !enc.boss || enc.boss.dead) {
+          enc.introT = -1; bossBarK = 1; enc.spawnT = 3;
+          if (enc.boss) { enc.boss.intro = false; enc.boss.cdT = 0.6; }
           for (const d of dancers) if (d.home0 != null) { d.home = d.home0; d.home0 = null; }
         }
       }
@@ -4661,8 +4662,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
   // the scene's light: an ambient tint, and pools [x, y (view), radius², r, g, b weights, glow] from lamps, lit windows, signs, club spots
   function lightList() {
-    const strobe = club && !reduceMotion && boss && !boss.dead && introT < 0 && (simTime * 6 % 1) < 0.12 && Math.floor(simTime * 6) % 4 === 0 ? 1.7 : 1;
-    const cut = club && introT >= 0 ? 1 - 0.72 * clamp(introT / 0.25, 0, 1) : 1;   // the entrance: the house lights drop to a quarter
+    const strobe = club && !reduceMotion && enc.boss && !enc.boss.dead && enc.introT < 0 && (simTime * 6 % 1) < 0.12 && Math.floor(simTime * 6) % 4 === 0 ? 1.7 : 1;
+    const cut = club && enc.introT >= 0 ? 1 - 0.72 * clamp(enc.introT / 0.25, 0, 1) : 1;   // the entrance: the house lights drop to a quarter
     const fl = club ? strobe : rain.flash > 0 ? 1 + Math.max(0, Math.sin(rain.flash * 40)) * 0.9 * (rain.flash / 0.3) : 1, dim = club ? cut : 1 - rain.k * 0.12;
     const aR = (club ? 0.52 : 0.5) * dim * fl, aG = (club ? 0.44 : 0.54) * dim * fl, aB = (club ? 0.66 : 0.7) * dim * fl;
     const ls = [];   // x, y (view), radius², r, g, b weights, glow
@@ -4674,7 +4675,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
     else {
       for (const sp of clubSpots()) ls.push([sp.x - cam.x, GROUND - 14 - cam.y, 64 * 64, sp.c[0], sp.c[1], sp.c[2], 0]);
-      if (introT < 0) ls.push([2600 - cam.x, GROUND - 105 - cam.y, 70 * 70, 0.9, 0.2, 0.6, 0], [2706 - cam.x, GROUND - 106 - cam.y, 50 * 50, 0.2, 0.8, 0.9, 0], [2720 - cam.x, GROUND - 30 - cam.y, 50 * 50, 0.8, 0.6, 0.3, 0]);
+      if (enc.introT < 0) ls.push([2600 - cam.x, GROUND - 105 - cam.y, 70 * 70, 0.9, 0.2, 0.6, 0], [2706 - cam.x, GROUND - 106 - cam.y, 50 * 50, 0.2, 0.8, 0.9, 0], [2720 - cam.x, GROUND - 30 - cam.y, 50 * 50, 0.8, 0.6, 0.3, 0]);
       { const k = 0.5 * Math.max(cut, 0.6); ls.push([P[2].x - cam.x, P[2].y - 12 - cam.y, 46 * 46, k, k, k, 0]); }   // a steady white key light on the hero, so he reads under the colour
     }
     return [aR, aG, aB, ls];
@@ -4683,7 +4684,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const SPOT_COL = [[1.3, 0.3, 0.9], [0.3, 1.1, 1.3], [0.9, 0.4, 1.4], [1.3, 1.1, 0.3]];
   function clubSpots() {
     const t = simTime, out = [];
-    if (introT >= 0 && boss) return [{ fx: boss.x, x: boss.x, c: [1.5, 1.5, 1.5] }];   // the entrance: one white spot follows the boss
+    if (enc.introT >= 0 && enc.boss) return [{ fx: enc.boss.x, x: enc.boss.x, c: [1.5, 1.5, 1.5] }];   // the entrance: one white spot follows the boss
     for (let i = 0; i < 3; i++) out.push({ fx: CLUB_X + 20 + i * 120, x: CLUB_X + 80 + i * 120 + Math.sin(t * 0.8 + i * 2.1) * 60, c: SPOT_COL[(i + Math.floor(t / 2)) & 3] });
     return out;
   }
@@ -4908,10 +4909,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // otherwise 75 % walking (or standing), out to 50 % at a full run to see further ahead. (Further out the fighters turn into
   // specks; the menu still offers a fixed 25 %.)
   // the auto camera: cinematics close (100 %), a fight framed at 40-60 %, walking 40 % out to 25 % at a full run
-  const cinematic = () => openT >= 0 || !!endPh || !!(boss && boss.intro);   // the opening, the ending, the boss's entrance
+  const cinematic = () => openT >= 0 || !!endPh || !!(enc.boss && enc.boss.intro);   // the opening, the ending, the boss's entrance
   function autoZoom() {
     if (cinematic()) return 1;
-    const px = P[2].x, fight = club || enemies.some(e => !e.dead && Math.abs(e.x - px) < 190 && e.zone !== 'arena' || (!e.dead && e === boss && Math.abs(e.x - px) < 260));
+    const px = P[2].x, fight = club || enemies.some(e => !e.dead && Math.abs(e.x - px) < 190 && e.zone !== 'arena' || (!e.dead && e === enc.boss && Math.abs(e.x - px) < 260));
     if (fight) {
       const bx = sceneBox();
       return clamp(Math.min(1, 160 / (bx.x1 - bx.x0 + 24), 160 * CH / CW / (bx.y1 - bx.y0 + 20)), 0.4, 0.6);
@@ -7287,8 +7288,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     demoTick(sdt);
     if (openT >= 0) openTick(rdt);
     if (endPh && endPh !== 'done') endTick(rdt);
-    if (jumpEnd && boss && !boss.dead && introT < 0 && boss.hp > 0) { boss.hp = 1; eHitKind = 1; damageEnemy(boss, 60, 1, 300, 0.5, boss.x, boss.y - 20, false); eHitKind = 0; }   // ?ending: the boss drops as the fight starts
-    if (introT >= 0) { input.dir = 0; input.run = false; input.jump = false; input.jumpHeld = false; input.attack = null; input.fireHeld = false; input.dash = false; input.dashHeld = false; input.downHeld = false; }   // the boss entrance: no input
+    if (jumpEnd && enc.boss && !enc.boss.dead && enc.introT < 0 && enc.boss.hp > 0) { enc.boss.hp = 1; enc.eHitKind = 1; damageEnemy(enc.boss, 60, 1, 300, 0.5, enc.boss.x, enc.boss.y - 20, false); enc.eHitKind = 0; }   // ?ending: the boss drops as the fight starts
+    if (enc.introT >= 0) { input.dir = 0; input.run = false; input.jump = false; input.jumpHeld = false; input.attack = null; input.fireHeld = false; input.dash = false; input.dashHeld = false; input.downHeld = false; }   // the boss entrance: no input
     for (let i = spawnFx.length - 1; i >= 0; i--) if ((spawnFx[i].t += sdt) > 0.45) spawnFx.splice(i, 1);
     if (grabIdx >= 0 && now - lastMove > 40) { pv.x *= 0.7; pv.y *= 0.7; }
     if (hitStop > 0) hitStop -= rdt; else acc += sdt;
@@ -7320,7 +7321,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     for (let i = waves.length - 1; i >= 0; i--) { waves[i].t += sdt; if (waves[i].t > 0.25) waves.splice(i, 1); }
     for (let i = quakes.length - 1; i >= 0; i--) {
       const q = quakes[i]; q.t += sdt; q.x += q.dir * QUAKE.v * sdt;
-      if (q.t > QUAKE.life || q.x < (arena ? arena.x0 - 4 : 0) || q.x > (arena ? arena.x1 + 4 : W)) { quakes.splice(i, 1); continue; }
+      if (q.t > QUAKE.life || q.x < (enc.arena ? enc.arena.x0 - 4 : 0) || q.x > (enc.arena ? enc.arena.x1 + 4 : W)) { quakes.splice(i, 1); continue; }
       for (let n = 0; n < 2; n++) particles.push({ x: q.x + (Math.random() - 0.5) * 4, y: q.y - 1, vx: q.dir * (20 + Math.random() * 40), vy: -60 - Math.random() * 70, life: 0.25 + Math.random() * 0.2, c: Math.random() < 0.5 ? PAL.dust1 : PAL.out });
       const k = 1 - q.t / QUAKE.life;   // it fades as it runs out
       if (!q.hit && hero.mode === 'anim' && !ctl.air && Math.abs(ctl.y + 2 - q.y) < 6 && Math.abs(ctl.x - q.x) < QUAKE.w) {   // on the ground when it passes: it knocks him off his feet
@@ -7386,10 +7387,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const last = kills.slice(-5);
       feedEl.innerHTML = last.map((k, i) => { const age = simTime - k.t, op = Math.min(1, (30 - age) / 6) * (i < last.length - 4 ? 0.55 : 1); return `<div class="kf" style="opacity:${Math.max(0, op).toFixed(2)}">${WICON[k.w] ? `<img src="${WICON[k.w]}" alt="">` : ''}<span><b>✕</b> ${k.name}</span></div>`; }).join('');
     }
-    bossBar.hidden = !(boss && !boss.dead);
+    bossBar.hidden = !(enc.boss && !enc.boss.dead);
     { const top = bossBar.hidden ? '8px' : '42px'; if (shown.tutTop !== top) { shown.tutTop = top; tutEl.style.top = top; } }   // the mission panel steps down under the boss bar
     { const hide = done.has('enter'); if (shown.tutHide !== hide) { shown.tutHide = hide; tutEl.hidden = hide; } }   // inside the club the lesson panel goes: the boss bar and the card carry the fight
-    if (boss) { bossFill.style.width = (Math.max(0, boss.hp / boss.maxHp * 100) * bossBarK).toFixed(1) + '%'; show('bname', bossNameEl, boss.name.toUpperCase()); }
+    if (enc.boss) { bossFill.style.width = (Math.max(0, enc.boss.hp / enc.boss.maxHp * 100) * bossBarK).toFixed(1) + '%'; show('bname', bossNameEl, enc.boss.name.toUpperCase()); }
     const tgt = null;
     if (tgt && false) { show('tname', tNameEl, tgt.dead ? tgt.name + ' — down' : tgt.name); tFill.style.width = Math.max(0, tgt.hp / tgt.maxHp * 100).toFixed(0) + '%'; }
     if (!AUTOTEST) requestAnimationFrame(frame);
