@@ -52,15 +52,17 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
 
 
   // ---------- camera and pixel helpers (all drawing takes world coordinates) ----------
-  let camX = 0, camY = GROUND - 60, VW = 160, VH = 96;
+  // cam: x, y = the view's top-left corner in whole world pixels; vw, vh = the view size; zoom (1 = 160 px across);
+  // xf, yf = the smooth camera position; v = the smoothDamp velocities; shake = shake time left (s); kick = the directional kick (world px)
+  const cam = { x: 0, y: GROUND - 60, vw: 160, vh: 96, zoom: 1, xf: 0, yf: GROUND - 60, v: { x: 0, y: 0, z: 0 }, shake: 0, kick: { x: 0, y: 0 } };
   // pickables (weapons, ammo, bandages, cans and bottles) are drawn with pickOn set: plot marks their pixels, and pickGlow rings them
   let pickOn = false, pkX0 = 1e9, pkY0 = 1e9, pkX1 = -1, pkY1 = -1;
   const pickMask = new Uint8Array(CW * CHMAX);
   const plot = (x, y, c) => {
-    x -= camX; y -= camY; if (x < 0 || y < 0 || x >= VW || y >= VH) return; buf[y * CW + x] = c;
+    x -= cam.x; y -= cam.y; if (x < 0 || y < 0 || x >= cam.vw || y >= cam.vh) return; buf[y * CW + x] = c;
     if (pickOn) { pickMask[y * CW + x] = 1; if (x < pkX0) pkX0 = x; if (x > pkX1) pkX1 = x; if (y < pkY0) pkY0 = y; if (y > pkY1) pkY1 = y; }
   };
-  const plotV = (x, y, c) => { if (x < 0 || y < 0 || x >= VW || y >= VH) return; buf[y * CW + x] = c; };   // view coordinates
+  const plotV = (x, y, c) => { if (x < 0 || y < 0 || x >= cam.vw || y >= cam.vh) return; buf[y * CW + x] = c; };   // view coordinates
   function disc(cx, cy, r, c) {
     const r2 = r * r;
     for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++)
@@ -571,10 +573,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const NOIR = [[0,0,0,10],[0,0,6,10],[6,10,6,0],[10,0,16,0],[16,0,16,10],[16,10,10,10],[10,10,10,0],[20,0,20,10],[24,0,24,10],[24,0,30,0],[30,0,30,5],[30,5,24,5],[24,5,30,10]];
   function drawClub() {
     const t = simTime, ceil = GROUND - 150;
-    for (let vy = 0; vy < VH; vy++) {
-      const wy = vy + camY, row = vy * CW;
-      for (let vx = 0; vx < VW; vx++) {
-        const wx = vx + camX;
+    for (let vy = 0; vy < cam.vh; vy++) {
+      const wy = vy + cam.y, row = vy * CW;
+      for (let vx = 0; vx < cam.vw; vx++) {
+        const wx = vx + cam.x;
         // the wall: panels above, a darker band from head height down behind the fight plane (so the fighters read against it), a dado at the bottom
         buf[row + vx] = wy < ceil ? C('#0d0913') : wy === ceil || wy === ceil + 1 ? C('#3a3a48') : wy > GROUND - 25 ? ((wx >> 3) % 2 ? C('#150e1d') : C('#181021')) : wy > GROUND - 64 ? ((wx - CLUB_X) % 24 === 0 ? C('#0f0a15') : C('#1a1225')) : (wx - CLUB_X) % 24 === 0 ? C('#160f1f') : C('#251a33');
       }
@@ -605,10 +607,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function drawClubFloor() {   // dance floor tiles that light up in moving patterns
     const t = Math.floor(simTime * 4), cols = [NEON_P, NEON_C, NEON_V, NEON_Y];
     for (let d = 0; d <= STREET; d++) {
-      const vy = GROUND + d - camY; if (vy < 0 || vy >= VH) continue;
+      const vy = GROUND + d - cam.y; if (vy < 0 || vy >= cam.vh) continue;
       const tr = Math.floor((d - 1) / 4), row = vy * CW;
-      for (let vx = 0; vx < VW; vx++) {
-        const wx = vx + camX, tc = Math.floor((wx - CLUB_X) / 12);
+      for (let vx = 0; vx < cam.vw; vx++) {
+        const wx = vx + cam.x, tc = Math.floor((wx - CLUB_X) / 12);
         if (d === 0) { buf[row + vx] = C('#c8ccd8'); continue; }
         const edge = (d - 1) % 4 === 3 || (wx - CLUB_X) % 12 === 0, h = ((tc * 73 + tr * 151 + t * 37) ^ (tc * t)) & 7;
         buf[row + vx] = edge ? C('#0d0913') : h < 2 ? cols[(tc + tr + t) & 3] : C('#1a1424');
@@ -619,35 +621,35 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (club) {
       drawClub();
       drawDancers();   // the crowd at the back: bar, speakers and fighters are all in front of it
-      for (let vy = 0; vy < VH; vy++) {
-        const wy = vy + camY; if (wy < 0 || wy >= H) continue;
-        const srow = wy * W + camX, row = vy * CW;
-        for (let vx = 0; vx < VW; vx++) { const c = GORE[srow + vx] || (wy < GROUND ? stat[srow + vx] : 0); if (c) buf[row + vx] = c; }
+      for (let vy = 0; vy < cam.vh; vy++) {
+        const wy = vy + cam.y; if (wy < 0 || wy >= H) continue;
+        const srow = wy * W + cam.x, row = vy * CW;
+        for (let vx = 0; vx < cam.vw; vx++) { const c = GORE[srow + vx] || (wy < GROUND ? stat[srow + vx] : 0); if (c) buf[row + vx] = c; }
       }
       drawClubFloor();
-      for (let vy = 0; vy < VH; vy++) { const wy = vy + camY; if (wy < GROUND || wy >= H) continue; const srow = wy * W + camX, row = vy * CW; for (let vx = 0; vx < VW; vx++) if (GORE[srow + vx]) buf[row + vx] = GORE[srow + vx]; }
+      for (let vy = 0; vy < cam.vh; vy++) { const wy = vy + cam.y; if (wy < GROUND || wy >= H) continue; const srow = wy * W + cam.x, row = vy * CW; for (let vx = 0; vx < cam.vw; vx++) if (GORE[srow + vx]) buf[row + vx] = GORE[srow + vx]; }
       return;
     }
     drawSky();
-    for (let vy = 0; vy < VH; vy++) {
-      const wy = vy + camY; if (wy < 0 || wy >= H) continue;
-      const srow = wy * W + camX, row = vy * CW;
-      for (let vx = 0; vx < VW; vx++) { const c = GORE[srow + vx] || stat[srow + vx]; if (c) buf[row + vx] = c; }
+    for (let vy = 0; vy < cam.vh; vy++) {
+      const wy = vy + cam.y; if (wy < 0 || wy >= H) continue;
+      const srow = wy * W + cam.x, row = vy * CW;
+      for (let vx = 0; vx < cam.vw; vx++) { const c = GORE[srow + vx] || stat[srow + vx]; if (c) buf[row + vx] = c; }
     }
     glassMask.fill(0);
     drawHouseWindows();
     drawGlass();
   }
   function drawSky() {   // everything far behind the street: the sky, stars, moon, clouds, the far town and its fog (view space, parallax)
-    for (let vy = 0; vy < VH; vy++) {
-      const t = clamp((camY + vy) / GROUND, 0, 1) * (SKY.length - 1), i = Math.floor(t), th = (t - i) * 16;
-      const c0 = SKY[i], c1 = SKY[Math.min(i + 1, SKY.length - 1)], row = vy * CW, by = ((vy + camY) & 3) * 4;
-      for (let vx = 0; vx < VW; vx++) buf[row + vx] = th > BAYER[by + ((vx + camX) & 3)] ? c1 : c0;
+    for (let vy = 0; vy < cam.vh; vy++) {
+      const t = clamp((cam.y + vy) / GROUND, 0, 1) * (SKY.length - 1), i = Math.floor(t), th = (t - i) * 16;
+      const c0 = SKY[i], c1 = SKY[Math.min(i + 1, SKY.length - 1)], row = vy * CW, by = ((vy + cam.y) & 3) * 4;
+      for (let vx = 0; vx < cam.vw; vx++) buf[row + vx] = th > BAYER[by + ((vx + cam.x) & 3)] ? c1 : c0;
     }
-    const sx = Math.round(camX * 0.05), sy = Math.round(camY * 0.05);
+    const sx = Math.round(cam.x * 0.05), sy = Math.round(cam.y * 0.05);
     if (rain.k < 0.5) for (const [x, y, c] of STARS) plotV(x - sx, y - sy, c);
     // a pale moon with a soft ring, veiled by passing cloud bands
-    const mx = Math.round(250 - camX * 0.04), my = Math.round(30 - camY * 0.04), moon = C('#e6dcc4'), moonD = C('#c9bea6'), halo = C('#2f2f4e');
+    const mx = Math.round(250 - cam.x * 0.04), my = Math.round(30 - cam.y * 0.04), moon = C('#e6dcc4'), moonD = C('#c9bea6'), halo = C('#2f2f4e');
     for (let y = -14; y <= 14; y++) for (let x = -14; x <= 14; x++) {
       const d2 = (x + 0.5) ** 2 + (y + 0.5) ** 2;
       if (d2 <= 42) plotV(mx + x, my + y, (x - 1.5) ** 2 + (y + 1.5) ** 2 > 30 ? moonD : moon);
@@ -655,41 +657,41 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
     const cloud = C('#20203a'), cloud2 = C('#282742'), drift = simTime * 3;
     for (let k = 0; k < 3; k++) {
-      const cy = 18 + k * 13 - Math.round(camY * 0.03), ox = camX * 0.06 + drift * (1 + k * 0.4);
-      for (let vx = 0; vx < VW; vx++) {
+      const cy = 18 + k * 13 - Math.round(cam.y * 0.03), ox = cam.x * 0.06 + drift * (1 + k * 0.4);
+      for (let vx = 0; vx < cam.vw; vx++) {
         const t = (vx + ox) * 0.03 + k * 7, th = Math.sin(t) * 2.2 + Math.sin(t * 2.7 + k) * 1.4 + 1.5;
         if (th <= 0) continue;
-        for (let dy = -Math.ceil(th); dy <= Math.ceil(th * 0.6); dy++) { const vy = cy + dy; if (vy >= 0 && vy < VH) buf[vy * CW + vx] = dy < -th + 1 ? cloud2 : cloud; }
+        for (let dy = -Math.ceil(th); dy <= Math.ceil(th * 0.6); dy++) { const vy = cy + dy; if (vy >= 0 && vy < cam.vh) buf[vy * CW + vx] = dy < -th + 1 ? cloud2 : cloud; }
       }
     }
     // each layer's own street line slides between a fixed screen line (far away) and the real ground (f = 1)
-    const gRow = GROUND - camY, K = VH * 0.66;
+    const gRow = GROUND - cam.y, K = cam.vh * 0.66;
     for (const L_ of LAYERS) {
-      const im = L_.img, ox = Math.round(camX * L_.f), bottom = Math.round(gRow * L_.f + K * (1 - L_.f)), top = bottom - im.h;
-      for (let vy = Math.max(0, top); vy < VH; vy++) {
+      const im = L_.img, ox = Math.round(cam.x * L_.f), bottom = Math.round(gRow * L_.f + K * (1 - L_.f)), top = bottom - im.h;
+      for (let vy = Math.max(0, top); vy < cam.vh; vy++) {
         const row = vy * CW;
-        if (vy >= bottom) { for (let vx = 0; vx < VW; vx++) buf[row + vx] = L_.body; continue; }
+        if (vy >= bottom) { for (let vx = 0; vx < cam.vw; vx++) buf[row + vx] = L_.body; continue; }
         const irow = (vy - top) * im.w;
-        for (let vx = 0; vx < VW; vx++) { const c = im.px[irow + (vx + ox) % im.w]; if (c) buf[row + vx] = c; }
+        for (let vx = 0; vx < cam.vw; vx++) { const c = im.px[irow + (vx + ox) % im.w]; if (c) buf[row + vx] = c; }
       }
     }
     // a thin fog band low over the far town, so the facades stand off it
-    for (let vy = 0; vy < VH; vy++) {
-      const wy = vy + camY, k = wy < GROUND - 110 || wy > GROUND ? 0 : wy < GROUND - 50 ? (wy - (GROUND - 110)) / 60 : 1 - (wy - (GROUND - 50)) / 50; if (k <= 0) continue;
+    for (let vy = 0; vy < cam.vh; vy++) {
+      const wy = vy + cam.y, k = wy < GROUND - 110 || wy > GROUND ? 0 : wy < GROUND - 50 ? (wy - (GROUND - 110)) / 60 : 1 - (wy - (GROUND - 50)) / 50; if (k <= 0) continue;
       const a = 0.3 * k * (1 + rain.k * 0.5), row = vy * CW, fr = 0x1b * a, fg = 0x1d * a, fb = 0x35 * a;
-      for (let vx = 0; vx < VW; vx++) { const c = buf[row + vx]; if (EMIT.has(c)) continue; buf[row + vx] = (255 << 24 | Math.round((c >> 16 & 255) * (1 - a) + fb) << 16 | Math.round((c >> 8 & 255) * (1 - a) + fg) << 8 | Math.round((c & 255) * (1 - a) + fr)) >>> 0; }
+      for (let vx = 0; vx < cam.vw; vx++) { const c = buf[row + vx]; if (EMIT.has(c)) continue; buf[row + vx] = (255 << 24 | Math.round((c >> 16 & 255) * (1 - a) + fb) << 16 | Math.round((c >> 8 & 255) * (1 - a) + fg) << 8 | Math.round((c & 255) * (1 - a) + fr)) >>> 0; }
     }
   }
   // people reflect in the glass behind them: a faint, cool ghost, shifted a little as if seen at an angle
   const bgSnap = new Uint32Array(CW * CHMAX), GK = [1, 4, 6, 4, 1];   // binomial weights ~ a gaussian
   const refSrc = new Uint32Array(CW * CHMAX);   // the frame with the people in it, read while the glass is written
   function glassReflect() {
-    const mid = VW / 2;
+    const mid = cam.vw / 2;
     refSrc.set(buf);
-    for (let vy = 0; vy < VH; vy++) {
-      const wy = vy + camY; if (wy < 0 || wy >= GROUND) continue;
+    for (let vy = 0; vy < cam.vh; vy++) {
+      const wy = vy + cam.y; if (wy < 0 || wy >= GROUND) continue;
       const row = vy * CW, srow = wy * W;
-      for (let vx = 0; vx < VW; vx++) {
+      for (let vx = 0; vx < cam.vw; vx++) {
         const i = row + vx;
         if (!glassMask[i] || refSrc[i] !== bgSnap[i]) continue;   // glass that no one stands in front of
         const off = Math.round(12 + (vx - mid) * 0.1), sx = vx - off, sy = vy + 1;
@@ -698,7 +700,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         for (let ky = -2; ky <= 2; ky++) for (let kx = -2; kx <= 2; kx++) {
           const qx = sx + kx, qy = sy + ky, wgt = GK[ky + 2] * GK[kx + 2];
           wsum += wgt;
-          if (qx < 0 || qy < 0 || qx >= VW || qy >= VH) continue;
+          if (qx < 0 || qy < 0 || qx >= cam.vw || qy >= cam.vh) continue;
           const j = qy * CW + qx, c = refSrc[j];
           if (c === bgSnap[j]) continue;   // the scene itself: only people (and what they carry) reflect, also where they stand in front of the glass
           wr += (c & 255) * wgt; wg += (c >> 8 & 255) * wgt; wb += (c >> 16 & 255) * wgt; cover += wgt;
@@ -716,16 +718,16 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const GLASS_C = new Set([C('#26304a'), C('#4a5878'), C('#1d1c2a'), C('#17151f')]);
   const glassMask = new Uint8Array(CW * CHMAX);   // this frame's glass pixels (static glass, and lit windows switched off)
   function drawGlass() {
-    const lamps = LAMPS.filter(lx => lx > camX - 60 && lx < camX + VW + 60);
-    for (let vy = 0; vy < VH; vy++) {
-      const wy = vy + camY; if (wy < 0 || wy >= GROUND) continue;
+    const lamps = LAMPS.filter(lx => lx > cam.x - 60 && lx < cam.x + cam.vw + 60);
+    for (let vy = 0; vy < cam.vh; vy++) {
+      const wy = vy + cam.y; if (wy < 0 || wy >= GROUND) continue;
       const row = vy * CW, srow = wy * W;
-      for (let vx = 0; vx < VW; vx++) {
-        const wx = vx + camX, sc = stat[srow + wx];
+      for (let vx = 0; vx < cam.vw; vx++) {
+        const wx = vx + cam.x, sc = stat[srow + wx];
         if (GLASS_C.has(sc) && buf[row + vx] === sc) glassMask[row + vx] = 1;
         if (!glassMask[row + vx]) continue;
         const base = buf[row + vx];
-        const band = ((wx * 0.8 + wy - camX * 0.35) % 34 + 34) % 34, sheen = band < 2 ? 60 : band < 4 ? 26 : 0;
+        const band = ((wx * 0.8 + wy - cam.x * 0.35) % 34 + 34) % 34, sheen = band < 2 ? 60 : band < 4 ? 26 : 0;
         let warm = 0;
         for (const lx of lamps) { const d = Math.hypot(wx - lx - 7, (wy - (GROUND - 75)) * 0.6); if (d < 46) warm += (1 - d / 46) * 70; }
         if (!sheen && !warm) continue;
@@ -742,7 +744,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function houseWinStep(dt) {
     const near = x => (simTime - fightT < 3.5 && Math.abs(fightX - x) < 180) || enemies.some(e => !e.dead && e.zone !== 'arena' && Math.abs(e.x - x) < 150 && Math.abs(e.x - P[2].x) < 120);
     for (const w of HOUSEWIN) {
-      if (w.cx < camX - 200 || w.cx > camX + VW + 200) continue;
+      if (w.cx < cam.x - 200 || w.cx > cam.x + cam.vw + 200) continue;
       const lane = w.wl && Math.abs(P[2].x - w.cx) < (w.wr || 22);   // its light falls on the hero's lane: that one stays on
       const danger = !club && near(w.cx) && !lane;
       if (w.keep) {   // about one in three only dims the light: a curious neighbour pulls the curtain aside to watch
@@ -753,7 +755,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       else w.t = 0;
     }
     for (const w of HOUSEWIN) {   // the light fades to where the switch is; out of sight it is simply there
-      const tg = w.off ? 0 : w.peek ? WIN_PEEK : 1, lv = w.lv ?? 1, far = w.cx < camX - 200 || w.cx > camX + VW + 200;
+      const tg = w.off ? 0 : w.peek ? WIN_PEEK : 1, lv = w.lv ?? 1, far = w.cx < cam.x - 200 || w.cx > cam.x + cam.vw + 200;
       w.lv = far ? tg : tg < lv ? Math.max(tg, lv - WIN_OUT * dt) : Math.min(tg, lv + WIN_IN * dt);
       if (w.wl) w.wl[2] = (w.wr || 22) * w.lv * w.lv;   // its light on the street goes with it
     }
@@ -761,13 +763,13 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function drawHouseWindows() {
     const dark = C('#17151f'), sil = C('#2b1d16');
     for (const w of HOUSEWIN) {
-      if (w.x1 < camX || w.x0 > camX + VW || w.y1 < camY || w.y0 > camY + VH) continue;
+      if (w.x1 < cam.x || w.x0 > cam.x + cam.vw || w.y1 < cam.y || w.y0 > cam.y + cam.vh) continue;
       const glass = (x, y) => EMIT.has(stat[y * W + x]);
       const lv = w.lv ?? 1, dim = c => { const m = sh => Math.round((dark >> sh & 255) + ((c >> sh & 255) - (dark >> sh & 255)) * lv); return (255 << 24 | m(16) << 16 | m(8) << 8 | m(0)) >>> 0; };
       if (lv < 1) {   // the light going (or coming back): the pane fades toward dark glass, which reflects the street once it is mostly dark
         for (let y = w.y0; y <= w.y1; y++) for (let x = w.x0; x <= w.x1; x++) if (glass(x, y)) {
           plot(x, y, dim(stat[y * W + x]));
-          const vx = x - camX, vy = y - camY; if (lv < 0.4 && !w.peek && vx >= 0 && vy >= 0 && vx < VW && vy < VH) glassMask[vy * CW + vx] = 1;   // (a peeker's pane is a lit room, not a mirror)
+          const vx = x - cam.x, vy = y - cam.y; if (lv < 0.4 && !w.peek && vx >= 0 && vy >= 0 && vx < cam.vw && vy < cam.vh) glassMask[vy * CW + vx] = 1;   // (a peeker's pane is a lit room, not a mirror)
         }
         if (lv < 0.5 && !w.peek) continue;   // too dark to see anyone (the peeker at the curtain still shows)
       }
@@ -1041,7 +1043,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     for (let i = 0; i < 16; i++) particles.push({ x: o.x + (Math.random() - 0.5) * o.r * 2, y: o.y + (Math.random() - 0.5) * o.r * 2,
       vx: dirx * Math.random() * 130 + (Math.random() - 0.5) * 90, vy: -30 - Math.random() * 120, life: 0.45 + Math.random() * 0.5, c: cols[i % 3] });
     dust(o.x, o.y + o.r - 1, 6);
-    if (!reduceMotion) shake = Math.max(shake, 0.08);
+    if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.08);
   }
   function breakObj(o, dirx) {
     removeObj(o); tut('smash');
@@ -1054,7 +1056,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       vx: dirx * Math.random() * 120 + (Math.random() - 0.5) * 80, vy: -30 - Math.random() * 110, life: 0.4 + Math.random() * 0.4,
       c: [PAL.crate, PAL.crateD, PAL.plankL][i % 3] });
     dust(o.x, o.y + o.r - 1, 8);
-    if (!reduceMotion) shake = Math.max(shake, 0.1);
+    if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.1);
     if ((o.kind === 'crate' || o.kind === 'bigcrate') && Math.random() < 0.5) {   // something was packed inside: a can, a bottle or a knife pops out
       const k = Math.random() < 0.3 ? 'knife' : Math.random() < 0.5 ? 'bottle' : 'can', q = makeObj(k, o.x, o.y - 2);
       q.vx = dirx * 30 + (Math.random() - 0.5) * 50; q.vy = -110; q.av = (Math.random() - 0.5) * 20; q.safeT = 0.35;
@@ -1113,7 +1115,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     const f = ctl.face, k = 1 / Math.sqrt(o.m);
     const aim = aimAt(o.x, o.y, 160 + 110 * k + Math.max(0, ctl.spd) * 0.4, G);
     o.vx = aim.vx; o.vy = aim.vy; o.av = f * 9; o.safeT = 0.3;
-    tut('toss'); if (!reduceMotion) shake = Math.max(shake, 0.05);
+    tut('toss'); if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.05);
     act = 'tw'; actT = 0.2; hitDone = true; atkId++;   // the throwing arm follows through
     return true;
   }
@@ -1429,8 +1431,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     gun.climb = Math.min(0.2, gun.climb + Wp.climb);
     if (ctl.air && !Wp.auto) ctl.push = Math.min(ctl.push + Wp.push, 90);   // feet stay planted on the ground; only a shotgun blast shoves you in the air
     if (ctl.air && Wp.pellets > 1) ctl.vu += 25;
-    if (Wp.pellets > 1) { gun.pumpT = 0; if (!reduceMotion) shake = Math.max(shake, 0.1); }
-    else if (!reduceMotion) shake = Math.max(shake, 0.025);
+    if (Wp.pellets > 1) { gun.pumpT = 0; if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.1); }
+    else if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.025);
     if (Wp.ammo && charge[weapon] <= 0) outOfAmmo();
   }
   function bulletStep(dt) {
@@ -1822,7 +1824,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       ragG = 0.9; ragGk = 1.7;
       crowdReact(P[2].x, 0, true);   // the hero sent flying: the crowd loves it
       for (const p of P) { p.px -= fx * DT; p.py += fy * DT; }
-      if (!reduceMotion) shake = Math.max(shake, 0.22);
+      if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.22);
     } else if (impact >= 18) {   // knocked off his feet: the legs go out from under him, he falls and gets up
       toRag(); hits++;
       const fx = dirx * (45 + into * 0.6 + impact);
@@ -2125,7 +2127,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (e.act === 'shoot') {
       const mx = h.x + dir * 4 * e.s, my = h.y, sp = 230;
       eshots.push({ k: 'b', x: mx, y: my, px: mx, py: my, vx: dir * sp, vy: clamp((e.ay - my) / (d / sp), -50, 50), life: 1, dmg: e.R.shot, t: 0 });
-      e.muz = 0.07; dust(mx, my, 1); if (!reduceMotion) shake = Math.max(shake, 0.03);
+      e.muz = 0.07; dust(mx, my, 1); if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.03);
     } else {
       const T = clamp(d / 170, 0.3, 0.75), ty = P[1].y + 5, g = 260;
       eshots.push({ k: 'k', x: h.x, y: h.y, px: h.x, py: h.y, vx: (px - h.x) / T, vy: (ty - h.y - 0.5 * g * T * T) / T, life: 1.6, dmg: e.R.shot, t: 0 });
@@ -2178,7 +2180,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function bossSpecial(e, dt, px) {
     const t0 = e.spT; e.spT += dt;
     if (e.sp === 'roar') {
-      if (t0 < 0.25 && e.spT >= 0.25) { if (!reduceMotion) shake = Math.max(shake, 0.4); waves.push({ x: e.x, y: e.y + 1, t: 0 }); dust(e.x - 8, e.y + 1, 6); dust(e.x + 8, e.y + 1, 6); }
+      if (t0 < 0.25 && e.spT >= 0.25) { if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.4); waves.push({ x: e.x, y: e.y + 1, t: 0 }); dust(e.x - 8, e.y + 1, 6); dust(e.x + 8, e.y + 1, 6); }
       if (e.spT >= 1.1) e.sp = null;
     } else if (e.sp === 'charge') {
       if (e.spT < 0) {   // tracks the player, then locks on and paws the ground
@@ -2194,7 +2196,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const wall = (e.face < 0 && e.x <= 2441) || (e.face > 0 && e.x >= W - 11);
       if (wall || e.spT > 1.1 || (e.spT > 0.25 && (px - e.x) * e.face < -40)) {
         e.sp = null; e.vx *= wall ? -0.3 : 0.3; e.recT = wall ? 1.5 : 0.9;
-        if (wall) { e.stunT = 1.5; if (!reduceMotion) shake = Math.max(shake, 0.3); dust(e.x + e.face * 8, e.y - 12, 8); hitStop = Math.max(hitStop, 0.08); }
+        if (wall) { e.stunT = 1.5; if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.3); dust(e.x + e.face * 8, e.y - 12, 8); hitStop = Math.max(hitStop, 0.08); }
       }
     } else if (e.sp === 'jslam') {
       if (e.spT < 0) { if (e.spT < -0.2) e.jx = clamp(px, 2450, W - 20); return; }   // the landing spot is marked, then locked
@@ -2268,7 +2270,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         e.sp = null; e.recT = 0.9; e.vx = 0;
         waves.push({ x: e.x - 8, y: e.y + 1, t: 0 }); waves.push({ x: e.x + 8, y: e.y + 1, t: 0 });
         dust(e.x - 10, e.y + 1, 10); dust(e.x + 10, e.y + 1, 10); hitStop = Math.max(hitStop, 0.06);
-        if (!reduceMotion) shake = Math.max(shake, 0.35);
+        if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.35);
         const d = Math.abs(P[2].x - e.x);
         if (mode === 'anim' && !ctl.air && d < 16 && Math.abs(ctl.y - e.y) < 10) hurtPlayer(e.heavyDmg, P[2].x, P[2].y + 10, Math.sign(P[2].x - e.x) || 1, true);   // right under him: the full weight
         for (const dir of [-1, 1]) quakes.push({ x: e.x + dir * 10, y: e.y + 2, dir, t: 0, hit: false });   // then a shockwave rolls out each way
@@ -2295,7 +2297,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
           e.slammed = true;
           const sx = e.x + e.face * 20 * e.s;
           waves.push({ x: sx, y: GROUND - 1, t: 0 }); dust(sx - 6, GROUND - 1, 8); dust(sx + 6, GROUND - 1, 8);
-          if (!reduceMotion) shake = Math.max(shake, 0.25);
+          if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.25);
           if (mode === 'anim' && !ctl.air && Math.abs(P[2].x - sx) < 95) hurtPlayer(20, P[2].x, P[2].y + 10, Math.sign(P[2].x - sx) || 1, true);
         }
         if (e.actT >= M.dur) {
@@ -2470,14 +2472,14 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   let ragG = 0, ragGk = 1, ragKD = false;   // extra fall gravity: seconds left, factor; the fall is a knock-down (no K.O. from it)
   const input = { dir: 0, run: false, jump: false, jumpHeld: false, downHeld: false, fireHeld: false, attack: null, dashHeld: false };
   let grabIdx = -1, target = { x: 0, y: 0 }, pv = { x: 0, y: 0 }, lastMove = 0, lastPtr = null;
-  let shake = 0, headSpeed = 0, simTime = 0;
+  let headSpeed = 0, simTime = 0;
   // shake amplitude in world px (1 light, 2 heavy, 3 slams); it decays over the shake time. Sites that only set shake get one from its length
   let shakeAmp = 0, shakeDur = 0, shakePrev = 0, shakeSet = false;
   function shakeIt(t, a) {
     if (reduceMotion) return;
-    const cur = shakeDur > 0 ? shakeAmp * Math.max(0, shake) / shakeDur : 0;
-    shake = Math.max(shake, t); shakeSet = true;
-    if (a >= cur) { shakeAmp = a; shakeDur = shake; }
+    const cur = shakeDur > 0 ? shakeAmp * Math.max(0, cam.shake) / shakeDur : 0;
+    cam.shake = Math.max(cam.shake, t); shakeSet = true;
+    if (a >= cur) { shakeAmp = a; shakeDur = cam.shake; }
   }
   const particles = [], sparks = [], waves = [], bullets = [], flashes = [];
   const quakes = [];   // the boss's jump slam: shockwaves that roll along the ground; jump them
@@ -2546,7 +2548,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     const g = weaponGeom(), w = weapon;
     if (g) for (let i = 0; i < 12; i++) particles.push({ x: g.x + g.dx * g.len * Math.random(), y: g.y + g.dy * g.len * Math.random(),
       vx: (Math.random() - 0.5) * 140, vy: -40 - Math.random() * 90, life: 0.5 + Math.random() * 0.4, c: i % 2 ? PAL.blade : PAL.bladeD });
-    if (!reduceMotion) shake = Math.max(shake, 0.12);
+    if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.12);
     for (const k of pickups) if (k.w === w) k.taken = false;   // a fresh one waits on its pedestal
     toast(`${Wp.name} broke`, 'Fight on bare-handed, or fetch a new one: it lies on a bench', true);
     setWeapon(0);
@@ -2569,7 +2571,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     thrown.push({ w, ch: charge[w], x: h.x, y: h.y, vx: aim.vx, vy: aim.vy, a: f > 0 ? -1.2 : Math.PI + 1.2,
       av: f * (fast ? 26 : Wp.gun ? 12 : 18), g: heavy ? 0.85 : 0.55, len: Wp.len, face: f, stuck: false, flat: !!Wp.gun, armed: true, hit: false, ids: new Set(), t: 0 });
     setWeapon(0); if (Wp.gun) tut('hurl');
-    if (!reduceMotion) shake = Math.max(shake, 0.05);
+    if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.05);
   }
   // a goon's body leaves a random weapon by it (a gun part-loaded): walk over it with empty hands, or squat on it to swap.
   // At most DROP_MAX of them lie about: the oldest goes
@@ -2700,7 +2702,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const v = Math.min(TRAMP_MAX, Math.max(TRAMP_MIN, fv * TRAMP_GAIN + TRAMP_ADD) + (input.jumpHeld ? TRAMP_HOLD : 0));
       s.squish = 0.18;
       ctl.bounces = (ctl.bounces || 0) + 1; tut('bounce'); if (ctl.bounces >= 3) tut('bounce3');
-      if (!reduceMotion && v > 280) shake = Math.max(shake, 0.06);
+      if (!reduceMotion && v > 280) cam.shake = Math.max(cam.shake, 0.06);
       {
         ctl.vu = v; ctl.jumps = 1; ctl.baseY = ctl.y; ctl.cap = 999; ctl.tramp = true;
         if (act !== 'air') { act = 'air'; actT = 0; }
@@ -2725,7 +2727,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
     const n = fv < TRN.soft ? 1 : fv > 150 ? (act === 'roll' ? 4 : 6) : 3;
     dust(ctl.x - 3, s.y - 1, n); dust(ctl.x + 3, s.y - 1, n);
-    if (fv > 150 && act !== 'roll') { waves.push({ x: ctl.x, y: s.y - 1, t: 0 }); if (!reduceMotion) shake = Math.max(shake, act === 'hero' ? 0.16 : 0.12); }
+    if (fv > 150 && act !== 'roll') { waves.push({ x: ctl.x, y: s.y - 1, t: 0 }); if (!reduceMotion) cam.shake = Math.max(cam.shake, act === 'hero' ? 0.16 : 0.12); }
   }
 
   // ===== [G2] transitions =====
@@ -2734,7 +2736,6 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const BUF = 0.12, COYOTE = 0.1;
   const ibuf = { jump: 0, atk: null, atkT: 0, dash: 0 };
   let dashCd = 0, atkHit = false, hitAtk = -1, hitCtx = null, coyT = 0, gunArmW = 0, gunArms = null;
-  const camKick = { x: 0, y: 0 };   // directional camera kick, in world pixels
   const isLight = m => m.dur < 0.5;
   // a queued attack starts here: the rest of the recovery is cut, the pose blend hides the cut
   const chainAt = m => m.win ? m.win[1] + (isLight(m) ? 0.35 : 0.55) * (m.dur - m.win[1]) : m.dur;
@@ -2749,7 +2750,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     sparks.push({ x, y, t: power >= 250 ? 0 : 0.05 });
   }
   const kickDir = { x: 1, y: 0 };
-  function kickCam(dx, dy, k) { if (reduceMotion) return; kickDir.x = dx; kickDir.y = dy; camKick.x = clamp(camKick.x + dx * k, -3, 3); camKick.y = clamp(camKick.y + dy * k, -3, 3); }
+  function kickCam(dx, dy, k) { if (reduceMotion) return; kickDir.x = dx; kickDir.y = dy; cam.kick.x = clamp(cam.kick.x + dx * k, -3, 3); cam.kick.y = clamp(cam.kick.y + dy * k, -3, 3); }
   let rollCd = 0;
   const ROLL_CD = 1.0;   // the rest after a roll before the next one (no roll spam)
   const ROLL_MAX = 1;   // rolls in one chain while U is held
@@ -3190,7 +3191,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function impact(i, p, v) {
     if (v > 60) dust(p.x, p.fl + p.r - 1, Math.min(6, Math.floor(v / 40)));
     if (!ragKD && ((i === 0 && v > 85) || (i === 2 && v > 170))) ko = true;
-    if (v > 160 && !reduceMotion) shake = Math.max(shake, 0.18);
+    if (v > 160 && !reduceMotion) cam.shake = Math.max(cam.shake, 0.18);
   }
   function ragStep(dt) {
     for (const p of P) { const s = bodyFloor(p.x, p.y, p.r, P[2].y); p.fl = s.y - p.r; p.fs = s; }
@@ -3217,7 +3218,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       }
       if ((p.x <= p.r + 0.01 && vx < 0) || (p.x >= W - p.r - 0.01 && vx > 0)) {
         p.px = p.x + vx * BOUNCE;
-        if (Math.abs(vx / dt) > 160 && !reduceMotion) shake = Math.max(shake, 0.12);
+        if (Math.abs(vx / dt) > 160 && !reduceMotion) cam.shake = Math.max(cam.shake, 0.12);
       }
       if (!p.fs.bouncy && grabIdx < 0 && p.y >= p.fl - 0.6) p.px = p.x - (p.x - p.px) * Math.exp(-9 * dt);   // [feel] the body scrapes to a stop on the floor
       mv = Math.max(mv, Math.hypot(p.x - p.px, p.y - p.py) / dt);
@@ -3468,7 +3469,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const nx = d > 0.5 ? dx / d : 0, ny = d > 0.5 ? dy / d : -1;
       p.px -= nx * f * DT; p.py -= (ny * f - 90 * (1 - d / R) * power) * DT;
     }
-    if (hit) { sparks.push({ x, y, t: 0 }); hits++; settleT = 0; if (!reduceMotion) shake = Math.max(shake, 0.1); }
+    if (hit) { sparks.push({ x, y, t: 0 }); hits++; settleT = 0; if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.1); }
     return hit;
   }
   function knockOver() {
@@ -3478,10 +3479,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function drop() {
     releaseGrab();
     mode = 'rag'; ko = false; settleT = 0; ragT = 0; act = null; ragFace = Math.random() < 0.5 ? -1 : 1;
-    const pose = fk(IDLE, camX + VW * (0.3 + Math.random() * 0.4), GROUND - 2, ragFace);
+    const pose = fk(IDLE, cam.x + cam.vw * (0.3 + Math.random() * 0.4), GROUND - 2, ragFace);
     const cx = pose[2][0], cy = pose[2][1], a = (Math.random() * 2 - 1) * Math.PI, ca = Math.cos(a), sa = Math.sin(a);
     const rot = pose.map(([x, y]) => [cx + (x - cx) * ca - (y - cy) * sa, cy + (x - cx) * sa + (y - cy) * ca]);
-    const dy = camY + 30 - Math.max(...rot.map(q => q[1]));
+    const dy = cam.y + 30 - Math.max(...rot.map(q => q[1]));
     const wv = (Math.random() * 2 - 1) * 5;
     P.forEach((p, i) => {
       p.x = rot[i][0]; p.y = rot[i][1] + dy;
@@ -3501,7 +3502,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     particles.length = 0; sparks.length = 0; waves.length = 0; quakes.length = 0;
     ctl.bounces = 0; ctl.tramp = false; ctl.carry = null; pocket.length = 0; tossed.length = 0; crowdTossT = 4;
     club = false; clubT = 0; fade = 0; fadeDir = 0; slamDone = false;
-    camXf = START_X - 80; camYf = GROUND - 60; camV.x = camV.y = camV.z = 0; zoom = 1;   // [feel] a restart cuts to the start, it does not fly the camera back
+    cam.xf = START_X - 80; cam.yf = GROUND - 60; cam.v.x = cam.v.y = cam.v.z = 0; cam.zoom = 1;   // [feel] a restart cuts to the start, it does not fly the camera back
     resetTutorial();
   }
 
@@ -3669,7 +3670,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       else if (zc < tutZone && P[2].x < ZONES[tutZone].x0 - 24) z = zc;
     }
     if (z !== tutZone) { tutZone = z; tutDirty = true; }
-    for (const i of wavePend) if (enemies.some(e => !e.dead && e.zone === i && e.x > camX - 4 && e.x < camX + VW + 4) && toast('Here they come', `Beat the ${WAVES[i].length} goons`, true)) wavePend.delete(i);
+    for (const i of wavePend) if (enemies.some(e => !e.dead && e.zone === i && e.x > cam.x - 4 && e.x < cam.x + cam.vw + 4) && toast('Here they come', `Beat the ${WAVES[i].length} goons`, true)) wavePend.delete(i);
     // each stage's goons come out by where the hero really is (not by the stage panel, which waits while goons stand):
     // once its moves are learned (so each is taught in peace first), after 30 s in it, past its middle, near its exit, or at once
     // if he runs in (skipping the lessons: he wants a fight). A runner meets them ahead of him, not behind.
@@ -3690,7 +3691,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         }
         let x;
         if (src) { used.add(src.d); x = src.d.x; spawnFx.push({ kind: src.kind, d: src.d, x, t: 0 }); }
-        else x = clamp(x0 >= hx ? Math.max(x0, camX + VW + 14) : Math.min(x0, camX - 14), 12, Math.min(W, STREET_END) - 20);
+        else x = clamp(x0 >= hx ? Math.max(x0, cam.x + cam.vw + 14) : Math.min(x0, cam.x - 14), 12, Math.min(W, STREET_END) - 20);
         const g = spawnEnemy('goon', x, i);
         g.cdT = Math.max(g.cdT, 0.9);
       });
@@ -3722,9 +3723,9 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const PICK_GLOW = [255, 205, 110], PICK_Z = 9;   // PICK_Z: in 3D, pickables lying in the street stand this far in front of the front lane (past its crates)
   function pickGlow() {
     if (pkX1 < 0) return;
-    const x0 = Math.max(0, pkX0 - 2), x1 = Math.min(VW - 1, pkX1 + 2), y0 = Math.max(0, pkY0 - 2), y1 = Math.min(VH - 1, pkY1 + 2), M = pickMask;
+    const x0 = Math.max(0, pkX0 - 2), x1 = Math.min(cam.vw - 1, pkX1 + 2), y0 = Math.max(0, pkY0 - 2), y1 = Math.min(cam.vh - 1, pkY1 + 2), M = pickMask;
     const a = 0.55 + 0.25 * Math.sin(simTime * 5);
-    const at = (x, y) => x >= 0 && y >= 0 && x < VW && y < VH && M[y * CW + x] === 1;
+    const at = (x, y) => x >= 0 && y >= 0 && x < cam.vw && y < cam.vh && M[y * CW + x] === 1;
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
       const i = y * CW + x; if (M[i]) continue;
       const k = at(x - 1, y) || at(x + 1, y) || at(x, y - 1) || at(x, y + 1) ? a
@@ -3733,7 +3734,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const c = buf[i], add = (v, sh) => Math.min(255, (c >> sh & 255) + v * k);
       buf[i] = (255 << 24 | add(PICK_GLOW[2], 16) << 16 | add(PICK_GLOW[1], 8) << 8 | add(PICK_GLOW[0], 0)) >>> 0;
     }
-    for (let y = Math.max(0, pkY0); y <= Math.min(VH - 1, pkY1); y++) M.fill(0, y * CW + Math.max(0, pkX0), y * CW + Math.min(VW - 1, pkX1) + 1);
+    for (let y = Math.max(0, pkY0); y <= Math.min(cam.vh - 1, pkY1); y++) M.fill(0, y * CW + Math.max(0, pkX0), y * CW + Math.min(cam.vw - 1, pkX1) + 1);
     pkX0 = pkY0 = 1e9; pkX1 = pkY1 = -1;
   }
   function drawPickups() {
@@ -4082,7 +4083,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if ((demoSpawnT -= sdt) <= 0) {   // a goon or two now and then, from off screen on either side
       demoSpawnT = 3 + Math.random() * 5;
       if (!club && enemies.filter(e => !e.dead).length < 3) for (let k = 0, n = Math.random() < 0.4 ? 2 : 1; k < n; k++) {
-        const side = Math.random() < 0.5 ? -1 : 1, x = clamp(ctl.x + side * (VW / 2 + 20 + k * 18), 40, STREET_END - 60);
+        const side = Math.random() < 0.5 ? -1 : 1, x = clamp(ctl.x + side * (cam.vw / 2 + 20 + k * 18), 40, STREET_END - 60);
         const g = spawnEnemy('goon', x, 1 + Math.floor(Math.random() * 5)); g.cdT = Math.max(g.cdT, 0.8);
       }
     }
@@ -4341,9 +4342,9 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function drawOffscreen() {
     for (const e of enemies) {
       if (e.dead) continue;
-      const sx = e.x - camX, side = sx < 0 ? -1 : sx >= VW ? 1 : 0;
-      if (!side || Math.abs(sx - VW / 2) > 380) continue;
-      const tip = side < 0 ? 0 : VW - 1, vy = Math.round(clamp(e.y - 14 * e.s - camY, 4, VH - 5)), c = e === boss ? PAL.gold : BLOOD[2];
+      const sx = e.x - cam.x, side = sx < 0 ? -1 : sx >= cam.vw ? 1 : 0;
+      if (!side || Math.abs(sx - cam.vw / 2) > 380) continue;
+      const tip = side < 0 ? 0 : cam.vw - 1, vy = Math.round(clamp(e.y - 14 * e.s - cam.y, 4, cam.vh - 5)), c = e === boss ? PAL.gold : BLOOD[2];
       for (let k = 0; k < 4; k++) for (let j = -k; j <= k; j++) {
         const vx = tip - side * (k + 1);
         plotV(vx, vy + j, k === 3 || Math.abs(j) === k ? PAL.out : c);
@@ -4368,7 +4369,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     for (const p of P) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     for (const st of hair) for (const p of st) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
-    camXf = CLUB_X; camYf = GROUND - 120; camV.x = camV.y = camV.z = 0;
+    cam.xf = CLUB_X; cam.yf = GROUND - 120; cam.v.x = cam.v.y = cam.v.z = 0;
     rain.drops.length = 0; rain.splash.length = 0;
   }
   function clubTick(rdt) {
@@ -4378,7 +4379,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (club) {
       clubT += rdt;
       if (!slamDone && clubT > 0.75) {   // the door slams shut behind him
-        slamDone = true; if (!reduceMotion) shake = Math.max(shake, 0.3);
+        slamDone = true; if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.3);
         dust(DOOR_X + 4, GROUND - 1, 8); sparks.push({ x: DOOR_X + 8, y: GROUND - 20, t: 0.05 });
       }
       if (introT >= 0) {   // the entrance, 1.7 s: spot and walk, the name card at 0.5 s, the boss bar fills from 0.7 s, then the fight
@@ -4432,7 +4433,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   };
   const SIGN = { x0: 2176, x1: 2330, y0: GOAL.y - 100, y1: GOAL.y - 60 };   // 2.7 m clear above the roof: the hero walks under it
   function drawSign() {
-    if (club || camX > SIGN.x1 + 40 || camX + VW < SIGN.x0 - 40) return;
+    if (club || cam.x > SIGN.x1 + 40 || cam.x + cam.vw < SIGN.x0 - 40) return;
     const t = simTime, { x0, x1, y0, y1 } = SIGN;
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) plot(x, y, x === x0 || x === x1 || y === y0 || y === y1 ? PAL.out : x === x0 + 1 || x === x1 - 1 || y === y0 + 1 || y === y1 - 1 ? C('#3a3a48') : C('#160d1c'));
     let k = 0;   // chasing bulbs round the frame
@@ -4462,7 +4463,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // at the foot of the fire escape: a blade sign (a neon cocktail over NOIR) hangs off the corner of the club, and three chevrons on the wall climb toward the roof
   const BLADE = { x0: 2163, x1: 2179, y0: 116, y1: 194 }, CHEV_X = STAIR_X0 + 10;
   function drawStairSign() {
-    if (club || camX > STAIR_X0 + 60 || camX + VW < BLADE.x0 - 20) return;
+    if (club || cam.x > STAIR_X0 + 60 || cam.x + cam.vw < BLADE.x0 - 20) return;
     const t = simTime, { x0, x1, y0, y1 } = BLADE, iron = C('#2a2a34'), ironL = C('#4a4a58');
     // two iron arms hold the blade off the wall
     for (const ay of [y0 + 6, y1 - 6]) { for (let x = x0 - 4; x < x0; x++) { plot(x, ay, iron); plot(x, ay + 1, ironL); } plot(x0 - 4, ay - 1, iron); plot(x0 - 4, ay + 2, iron); }
@@ -4508,7 +4509,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     flush(); return out;
   })();
   function drawStairRails() {
-    if (club || camX > STAIR_X1 + 20 || camX + VW < STAIR_X0 - 20) return;
+    if (club || cam.x > STAIR_X1 + 20 || cam.x + cam.vw < STAIR_X0 - 20) return;
     const top = C('#7c7c96'), post = C('#34343f');
     for (const [ax, ay, bx, by, run] of RAILSEG) {
       if (run) run.forEach((st, i) => { if (i % 4 === 0 && i) { const px = st.dir > 0 ? st.x0 : st.x1; for (let y = st.y - RAIL_H + 1; y < st.y; y++) plot(px, y, post); } });   // a post on every 4th tread
@@ -4516,13 +4517,13 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
   }
   function drawSearchlights() {   // two beams from the roof corners sweep the sky
-    if (club || camX > GOAL.x1 + 60 || camX + VW < GOAL.x0 - 60) return;
+    if (club || cam.x > GOAL.x1 + 60 || cam.x + cam.vw < GOAL.x0 - 60) return;
     for (const [bx, ph, by] of [[GOAL.x0 + 8, 0, GOAL.y - 2], [GOAL.x1 - 8, 2.2, GOAL.y - 70]]) {   // one on the parapet, one on the kiosk roof
       const a = Math.sin(simTime * 0.5 + ph) * 0.5;
       for (let y = by; y > by - 220; y--) {
-        const k = (by - y) / 220, cx = bx + Math.tan(a) * (by - y), hw = 1 + k * 12, vy = y - camY; if (vy < 0 || vy >= VH) continue;
+        const k = (by - y) / 220, cx = bx + Math.tan(a) * (by - y), hw = 1 + k * 12, vy = y - cam.y; if (vy < 0 || vy >= cam.vh) continue;
         for (let x = Math.round(cx - hw); x <= Math.round(cx + hw); x++) {
-          const vx = x - camX; if (vx < 0 || vx >= VW || (x + y) & 1) continue;
+          const vx = x - cam.x; if (vx < 0 || vx >= cam.vw || (x + y) & 1) continue;
           const i = vy * CW + vx, c = buf[i], add = 34 * (1 - k);
           buf[i] = (255 << 24 | Math.min(255, (c >> 16 & 255) + add) << 16 | Math.min(255, (c >> 8 & 255) + add * 0.95) << 8 | Math.min(255, (c & 255) + add * 0.9)) >>> 0;
         }
@@ -4617,17 +4618,17 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (rain.flash > 0) rain.flash -= dt;
     else if (rain.k > 0.55 && Math.random() < dt * 0.05) rain.flash = 0.3;   // lightning over the roofs
     const want = club ? 0 : Math.round(rain.k * 170);
-    while (rain.drops.length < want) rain.drops.push({ x: camX + Math.random() * (VW + 60), y: camY - Math.random() * VH, v: 250 + Math.random() * 90 });
+    while (rain.drops.length < want) rain.drops.push({ x: cam.x + Math.random() * (cam.vw + 60), y: cam.y - Math.random() * cam.vh, v: 250 + Math.random() * 90 });
     if (rain.drops.length > want) rain.drops.length = want;
     for (const d of rain.drops) {
       d.x -= 45 * dt; d.y += d.v * dt;
-      const fl = d.y > camY + 10 ? floorBelow(d.x, d.y - 6, 0).y : 1e9;
-      if (d.y >= fl || d.y > camY + VH + 10 || d.x < camX - 30) {
-        if (d.y >= fl && d.y < camY + VH) {
+      const fl = d.y > cam.y + 10 ? floorBelow(d.x, d.y - 6, 0).y : 1e9;
+      if (d.y >= fl || d.y > cam.y + cam.vh + 10 || d.x < cam.x - 30) {
+        if (d.y >= fl && d.y < cam.y + cam.vh) {
           rain.splash.push({ x: d.x, y: fl - 1, t: 0 });
           if (fl === GROUND && Math.random() < 0.5) rain.rip.push({ x: d.x, d: 1 + Math.floor(Math.random() * (STREET - 2)), t: 0 });
         }
-        d.x = camX + Math.random() * (VW + 60); d.y = camY - Math.random() * 30; d.v = 250 + Math.random() * 90;
+        d.x = cam.x + Math.random() * (cam.vw + 60); d.y = cam.y - Math.random() * 30; d.v = 250 + Math.random() * 90;
       }
     }
     for (let i = rain.splash.length - 1; i >= 0; i--) if ((rain.splash[i].t += dt) > 0.12) rain.splash.splice(i, 1);
@@ -4637,19 +4638,19 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const LROW = { r: new Float32Array(CW), g: new Float32Array(CW), b: new Float32Array(CW), w: new Float32Array(CW) };
   function lightPass() {
     const [aR, aG, aB, ls] = lightList(), Lr = LROW.r, Lg = LROW.g, Lb = LROW.b, Gw = LROW.w;
-    for (let vy = 0; vy < VH; vy++) {
+    for (let vy = 0; vy < cam.vh; vy++) {
       const row = vy * CW;
-      Lr.fill(0, 0, VW); Lg.fill(0, 0, VW); Lb.fill(0, 0, VW); Gw.fill(0, 0, VW);
+      Lr.fill(0, 0, cam.vw); Lg.fill(0, 0, cam.vw); Lb.fill(0, 0, cam.vw); Gw.fill(0, 0, cam.vw);
       for (let i = 0; i < ls.length; i++) {   // each pool adds its light along the part of this row it reaches
         const q = ls[i], dy = vy - q[1], dyy = dy * dy * (dy < 0 ? 2.2 : 0.75);
         if (dyy >= q[2]) continue;
-        const span = Math.sqrt(q[2] - dyy), x0 = Math.max(0, Math.ceil(q[0] - span)), x1 = Math.min(VW - 1, Math.floor(q[0] + span));
+        const span = Math.sqrt(q[2] - dyy), x0 = Math.max(0, Math.ceil(q[0] - span)), x1 = Math.min(cam.vw - 1, Math.floor(q[0] + span));
         for (let vx = x0; vx <= x1; vx++) {
           const dx = vx - q[0], d2 = dx * dx + dyy;
           if (d2 < q[2]) { const k = 1 - d2 / q[2], kk = k * k; Lr[vx] += kk * q[3]; Lg[vx] += kk * q[4]; Lb[vx] += kk * q[5]; if (q[6] && d2 < 90) Gw[vx] += (1 - d2 / 90) * q[6]; }
         }
       }
-      for (let vx = 0; vx < VW; vx++) {
+      for (let vx = 0; vx < cam.vw; vx++) {
         const c = buf[row + vx];
         if (!c || EMIT.has(c)) continue;   // (an empty pixel only happens in a 3D view layer)
         const glow = Gw[vx], r = (c & 255) * (aR + Lr[vx]) + glow, g = (c >> 8 & 255) * (aG + Lg[vx]) + glow * 0.78, b = (c >> 16 & 255) * (aB + Lb[vx]) + glow * 0.35;
@@ -4665,15 +4666,15 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     const aR = (club ? 0.52 : 0.5) * dim * fl, aG = (club ? 0.44 : 0.54) * dim * fl, aB = (club ? 0.66 : 0.7) * dim * fl;
     const ls = [];   // x, y (view), radius², r, g, b weights, glow
     if (!club) {
-      for (const lx of LAMPS) if (lx > camX - 100 && lx < camX + VW + 100) ls.push([lx + 7 - camX, GROUND - 75 - camY, 100 * 100, 1.5, 1.18, 0.6, 55]);
-      for (const [wx, wy, wr] of WINL) if (wx > camX - wr && wx < camX + VW + wr) ls.push([wx - camX, wy - camY, wr * wr, 0.55, 0.4, 0.14, 0]);   // window spill
-      if (camX < SIGN.x1 + 120 && camX + VW > SIGN.x0 - 120) ls.push([(SIGN.x0 + SIGN.x1) / 2 - camX, SIGN.y1 - camY, 120 * 120, 1.0, 0.4, 0.95, 0], [GOAL.x1 - 8 - camX, GOAL.y - 20 - camY, 50 * 50, 0.3, 1.0, 1.1, 0]);   // the sign bathes the roof pink, the door glows cyan
-      if (!club && camX < STAIR_X0 + 120 && camX + VW > BLADE.x0 - 120) ls.push([(BLADE.x0 + BLADE.x1) / 2 - camX, (BLADE.y0 + BLADE.y1) / 2 - camY, 46 * 46, 1.0, 0.35, 0.8, 0], [CHEV_X - camX, GROUND - 40 - camY, 30 * 30, 0.3, 0.95, 1.1, 0]);   // the blade sign glows pink on the wall, the chevrons cyan
+      for (const lx of LAMPS) if (lx > cam.x - 100 && lx < cam.x + cam.vw + 100) ls.push([lx + 7 - cam.x, GROUND - 75 - cam.y, 100 * 100, 1.5, 1.18, 0.6, 55]);
+      for (const [wx, wy, wr] of WINL) if (wx > cam.x - wr && wx < cam.x + cam.vw + wr) ls.push([wx - cam.x, wy - cam.y, wr * wr, 0.55, 0.4, 0.14, 0]);   // window spill
+      if (cam.x < SIGN.x1 + 120 && cam.x + cam.vw > SIGN.x0 - 120) ls.push([(SIGN.x0 + SIGN.x1) / 2 - cam.x, SIGN.y1 - cam.y, 120 * 120, 1.0, 0.4, 0.95, 0], [GOAL.x1 - 8 - cam.x, GOAL.y - 20 - cam.y, 50 * 50, 0.3, 1.0, 1.1, 0]);   // the sign bathes the roof pink, the door glows cyan
+      if (!club && cam.x < STAIR_X0 + 120 && cam.x + cam.vw > BLADE.x0 - 120) ls.push([(BLADE.x0 + BLADE.x1) / 2 - cam.x, (BLADE.y0 + BLADE.y1) / 2 - cam.y, 46 * 46, 1.0, 0.35, 0.8, 0], [CHEV_X - cam.x, GROUND - 40 - cam.y, 30 * 30, 0.3, 0.95, 1.1, 0]);   // the blade sign glows pink on the wall, the chevrons cyan
     }
     else {
-      for (const sp of clubSpots()) ls.push([sp.x - camX, GROUND - 14 - camY, 64 * 64, sp.c[0], sp.c[1], sp.c[2], 0]);
-      if (introT < 0) ls.push([2600 - camX, GROUND - 105 - camY, 70 * 70, 0.9, 0.2, 0.6, 0], [2706 - camX, GROUND - 106 - camY, 50 * 50, 0.2, 0.8, 0.9, 0], [2720 - camX, GROUND - 30 - camY, 50 * 50, 0.8, 0.6, 0.3, 0]);
-      { const k = 0.5 * Math.max(cut, 0.6); ls.push([P[2].x - camX, P[2].y - 12 - camY, 46 * 46, k, k, k, 0]); }   // a steady white key light on the hero, so he reads under the colour
+      for (const sp of clubSpots()) ls.push([sp.x - cam.x, GROUND - 14 - cam.y, 64 * 64, sp.c[0], sp.c[1], sp.c[2], 0]);
+      if (introT < 0) ls.push([2600 - cam.x, GROUND - 105 - cam.y, 70 * 70, 0.9, 0.2, 0.6, 0], [2706 - cam.x, GROUND - 106 - cam.y, 50 * 50, 0.2, 0.8, 0.9, 0], [2720 - cam.x, GROUND - 30 - cam.y, 50 * 50, 0.8, 0.6, 0.3, 0]);
+      { const k = 0.5 * Math.max(cut, 0.6); ls.push([P[2].x - cam.x, P[2].y - 12 - cam.y, 46 * 46, k, k, k, 0]); }   // a steady white key light on the hero, so he reads under the colour
     }
     return [aR, aG, aB, ls];
   }
@@ -4690,9 +4691,9 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     for (const sp of clubSpots()) {
       const y0 = GROUND - 144, y1 = GROUND - 2, cr = sp.c[0] * 40, cg = sp.c[1] * 40, cb = sp.c[2] * 40;
       for (let y = y0; y < y1; y++) {
-        const k = (y - y0) / (y1 - y0), cx = sp.fx + (sp.x - sp.fx) * k, hw = 1 + k * 13, vy = y - camY; if (vy < 0 || vy >= VH) continue;
+        const k = (y - y0) / (y1 - y0), cx = sp.fx + (sp.x - sp.fx) * k, hw = 1 + k * 13, vy = y - cam.y; if (vy < 0 || vy >= cam.vh) continue;
         for (let x = Math.round(cx - hw); x <= Math.round(cx + hw); x++) {
-          const vx = x - camX; if (vx < 0 || vx >= VW || (x + y) & 1) continue;
+          const vx = x - cam.x; if (vx < 0 || vx >= cam.vw || (x + y) & 1) continue;
           const i = vy * CW + vx, c = buf[i];
           buf[i] = (255 << 24 | Math.min(255, (c >> 16 & 255) + cb) << 16 | Math.min(255, (c >> 8 & 255) + cg) << 8 | Math.min(255, (c & 255) + cr)) >>> 0;
         }
@@ -4705,16 +4706,16 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const WET = { w: 0.1, k0: 0.18, kRain: 0.3, kClub: 0.5, step: 0.055, dry: [0.08, 0.25] };
   function reflectPass() {
     const t = simTime, rk = rain.k, ls = lightList()[3], wk = club ? WET.kClub : WET.k0 + rk * WET.kRain;
-    { const vy = GROUND - camY; if (vy >= 0 && vy < VH) for (let vx = 0; vx < VW; vx++) { const bp = BPOOL[vx + camX]; if (bp > 0.025) buf[vy * CW + vx] = bp > 0.2 ? C('#8a1420') : C('#6a1018'); } }   // a pool's lip on the curb
+    { const vy = GROUND - cam.y; if (vy >= 0 && vy < cam.vh) for (let vx = 0; vx < cam.vw; vx++) { const bp = BPOOL[vx + cam.x]; if (bp > 0.025) buf[vy * CW + vx] = bp > 0.2 ? C('#8a1420') : C('#6a1018'); } }   // a pool's lip on the curb
     for (let d = 1; d <= STREET; d++) {
-      const vy = GROUND + d - camY; if (vy < 0 || vy >= VH) continue;
-      const svy = GROUND - 1 - d * 3 - camY, row = vy * CW, mrow = d * W;
-      for (let vx = 0; vx < VW; vx++) {
-        const wx = vx + camX, bp = BPOOL[mrow + wx], bpool = bp > 0.025, pud = PUDDLE[mrow + wx] || bpool;
+      const vy = GROUND + d - cam.y; if (vy < 0 || vy >= cam.vh) continue;
+      const svy = GROUND - 1 - d * 3 - cam.y, row = vy * CW, mrow = d * W;
+      for (let vx = 0; vx < cam.vw; vx++) {
+        const wx = vx + cam.x, bp = BPOOL[mrow + wx], bpool = bp > 0.025, pud = PUDDLE[mrow + wx] || bpool;
         const a = club ? 0.38 * (1 - d / (STREET + 6)) : pud ? 0.75 : 0.32 * (0.6 + rk * 0.6) * (1 - d / (STREET + 4));
         if (svy < 0) continue;
         const sx = vx + (pud && !club ? Math.round(Math.sin(d * 1.9 + t * (3 + rk * 8) + wx * 0.21) * (0.4 + rk * 1.3)) : 0);
-        if (sx < 0 || sx >= VW) continue;
+        if (sx < 0 || sx >= cam.vw) continue;
         const sc = buf[svy * CW + sx], c = buf[row + vx];
         let r = (c & 255) * (1 - a) + (sc & 255) * a * 0.92, g = (c >> 8 & 255) * (1 - a) + (sc >> 8 & 255) * a * 0.94, b = (c >> 16 & 255) * (1 - a) + Math.min(255, (sc >> 16 & 255) * a * 1.05 + a * 10);
         const bk = (bpool ? Math.min(0.95, 0.6 + bp * 0.4) : pud && !club ? PUD_BLOOD[wx] : 0) * (club ? 0.5 : 1);   // the mirrored club floor keeps half the red
@@ -4738,7 +4739,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
   }
   function blendPlot(x, y, r, g, b, a) {   // see-through pixel (world coordinates)
-    x -= camX; y -= camY; if (x < 0 || y < 0 || x >= VW || y >= VH) return;
+    x -= cam.x; y -= cam.y; if (x < 0 || y < 0 || x >= cam.vw || y >= cam.vh) return;
     const i = y * CW + x, c = buf[i];
     if (!c) { buf[i] = (Math.round(a * 255) << 24 | b << 16 | g << 8 | r) >>> 0; return; }   // an empty pixel (a 3D view layer): keep the see-through
     buf[i] = (255 << 24 | ((c >> 16 & 255) * (1 - a) + b * a) << 16 | ((c >> 8 & 255) * (1 - a) + g * a) << 8 | ((c & 255) * (1 - a) + r * a)) >>> 0;
@@ -4794,10 +4795,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
     if (fade > 0) {   // fade through black on the way into the club
       const k = 1 - clamp(fade, 0, 1);
-      for (let vy = 0; vy < VH; vy++) for (let vx = 0, row = vy * CW; vx < VW; vx++) { const c = buf[row + vx]; buf[row + vx] = (255 << 24 | ((c >> 16 & 255) * k) << 16 | ((c >> 8 & 255) * k) << 8 | (c & 255) * k) >>> 0; }
+      for (let vy = 0; vy < cam.vh; vy++) for (let vx = 0, row = vy * CW; vx < cam.vw; vx++) { const c = buf[row + vx]; buf[row + vx] = (255 << 24 | ((c >> 16 & 255) * k) << 16 | ((c >> 8 & 255) * k) << 8 | (c & 255) * k) >>> 0; }
     }
     octx.putImageData(img, 0, 0);
-    ctx.drawImage(off, 0, 0, VW, VH, 0, 0, CW, CH);
+    ctx.drawImage(off, 0, 0, cam.vw, cam.vh, 0, 0, CW, CH);
   }
   // the finish, the same in both views (the 3D view runs it as a shader with these numbers): bloom on bright pixels,
   // a colour grade (a little more saturation, cool shadows, warm highlights) and a vignette. The bloom is found on a grid
@@ -4805,11 +4806,11 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const GRADE = { bloomT: 0.8, bloom: 0.55, sat: 1.12, vig: 0.28, W: [0.227, 0.195, 0.122, 0.054, 0.016] };
   const postB = { w: 0, h: 0 };
   function postPass() {
-    const gw = Math.ceil(VW / 4), gh = Math.ceil(VH / 4), n = gw * gh;
+    const gw = Math.ceil(cam.vw / 4), gh = Math.ceil(cam.vh / 4), n = gw * gh;
     if (postB.w !== gw || postB.h !== gh) { Object.assign(postB, { w: gw, h: gh, a: new Float32Array(n * 3), b: new Float32Array(n * 3) }); }
     const A = postB.a, B = postB.b, Wt = GRADE.W;
     A.fill(0);
-    for (let vy = 0; vy < VH; vy++) for (let vx = 0, row = vy * CW; vx < VW; vx++) {   // bright pass, averaged over each cell
+    for (let vy = 0; vy < cam.vh; vy++) for (let vx = 0, row = vy * CW; vx < cam.vw; vx++) {   // bright pass, averaged over each cell
       const c = buf[row + vx], r = (c & 255) / 255, g = (c >> 8 & 255) / 255, b = (c >> 16 & 255) / 255, m = Math.max(r, g, b);
       if (m <= GRADE.bloomT) continue;
       const t = Math.min(1, (m - GRADE.bloomT) / (1 - GRADE.bloomT)), k = t * t * (3 - 2 * t) / 16, o = ((vy >> 2) * gw + (vx >> 2)) * 3;
@@ -4822,18 +4823,18 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
     const ss = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
     // the bloom grid spread smoothly over the pixels: per column and per row, the two cells to blend and the weight (built once)
-    if (postB.cw !== VW || postB.chh !== VH) {
+    if (postB.cw !== cam.vw || postB.chh !== cam.vh) {
       const col = n => { const i0 = new Int32Array(n), i1 = new Int32Array(n), t = new Float32Array(n), g = Math.ceil(n / 4); for (let v = 0; v < n; v++) { const f = clamp((v + 0.5) / 4 - 0.5, 0, g - 1), a = Math.floor(f); i0[v] = a; i1[v] = Math.min(g - 1, a + 1); t[v] = f - a; } return { i0, i1, t }; };
-      const vg = new Float32Array(VW * VH);   // the vignette, per pixel
-      for (let y = 0; y < VH; y++) for (let x = 0; x < VW; x++) { const d2 = ((x + 0.5) / VW * 2 - 1) ** 2 + ((y + 0.5) / VH * 2 - 1) ** 2; vg[y * VW + x] = d2 <= 0.35 ? 1 : 1 - GRADE.vig * ss(0.35, 1.25, d2); }
-      Object.assign(postB, { cw: VW, chh: VH, cx: col(VW), cy: col(VH), vg });
+      const vg = new Float32Array(cam.vw * cam.vh);   // the vignette, per pixel
+      for (let y = 0; y < cam.vh; y++) for (let x = 0; x < cam.vw; x++) { const d2 = ((x + 0.5) / cam.vw * 2 - 1) ** 2 + ((y + 0.5) / cam.vh * 2 - 1) ** 2; vg[y * cam.vw + x] = d2 <= 0.35 ? 1 : 1 - GRADE.vig * ss(0.35, 1.25, d2); }
+      Object.assign(postB, { cw: cam.vw, chh: cam.vh, cx: col(cam.vw), cy: col(cam.vh), vg });
     }
     const CX = postB.cx, CY = postB.cy, bloom = GRADE.bloom, sat = GRADE.sat;
     const Sm = postB.sm && postB.sm.length === gw * gh ? postB.sm : (postB.sm = new Float32Array(gw * gh));
     for (let i = 0; i < gw * gh; i++) Sm[i] = A[i * 3] + A[i * 3 + 1] + A[i * 3 + 2];   // a cell with no glow near it skips the spread
-    for (let vy = 0; vy < VH; vy++) {
-      const ra = CY.i0[vy] * gw * 3, rb = CY.i1[vy] * gw * 3, ty = CY.t[vy], row = vy * CW, vrow = vy * VW, VG = postB.vg;
-      for (let vx = 0; vx < VW; vx++) {
+    for (let vy = 0; vy < cam.vh; vy++) {
+      const ra = CY.i0[vy] * gw * 3, rb = CY.i1[vy] * gw * 3, ty = CY.t[vy], row = vy * CW, vrow = vy * cam.vw, VG = postB.vg;
+      for (let vx = 0; vx < cam.vw; vx++) {
         const a = CX.i0[vx] * 3, b2 = CX.i1[vx] * 3;
         let br = 0, bg = 0, bb = 0;
         if (Sm[(ra + a) / 3] + Sm[(ra + b2) / 3] + Sm[(rb + a) / 3] + Sm[(rb + b2) / 3] > 1e-4) {
@@ -4885,7 +4886,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
 
   // ---------- camera: follows the fighter, zooms out for speed, height and flying objects ----------
-  let zoom = 1, zoomGoal = 1, zoomMode = 'auto', camXf = START_X - 80, camYf = GROUND - 60;
+  let zoomGoal = 1, zoomMode = 'auto';
+  cam.xf = START_X - 80;   // (START_X is set above this point, not at cam's birth)
   // the box around the fighter and everything fighting near him: enemies, fresh bodies, enemy shots, thrown weapons
   let sBox = null;
   function sceneBox() {
@@ -4916,30 +4918,29 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     const run = mode === 'anim' ? clamp((Math.abs(ctl.spd) - WALK) / (RUN - WALK), 0, 1) : 0;
     return 0.4 - 0.15 * run;
   }
-  const camV = { x: 0, y: 0, z: 0 };
   function updateCamera(rdt) {
     const want = zoomMode === 'auto' ? autoZoom() : zoomMode;
     // the zoom glides: out over about a second, back in a little slower so it never pumps (it eases on the scale, so 100 -> 25 % feels even)
-    const cx0 = camXf + VW / 2, cy0 = camYf + VH / 2;   // zoom about the view centre
-    const lz = smoothDamp(Math.log(zoom), Math.log(want), camV, 'z', want < zoom ? 0.9 : zoomMode === 'auto' && cinematic() ? 0.35 : 1.3, rdt);   // (a cinematic is short: it closes in fast)
-    zoom = clamp(Math.exp(lz), 0.25, 1);
+    const cx0 = cam.xf + cam.vw / 2, cy0 = cam.yf + cam.vh / 2;   // zoom about the view centre
+    const lz = smoothDamp(Math.log(cam.zoom), Math.log(want), cam.v, 'z', want < cam.zoom ? 0.9 : zoomMode === 'auto' && cinematic() ? 0.35 : 1.3, rdt);   // (a cinematic is short: it closes in fast)
+    cam.zoom = clamp(Math.exp(lz), 0.25, 1);
     // [feel] even view sizes: the centre stays on the same pixel as the view grows, so a zoom never jitters by 1 px
-    VW = Math.min(CW, 2 * Math.round(80 / zoom)); VH = Math.min(CHMAX, 2 * Math.round(VW * CH / CW / 2));   // (taller than the world when far out: the sky fills the top)
-    if (endCam) { camXf = endCam.x - VW / 2; camYf = clamp(GROUND - 14 - VH * 0.6, 0, H - VH); camV.x = camV.y = 0; camX = Math.round(camXf); camY = Math.round(camYf); return; }   // the ending's street shot
-    if (openT >= 0) { camXf = OPEN.camX; camYf = clamp(GROUND - 14 - VH * 0.6, 0, H - VH); camV.x = camV.y = 0; camX = Math.round(camXf); camY = Math.round(camYf); return; }   // the opening: a locked shot
+    cam.vw = Math.min(CW, 2 * Math.round(80 / cam.zoom)); cam.vh = Math.min(CHMAX, 2 * Math.round(cam.vw * CH / CW / 2));   // (taller than the world when far out: the sky fills the top)
+    if (endCam) { cam.xf = endCam.x - cam.vw / 2; cam.yf = clamp(GROUND - 14 - cam.vh * 0.6, 0, H - cam.vh); cam.v.x = cam.v.y = 0; cam.x = Math.round(cam.xf); cam.y = Math.round(cam.yf); return; }   // the ending's street shot
+    if (openT >= 0) { cam.xf = OPEN.camX; cam.yf = clamp(GROUND - 14 - cam.vh * 0.6, 0, H - cam.vh); cam.v.x = cam.v.y = 0; cam.x = Math.round(cam.xf); cam.y = Math.round(cam.yf); return; }   // the opening: a locked shot
     const look = mode === 'anim' ? ctl.face * ctl.spd * 0.35 : 0;
     // follow the fighter, but slide so the whole fight stays in view (worked out for the view centre)
-    let tx = P[2].x + look, ty = P[2].y + 17 - VH * 0.22;   // his feet about 72 % of the way down the view: more street and roofs, less sky
+    let tx = P[2].x + look, ty = P[2].y + 17 - cam.vh * 0.22;   // his feet about 72 % of the way down the view: more street and roofs, less sky
     const bx = sceneBox();
-    tx = bx.x1 - bx.x0 <= VW - 16 ? clamp(tx, bx.x1 - VW / 2 + 8, bx.x0 + VW / 2 - 8) : (bx.x0 + bx.x1) / 2;
-    ty = bx.y1 - bx.y0 <= VH - 10 ? clamp(ty, bx.y1 - VH / 2 + 5, bx.y0 + VH / 2 - 5) : (bx.y0 + bx.y1) / 2;
-    let cx = smoothDamp(cx0, tx, camV, 'x', 0.32, rdt), cy = smoothDamp(cy0, ty, camV, 'y', 0.4, rdt);
-    camXf = cx - VW / 2; camYf = cy - VH / 2;
-    const lo = club ? CLUB_X : 0, hi = club ? W - VW : Math.min(W, CLUB_X) - VW;
-    if (camXf < lo || camXf > hi) { camXf = clamp(camXf, lo, hi); camV.x *= 0.5; }
-    if (VH >= H) { camYf = H - VH; camV.y = 0; }
-    else if (camYf < 0 || camYf > H - VH) { camYf = clamp(camYf, 0, H - VH); camV.y *= 0.5; }
-    camX = Math.round(camXf); camY = Math.round(camYf);
+    tx = bx.x1 - bx.x0 <= cam.vw - 16 ? clamp(tx, bx.x1 - cam.vw / 2 + 8, bx.x0 + cam.vw / 2 - 8) : (bx.x0 + bx.x1) / 2;
+    ty = bx.y1 - bx.y0 <= cam.vh - 10 ? clamp(ty, bx.y1 - cam.vh / 2 + 5, bx.y0 + cam.vh / 2 - 5) : (bx.y0 + bx.y1) / 2;
+    let cx = smoothDamp(cx0, tx, cam.v, 'x', 0.32, rdt), cy = smoothDamp(cy0, ty, cam.v, 'y', 0.4, rdt);
+    cam.xf = cx - cam.vw / 2; cam.yf = cy - cam.vh / 2;
+    const lo = club ? CLUB_X : 0, hi = club ? W - cam.vw : Math.min(W, CLUB_X) - cam.vw;
+    if (cam.xf < lo || cam.xf > hi) { cam.xf = clamp(cam.xf, lo, hi); cam.v.x *= 0.5; }
+    if (cam.vh >= H) { cam.yf = H - cam.vh; cam.v.y = 0; }
+    else if (cam.yf < 0 || cam.yf > H - cam.vh) { cam.yf = clamp(cam.yf, 0, H - cam.vh); cam.v.y *= 0.5; }
+    cam.x = Math.round(cam.xf); cam.y = Math.round(cam.yf);
   }
 
 
@@ -5552,13 +5553,13 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
   // draw with the 2D code into a size x size scratch window of buf whose top-left is world (ox, oy), and copy it out
   function t3capture(size, draw, ox = 0, oy = 0) {
-    const sx = camX, sy = camY, sw = VW, sh = VH;
-    camX = ox; camY = oy; VW = size; VH = size;
+    const sx = cam.x, sy = cam.y, sw = cam.vw, sh = cam.vh;
+    cam.x = ox; cam.y = oy; cam.vw = size; cam.vh = size;
     for (let y = 0; y < size; y++) buf.fill(0, y * CW, y * CW + size);
     draw();
     const out = new Uint32Array(size * size);
     for (let y = 0; y < size; y++) out.set(buf.subarray(y * CW, y * CW + size), y * size);
-    camX = sx; camY = sy; VW = sw; VH = sh;
+    cam.x = sx; cam.y = sy; cam.vw = sw; cam.vh = sh;
     return out;
   }
   const t3hash = a => { let h = 2166136261; for (let i = 0; i < a.length; i++) h = Math.imul(h ^ a[i], 16777619); return h >>> 0; };
@@ -5777,7 +5778,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     updateGore(rdt) {
       if ((this.goreT -= rdt) > 0) return;
       this.goreT = 0.2;
-      const inView = (x0, x1) => x1 >= camX - 40 && x0 <= camX + VW + 40;
+      const inView = (x0, x1) => x1 >= cam.x - 40 && x0 <= cam.x + cam.vw + 40;
       for (const c of this.gore) {
         if (!inView(c.x0, c.x1)) continue;
         for (let y = 0; y < GROUND; y++) for (let x = c.x0; x < c.x1; x++) { const i = y * W + x; c.gw[y * c.cw + x - c.x0] = this.lift[i] ? 0 : GORE[i]; }
@@ -6107,7 +6108,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         S[i * 4] = Math.round(v * 255); S[i * 4 + 1] = R.tv ? 255 : 0; S[i * 4 + 3] = 255;
       });
       this.roomTex.needsUpdate = true;
-      const vis = (x0, x1) => x1 > camX - 60 && x0 < camX + VW + 60;
+      const vis = (x0, x1) => x1 > cam.x - 60 && x0 < cam.x + cam.vw + 60;
       for (const p of this.peeks) {   // the curtain slides across, and back when it is over
         p.m.visible = vis(p.w.x0, p.w.x1);
         p.k += ((p.w.peek ? 1 : 0.04) - p.k) * Math.min(1, rdt * 5); p.m.scale.x = p.k;
@@ -6505,28 +6506,28 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     // draw into buf and copy into the layer's texture; a layer at depth z gets the window the camera sees at that depth
     // (wider, and shifted down by the lens shift), drawn in tiles of the buffer's size
     layer(L, draw, { glow = false, z = 0 } = {}) {
-      const sx = camX, sy = camY, sw = VW, sh = VH, t = Math.tan(T3.FOV * Math.PI / 360), D = (sh / 2) / t, h = D * Math.tan(T3.PITCH);
+      const sx = cam.x, sy = cam.y, sw = cam.vw, sh = cam.vh, t = Math.tan(T3.FOV * Math.PI / 360), D = (sh / 2) / t, h = D * Math.tan(T3.PITCH);
       const k = z < 0 ? (D - z) / D * 1.03 : 1, TW = Math.min(L.dw, Math.ceil(sw * k) + (z < 0 ? 4 : 0)), TH = Math.min(L.dh, Math.ceil(sh * k) + (z < 0 ? 4 : 0));
       const x0 = Math.round(sx + sw / 2 - TW / 2), y0 = Math.round(sy + sh / 2 - h * Math.min(z, 0) / D - TH / 2), gl = L.kind === 'glass';
       let any = false;
       for (let oy = 0; oy < TH; oy += CHMAX) for (let ox = 0; ox < TW; ox += CW) {
-        camX = x0 + ox; camY = y0 + oy; VW = Math.min(CW, TW - ox); VH = Math.min(CHMAX, TH - oy);
-        for (let y = 0; y < VH; y++) buf.fill(0, y * CW, y * CW + VW);
+        cam.x = x0 + ox; cam.y = y0 + oy; cam.vw = Math.min(CW, TW - ox); cam.vh = Math.min(CHMAX, TH - oy);
+        for (let y = 0; y < cam.vh; y++) buf.fill(0, y * CW, y * CW + cam.vw);
         draw();
-        for (let y = 0; y < VH; y++) for (let x = 0, r = y * CW, o = (oy + y) * L.dw + ox; x < VW; x++) {
+        for (let y = 0; y < cam.vh; y++) for (let x = 0, r = y * CW, o = (oy + y) * L.dw + ox; x < cam.vw; x++) {
           const c = buf[r + x];
           if (c) any = true;
           L.data[o + x] = !glow || !c ? c : EMIT.has(c) ? t3flag(c, 254) : gl && GLASS_C.has(c) ? t3flag(c, 253) : c;
         }
       }
-      if (!any) { L.mesh.visible = false; camX = sx; camY = sy; VW = sw; VH = sh; return; }   // nothing drawn: no upload, no plane
+      if (!any) { L.mesh.visible = false; cam.x = sx; cam.y = sy; cam.vw = sw; cam.vh = sh; return; }   // nothing drawn: no upload, no plane
       L.tex.needsUpdate = true;
       const p = L.mesh.geometry.attributes.position, uv = L.mesh.geometry.attributes.uv;
       p.setXYZ(0, x0, -y0, z); p.setXYZ(1, x0 + TW, -y0, z); p.setXYZ(2, x0, -(y0 + TH), z); p.setXYZ(3, x0 + TW, -(y0 + TH), z);
       uv.setXY(0, 0, 0); uv.setXY(1, TW / L.dw, 0); uv.setXY(2, 0, TH / L.dh); uv.setXY(3, TW / L.dw, TH / L.dh);
       p.needsUpdate = uv.needsUpdate = true;
       L.mesh.visible = true;
-      camX = sx; camY = sy; VW = sw; VH = sh;
+      cam.x = sx; cam.y = sy; cam.vw = sw; cam.vh = sh;
     },
     updateLayers() {
       const { ZF } = T3;
@@ -6534,28 +6535,28 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); }, { glow: true, z: club ? ZF - 0.3 : ZF + 0.3 });
       this.layer(this.lSign, drawSign, { glow: true, z: ZF + 5.05 });
       this.layer(this.lBlade, drawStairSign, { glow: true, z: ZF + 4.05 });
-      if (!club && camX < STAIR_X1 + 160 && camX + VW > STAIR_X0 - 160) this.layer(this.lRail, drawStairRails, { z: ZF + T3.STAIR + 0.4 }); else this.lRail.mesh.visible = false;
+      if (!club && cam.x < STAIR_X1 + 160 && cam.x + cam.vw > STAIR_X0 - 160) this.layer(this.lRail, drawStairRails, { z: ZF + T3.STAIR + 0.4 }); else this.lRail.mesh.visible = false;
       this.lFloor.mesh.visible = club;
       if (club) {   // drawClubFloor in camera-sized strips across the sheet
-        const F = this.lFloor, S = STREET + 1, sx = camX, sy = camY, sw = VW, sh = VH, step = 256;
+        const F = this.lFloor, S = STREET + 1, sx = cam.x, sy = cam.y, sw = cam.vw, sh = cam.vh, step = 256;
         for (let ox = 0; ox < F.w; ox += step) {
-          camX = F.x0 + ox; camY = GROUND; VW = step; VH = S;
+          cam.x = F.x0 + ox; cam.y = GROUND; cam.vw = step; cam.vh = S;
           for (let y = 0; y < S; y++) buf.fill(0, y * CW, y * CW + step);
           drawClubFloor();
           for (let y = 0; y < S; y++) for (let x = 0; x < step; x++) { const c = buf[y * CW + x]; F.data[y * F.w + ox + x] = t3glow(c); }
         }
-        camX = sx; camY = sy; VW = sw; VH = sh;
+        cam.x = sx; cam.y = sy; cam.vw = sw; cam.vh = sh;
         F.tex.needsUpdate = true;
       }
       this.layer(this.lMid, () => { drawTramp(); drawBag(); drawGroundFx(); });
       this.layer(this.lFront, () => {
         // the marks of a body at depth: drawn where that body shows on this plane (z = 0), seen from the camera
-        const t = Math.tan(T3.FOV * Math.PI / 360), D = (VH / 2) / t, ccx = camX + VW / 2, ccy = camY + VH / 2 - D * Math.tan(T3.PITCH);
+        const t = Math.tan(T3.FOV * Math.PI / 360), D = (cam.vh / 2) / t, ccx = cam.x + cam.vw / 2, ccy = cam.y + cam.vh / 2 - D * Math.tan(T3.PITCH);
         for (const e of enemies) {
-          const J = e.dead ? e.pts : e.J, bz = this.zw.get(e) ?? 0, sx = camX, sy = camY;
-          if (J && Math.abs(bz) > 0.5) { const k = D / (D - bz); camX -= Math.round((J[2].x - ccx) * (k - 1)); camY -= Math.round((J[2].y - ccy) * (k - 1)); }
+          const J = e.dead ? e.pts : e.J, bz = this.zw.get(e) ?? 0, sx = cam.x, sy = cam.y;
+          if (J && Math.abs(bz) > 0.5) { const k = D / (D - bz); cam.x -= Math.round((J[2].x - ccx) * (k - 1)); cam.y -= Math.round((J[2].y - ccy) * (k - 1)); }
           drawEnemyMarks(e);
-          camX = sx; camY = sy;
+          cam.x = sx; cam.y = sy;
         }
         drawEShots(false);
       });
@@ -6577,7 +6578,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       lightPass();
       this.bgData.set(buf);
       const t = this.bgTex; t.needsUpdate = true;
-      t.repeat.set(VW / CW, -VH / CHMAX); t.offset.set(0, VH / CHMAX);
+      t.repeat.set(cam.vw / CW, -cam.vh / CHMAX); t.offset.set(0, cam.vh / CHMAX);
     },
 
     // ----- rain, club light beams, roof searchlights -----
@@ -6608,7 +6609,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       p.needsUpdate = true; this.rain.geometry.setDrawRange(0, n * 2);
       for (const b of this.beams) b.visible = false;
       if (club) clubSpots().forEach((sp, i) => this.beam(i, sp.fx, GROUND - 144, sp.x, GROUND - 2, 13, -3, sp.c.map(v => Math.min(1, v / 1.4)), 0.13));
-      else if (camX < GOAL.x1 + 60 && camX + VW > GOAL.x0 - 60) [[GOAL.x0 + 8, 0, GOAL.y - 2], [GOAL.x1 - 8, 2.2, GOAL.y - 70]].forEach(([bx, ph, by], i) => {
+      else if (cam.x < GOAL.x1 + 60 && cam.x + cam.vw > GOAL.x0 - 60) [[GOAL.x0 + 8, 0, GOAL.y - 2], [GOAL.x1 - 8, 2.2, GOAL.y - 70]].forEach(([bx, ph, by], i) => {
         const a = Math.sin(simTime * 0.5 + ph) * 0.5;
         this.beam(i, bx, by, bx + Math.tan(a) * 220, by - 220, 13, T3.ZF + 2, [0.55, 0.55, 0.5], 0.09);
       });
@@ -6621,20 +6622,20 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       for (let i = 0; i < T3.NL; i++) {
         const q = ls[i];
         if (q) {
-          T3U.lp.value[i].set(q[0] + camX, q[1] + camY, q[2], q[6]); T3U.lc.value[i].set(q[3], q[4], q[5]);
-          const key = Math.abs(q[0] + camX - P[2].x) < 0.01 && Math.abs(q[1] + camY - (P[2].y - 12)) < 0.01;   // the key light follows the hero
+          T3U.lp.value[i].set(q[0] + cam.x, q[1] + cam.y, q[2], q[6]); T3U.lc.value[i].set(q[3], q[4], q[5]);
+          const key = Math.abs(q[0] + cam.x - P[2].x) < 0.01 && Math.abs(q[1] + cam.y - (P[2].y - 12)) < 0.01;   // the key light follows the hero
           T3U.lz.value[i] = key ? (this.zw.get(this.hero) ?? 0) : club ? 0 : q[6] > 0 ? -10 : T3.ZF + 2;
         }
         else T3U.lp.value[i].set(0, 0, 0, 0);
       }
-      T3U.cam.value.set(camX, rain.k, club ? 1 : 0, simTime); T3U.view.value = VW;
+      T3U.cam.value.set(cam.x, rain.k, club ? 1 : 0, simTime); T3U.view.value = cam.vw;
     },
     updateCamera() {
       // a shifted lens instead of a tilt: the camera stands above the view and looks straight at the wall, so verticals stay
       // vertical and the fight lane (z = 0) maps 1:1 onto the 2D pixels; the tops of things below eye level still show
-      const cam = this.camera, cx = camX + VW / 2, cy = camY + VH / 2, t = Math.tan(T3.FOV * Math.PI / 360), D = (VH / 2) / t, h = D * Math.tan(T3.PITCH);
-      cam.position.set(cx, -cy + h, D); cam.rotation.set(0, 0, 0);
-      cam.updateProjectionMatrix(); cam.projectionMatrix.elements[9] = -h / (D * t); cam.projectionMatrixInverse.copy(cam.projectionMatrix).invert();
+      const cam3 = this.camera, cx = cam.x + cam.vw / 2, cy = cam.y + cam.vh / 2, t = Math.tan(T3.FOV * Math.PI / 360), D = (cam.vh / 2) / t, h = D * Math.tan(T3.PITCH);
+      cam3.position.set(cx, -cy + h, D); cam3.rotation.set(0, 0, 0);
+      cam3.updateProjectionMatrix(); cam3.projectionMatrix.elements[9] = -h / (D * t); cam3.projectionMatrixInverse.copy(cam3.projectionMatrix).invert();
     },
     frame(rdt) {
       if (!this.renderer) return;
@@ -6685,7 +6686,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         }`);
     },
     post() {
-      const r = this.renderer, U = this.postU, gw = Math.ceil(VW / 4), gh = Math.ceil(VH / 4), q = this.postQuad;
+      const r = this.renderer, U = this.postU, gw = Math.ceil(cam.vw / 4), gh = Math.ceil(cam.vh / 4), q = this.postQuad;
       if (this.rtA.width !== gw || this.rtA.height !== gh) { this.rtA.setSize(gw, gh); this.rtB.setSize(gw, gh); }
       U.gp.value.set(gw, gh); U.view.value.set(1, 1); U.fade.value = 1 - clamp(fade, 0, 1);
       r.setRenderTarget(this.rtMain); r.render(this.scene, this.camera);
@@ -6711,7 +6712,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   b3d?.addEventListener('click', () => setMode3D(!mode3D));
 
   // ---------- pointer: drag and hit ----------
-  const toWorld = e => { const r = cv.getBoundingClientRect(); return { x: camX + (e.clientX - r.left) / r.width * VW, y: camY + (e.clientY - r.top) / r.height * VH }; };
+  const toWorld = e => { const r = cv.getBoundingClientRect(); return { x: cam.x + (e.clientX - r.left) / r.width * cam.vw, y: cam.y + (e.clientY - r.top) / r.height * cam.vh }; };
   function nearest(pos) {
     let best = -1, bd = Infinity;
     P.forEach((p, i) => { const d = Math.hypot(p.x - pos.x, p.y - pos.y) - p.r; if (d < bd) { bd = d; best = i; } });
@@ -6899,7 +6900,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     for (const p of P) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     for (const st of hair) for (const p of st) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
-    camXf = ctl.x - 80; camYf = ctl.y - 60; camV.x = camV.y = camV.z = 0;
+    cam.xf = ctl.x - 80; cam.yf = ctl.y - 60; cam.v.x = cam.v.y = cam.v.z = 0;
     if (demo) { di = Math.max(0, DEMO.findIndex(st => st.tag === 'club')); dk = 0; dTry = 0; dStarted = false; }
     else autoWalk = true;
   }
@@ -7130,8 +7131,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (st >= 0) {   // stops over the body, then the line types itself out
       const n = Math.min(OPEN.line.length, Math.floor(st * 30));
       sayEl.hidden = false; sayEl.textContent = OPEN.line.slice(0, Math.max(1, n));
-      const k = cv.clientWidth / VW, hd = D[0];
-      sayEl.style.left = `${(hd.x - camX) * k}px`; sayEl.style.top = `${(hd.y - camY - 6) * k}px`;
+      const k = cv.clientWidth / cam.vw, hd = D[0];
+      sayEl.style.left = `${(hd.x - cam.x) * k}px`; sayEl.style.top = `${(hd.y - cam.y - 6) * k}px`;
       if (st > OPEN.sayFor) endOpening();
     }
   }
@@ -7336,17 +7337,17 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (mode3D) Three3D.frame(rdt);
 
     {   // [feel] screen shake: a random jitter plus a directional kick that springs back, both in whole world pixels
-      if (shake > shakePrev + 1e-4 && !shakeSet) {   // set without an amplitude: take one from its length
-        const a = shake >= 0.25 ? 3 : shake >= 0.15 ? 2 : 1, cur = shakeDur > 0 ? shakeAmp * shakePrev / shakeDur : 0;
-        if (a >= cur) { shakeAmp = a; shakeDur = shake; }
+      if (cam.shake > shakePrev + 1e-4 && !shakeSet) {   // set without an amplitude: take one from its length
+        const a = cam.shake >= 0.25 ? 3 : cam.shake >= 0.15 ? 2 : 1, cur = shakeDur > 0 ? shakeAmp * shakePrev / shakeDur : 0;
+        if (a >= cur) { shakeAmp = a; shakeDur = cam.shake; }
       }
       shakeSet = false;
-      if (shake > 0) shake -= rdt;
-      shakePrev = shake;
+      if (cam.shake > 0) cam.shake -= rdt;
+      shakePrev = cam.shake;
       // the jitter decays with the time left and leans along the last camera kick
-      const kx = Math.round(camKick.x), ky = Math.round(camKick.y), j = shake > 0 && shakeDur > 0 ? shakeAmp * Math.min(1, shake / shakeDur) : 0;
-      if (shake <= 0) shakeAmp = shakeDur = 0;
-      camKick.x *= Math.exp(-18 * rdt); camKick.y *= Math.exp(-18 * rdt);
+      const kx = Math.round(cam.kick.x), ky = Math.round(cam.kick.y), j = cam.shake > 0 && shakeDur > 0 ? shakeAmp * Math.min(1, cam.shake / shakeDur) : 0;
+      if (cam.shake <= 0) shakeAmp = shakeDur = 0;
+      cam.kick.x *= Math.exp(-18 * rdt); cam.kick.y *= Math.exp(-18 * rdt);
       const r0 = Math.random() * 2 - 1, kd = Math.hypot(kickDir.x, kickDir.y) || 1, bx = kickDir.x / kd, by = kickDir.y / kd;
       const jx = j * (0.5 * (Math.random() * 2 - 1) + 0.6 * r0 * bx), jy = j * (0.5 * (Math.random() * 2 - 1) + 0.6 * r0 * by);
       const sx = (Math.round(jx) + kx) * scale, sy = (Math.round(jy) + ky) * scale;
@@ -7365,7 +7366,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     show('speed', speedEl, ((mode === 'anim' ? ctl.spd : headSpeed) / PX_PER_M).toFixed(1));
     show('hits', hitsEl, hits);
     show('bag', bagEl, landed);
-    show('zoom', zoomEl, Math.round(zoom * 100));
+    show('zoom', zoomEl, Math.round(cam.zoom * 100));
     if (bandT > 0) bandT = Math.max(0, bandT - sdt);
     if (mode === 'anim') playerHp = playerHp <= 0 ? 100 : Math.min(100, playerHp + (DIF().regen + (bandT > 0 ? BAND_REGEN : 0)) * sdt);   // back up with full health after a K.O.; the regen by difficulty, more with a bandage on
     if (ammoFlash > 0) ammoFlash -= rdt;
