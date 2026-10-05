@@ -1,0 +1,83 @@
+{
+  "_doc": "Voice script for tools/voice.py (F5-TTS MLX). Each speaker has one fixed reference clip in assets/audio/voices/<speaker>/ (built from a macOS say voice, pitch-shifted and coloured). 'say' overrides the spoken text when a name needs a spelling hint; 'text' is the caption.",
+  "voices": {
+    "elias": {
+      "desc": "Low, tired, quiet male. Narrator of the voice-over.",
+      "say_voice": "Daniel", "say_rate": 150, "pitch_st": -2.5,
+      "ref_fx": "lowpass=f=7000,equalizer=f=140:t=q:w=1:g=3,acompressor=threshold=-24dB:ratio=3",
+      "ref_text": "I did not come back for revenge. I came back because nobody else was going to finish it.",
+      "speed": 1.0, "line_pitch_st": -1.5
+    },
+    "marchetti": {
+      "desc": "Big, coarse, older male. Fishmonger boss, loud.",
+      "say_voice": "Rocko (English (US))", "say_rate": 165, "pitch_st": -3,
+      "ref_fx": "equalizer=f=120:t=q:w=1:g=5,equalizer=f=900:t=q:w=1:g=3,asoftclip=type=tanh:param=2",
+      "ref_text": "Every fish on this pier has a price, my friend. And every man who walks in here pays it.",
+      "speed": 1.0, "line_pitch_st": -3
+    },
+    "bell": {
+      "desc": "Old, warm, raspy male. The watchmaker.",
+      "say_voice": "Grandpa (English (UK))", "say_rate": 140, "pitch_st": -1,
+      "ref_fx": "vibrato=f=5.5:d=0.05,equalizer=f=250:t=q:w=1:g=3,equalizer=f=3500:t=q:w=1.5:g=3,asoftclip=type=atan:param=1.5",
+      "ref_text": "Sit down, boy. A good clock never hurries, and neither should a man who wants to live long.",
+      "speed": 1.0, "line_pitch_st": -0.5
+    },
+    "hale": {
+      "desc": "Weary middle-aged male. Police inspector, mostly heard on the phone.",
+      "say_voice": "Reed (English (US))", "say_rate": 160, "pitch_st": -1.5,
+      "ref_fx": "lowpass=f=6500,equalizer=f=200:t=q:w=1:g=2",
+      "ref_text": "Listen to me. I have been a cop in this city for twenty years, and I am tired of burying people.",
+      "speed": 1.0, "line_pitch_st": 1
+    }
+  },
+  "moods": {
+    "vo":      { "speed": 0.92, "fx": "acompressor=threshold=-22dB:ratio=3:attack=5:release=120" },
+    "cold":    { "speed": 0.9 },
+    "warm":    { "speed": 0.95 },
+    "serious": { "speed": 0.95 },
+    "amused":  { "speed": 1.0 },
+    "smug":    { "speed": 1.0 },
+    "furious": { "speed": 1.08, "fx": "asoftclip=type=tanh:param=1.3", "lufs": -16 },
+    "phone":   { "speed": 1.0, "fx": "highpass=f=320,lowpass=f=3200,acrusher=bits=11:mix=0.25,equalizer=f=1500:t=q:w=1:g=4" }
+  },
+  "lines": [
+    { "id": "prologue_01", "speaker": "elias", "mood": "vo", "scene": "prologue_open", "panel": 1,
+      "text": "Three nights since Club Noir. The rain had not stopped. Neither had the clocks.",
+      "say": "Three nights since Club Nwar. The rain had not stopped. Neither had the clocks." },
+    { "id": "prologue_02", "speaker": "bell", "mood": "warm", "scene": "prologue_open", "panel": 2,
+      "text": "Eat, Elias. You look like a man who broke something expensive." },
+    { "id": "prologue_03", "speaker": "bell", "mood": "serious", "scene": "prologue_open", "panel": 3,
+      "text": "Malaspina was a tenor. There is a whole choir. And every choir needs someone to keep time." },
+    { "id": "prologue_04", "speaker": "elias", "mood": "vo", "scene": "prologue_open", "panel": 4,
+      "text": "In this city, a tuning fork is a death notice." },
+    { "id": "prologue_05", "speaker": "elias", "mood": "vo", "scene": "prologue_open", "panel": 5,
+      "text": "The dog pulled me out. Nobody pulled Bell out." },
+    { "id": "prologue_06", "speaker": "elias", "mood": "vo", "scene": "prologue_end", "panel": 1,
+      "text": "They said it was Bell. The ring said so. The dog said nothing." },
+    { "id": "prologue_07", "speaker": "elias", "mood": "vo", "scene": "prologue_end", "panel": 2,
+      "text": "Underworld rule: break a man, inherit his debts. They had sent me the bill." },
+    { "id": "prologue_08", "speaker": "elias", "mood": "cold", "scene": "prologue_end", "panel": 3,
+      "text": "Who." },
+    { "id": "prologue_09", "speaker": "hale", "mood": "phone", "scene": "prologue_end", "panel": 4,
+      "text": "The fork means the Choir. Start at Pier 9. And keep your head down.",
+      "say": "The fork means the Choir. Start at Pier Nine. And keep your head down." },
+
+    { "id": "docks_intro_01", "speaker": "elias", "mood": "vo", "scene": "docks_intro", "panel": 1,
+      "text": "Pier 9. Where the city guts its fish, and its debts.",
+      "say": "Peer nine. Where the city guts its fish, and its debts." },
+    { "id": "docks_intro_03", "speaker": "elias", "mood": "vo", "scene": "docks_intro", "panel": 3,
+      "text": "I brought their bell back. Let them hear it ring." },
+
+    { "id": "marchetti_intro_01", "speaker": "marchetti", "mood": "amused", "scene": "marchetti_intro", "portrait": "marchetti_amused",
+      "text": "The Sandman. I thought you were a bedtime story they tell to scare tenors." },
+    { "id": "marchetti_intro_02", "speaker": "elias", "mood": "cold", "scene": "marchetti_intro", "portrait": "elias_cold",
+      "text": "The watchmaker." },
+    { "id": "marchetti_intro_03", "speaker": "marchetti", "mood": "smug", "scene": "marchetti_intro", "portrait": "marchetti_smug",
+      "text": "Business. You broke Malaspina, you carry his debt. Rules are rules.",
+      "say": "Business. You broke Mala-speena, you carry his debt. Rules are rules." },
+    { "id": "marchetti_intro_04", "speaker": "elias", "mood": "cold", "scene": "marchetti_intro", "portrait": "elias_cold",
+      "text": "Then collect." },
+    { "id": "marchetti_intro_05", "speaker": "marchetti", "mood": "furious", "scene": "marchetti_intro", "portrait": "marchetti_furious",
+      "text": "With pleasure. I'll weigh you by the pound!" }
+  ]
+}

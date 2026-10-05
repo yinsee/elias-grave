@@ -1,0 +1,162 @@
+[
+ {
+  "id": "prologue_01",
+  "speaker": "elias",
+  "mood": "vo",
+  "scene": "prologue_open",
+  "dur": 8.04,
+  "text": "Three nights since Club Noir. The rain had not stopped. Neither had the clocks.",
+  "heard": "Three nights since club no war. The rain had not stopped. Neither had the clocks.",
+  "wer": 0.14
+ },
+ {
+  "id": "prologue_02",
+  "speaker": "bell",
+  "mood": "warm",
+  "scene": "prologue_open",
+  "dur": 7.39,
+  "text": "Eat, Elias. You look like a man who broke something expensive.",
+  "heard": "Eat Elias. You look like a man who broke something expensive.",
+  "wer": 0.0
+ },
+ {
+  "id": "prologue_03",
+  "speaker": "bell",
+  "mood": "serious",
+  "scene": "prologue_open",
+  "dur": 10.79,
+  "text": "Malaspina was a tenor. There is a whole choir. And every choir needs someone to keep time.",
+  "heard": "Malaspina was a tenor. There is a whole choir. And every choir needs someone to keep time.",
+  "wer": 0.0
+ },
+ {
+  "id": "prologue_04",
+  "speaker": "elias",
+  "mood": "vo",
+  "scene": "prologue_open",
+  "dur": 4.34,
+  "text": "In this city, a tuning fork is a death notice.",
+  "heard": "In this city, a tuning fork is a death notice.",
+  "wer": 0.0
+ },
+ {
+  "id": "prologue_05",
+  "speaker": "elias",
+  "mood": "vo",
+  "scene": "prologue_open",
+  "dur": 5.13,
+  "text": "The dog pulled me out. Nobody pulled Bell out.",
+  "heard": "The dog pulled me out. Nobody pulled Belle out.",
+  "wer": 0.11
+ },
+ {
+  "id": "prologue_06",
+  "speaker": "elias",
+  "mood": "vo",
+  "scene": "prologue_end",
+  "dur": 7.17,
+  "text": "They said it was Bell. The ring said so. The dog said nothing.",
+  "heard": "They said it was Belle. The ring said so. The dog said nothing.",
+  "wer": 0.08
+ },
+ {
+  "id": "prologue_07",
+  "speaker": "elias",
+  "mood": "vo",
+  "scene": "prologue_end",
+  "dur": 7.99,
+  "text": "Underworld rule: break a man, inherit his debts. They had sent me the bill.",
+  "heard": "Underworld ruled, break a man, inherit his debts. They had sent me the bill.",
+  "wer": 0.07
+ },
+ {
+  "id": "prologue_08",
+  "speaker": "elias",
+  "mood": "cold",
+  "scene": "prologue_end",
+  "dur": 1.99,
+  "text": "Who.",
+  "heard": "Who?",
+  "wer": 0.0
+ },
+ {
+  "id": "prologue_09",
+  "speaker": "hale",
+  "mood": "phone",
+  "scene": "prologue_end",
+  "dur": 8.9,
+  "text": "The fork means the Choir. Start at Pier 9. And keep your head down.",
+  "heard": "The fork means the choir. Start at Pier 9 and keep your head down.",
+  "wer": 0.0
+ },
+ {
+  "id": "docks_intro_01",
+  "speaker": "elias",
+  "mood": "vo",
+  "scene": "docks_intro",
+  "dur": 5.89,
+  "text": "Pier 9. Where the city guts its fish, and its debts.",
+  "heard": "Pier 9. Where the city guts its fish, and its debts.",
+  "wer": 0.0
+ },
+ {
+  "id": "docks_intro_03",
+  "speaker": "elias",
+  "mood": "vo",
+  "scene": "docks_intro",
+  "dur": 4.81,
+  "text": "I brought their bell back. Let them hear it ring.",
+  "heard": "I brought their bell back. Let them hear it ring.",
+  "wer": 0.0
+ },
+ {
+  "id": "marchetti_intro_01",
+  "speaker": "marchetti",
+  "mood": "amused",
+  "scene": "marchetti_intro",
+  "dur": 7.39,
+  "text": "The Sandman. I thought you were a bedtime story they tell to scare tenors.",
+  "heard": "The Sandman. I thought you were a bedtime story they tell to scare sinners.",
+  "wer": 0.07
+ },
+ {
+  "id": "marchetti_intro_02",
+  "speaker": "elias",
+  "mood": "cold",
+  "scene": "marchetti_intro",
+  "dur": 2.47,
+  "text": "The watchmaker.",
+  "heard": "The Watchmaker",
+  "wer": 0.0
+ },
+ {
+  "id": "marchetti_intro_03",
+  "speaker": "marchetti",
+  "mood": "smug",
+  "scene": "marchetti_intro",
+  "dur": 9.69,
+  "text": "Business. You broke Malaspina, you carry his debt. Rules are rules.",
+  "heard": "Business. You broke Mollaspina. You carry his debt. Rules are rules.",
+  "wer": 0.09
+ },
+ {
+  "id": "marchetti_intro_04",
+  "speaker": "elias",
+  "mood": "cold",
+  "scene": "marchetti_intro",
+  "dur": 2.3,
+  "text": "Then collect.",
+  "heard": "Then collect.",
+  "wer": 0.0
+ },
+ {
+  "id": "marchetti_intro_05",
+  "speaker": "marchetti",
+  "mood": "furious",
+  "scene": "marchetti_intro",
+  "dur": 4.59,
+  "text": "With pleasure. I'll weigh you by the pound!",
+  "heard": "With pleasure, I'll weigh you by the pound.",
+  "wer": 0.0
+ }
+]
