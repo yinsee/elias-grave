@@ -7411,14 +7411,17 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       st.add(kills.length); st.add(q(simTime));
       let g = 0; for (let i = 0; i < GORE.length; i += 7) g = (g + (GORE[i] & 0xffffff)) >>> 0; st.add(g);
       for (let i = 0; i < buf.length; i++) bf.add(buf[i]);
-      window.__autotest = { kind, frames, seed: SEED, state: st.hex, buf: bf.hex, hero: Math.round(ctl.x), enemies: enemies.length, kills: kills.length };
-      document.title = `AUTOTEST ${kind} f=${frames} seed=${SEED} state=${st.hex} buf=${bf.hex}`;
+      let l3 = '';   // ?view3d: the run plays in the 3D view; hash the 2D art the 3D layers hold (CPU side, so it does not depend on the GPU)
+      if (mode3D) { const h = fnv(); for (const k of ['lWall', 'lSign', 'lBlade', 'lRail', 'lClub', 'lFloor', 'lMid', 'lFront', 'lFx']) { const d = Three3D[k].data; for (let i = 0; i < d.length; i++) h.add(d[i]); } l3 = h.hex; }
+      window.__autotest = { kind, frames, seed: SEED, state: st.hex, buf: bf.hex, l3, hero: Math.round(ctl.x), enemies: enemies.length, kills: kills.length };
+      document.title = `AUTOTEST ${kind} f=${frames} seed=${SEED} state=${st.hex} buf=${bf.hex}` + (l3 ? ` l3=${l3}` : '');
       console.log('[autotest]', JSON.stringify(window.__autotest));
     };
     setTimeout(chunk, 0);
   }
   if (AUTOTEST) {   // (no saved settings: the run must not depend on this browser's choices)
     if (AUTOTEST === 'boss') { setDemo(true); skipToBoss(); } else startAttract();
+    if (QS.has('view3d')) setMode3D(true);
     runAutotest(AUTOTEST, +QS.get('frames') || 1800);
     return;
   }
