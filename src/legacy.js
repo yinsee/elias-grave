@@ -150,7 +150,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     // things in flight keep their lane on the way up, and take the new one as they come down (no swerve under every car)
     for (const o of objs) { const l = laneAt(o.x, o.y + o.r, false); if (o.carried) o.lane = ctl.lane ?? LANE.FIGHT; else if (o.lane == null || o.vy >= -5) o.lane = l; }   // (one in his hand goes where he goes)
     // a ragdoll lies where its pelvis lies (as bodyFloor decides), not where a dangling foot hangs
-    ctl.lane = act === 'climb' && ctl.climb ? laneOf(ctl.climb.s, true) : mode === 'anim' && !ctl.air ? laneOf(ctl.surf, true) : mode !== 'anim' ? laneAt(P[2].x, P[2].y + P[2].r, true) : laneOf(floorBelow(P[2].x, footOf(P) - 0.5, 0, true), true);
+    ctl.lane = hero.act === 'climb' && ctl.climb ? laneOf(ctl.climb.s, true) : hero.mode === 'anim' && !ctl.air ? laneOf(ctl.surf, true) : hero.mode !== 'anim' ? laneAt(P[2].x, P[2].y + P[2].r, true) : laneOf(floorBelow(P[2].x, footOf(P) - 0.5, 0, true), true);
     for (const e of enemies) { const J = e.dead ? e.pts : e.J; e.lane = !J ? LANE.FIGHT : e.dead ? laneAt(J[2].x, J[2].y + 3, true) : laneAt(J[2].x, footOf(J), true); }
     for (const t of thrown) { let l = laneAt(t.x, t.y + 1, true); if (t.stuck && l === LANE.FIGHT) l = LANE.FRONT; if (t.lane == null || t.stuck || t.vy >= 0) t.lane = l; }   // a weapon lying in the street: the front lane, where nothing hides it
     for (const b of ammoBoxes) b.lane = LANE.FRONT;   // ammo and bandages: always in the front lane, where nothing hides them
@@ -160,7 +160,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // the climb: both hands on the ledge (a 2-bone IK from the shoulder, elbows out away from the wall), held while he pulls up and
   // presses over, let go as he stands
   function climbArms(joints) {
-    const C = ctl.climb, f = ctl.face, t = actT, end = CLIMB.hang + CLIMB.up + CLIMB.over, w = 1 - smooth(clamp((t - (end - CLIMB.over * 0.35)) / (CLIMB.over * 0.35), 0, 1));
+    const C = ctl.climb, f = ctl.face, t = hero.actT, end = CLIMB.hang + CLIMB.up + CLIMB.over, w = 1 - smooth(clamp((t - (end - CLIMB.over * 0.35)) / (CLIMB.over * 0.35), 0, 1));
     if (w <= 0) return;
     const sh = joints[1], grip = smooth(clamp(t / 0.06, 0, 1));   // the hands reach the edge in the first frames
     for (const [ei, hi, off] of [[3, 4, 3.2], [5, 6, 1.0]]) {
@@ -1087,8 +1087,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // fighting: the first goon it hits, it breaks on (shatterObj)
   function carryStep(dt) {
     let c = ctl.carry;
-    if (c && (!objs.includes(c) || mode !== 'anim')) { if (objs.includes(c)) { c.carried = false; c.vx = (Math.random() - 0.5) * 40; c.vy = -40; } ctl.carry = c = null; }   // knocked down: he drops it
-    if (!c && mode === 'anim' && act === 'squat' && !weapon && !ctl.air && !demoSmash) {
+    if (c && (!objs.includes(c) || hero.mode !== 'anim')) { if (objs.includes(c)) { c.carried = false; c.vx = (Math.random() - 0.5) * 40; c.vy = -40; } ctl.carry = c = null; }   // knocked down: he drops it
+    if (!c && hero.mode === 'anim' && hero.act === 'squat' && !hero.weapon && !ctl.air && !demoSmash) {
       let best = null;
       for (const o of objs) if (LIFTABLE.has(o.kind) && !o.carried && Math.abs(o.x - ctl.x) < o.r + 9 && Math.abs(o.y + o.r - (ctl.y + 2)) < 6 && Math.hypot(o.vx, o.vy) < 40 && (!best || Math.abs(o.x - ctl.x) < Math.abs(best.x - ctl.x))) best = o;
       if (best) { ctl.carry = c = best; ctl.bashT = 0; best.carried = true; best.a = 0; best.av = 0; best.liftT = 0.15; best.lx = best.x; best.ly = best.y; tut('lift'); dust(best.x, GROUND - 1, 2); }
@@ -1116,7 +1116,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     const aim = aimAt(o.x, o.y, 160 + 110 * k + Math.max(0, ctl.spd) * 0.4, G);
     o.vx = aim.vx; o.vy = aim.vy; o.av = f * 9; o.safeT = 0.3;
     tut('toss'); if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.05);
-    act = 'tw'; actT = 0.2; hitDone = true; atkId++;   // the throwing arm follows through
+    hero.act = 'tw'; hero.actT = 0.2; hitDone = true; hero.atkId++;   // the throwing arm follows through
     return true;
   }
   function thrownObjStep(dt) {   // a thrown object hits the first goon in its way
@@ -1156,8 +1156,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
   function pocketStep(dt) {
     for (const o of objs.slice()) {
-      if (!o.pocket || o.safeT > 0 || mode !== 'anim' || pocket.length >= 3) continue;
-      if (!endPh && act === 'squat' && Math.abs(o.x - ctl.x) < 9 && Math.abs(o.y - ctl.y) < 14) { pocket.push(o.kind); removeObj(o); tut('pocket'); sparks.push({ x: o.x, y: o.y - 3, t: 0.1 }); }   // squat by it to pocket it (walking into it kicks it along)
+      if (!o.pocket || o.safeT > 0 || hero.mode !== 'anim' || pocket.length >= 3) continue;
+      if (!endPh && hero.act === 'squat' && Math.abs(o.x - ctl.x) < 9 && Math.abs(o.y - ctl.y) < 14) { pocket.push(o.kind); removeObj(o); tut('pocket'); sparks.push({ x: o.x, y: o.y - 3, t: 0.1 }); }   // squat by it to pocket it (walking into it kicks it along)
     }
     for (let i = tossed.length - 1; i >= 0; i--) {   // pocket throws fly until they hit someone or land
       const q = tossed[i], T = TOSS[q.k];
@@ -1180,13 +1180,13 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function throwPocket() {
     const k = pocket.shift(); if (!k) return false;
     // [feel] the arm winds back first; the can leaves the hand at the release key (see tossRelease), not from the belt
-    act = 'tw'; actT = 0.06; hitDone = true; atkId++; ctl.toss = k;
+    hero.act = 'tw'; hero.actT = 0.06; hitDone = true; hero.atkId++; ctl.toss = k;
     return true;
   }
   function tossRelease() {
     const k = ctl.toss; if (!k) return;
-    if (act !== 'tw') { pocket.unshift(k); ctl.toss = null; return; }   // cut short: it stays in the pocket
-    if (actT < 0.22) return;
+    if (hero.act !== 'tw') { pocket.unshift(k); ctl.toss = null; return; }   // cut short: it stays in the pocket
+    if (hero.actT < 0.22) return;
     const T = TOSS[k], f = ctl.face, h = P[6];
     const aim = aimAt(h.x, h.y, T.v, G * (k === 'knife' ? 0.15 : 0.7));
     tossed.push({ k, x: h.x, y: h.y, vx: aim.vx, vy: aim.vy, a: 0, av: f * T.spin });
@@ -1264,7 +1264,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     // objects against the fighter
     for (const o of objs) {
       if (o.carried || offPlat(o, ctl.lane)) continue;
-      if (mode === 'rag') {
+      if (hero.mode === 'rag') {
         for (const p of P) {
           const dx = o.x - p.x, dy = o.y - p.y, d = Math.hypot(dx, dy), rr = o.r + p.r * 0.8;
           if (d >= rr || d === 0) continue;
@@ -1289,7 +1289,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         o.x += nx * (4 - q.d); o.y += ny * (4 - q.d);
         const fvx = (P[2].x - P[2].px) / dt, fvy = (P[2].y - P[2].py) / dt;
         const vn = (o.vx - fvx) * nx + (o.vy - fvy) * ny;
-        if (o.vx * nx + o.vy * ny < -170 && o.safeT <= 0 && mode === 'anim') {   // an object flying into the fighter knocks them down
+        if (o.vx * nx + o.vy * ny < -170 && o.safeT <= 0 && hero.mode === 'anim') {   // an object flying into the fighter knocks them down
           const ivx = o.vx * 0.5, ivy = o.vy * 0.5;
           toRag();
           for (const p of P) { const f = clamp(1 - Math.hypot(p.x - o.x, p.y - o.y) / 20, 0.2, 1); p.px -= ivx * f * dt; p.py -= ivy * f * dt; }
@@ -1297,10 +1297,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
           sparks.push({ x: cx, y: cy, t: 0 }); hits++; hitFx(200);
         } else {
           const on = o.vx * nx + o.vy * ny;
-          if (on < -80 && o.safeT <= 0 && mode === 'anim' && flinch(o.x, o.y, clamp((-on - 60) / 110, 0.35, 1), cx, cy)) o.safeT = 0.2;   // [G3] moderate hit: flinch
+          if (on < -80 && o.safeT <= 0 && hero.mode === 'anim' && flinch(o.x, o.y, clamp((-on - 60) / 110, 0.35, 1), cx, cy)) o.safeT = 0.2;   // [G3] moderate hit: flinch
           if (vn < 0) {
             o.vx -= nx * vn * 1.1; o.vy -= ny * vn * 1.1;
-            if (o.m < 1 && !ctl.air && mode === 'anim' && Math.abs(fvx) > 15 && o.y > P[2].y) {   // a can, a bottle, a cone at his feet: kicked skittering along
+            if (o.m < 1 && !ctl.air && hero.mode === 'anim' && Math.abs(fvx) > 15 && o.y > P[2].y) {   // a can, a bottle, a cone at his feet: kicked skittering along
               o.vx = fvx * (1.3 + Math.random() * 0.5) + nx * 15; o.vy = -25 - Math.random() * 45 * Math.min(1, Math.abs(fvx) / 120); o.av += (Math.random() - 0.5) * 20; o.safeT = 0.15;
             }
           }
@@ -1345,11 +1345,11 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // ---------- weapons ----------
   // a blade sits in the front hand, pointed by the forearm (plus the blade angle, wrist turn and swing through depth).
   // a gun is held at the shoulder: x, y is the butt of the stock and the hands grip it (see holdGun)
-  const wBack = () => mode === 'anim' && !!WEAPONS[weapon].melee && !!MOVES[act] && MOVES[act].hand === 0 && actT >= (MOVES[act].swapAt || 0) && actT < MOVES[act].dur - 0.04;   // passed hand to hand where the grips meet   // the blade is in the back hand
+  const wBack = () => hero.mode === 'anim' && !!WEAPONS[hero.weapon].melee && !!MOVES[hero.act] && MOVES[hero.act].hand === 0 && hero.actT >= (MOVES[hero.act].swapAt || 0) && hero.actT < MOVES[hero.act].dur - 0.04;   // passed hand to hand where the grips meet   // the blade is in the back hand
   function weaponGeom() {
-    const Wp = WEAPONS[weapon]; if (!Wp.len) return null;
+    const Wp = WEAPONS[hero.weapon]; if (!Wp.len) return null;
     const f = faceNow();
-    if (Wp.gun && gunPose && mode !== 'rag') {
+    if (Wp.gun && gunPose && hero.mode !== 'rag') {
       const { bx, by, dx, dy } = gunPose;
       return { x: bx, y: by, dx, dy, len: Wp.len, tx: bx + dx * Wp.len, ty: by + dy * Wp.len, s: f };
     }
@@ -1374,11 +1374,11 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // shoulder the gun: stock in the shoulder pocket, trigger hand on the grip, support hand on the forend.
   // aiming raises the muzzle from low carry to level; recoil drives the stock back and lifts the muzzle.
   function holdGun(j) {
-    const Wp = WEAPONS[weapon], f = ctl.face, r = gun.recoil, nk = j[1];
-    let th = act === 'gb' ? 0 : lerp(0.65, 0, gun.aimW) - Wp.lift * r - gun.climb;   // radians below level
+    const Wp = WEAPONS[hero.weapon], f = ctl.face, r = gun.recoil, nk = j[1];
+    let th = hero.act === 'gb' ? 0 : lerp(0.65, 0, gun.aimW) - Wp.lift * r - gun.climb;   // radians below level
     let dx = Math.cos(th) * f, dy = Math.sin(th);
     if (ctl.spin) { const a = ctl.spin * f, c = Math.cos(a), sn = Math.sin(a); [dx, dy] = [dx * c - dy * sn, dx * sn + dy * c]; }
-    const thrust = act === 'gb' ? 4 * Math.sin(Math.PI * clamp((actT - 0.08) / 0.3, 0, 1)) : 0;
+    const thrust = hero.act === 'gb' ? 4 * Math.sin(Math.PI * clamp((hero.actT - 0.08) / 0.3, 0, 1)) : 0;
     const back = Wp.kick * r - thrust;
     const sa = Math.sin(ctl.spin * f), ca = Math.cos(ctl.spin * f);   // [feel] the shoulder pocket turns with the body in a flip
     const bx = nk[0] + f * 1.5 * ca - 2.5 * sa - dx * back, by = nk[1] + f * 1.5 * sa + 2.5 * ca - dy * back;
@@ -1395,15 +1395,15 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
   // with a gun up, recoil rocks the upper body: hips shove back, the torso leans back, the head jolts
   function gunBody(q, dt) {
-    gun.aimW += ((gun.aimT > 0 || act === 'gb' ? 1 : 0) - gun.aimW) * (1 - Math.exp(-20 * dt));
-    const k = gun.recoil * WEAPONS[weapon].body, o = q.slice();
+    gun.aimW += ((gun.aimT > 0 || hero.act === 'gb' ? 1 : 0) - gun.aimW) * (1 - Math.exp(-20 * dt));
+    const k = gun.recoil * WEAPONS[hero.weapon].body, o = q.slice();
     o[0] -= 1.8 * k; o[2] -= 0.25 * k; o[3] += 0.15 * k;   // hips and torso only: the feet keep their spots
     return o;
   }
   function fire(Wp) {
     const g = weaponGeom(); if (!g) return;
     if (Wp.ammo) {
-      if (charge[weapon] <= 0) {   // empty: hurl the gun at the nearest enemy instead
+      if (charge[hero.weapon] <= 0) {   // empty: hurl the gun at the nearest enemy instead
         gun.want = false; gun.cd = 0.3;
         let foe = null;
         for (const e of enemies) if (!e.dead && Math.abs(e.x - ctl.x) < 180 && Math.abs(e.y - ctl.y) < 30 && (!foe || Math.abs(e.x - ctl.x) < Math.abs(foe.x - ctl.x))) foe = e;
@@ -1411,7 +1411,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         ctl.flipT = -1; ctl.spin = 0; startAttack('tw');
         return;
       }
-      charge[weapon]--;
+      charge[hero.weapon]--;
     }
     // the machine gun sprays around a level line ahead, so kick never walks the stream upward
     const base = Wp.auto && !ctl.spin ? (ctl.face > 0 ? 0 : Math.PI) : Math.atan2(g.dy, g.dx);
@@ -1433,7 +1433,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (ctl.air && Wp.pellets > 1) ctl.vu += 25;
     if (Wp.pellets > 1) { gun.pumpT = 0; if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.1); }
     else if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.025);
-    if (Wp.ammo && charge[weapon] <= 0) outOfAmmo();
+    if (Wp.ammo && charge[hero.weapon] <= 0) outOfAmmo();
   }
   function bulletStep(dt) {
     for (let i = bullets.length - 1; i >= 0; i--) {
@@ -1671,7 +1671,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const DIF = () => DIFFS[demo ? 2 : diffSel], dLv = () => Math.log2(DIF().A);   // dLv: 0 .. 3
   let eTokN = 0, eTokMax = 2, eShotN = 0, eSideT = 0, eHitKind = 0;   // melee / ranged attack tokens in use; side re-plan timer; 1 = melee hit, 2 = bullet
   const enemies = [], zoneAlive = {}, zoneN = {}, eshots = [], spawnFx = [];   // spawnFx: a door that just opened for a goon (kind, x, t)
-  let playerHp = 100, invT = 0, boss = null, bossBeaten = false, arena = null, spawnT = 0, arenaSpawned = 0;
+  // hero: the fighter's own state. hp; invT = time hits still miss; mode = 'anim' | 'rag' | 'getup'; ko; act / actT = the move or
+  // transition playing and its clock; atkId = a count of attacks (one hit per enemy per attack); weapon = index into WEAPONS; bandT = bandage regen time left
+  const hero = { hp: 100, invT: 0, mode: 'anim', ko: false, act: null, actT: 0, atkId: 0, weapon: 0, bandT: 0 };
+  let boss = null, bossBeaten = false, arena = null, spawnT = 0, arenaSpawned = 0;
   const capsule = J => [J[0].x, J[0].y, (J[8].x + J[10].x) / 2, (J[8].y + J[10].y) / 2];
   // every goon gets a gangster name; the boss's name never changes
   const NM_FIRST = ['Vinnie', 'Sal', 'Tony', 'Paulie', 'Carmine', 'Frankie', 'Nicky', 'Joey', 'Lou', 'Rocco', 'Mickey', 'Benny', 'Dino', 'Gino', 'Sonny', 'Luca', 'Enzo', 'Bruno', 'Sergei', 'Viktor', 'Dmitri', 'Klaus', 'Jacques', 'Fritz', 'Seamus', 'Eddie', 'Marcel', 'Otto'];
@@ -1802,23 +1805,23 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (e.gu.t >= GU_T[2]) { e.down = false; e.gu = null; e.pts = null; e.q = RISE.slice(); e.riseT = 0.35; e.vx = e.vy = 0; e.air = false; e.cdT = Math.max(e.cdT, 0.4); }
   }
   function hitsPlayer(x, y, r) {
-    if (mode !== 'anim' || invT > 0) return false;
+    if (hero.mode !== 'anim' || hero.invT > 0) return false;
     const [ax, ay, bx, by] = capsule(P);
     return segDist(ax, ay, bx, by, x, y) < 4 + r;
   }
   // how a hit lands on the player: the blow, plus how fast he was moving into it, airborne or braced.
   // a light one makes him stutter back, a solid one knocks him off his feet, a big one (or a K.O.) sends him flying
   function hurtPlayer(dmg, x, y, dirx, heavy, impK = 1) {   // impK scales how hard the blow moves him (not the damage)
-    if (mode !== 'anim' || invT > 0) return;
-    playerHp = Math.max(0, playerHp - dmg); invT = 0.45;
+    if (hero.mode !== 'anim' || hero.invT > 0) return;
+    hero.hp = Math.max(0, hero.hp - dmg); hero.invT = 0.45;
     const vx = ctl.air ? ctl.face * ctl.spd : ctl.face * ctl.spd, into = Math.max(0, -dirx * vx);
-    const braced = act === 'squat' || act === 'guard' ? 0.7 : 1;
+    const braced = hero.act === 'squat' || hero.act === 'guard' ? 0.7 : 1;
     const impact = dmg * impK * (heavy ? 1.7 : 1) * (1 + into / 55) * (ctl.air ? 1.35 : 1) * braced;
     bleed(x, y, dirx, 6 + Math.round(dmg / 2), 1 + Math.min(1, impact / 40));
     hitFx(Math.min(320, 90 + impact * 7));
-    if (playerHp <= 0 || impact >= 40) {   // sent flying
+    if (hero.hp <= 0 || impact >= 40) {   // sent flying
       toRag(); hits++;
-      if (playerHp <= 0) { ko = true; if (!DIF().perma) toast('K.O.', 'You get back up with full health'); }
+      if (hero.hp <= 0) { hero.ko = true; if (!DIF().perma) toast('K.O.', 'You get back up with full health'); }
       // [feel] a short, heavy arc (~0.7 s, ~100 px): readable, and the camera does not have to chase it
       const fx = dirx * Math.min(170, 110 + impact * 1.4 + into * 0.4), fy = Math.min(140, 80 + impact);
       ragG = 0.9; ragGk = 1.7;
@@ -1842,7 +1845,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         dust(P[8].x - dirx * 2, ctl.y + 1, 1);
       }
       ctl.face = -dirx || ctl.face; ctl.spd = 0; ctl.push = 40 + impact * 3; ctl.pushK = 14;   // a sharp shove that stops quickly
-      if (MOVES[act] && impact >= 9 && act !== 'tw') { act = ctl.air ? 'air' : null; actT = 0; queued = null; }
+      if (MOVES[hero.act] && impact >= 9 && hero.act !== 'tw') { hero.act = ctl.air ? 'air' : null; hero.actT = 0; queued = null; }
     }
   }
   function damageEnemy(e, dmg, dirx, power, up, x, y, blade) {
@@ -1877,7 +1880,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     e.fkZone = zone;
     if (zone === 'head') dmg = Math.round(dmg * 1.35); else if (zone === 'legs') { dmg = Math.max(1, Math.round(dmg * 0.8)); e.limpT = 0.8; }
     e.hp -= dmg; e.flash = 0.08; landed++;
-    const bare = !blade && eHitKind === 1 && !weapon;   // a punch or a kick only splits the skin
+    const bare = !blade && eHitKind === 1 && !hero.weapon;   // a punch or a kick only splits the skin
     bleed(x, y, dirx, bare ? Math.round(1 + dmg / 10) : Math.round(4 + dmg / (blade ? 2 : 3)), blade ? 1.3 : bare ? 0.6 : 1);
     bodyStain(e, x, y, bare ? 1 : Math.round(2 + dmg / (blade ? 4 : 6)));
     if (e.hp <= 0) { killEnemy(e, dirx, power, up, x, y); return; }
@@ -1899,7 +1902,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const kills = []; let killBy = null, feedDirty = true;
   function killEnemy(e, dirx, power, up, hx, hy) {
     crowdReact(e.x, 0, true);   // somebody goes down: the crowd roars
-    if (e !== boss) { kills.push({ name: e.name, w: killBy != null ? killBy : weapon, t: simTime }); feedDirty = true; }
+    if (e !== boss) { kills.push({ name: e.name, w: killBy != null ? killBy : hero.weapon, t: simTime }); feedDirty = true; }
     e.dead = true; e.deadT = 0; e.act = null; e.down = false; e.diedAt = simTime;
     // the blow drives the body from where it landed: that part moves most (a head shot snaps the head back, a leg shot takes
     // the legs), the feet keep their grip on the floor, so he topples back over them; the strength sets how hard (1-3.5 m/s),
@@ -1911,10 +1914,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const vx = e.vx * 0.5 + dirx * v * w * (foot ? 0.12 : knee ? 0.5 : 1), vy = Math.min(0, e.vy) * 0.5 - lift * w * (foot ? 0.3 : 1);
       return { x: j.x, y: j.y, px: j.x - vx * DT, py: j.y - vy * DT, im: IM[i], r: RAD[i] * e.s, fl: GROUND };
     });
-    bleed(e.J[1].x, e.J[1].y, dirx, e.type === 'boss' ? 60 : !weapon && killBy == null && eHitKind === 1 ? 7 : 24, 1.4);   // beaten down with fists: less blood
-    bodyStain(e, hx ?? e.J[1].x, hy ?? e.J[1].y + 3, !weapon && killBy == null && eHitKind === 1 ? 4 : 10);
+    bleed(e.J[1].x, e.J[1].y, dirx, e.type === 'boss' ? 60 : !hero.weapon && killBy == null && eHitKind === 1 ? 7 : 24, 1.4);   // beaten down with fists: less blood
+    bodyStain(e, hx ?? e.J[1].x, hy ?? e.J[1].y + 3, !hero.weapon && killBy == null && eHitKind === 1 ? 4 : 10);
     // sometimes an enemy drops an ammo box; you have to walk over it to load it
-    const nBox = e === boss ? 3 : Math.random() < (WEAPONS[weapon].ammo ? 0.55 : 0.35) ? 1 : 0;
+    const nBox = e === boss ? 3 : Math.random() < (WEAPONS[hero.weapon].ammo ? 0.55 : 0.35) ? 1 : 0;
     for (let i = 0; i < nBox; i++) ammoBoxes.push({ x: e.x, y: e.y - 12 * e.s, vx: dirx * 30 + (Math.random() - 0.5) * 70, vy: -110 - Math.random() * 50, life: 30 });
     if ((e === boss || Math.random() < BAND_P) && ammoBoxes.filter(b => b.band).length < BAND_MAX)   // and a bandage now and then: walk over it for 30 s of regen
       ammoBoxes.push({ band: true, x: e.x, y: e.y - 12 * e.s, vx: -dirx * 20 + (Math.random() - 0.5) * 60, vy: -120 - Math.random() * 40, life: 30 });
@@ -1932,15 +1935,15 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function hitEnemies(m, wg, p, pre) {
     let any = null;
     for (const e of enemies) {
-      if (e.dead || e.down || e.hitBy === atkId) continue;
+      if (e.dead || e.down || e.hitBy === hero.atkId) continue;
       const [ax, ay, bx, by] = capsule(e.J), rr = 4 * e.s;
       let hx = p.x, hy = p.y, hit = false;
       if (wg) for (let i = 0; i <= 5 && !hit; i++) { hx = wg.x + (wg.tx - wg.x) * i / 5; hy = wg.y + (wg.ty - wg.y) * i / 5; hit = segDist(ax, ay, bx, by, hx, hy) < rr + 1.5; }
       else hit = segDist(ax, ay, bx, by, p.x, p.y) < rr + 3;
-      if (pre) { if (hit && e.pendAtk !== atkId && (e.x - ctl.x) * ctl.face > -2) { e.pendAtk = atkId; e.pendX = hx; e.pendY = hy; } continue; }
-      if (!hit && e.pendAtk === atkId) { hit = true; hx = e.pendX; hy = e.pendY; }
+      if (pre) { if (hit && e.pendAtk !== hero.atkId && (e.x - ctl.x) * ctl.face > -2) { e.pendAtk = hero.atkId; e.pendX = hx; e.pendY = hy; } continue; }
+      if (!hit && e.pendAtk === hero.atkId) { hit = true; hx = e.pendX; hy = e.pendY; }
       if (!hit) continue;
-      e.hitBy = atkId; any = any || { x: hx, y: hy };
+      e.hitBy = hero.atkId; any = any || { x: hx, y: hy };
       eHitKind = 1; damageEnemy(e, Math.round(m.power / 10 * (wg ? 1.4 : 1)), ctl.face, m.power, m.up, hx, hy, !!wg); eHitKind = 0;
     }
     if (any) hitFx(m.power);
@@ -2036,14 +2039,14 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       if (e.react === 'dodge') { eHop(e, -dir * 95, -95); e.dodgeCd = 1.4; e.react = null; return; }
       e.guardT = 0.5; e.react = null;
     }
-    if (pm && atkId !== e.seenAtk && level && adx < 48 && Math.sign(e.x - ctl.x) === ctl.face && !e.react) {
-      e.seenAtk = atkId;
+    if (pm && hero.atkId !== e.seenAtk && level && adx < 48 && Math.sign(e.x - ctl.x) === ctl.face && !e.react) {
+      e.seenAtk = hero.atkId;
       const fear = 1 - e.agg + (e.retreatT > 0 ? 0.5 : 0);
       if (pm.power >= 250) { if (e.dodgeCd <= 0 && Math.random() < 0.25 + 0.4 * fear) { e.react = 'dodge'; e.reactT = 0.06 + Math.random() * 0.1; } }
       else if (Math.random() < 0.1 + 0.35 * fear) { e.react = 'guard'; e.reactT = 0.02 + Math.random() * 0.08; }
     }
     // a gun pointed at it: after a beat, jump over the stream and land close
-    if (WEAPONS[weapon].gun && mode === 'anim' && gun.aimW > 0.6 && level && adx > 22 && adx < 170 && Math.sign(e.x - ctl.x) === ctl.face && e.dodgeCd <= 0) {
+    if (WEAPONS[hero.weapon].gun && hero.mode === 'anim' && gun.aimW > 0.6 && level && adx > 22 && adx < 170 && Math.sign(e.x - ctl.x) === ctl.face && e.dodgeCd <= 0) {
       if ((e.aimT += dt) > 0.25 + 0.35 * (1 - e.agg)) {
         e.aimT = 0; e.dodgeCd = 2 + Math.random() * 1.5;
         if (Math.random() < 0.35 + 0.4 * e.agg) { e.crouchT = 0.1; e.jvx = dir * (60 + 50 * e.agg); e.jvy = -135; e.face = dir; return; }
@@ -2051,7 +2054,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     } else e.aimT = Math.max(0, e.aimT - dt);
     // the player is up on a ledge: walk to its nearer edge, crouch, jump up
     const s = ctl.surf;
-    if (mode === 'anim' && !ctl.air && s && s !== GROUND_S && !s.bouncy && s.y < e.y - 6 && !(e.R.ranged && e.y - s.y < 34)) {
+    if (hero.mode === 'anim' && !ctl.air && s && s !== GROUND_S && !s.bouncy && s.y < e.y - 6 && !(e.R.ranged && e.y - s.y < 34)) {
       const h = e.y + 2 - s.y;
       if (h > 75 || adx > 180) { e.tx = px - dir * 30; e.run = 0.6; return; }   // too high: wait below
       const ex = Math.abs(e.x - s.x0) < Math.abs(e.x - s.x1) ? s.x0 - 12 : s.x1 + 12, into = ex < s.x0 ? 1 : -1;
@@ -2060,7 +2063,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       return;
     }
     // this goon is up on a roof or ledge and the player is down below: walk off the edge on the player's side and drop
-    if (!e.R.ranged && mode === 'anim' && !ctl.air && ctl.y > e.y + 8) {
+    if (!e.R.ranged && hero.mode === 'anim' && !ctl.air && ctl.y > e.y + 8) {
       const es = floorBelow(e.x, e.y + 1.5, 0);
       if (es !== GROUND_S && !es.box) {
         const ex = px < es.x0 ? es.x0 - 10 : px > es.x1 ? es.x1 + 10 : (e.x - es.x0 < es.x1 - e.x ? es.x0 - 10 : es.x1 + 10);
@@ -2075,8 +2078,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       e.agg = Math.min(1, e.agg + 0.35); e.mark = 0.4; e.cdT = 0;
     }
     // the player is stuck in a long recovery: step in and punish
-    if (pm && pm.dur >= 0.7 && actT > pm.win[1] && e.punId !== atkId && level && adx < e.reach + 40) {
-      e.punId = atkId;
+    if (pm && pm.dur >= 0.7 && hero.actT > pm.win[1] && e.punId !== hero.atkId && level && adx < e.reach + 40) {
+      e.punId = hero.atkId;
       if (Math.random() < 0.45 + 0.45 * e.agg) e.punish = 0.5;
     }
     let free = eTokN < eTokMax;   // a few attackers per side (by difficulty): pressure from both ways, never a pile-up
@@ -2084,7 +2087,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (!e.tok && (e.punish > 0 || (e.cdT <= 0 && free))) { e.tok = true; e.tokT = 0; eTokN++; }
     if (e.tok && e.tokT > 3 / Math.sqrt(DIF().A) && e.punish <= 0) eRelease(e, 0.6 / DIF().A);   // could not land it: let another goon try
     if (e.tok) {
-      const canHit = level && !ctl.air && mode === 'anim';
+      const canHit = level && !ctl.air && hero.mode === 'anim';
       if (canHit && e.role === 'brawler' && e.punish <= 0 && adx > e.reach + 10 && adx < e.reach + 55 && Math.random() < dt * (0.1 + 0.9 * e.agg) * Math.sqrt(DIF().A)) { eStart(e, 'lunge', 0.36); return; }
       if (adx > e.reach + 1) { e.tx = px - dir * e.reach * 0.6; e.run = e.punish > 0 ? 2.2 : 1 + 0.15 * dLv(); return; }
       e.face = dir;
@@ -2114,10 +2117,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     const want = r0 + (r1 - r0) * (0.25 + 0.5 * (1 - e.agg)) + 8 * Math.sin(simTime * 1.3 + e.seed * 7);
     e.tx = px + side * want; e.run = adx < r0 * 0.7 ? 1.15 : 0.7;
     const lo = arena && e.zone === 'arena' ? 2450 : 18, cornered = (side < 0 && e.x < lo + 4) || (side > 0 && e.x > W - 22);
-    if (adx < e.reach + 1 && level && !ctl.air && mode === 'anim' && (cornered || e.cdT <= 0)) {   // pressed close: a pistol-whip or an elbow
+    if (adx < e.reach + 1 && level && !ctl.air && hero.mode === 'anim' && (cornered || e.cdT <= 0)) {   // pressed close: a pistol-whip or an elbow
       e.combo = CMB[0]; e.ci = 0; eStart(e, 'jab', e.windup); return;
     }
-    if (e.cdT <= 0 && eShotN < (DIF().A >= 4 ? 2 : 1) && dyl < 34 && adx > 28 && adx < 175 && mode === 'anim') {
+    if (e.cdT <= 0 && eShotN < (DIF().A >= 4 ? 2 : 1) && dyl < 34 && adx > 28 && adx < 175 && hero.mode === 'anim') {
       eShotN++; e.combo = null; e.ci = 0; eStart(e, e.R.w === 'pistol' ? 'shoot' : 'throw', e.R.aim); if (e.R.w === 'pistol') e.mark = e.R.aim;   // (no tell for a knife throw) e.ay = P[1].y + 1;
     }
   }
@@ -2142,8 +2145,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       if (!dead) for (const s of SURF) if (b.x >= s.x0 && b.x <= s.x1 && b.py < s.y && b.y >= s.y) { dead = true; puff(b.x, s.y - 1); break; }
       // a bullet coming at him: half the time he reads it and ducks under it
       // [feel] the duck starts by time to impact (fast shots too), early enough to be down when the bullet arrives
-      if (b.k === 'b' && b.duck === undefined && mode === 'anim' && Math.sign(P[2].x - b.x) === Math.sign(b.vx) && Math.abs(P[2].x - b.x) / Math.max(1, Math.abs(b.vx)) < 0.24 && Math.abs(P[2].y - b.y) < 30) {
-        b.duck = demo && !ctl.air && !MOVES[act] && act !== 'dash' && Math.random() < 0.5;   // only the demo ducks by itself; a player ducks with S
+      if (b.k === 'b' && b.duck === undefined && hero.mode === 'anim' && Math.sign(P[2].x - b.x) === Math.sign(b.vx) && Math.abs(P[2].x - b.x) / Math.max(1, Math.abs(b.vx)) < 0.24 && Math.abs(P[2].y - b.y) < 30) {
+        b.duck = demo && !ctl.air && !MOVES[hero.act] && hero.act !== 'dash' && Math.random() < 0.5;   // only the demo ducks by itself; a player ducks with S
         if (b.duck) ctl.duckT = 0.5;
       }
       if (!dead && !b.duck && (hitsPlayer(b.x, b.y, 1) || hitsPlayer((b.x + b.px) / 2, (b.y + b.py) / 2, 1))) { hurtPlayer(b.dmg, b.x, b.y, Math.sign(b.vx) || 1, false); dead = true; }
@@ -2162,7 +2165,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       toast('Boss enraged', 'Watch for the charge. Jump the shockwave of his slam. Punish the recovery.');
       return;
     }
-    if (e.ph === 2 && (e.bigCd -= dt) <= 0 && level && mode === 'anim' && adx > 60 && adx < 200) {
+    if (e.ph === 2 && (e.bigCd -= dt) <= 0 && level && hero.mode === 'anim' && adx > 60 && adx < 200) {
       e.bigCd = 4.5 + Math.random() * 2.5;
       e.sp = Math.random() < 0.5 ? 'charge' : 'jslam'; e.spT = e.sp === 'charge' ? -0.7 : -0.55;
       e.leapt = false; e.hitP = false; e.face = dir; e.jx = px; e.mark = -e.spT;
@@ -2170,7 +2173,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
     if (adx > e.reach + 1) { e.tx = px - dir * e.reach * 0.65; return; }
     e.face = dir;
-    if (level && !ctl.air && mode === 'anim' && (e.cdT -= dt) <= 0) {
+    if (level && !ctl.air && hero.mode === 'anim' && (e.cdT -= dt) <= 0) {
       const r = Math.random();
       e.combo = e.ph === 2 ? BCMB[r < 0.3 ? 2 : r < 0.5 ? 3 : r < 0.75 ? 0 : 1] : BCMB[r < 0.35 ? 1 : 0];
       e.ci = 0; eStart(e, e.combo[0], e.windup);
@@ -2190,7 +2193,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       }
       e.vx = e.face * 215;
       if (Math.random() < dt * 30) dust(e.x - e.face * 5, e.y + 1, 1);
-      if (!e.hitP && mode === 'anim' && !ctl.air && Math.abs(P[2].x - e.x) < 9 * e.s && Math.abs(ctl.y - e.y) < 12) {   // any jump clears it
+      if (!e.hitP && hero.mode === 'anim' && !ctl.air && Math.abs(P[2].x - e.x) < 9 * e.s && Math.abs(ctl.y - e.y) < 12) {   // any jump clears it
         e.hitP = true; hurtPlayer(e.heavyDmg, P[2].x, P[2].y, e.face, true);
       }
       const wall = (e.face < 0 && e.x <= 2441) || (e.face > 0 && e.x >= W - 11);
@@ -2207,7 +2210,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
   }
   function enemyStep(dt) {
-    if (invT > 0) invT -= dt;
+    if (hero.invT > 0) hero.invT -= dt;
     if (boss && !boss.dead && arena && arenaSpawned < 10 && (spawnT -= dt) <= 0) {   // the boss calls in his crew: one every 3 s (4.5 s once enraged), 10 in all
       spawnT = boss.ph > 1 ? 4.5 : 3;
       if (enemies.filter(g => !g.dead && g.zone === 'arena').length < 4) {
@@ -2217,7 +2220,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         g.cdT = Math.max(g.cdT, 0.8); spawnFx.push({ kind: 'club', x: dx, t: 0 });
       }
     }
-    const px = P[2].x, py = mode === 'anim' ? ctl.y : P[2].y + 15, pm = mode === 'anim' ? MOVES[act] : null;
+    const px = P[2].x, py = hero.mode === 'anim' ? ctl.y : P[2].y + 15, pm = hero.mode === 'anim' ? MOVES[hero.act] : null;
     eTokN = 0; eShotN = 0; for (const e of enemies) if (!e.dead) { if (e.tok) eTokN++; if (e.act === 'shoot' || e.act === 'throw') eShotN++; }
     eShotStep(dt);
     eTokMax = boss && !boss.dead && Math.abs(boss.x - px) < 160 ? (DIF().A >= 4 ? 2 : 1) : DIF().tok;   // with the boss close, fewer goons swing at once
@@ -2236,7 +2239,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       if (e.muz > 0) e.muz -= dt;
       if (e.down) { eDownStep(e, dt); continue; }
       const dx = px - e.x, adx = Math.abs(dx), dy = Math.abs(P[2].y - (e.y - 16 * e.s));
-      const aggro = adx < 200 && dy < 80 * e.s && mode !== 'getup', level = Math.abs(py - e.y) < 14;
+      const aggro = adx < 200 && dy < 80 * e.s && hero.mode !== 'getup', level = Math.abs(py - e.y) < 14;
       e.fight = aggro && adx < 60 * e.s && !e.intro;
       if (e.intro) { e.act = null; e.sp = null; e.tx = e.introX; e.run = 0.5; e.cdT = Math.max(e.cdT, 0.8); if (Math.abs(e.introX - e.x) <= 3) e.face = -1; }   // the entrance: a slow walk to his mark under the spot, nothing else
       else if (e.type === 'boss') bossThink(e, dt, px, dx, adx, level, aggro); else goonThink(e, dt, px, dx, adx, level, aggro, pm);
@@ -2272,7 +2275,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         dust(e.x - 10, e.y + 1, 10); dust(e.x + 10, e.y + 1, 10); hitStop = Math.max(hitStop, 0.06);
         if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.35);
         const d = Math.abs(P[2].x - e.x);
-        if (mode === 'anim' && !ctl.air && d < 16 && Math.abs(ctl.y - e.y) < 10) hurtPlayer(e.heavyDmg, P[2].x, P[2].y + 10, Math.sign(P[2].x - e.x) || 1, true);   // right under him: the full weight
+        if (hero.mode === 'anim' && !ctl.air && d < 16 && Math.abs(ctl.y - e.y) < 10) hurtPlayer(e.heavyDmg, P[2].x, P[2].y + 10, Math.sign(P[2].x - e.x) || 1, true);   // right under him: the full weight
         for (const dir of [-1, 1]) quakes.push({ x: e.x + dir * 10, y: e.y + 2, dir, t: 0, hit: false });   // then a shockwave rolls out each way
       }
       if (e.act) {
@@ -2298,12 +2301,12 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
           const sx = e.x + e.face * 20 * e.s;
           waves.push({ x: sx, y: GROUND - 1, t: 0 }); dust(sx - 6, GROUND - 1, 8); dust(sx + 6, GROUND - 1, 8);
           if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.25);
-          if (mode === 'anim' && !ctl.air && Math.abs(P[2].x - sx) < 95) hurtPlayer(20, P[2].x, P[2].y + 10, Math.sign(P[2].x - sx) || 1, true);
+          if (hero.mode === 'anim' && !ctl.air && Math.abs(P[2].x - sx) < 95) hurtPlayer(20, P[2].x, P[2].y + 10, Math.sign(P[2].x - sx) || 1, true);
         }
         if (e.actT >= M.dur) {
           const was = e.act; e.act = null;
           const dl = Math.abs(P[2].x - e.x);
-          if (e.combo && ++e.ci < e.combo.length && mode === 'anim' && dl < e.reach + 10 && Math.abs(py - e.y) < 14) eStart(e, e.combo[e.ci], e.type === 'boss' ? 0.2 : 0.08);   // the string goes on
+          if (e.combo && ++e.ci < e.combo.length && hero.mode === 'anim' && dl < e.reach + 10 && Math.abs(py - e.y) < 14) eStart(e, e.combo[e.ci], e.type === 'boss' ? 0.2 : 0.08);   // the string goes on
           else {
             if (e.type === 'boss') { e.combo = null; if (was === 'slam') e.recT = 0.6; e.cdT = (e.cd[0] + Math.random() * (e.cd[1] - e.cd[0])) / Math.sqrt(DIF().A); }   // (the boss: half the steps, his moves are big)
             else eRelease(e, (e.R.ranged ? 1.4 + Math.random() * 1.2 : (e.cd[0] + Math.random() * (e.cd[1] - e.cd[0])) * (1.3 - 0.6 * e.agg)) / DIF().A);
@@ -2460,14 +2463,14 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
   function clearEnemies() {
     enemies.length = 0; eshots.length = 0; for (const k in zoneAlive) delete zoneAlive[k]; for (const k in zoneN) delete zoneN[k];
-    boss = null; bossBeaten = false; arena = null; playerHp = 100; invT = 0;
+    boss = null; bossBeaten = false; arena = null; hero.hp = 100; hero.invT = 0;
     GORE.fill(0); PUD_BLOOD.fill(0); BPOOL.fill(0); drips.length = 0; for (const i of gList) gIn[i] = 0; gList.length = 0; BCAP.fill(0); VCAP.fill(0); spawnFx.length = 0;
   }
 
   // ---------- state ----------
-  let mode = 'anim', ko = false, hits = 0, landed = 0, timeScale = 1, showSkel = false, ragFace = 1, settleT = 0, gu = null;
+  let hits = 0, landed = 0, timeScale = 1, showSkel = false, ragFace = 1, settleT = 0, gu = null;
   const ctl = { stOff: 0, combo: 0, comboEnd: -9, x: START_X, y: GROUND - 2, face: 1, spd: 0, phase: 0, air: false, vu: 0, accS: 0, jumps: 0, flipT: -1, spin: 0, landDip: 4, landDur: 0.22, baseY: GROUND - 2, cap: MAX_AIR, surf: GROUND_S, squatT: 0, squatEnd: -9, charged: false, wr: 0, yw: 0, slam: false, push: 0 };
-  let act = null, actT = 0, queued = null, hitDone = false, wAct = 0, apSm = IDLE.slice(), lastHand = 0, kickLeg = 1, atkId = 0;
+  let queued = null, hitDone = false, wAct = 0, apSm = IDLE.slice(), lastHand = 0, kickLeg = 1;
   let hitStop = 0, bagFlash = 0, ragT = 0;
   let ragG = 0, ragGk = 1, ragKD = false;   // extra fall gravity: seconds left, factor; the fall is a knock-down (no K.O. from it)
   const input = { dir: 0, run: false, jump: false, jumpHeld: false, downHeld: false, fireHeld: false, attack: null, dashHeld: false };
@@ -2484,15 +2487,13 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const particles = [], sparks = [], waves = [], bullets = [], flashes = [];
   const quakes = [];   // the boss's jump slam: shockwaves that roll along the ground; jump them
   const QUAKE = { v: 165, life: 1.25, dmg: 16, w: 5 };
-  let weapon = 0;
   // ammo for guns, durability (hits left) for blades; fists never run out
   const charge = [0, 0, 0, 0, 0], fullCharge = w => WEAPONS[w].ammo || Math.round((WEAPONS[w].dura || 0) * DIF().dura);   // blades wear out faster on a harder level
   let wornId = -1, ammoFlash = 0;
   const ammoBoxes = [];   // ammo boxes and bandages (band: true)
   const BAND_P = 0.25, BAND_MAX = 3, BAND_T = 30, BAND_REGEN = 2.5;   // a bandage: drop chance, most on the ground, how long it heals, HP/s
-  let bandT = 0;
   function ammoStep(dt) {
-    const Wp = WEAPONS[weapon];
+    const Wp = WEAPONS[hero.weapon];
     for (let i = ammoBoxes.length - 1; i >= 0; i--) {
       const b = ammoBoxes[i];
       if ((b.life -= dt) <= 0) { ammoBoxes.splice(i, 1); continue; }
@@ -2501,16 +2502,16 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const fl = floorBelow(b.x, b.y - 3, 0);
       if (b.vy > 0 && b.y >= fl.y - 2) { b.y = fl.y - 2; b.vy = Math.abs(b.vy) > 60 ? -b.vy * 0.35 : 0; b.vx *= 0.6; }
       if (b.band) {   // a bandage: walk over it, 30 s of regen (a new one starts the clock again)
-        if (mode === 'anim' && Math.abs(ctl.x - b.x) < 9 && Math.abs(ctl.y - b.y) < 16) {
-          bandT = BAND_T; ammoBoxes.splice(i, 1);
+        if (hero.mode === 'anim' && Math.abs(ctl.x - b.x) < 9 && Math.abs(ctl.y - b.y) < 16) {
+          hero.bandT = BAND_T; ammoBoxes.splice(i, 1);
           for (let k = 0; k < 5; k++) particles.push({ x: b.x, y: b.y - 2, vx: (Math.random() - 0.5) * 50, vy: -50 - Math.random() * 40, life: 0.45, c: PAL.white });
           if (!pickToasted.has('band')) { pickToasted.add('band'); toast('Bandage', `Regen for ${BAND_T} s`, true); }
         }
         continue;
       }
       // walk over it: only a gun that is not full takes it, and it fills the gun
-      if (mode === 'anim' && Wp.ammo && charge[weapon] < Wp.ammo && Math.abs(ctl.x - b.x) < 9 && Math.abs(ctl.y - b.y) < 16) {
-        charge[weapon] = Wp.ammo; ammoFlash = 0.6; ammoBoxes.splice(i, 1); tut('ammo');
+      if (hero.mode === 'anim' && Wp.ammo && charge[hero.weapon] < Wp.ammo && Math.abs(ctl.x - b.x) < 9 && Math.abs(ctl.y - b.y) < 16) {
+        charge[hero.weapon] = Wp.ammo; ammoFlash = 0.6; ammoBoxes.splice(i, 1); tut('ammo');
         for (let k = 0; k < 5; k++) particles.push({ x: b.x, y: b.y - 2, vx: (Math.random() - 0.5) * 50, vy: -50 - Math.random() * 40, life: 0.45, c: PAL.gold });
       }
     }
@@ -2530,22 +2531,22 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // you carry one weapon: picking up another drops the one in your hands
   const WEAPON_REST = q => q === GROUND_S || q === GOAL || q === PLATS[2] || q === PLATS[6];   // street, the two scaffolds, the club roof
   function dropHeld() {
-    if (!weapon) return;
-    const fl = floorBelow(ctl.x, ctl.y - 4, 0), f = ctl.face, Wp = WEAPONS[weapon], ok = WEAPON_REST(fl);
+    if (!hero.weapon) return;
+    const fl = floorBelow(ctl.x, ctl.y - 4, 0), f = ctl.face, Wp = WEAPONS[hero.weapon], ok = WEAPON_REST(fl);
     // dropped on a car roof it slides off and falls to the street; elsewhere it lies where he stood
-    thrown.push({ w: weapon, ch: charge[weapon], x: ctl.x - f * 6, y: ok ? fl.y : ctl.y - 6, vx: ok ? 0 : -f * 40, vy: ok ? 0 : -20, a: Wp.gun ? (f > 0 ? 0 : Math.PI) : Math.PI / 2 + f * 0.35,
+    thrown.push({ w: hero.weapon, ch: charge[hero.weapon], x: ctl.x - f * 6, y: ok ? fl.y : ctl.y - 6, vx: ok ? 0 : -f * 40, vy: ok ? 0 : -20, a: Wp.gun ? (f > 0 ? 0 : Math.PI) : Math.PI / 2 + f * 0.35,
       av: ok ? 0 : -f * 6, g: 0.8, len: Wp.len, face: f, stuck: ok, flat: !!Wp.gun, armed: false, hit: true, ids: new Set(), t: 0 });
     if (ok) puff(ctl.x - f * 6, fl.y - 1);
   }
   function equip(w, ch) {
-    if (weapon && weapon !== w) dropHeld();
+    if (hero.weapon && hero.weapon !== w) dropHeld();
     setWeapon(w); charge[w] = ch;
   }
   function wear() {   // a blade loses one point per swing that connects
-    const Wp = WEAPONS[weapon]; if (!Wp.dura || wornId === atkId) return;
-    wornId = atkId;
-    if (--charge[weapon] > 0) return;
-    const g = weaponGeom(), w = weapon;
+    const Wp = WEAPONS[hero.weapon]; if (!Wp.dura || wornId === hero.atkId) return;
+    wornId = hero.atkId;
+    if (--charge[hero.weapon] > 0) return;
+    const g = weaponGeom(), w = hero.weapon;
     if (g) for (let i = 0; i < 12; i++) particles.push({ x: g.x + g.dx * g.len * Math.random(), y: g.y + g.dy * g.len * Math.random(),
       vx: (Math.random() - 0.5) * 140, vy: -40 - Math.random() * 90, life: 0.5 + Math.random() * 0.4, c: i % 2 ? PAL.blade : PAL.bladeD });
     if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.12);
@@ -2565,7 +2566,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     return { vx: f * vx0, vy: clamp((ty - y - 0.5 * g * T * T) / T, -160, 60) };
   }
   function releaseThrow() {
-    const w = weapon, Wp = WEAPONS[w]; if (!w) return;
+    const w = hero.weapon, Wp = WEAPONS[w]; if (!w) return;
     const f = ctl.face, h = P[6], fast = Wp.id === 'katana', heavy = !fast;
     const aim = aimAt(h.x, h.y, (fast ? 215 : 175) + Math.max(0, ctl.spd) * 0.3, G * (heavy ? 0.85 : 0.55));
     thrown.push({ w, ch: charge[w], x: h.x, y: h.y, vx: aim.vx, vy: aim.vy, a: f > 0 ? -1.2 : Math.PI + 1.2,
@@ -2599,18 +2600,18 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     for (let i = thrown.length - 1; i >= 0; i--) {
       const t = thrown[i];
       if (t.stuck) {   // empty hands: walk over it to take it. Holding a weapon: squat (S) on it to swap
-        const near = mode === 'anim' && Math.abs(ctl.x - t.x) < (t.hit && !weapon ? 22 : 10) && Math.abs(ctl.y - t.y) < 16;   // a blade that bounced back off a goon: in reach, bare hands take it
-        if (near && t.hit && !weapon && !ctl.carry) t.armed = true;
+        const near = hero.mode === 'anim' && Math.abs(ctl.x - t.x) < (t.hit && !hero.weapon ? 22 : 10) && Math.abs(ctl.y - t.y) < 16;   // a blade that bounced back off a goon: in reach, bare hands take it
+        if (near && t.hit && !hero.weapon && !ctl.carry) t.armed = true;
         t.near = near && t.armed;
         if (!near) t.armed = true;   // a weapon you just dropped waits until you step away
-        else if (t.armed && !ctl.carry && (!weapon || input.downHeld)) {
-          const had = weapon; thrown.splice(i, 1); equip(t.w, t.ch); tut(had ? 'swap' : 'catch');
+        else if (t.armed && !ctl.carry && (!hero.weapon || input.downHeld)) {
+          const had = hero.weapon; thrown.splice(i, 1); equip(t.w, t.ch); tut(had ? 'swap' : 'catch');
           sparks.push({ x: t.x, y: t.y - 4, t: 0.05 });
         }
         continue;
       }
       t.t += dt; t.vy += G * t.g * dt; t.x += t.vx * dt; t.y += t.vy * dt; t.a += t.av * dt;
-      if (!weapon && !ctl.carry && mode === 'anim' && t.t > 0.2 && !(WEAPONS[t.w].gun && !t.drop) && Math.abs(t.x - ctl.x) < 14 && t.y > ctl.y - 56 && t.y < ctl.y + 4) {   // (a hand reaches up over the head too)   // it bounced back to him: bare hands snatch it out of the air
+      if (!hero.weapon && !ctl.carry && hero.mode === 'anim' && t.t > 0.2 && !(WEAPONS[t.w].gun && !t.drop) && Math.abs(t.x - ctl.x) < 14 && t.y > ctl.y - 56 && t.y < ctl.y + 4) {   // (a hand reaches up over the head too)   // it bounced back to him: bare hands snatch it out of the air
         thrown.splice(i, 1); equip(t.w, t.ch); tut('catch'); sparks.push({ x: t.x, y: t.y, t: 0.05 }); continue;
       }
       const tipx = t.x + Math.cos(t.a) * t.len * 0.5, tipy = t.y + Math.sin(t.a) * t.len * 0.5;
@@ -2659,8 +2660,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
   }
   function outOfAmmo() {
-    const Wp = WEAPONS[weapon];
-    for (const k of pickups) if (k.w === weapon) k.taken = false;   // the pedestal has a loaded one again
+    const Wp = WEAPONS[hero.weapon];
+    for (const k of pickups) if (k.w === hero.weapon) k.taken = false;   // the pedestal has a loaded one again
     toast(`${Wp.name}: out of ammo`, 'Fire again to hurl it at them, or find an ammo box', true);
     gun.want = false;
   }
@@ -2675,10 +2676,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const WSWING = /^(ks[0-2]|al1?)$/;   // the light blade swings that build a combo
   function startAttack(a) {
     // light kicks repeat with the current leg; a heavy kick switches to the other leg, which then stays current
-    const Wp = WEAPONS[weapon];
+    const Wp = WEAPONS[hero.weapon];
     // blades: taps run a combo (katana: forehand, backhand, back-hand cut; axe: front-hand chop, back-hand chop);
     // a hold inside the combo is the top-to-bottom finisher, a hold from neutral a wide two-hand swing
-    const combo = MOVES[act] && WSWING.test(act) || simTime - ctl.comboEnd < 0.45;
+    const combo = MOVES[hero.act] && WSWING.test(hero.act) || simTime - ctl.comboEnd < 0.45;
     if (a === 'lp') {
       if (Wp.melee) { const n = Wp.id === 'katana' ? 3 : 2; ctl.combo = combo ? (ctl.combo + 1) % n : 0; a = Wp.id === 'katana' ? 'ks' + ctl.combo : ctl.combo ? 'al1' : 'al'; }
       else { lastHand ^= 1; a = 'lp' + lastHand; }
@@ -2688,14 +2689,14 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
     else if (a === 'lk') a += kickLeg;
     else if (a === 'hk') { kickLeg ^= 1; a += kickLeg; }
-    act = a; actT = 0; hitDone = false; atkId++; ctl.slam = false;
+    hero.act = a; hero.actT = 0; hitDone = false; hero.atkId++; ctl.slam = false;
     tut(a.replace(/[0-9]$/, ''));
   }
   function startFall() {
     ctl.air = true; ctl.vu = 0; ctl.jumps = Math.max(ctl.jumps, 1); ctl.baseY = ctl.y; ctl.cap = MAX_AIR;
-    if (!MOVES[act] && !rollingNow()) { act = 'air'; actT = 0; }   // a roll off a ledge keeps rolling through the drop
+    if (!MOVES[hero.act] && !rollingNow()) { hero.act = 'air'; hero.actT = 0; }   // a roll off a ledge keeps rolling through the drop
   }
-  const rollingNow = () => act === 'dash' && ctl.dashK === 'roll';
+  const rollingNow = () => hero.act === 'dash' && ctl.dashK === 'roll';
   function landOn(s, fv) {
     ctl.y = s.y - 2; ctl.airDash = false; coyT = 0;
     if (s.bouncy && !input.downHeld) {   // trampoline: each bounce beats the landing that made it; hold S to stop
@@ -2705,7 +2706,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       if (!reduceMotion && v > 280) cam.shake = Math.max(cam.shake, 0.06);
       {
         ctl.vu = v; ctl.jumps = 1; ctl.baseY = ctl.y; ctl.cap = 999; ctl.tramp = true;
-        if (act !== 'air') { act = 'air'; actT = 0; }
+        if (hero.act !== 'air') { hero.act = 'air'; hero.actT = 0; }
         ibuf.jump = 0;   // the held jump already adds its kick to the bounce
         sparks.push({ x: ctl.x, y: s.y - 1, t: 0.1 });
         return;
@@ -2714,20 +2715,20 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (s.bouncy) s.squish = 0.18;
     ctl.bounces = 0; ctl.tramp = false;
     if (s === GOAL) tut('top');
-    const plunge = act === 'aair';
+    const plunge = hero.act === 'aair';
     if (plunge) slam(ctl.x + 9 * ctl.face, s.y, 40, 1.6);   // axe plunge lands
     ctl.air = false; ctl.jumps = 0; ctl.flipT = -1; ctl.spin = 0; ctl.surf = s;
-    if (!input.dir && act !== 'dash') ctl.spd *= 0.35;   // [feel] the feet grip on landing: no long slide off a ledge
+    if (!input.dir && hero.act !== 'dash') ctl.spd *= 0.35;   // [feel] the feet grip on landing: no long slide off a ledge
     if (rollingNow()) { dust(ctl.x - 3, s.y - 1, 3); dust(ctl.x + 3, s.y - 1, 3); return; }   // rolled off a ledge: it lands still rolling and rolls on
-    act = 'land'; actT = 0; queued = null;
+    hero.act = 'land'; hero.actT = 0; queued = null;
     ctl.landDip = clamp(fv / 30, 3, 7); ctl.landDur = fv > 150 ? 0.3 : 0.22;
     if (fv < TRN.soft) { ctl.landDip = clamp(fv / 60, 0.8, 2); ctl.landDur = 0.14; }   // hop: small dip
     else if (fv >= TRN.heavy && !plunge) {   // heavy: a hero landing from a stand, a deep knee bend that runs on when moving
-      if (ctl.spd > TRN.rollV) { ctl.landDip = 7; ctl.landDur = 0.32; } else act = 'hero';
+      if (ctl.spd > TRN.rollV) { ctl.landDip = 7; ctl.landDur = 0.32; } else hero.act = 'hero';
     }
-    const n = fv < TRN.soft ? 1 : fv > 150 ? (act === 'roll' ? 4 : 6) : 3;
+    const n = fv < TRN.soft ? 1 : fv > 150 ? (hero.act === 'roll' ? 4 : 6) : 3;
     dust(ctl.x - 3, s.y - 1, n); dust(ctl.x + 3, s.y - 1, n);
-    if (fv > 150 && act !== 'roll') { waves.push({ x: ctl.x, y: s.y - 1, t: 0 }); if (!reduceMotion) cam.shake = Math.max(cam.shake, act === 'hero' ? 0.16 : 0.12); }
+    if (fv > 150 && hero.act !== 'roll') { waves.push({ x: ctl.x, y: s.y - 1, t: 0 }); if (!reduceMotion) cam.shake = Math.max(cam.shake, hero.act === 'hero' ? 0.16 : 0.12); }
   }
 
   // ===== [G2] transitions =====
@@ -2740,7 +2741,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // a queued attack starts here: the rest of the recovery is cut, the pose blend hides the cut
   const chainAt = m => m.win ? m.win[1] + (isLight(m) ? 0.35 : 0.55) * (m.dur - m.win[1]) : m.dur;
   // jump or dodge out of an attack: a light one as soon as it connects, a heavy one after its active window; any once the chain point passes
-  const cancelOK = () => { const m = MOVES[act]; return !!m && !ctl.air && ((atkHit && m.win && actT >= (isLight(m) ? m.win[0] : m.win[1])) || actT >= chainAt(m)); };
+  const cancelOK = () => { const m = MOVES[hero.act]; return !!m && !ctl.air && ((atkHit && m.win && hero.actT >= (isLight(m) ? m.win[0] : m.win[1])) || hero.actT >= chainAt(m)); };
   function hitSpark(x, y, dir, power, blade) {   // crisp single pixels thrown along the hit, plus the star
     const n = 3 + Math.round(power / 60);
     for (let k = 0; k < n; k++) {
@@ -2755,15 +2756,15 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const ROLL_CD = 1.0;   // the rest after a roll before the next one (no roll spam)
   const ROLL_MAX = 1;   // rolls in one chain while U is held
   function startRoll(d) {
-    ctl.rollN = (act === 'dash' && ctl.dashK === 'roll' && ctl.chainRoll ? ctl.rollN : 0) + 1;
+    ctl.rollN = (hero.act === 'dash' && ctl.dashK === 'roll' && ctl.chainRoll ? ctl.rollN : 0) + 1;
     ctl.face = d; ctl.spd = Math.max(ctl.spd, DASH.v); ctl.dashK = 'roll'; ctl.chainRoll = true; ctl.flipT = -1; queued = null;
-    act = 'dash'; actT = 0; invT = Math.max(invT, DASH.dur + 0.03);   // the whole roll dodges
+    hero.act = 'dash'; hero.actT = 0; hero.invT = Math.max(hero.invT, DASH.dur + 0.03);   // the whole roll dodges
     rollCd = DASH.dur + ROLL_CD;   // counted from the start: a roll cut short by an attack gets no early next roll
     dust(ctl.x - d * 3, ctl.y + 1, 3); tut('roll');
   }
   function tryDash() {
-    if (dashCd > 0 || mode !== 'anim' || act === 'dash' || act === 'hero' || act === 'rise' || act === 'crouch' || act === 'climb') return false;
-    if (MOVES[act] && !(ctl.air ? actT > (MOVES[act].win || [0, MOVES[act].dur])[1] && act !== 'aair' : cancelOK())) return false;
+    if (dashCd > 0 || hero.mode !== 'anim' || hero.act === 'dash' || hero.act === 'hero' || hero.act === 'rise' || hero.act === 'crouch' || hero.act === 'climb') return false;
+    if (MOVES[hero.act] && !(ctl.air ? hero.actT > (MOVES[hero.act].win || [0, MOVES[hero.act].dur])[1] && hero.act !== 'aair' : cancelOK())) return false;
     const d = input.dir;
     queued = null; ctl.slam = false; ctl.flipT = -1;
     if (ctl.air) {
@@ -2774,10 +2775,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       sparks.push({ x: P[2].x - ctl.face * 4, y: P[2].y, t: 0.1 });
     } else {   // on the ground the dodge is always a roll: toward the held direction, or the way he faces
       if (rollCd > 0) return false;
-      act = null; startRoll(d || ctl.face); dashCd = DASH.cd; return true;
+      hero.act = null; startRoll(d || ctl.face); dashCd = DASH.cd; return true;
     }
-    act = 'dash'; actT = 0; dashCd = DASH.cd;
-    invT = Math.max(invT, DASH.inv);
+    hero.act = 'dash'; hero.actT = 0; dashCd = DASH.cd;
+    hero.invT = Math.max(hero.invT, DASH.inv);
     return true;
   }
   // from a squat: a tap punch jabs low, a held one drives a low body blow; a tap kick hits the shins, a held one sweeps the legs (he goes down)
@@ -2785,35 +2786,35 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const lowOf = (a, Wp) => a === 'tw' ? 'tw' : Wp.gun ? 'tw' : Wp.melee && (a === 'lp' || a === 'hp') ? 'sslash' : LOW[a] || a;
   const CBASH = 0.36;   // a bash with a lifted object: it comes down in front of him and back up
   function tryAttack(a) {   // true when the press is used up
-    if (act === 'climb') return false;
+    if (hero.act === 'climb') return false;
     if (ctl.carry) {   // a bin or a crate in one hand: a tap swings it, a hold throws it; kicks wait
-      if (MOVES[act] || act === 'rise') return false;
+      if (MOVES[hero.act] || hero.act === 'rise') return false;
       if (a === 'lp') { if (!(ctl.bashT > 0)) { ctl.bashT = CBASH; ctl.bashHit = false; } return true; }
       if (a === 'lk' || a === 'hk') return true;
       if (ctl.bashT > 0) return false;
       throwCarry(); return true;
     }
-    const Wp = WEAPONS[weapon];
+    const Wp = WEAPONS[hero.weapon];
     if (a === 'tw' && pocket.length) {   // something in the pocket: a long punch hold throws that first
-      if (MOVES[act] || act === 'rise' || act === 'roll' || act === 'crouch' || act === 'hero' || act === 'dash') return false;
+      if (MOVES[hero.act] || hero.act === 'rise' || hero.act === 'roll' || hero.act === 'crouch' || hero.act === 'hero' || hero.act === 'dash') return false;
       throwPocket(); return true;
     }
     if (a === 'tw') {   // throw the weapon in hand once the fighter is free
-      if (!weapon) return true;
-      if (MOVES[act] || act === 'rise' || act === 'roll' || act === 'crouch' || act === 'hero' || act === 'dash') return false;
+      if (!hero.weapon) return true;
+      if (MOVES[hero.act] || hero.act === 'rise' || hero.act === 'roll' || hero.act === 'crouch' || hero.act === 'hero' || hero.act === 'dash') return false;
       ctl.flipT = -1; ctl.spin = 0; startAttack('tw'); return true;
     }
-    if (Wp.gun && (a === 'lp' || (a === 'hp' && charge[weapon] > 0))) { gun.want = true; if (Wp.auto) gun.tapT = 0.28; return true; }   // no gun bash: a held punch fires too   // a tap on the machine gun fires a short burst
+    if (Wp.gun && (a === 'lp' || (a === 'hp' && charge[hero.weapon] > 0))) { gun.want = true; if (Wp.auto) gun.tapT = 0.28; return true; }   // no gun bash: a held punch fires too   // a tap on the machine gun fires a short burst
     if (ctl.air) {
-      if (act !== 'air' && !(act === 'dash' && actT > DASH.airDur * 0.5)) return false;
+      if (hero.act !== 'air' && !(hero.act === 'dash' && hero.actT > DASH.airDur * 0.5)) return false;
       const air = a === 'lk' || a === 'hk' ? 'airkick' : Wp.id === 'katana' ? 'kair' : Wp.id === 'axe' ? 'aair' : null;
       if (air) { ctl.flipT = -1; ctl.spin = 0; startAttack(air); }
       return true;
     }
-    if (act === 'crouch' || act === 'hero' || act === 'rise') return false;
-    if (act === 'roll' || act === 'dash') { if (actT < (act === 'roll' ? TRN.roll : DASH.dur) * 0.55) return false; startAttack(a); return true; }
-    const m = MOVES[act], low = input.downHeld && (act === 'squat' || LOW_RE.test(act || ''));   // attacks from a squat stay low, and so does a chain of them
-    if (m) { if (actT < m.dur * 0.3) return false; queued = low ? lowOf(a, Wp) : a; return true; }
+    if (hero.act === 'crouch' || hero.act === 'hero' || hero.act === 'rise') return false;
+    if (hero.act === 'roll' || hero.act === 'dash') { if (hero.actT < (hero.act === 'roll' ? TRN.roll : DASH.dur) * 0.55) return false; startAttack(a); return true; }
+    const m = MOVES[hero.act], low = input.downHeld && (hero.act === 'squat' || LOW_RE.test(hero.act || ''));   // attacks from a squat stay low, and so does a chain of them
+    if (m) { if (hero.actT < m.dur * 0.3) return false; queued = low ? lowOf(a, Wp) : a; return true; }
     if (low) { startAttack(lowOf(a, Wp)); return true; }
     if (input.dir === -ctl.face) { ctl.face = input.dir; ctl.spd = 0; }   // attack the way the stick points: turn on the spot
     startAttack(a); return true;
@@ -2822,7 +2823,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function lunge(m, dt) {
     if (ctl.air || !m.keys || !m.win || isLight(m)) return;
     const d = 4.5, t0 = m.win[0] - 0.08, t1 = m.win[0] + 0.03;
-    if (actT <= t0 || actT > t1 || ((BAG_X - ctl.x) * ctl.face > -4 && (BAG_X - ctl.x) * ctl.face < 16)) return;
+    if (hero.actT <= t0 || hero.actT > t1 || ((BAG_X - ctl.x) * ctl.face > -4 && (BAG_X - ctl.x) * ctl.face < 16)) return;
     for (const e of enemies) { const ahead = (e.x - ctl.x) * ctl.face; if (!e.dead && ahead > -4 && ahead < 14 + 6 * e.s && Math.abs(e.y - ctl.y) < 20) return; }   // never step into a foe
     ctl.x += ctl.face * d / (t1 - t0) * dt;
   }
@@ -2834,15 +2835,15 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const JMP = [2, 2, 0.3, 0.3, 2, 2, 2, 2, 0.35, 0.35, 0.35, 0.35, 0.3, 0.4, 0.6];
   const wrapA = a => a - 2 * Math.PI * Math.round(a / (2 * Math.PI));
   function inertia(tp, dt) {
-    if (!INR.out) { INR.out = tp.slice(); INR.tp = tp.slice(); INR.act = act; INR.w = weapon; INR.v.fill(0); INR.off.fill(0); INR.ov.fill(0); return tp.slice(); }
+    if (!INR.out) { INR.out = tp.slice(); INR.tp = tp.slice(); INR.act = hero.act; INR.w = hero.weapon; INR.v.fill(0); INR.off.fill(0); INR.ov.fill(0); return tp.slice(); }
     const dif = (a, b, i) => i === 14 ? wrapA(a - b) : a - b;
-    let ev = act !== INR.act || weapon !== INR.w;
+    let ev = hero.act !== INR.act || hero.weapon !== INR.w;
     // [feel] inside one attack the keys are continuous: a fast strike plays at full snap, it is no jump to smooth over
-    if (!(MOVES[act] && act === INR.act)) for (let i = 0; i < NP && !ev; i++) if (Math.abs(dif(tp[i], INR.tp[i], i)) > JMP[i]) ev = true;
+    if (!(MOVES[hero.act] && hero.act === INR.act)) for (let i = 0; i < NP && !ev; i++) if (Math.abs(dif(tp[i], INR.tp[i], i)) > JMP[i]) ev = true;
     if (ev) {
       for (let i = 0; i < NP; i++) { INR.off[i] = dif(INR.out[i], tp[i], i); INR.ov[i] = INR.v[i]; }
       // the first strike out of a stance or a walk eases in a little softer than a chained one, so the arms do not pop
-      INR.om = MOVES[act] ? (MOVES[INR.act] ? 42 : 28) : act === 'dash' ? 38 : act === 'land' || act === 'hero' ? 26 : 30;
+      INR.om = MOVES[hero.act] ? (MOVES[INR.act] ? 42 : 28) : hero.act === 'dash' ? 38 : hero.act === 'land' || hero.act === 'hero' ? 26 : 30;
     }
     const w = INR.om, out = tp.slice();
     for (let i = 0; i < NP; i++) {
@@ -2850,58 +2851,58 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       out[i] = tp[i] + INR.off[i];
       INR.v[i] = dif(out[i], INR.out[i], i) / dt;
     }
-    INR.out = out; INR.tp = tp.slice(); INR.act = act; INR.w = weapon;
+    INR.out = out; INR.tp = tp.slice(); INR.act = hero.act; INR.w = hero.weapon;
     return out;
   }
   // ===== [/G2] =====
   function animStep(dt) {
-    if (mode === 'getup') {
+    if (hero.mode === 'getup') {
       gu.t += dt;
       setJoints(getupJoints(gu, ctl.x, ctl.y, ctl.face));
-      if (gu.t >= GU_T[2]) { mode = 'anim'; ko = false; act = 'rise'; actT = 0; apSm = RISE.slice(); wAct = 1; INR.out = null; }
+      if (gu.t >= GU_T[2]) { hero.mode = 'anim'; hero.ko = false; hero.act = 'rise'; hero.actT = 0; apSm = RISE.slice(); wAct = 1; INR.out = null; }
       return;
     }
-    if (atkId !== hitAtk) { hitAtk = atkId; atkHit = false; }
+    if (hero.atkId !== hitAtk) { hitAtk = hero.atkId; atkHit = false; }
     dashCd -= dt; coyT -= dt; rollCd -= dt; if (ctl.duckT > 0) ctl.duckT -= dt;
-    const atk = !!MOVES[act], locked = atk || act === 'rise' || act === 'roll' || act === 'hero' || act === 'dash' || act === 'climb';
-    if (act === 'teeter' && (input.dir || ctl.air)) act = null;
-    const free = act === null || act === 'guard' || act === 'land' || act === 'settle' || act === 'start' || act === 'pivot' || act === 'teeter';
+    const atk = !!MOVES[hero.act], locked = atk || hero.act === 'rise' || hero.act === 'roll' || hero.act === 'hero' || hero.act === 'dash' || hero.act === 'climb';
+    if (hero.act === 'teeter' && (input.dir || ctl.air)) hero.act = null;
+    const free = hero.act === null || hero.act === 'guard' || hero.act === 'land' || hero.act === 'settle' || hero.act === 'start' || hero.act === 'pivot' || hero.act === 'teeter';
     let tgt = 0;
     if (!ctl.air && !locked && input.dir !== 0) {
       if (input.dir !== ctl.face) {   // fast: skid, then pivot; slow: brake, then a small pivot
-        if (act !== 'skid' && free && ctl.spd > TRN.skidV) { act = 'skid'; actT = 0; }
-        if (ctl.spd < 4) { const sk = act === 'skid'; ctl.face = input.dir; if (sk || free) { act = 'pivot'; actT = 0; ctl.pivT = sk ? 0.12 : 0.08; } }
+        if (hero.act !== 'skid' && free && ctl.spd > TRN.skidV) { hero.act = 'skid'; hero.actT = 0; }
+        if (ctl.spd < 4) { const sk = hero.act === 'skid'; ctl.face = input.dir; if (sk || free) { hero.act = 'pivot'; hero.actT = 0; ctl.pivT = sk ? 0.12 : 0.08; } }
       } else {
-        if (act === 'skid') act = null;   // changed your mind: run on
+        if (hero.act === 'skid') hero.act = null;   // changed your mind: run on
         if (!input.downHeld) {   // no walking while squatting, but you can turn
           tgt = input.run ? RUN : WALK;
-          if (act === null && ctl.spd < 1) { act = 'start'; actT = 0; }   // anticipation dip
+          if (hero.act === null && ctl.spd < 1) { hero.act = 'start'; hero.actT = 0; }   // anticipation dip
         }
       }
-      if (act === 'guard') act = null;
-    } else if (!ctl.air && !locked && input.dir === 0 && act === null) {
-      if (ctl.spd > TRN.stopV) { act = 'skid'; actT = 0; }   // let go of a sprint: skid to a stop
+      if (hero.act === 'guard') hero.act = null;
+    } else if (!ctl.air && !locked && input.dir === 0 && hero.act === null) {
+      if (ctl.spd > TRN.stopV) { hero.act = 'skid'; hero.actT = 0; }   // let go of a sprint: skid to a stop
       else if (ctl.spd < 1 && !input.downHeld && ctl.surf !== GROUND_S && !ctl.surf.bouncy && !ctl.surf.step && !ctl.surf.landing) {   // idle on a ledge end: teeter (not on the fire escape: its treads are narrow and its rails hold you)
         const e = ctl.surf.x1 - ctl.x < TRN.edge ? 1 : ctl.x - ctl.surf.x0 < TRN.edge ? -1 : 0;
-        if (e) { act = 'teeter'; actT = 0; ctl.edge = e; }
+        if (e) { hero.act = 'teeter'; hero.actT = 0; ctl.edge = e; }
       }
     }
-    if (act === 'roll' || act === 'dash') tgt = ctl.spd;   // the roll keeps its momentum; the dodge sets its own speed
+    if (hero.act === 'roll' || hero.act === 'dash') tgt = ctl.spd;   // the roll keeps its momentum; the dodge sets its own speed
     // squat while down is held; a squat held long enough charges a higher jump
     // squat pressed at a run: a dodge roll (like U), the way he is running; at a walk or standing, a plain squat
     const downEdge = input.downHeld && !ctl.downPrev; ctl.downPrev = input.downHeld;
-    if (downEdge && !ctl.air && mode === 'anim' && ctl.spd > WALK + 10 && act !== 'squat' && tryDash()) { ibuf.dash = 0; tut('squatroll'); }
+    if (downEdge && !ctl.air && hero.mode === 'anim' && ctl.spd > WALK + 10 && hero.act !== 'squat' && tryDash()) { ibuf.dash = 0; tut('squatroll'); }
     const ducking = input.downHeld || ctl.duckT > 0;   // held down, or an automatic duck under a bullet
-    if (!ctl.air && ducking && !locked && act !== 'dash' && (free || ctl.duckT > 0) && act !== 'pivot' && act !== 'squat') { act = 'squat'; actT = 0; ctl.squatT = 0; }
-    else if (act === 'squat' && (!ducking || ctl.air)) { act = null; ctl.squatEnd = simTime; }
+    if (!ctl.air && ducking && !locked && hero.act !== 'dash' && (free || ctl.duckT > 0) && hero.act !== 'pivot' && hero.act !== 'squat') { hero.act = 'squat'; hero.actT = 0; ctl.squatT = 0; }
+    else if (hero.act === 'squat' && (!ducking || ctl.air)) { hero.act = null; ctl.squatEnd = simTime; }
     const prevSpd = ctl.spd;
     if (!ctl.air) {
-      const rate = tgt > ctl.spd ? (tgt > WALK ? 230 : 180) : (act === 'skid' ? (input.dir === -ctl.face ? TRN.skidDec * 1.7 : TRN.skidDec) : act === 'squat' ? 520 : locked ? 260 : input.dir === -ctl.face ? 400 : 150);   // a squat at a run plants the feet: he stops in a stride or two, no slide
+      const rate = tgt > ctl.spd ? (tgt > WALK ? 230 : 180) : (hero.act === 'skid' ? (input.dir === -ctl.face ? TRN.skidDec * 1.7 : TRN.skidDec) : hero.act === 'squat' ? 520 : locked ? 260 : input.dir === -ctl.face ? 400 : 150);   // a squat at a run plants the feet: he stops in a stride or two, no slide
       ctl.spd += clamp(tgt - ctl.spd, -rate * dt, rate * dt);
     }
     ctl.accS += ((ctl.spd - prevSpd) / dt - ctl.accS) * (1 - Math.exp(-10 * dt));
     if (!ctl.air && ctl.accS < -100 && ctl.spd > 25 && Math.random() < 0.25) dust(P[10].x, ctl.y + 1, 1);   // skid
-    if (act === 'skid' && ctl.spd > 6 && Math.random() < 0.45) dust(P[Math.random() < 0.6 ? 10 : 8].x, ctl.y + 1, 1);
+    if (hero.act === 'skid' && ctl.spd > 6 && Math.random() < 0.45) dust(P[Math.random() < 0.6 ? 10 : 8].x, ctl.y + 1, 1);
     const xPrev = ctl.x;
     ctl.x += ctl.face * ctl.spd * dt;
     if (ctl.push > 0.5) { ctl.x -= ctl.face * ctl.push * dt; ctl.push *= Math.exp(-(ctl.pushK || 9) * dt); } else { ctl.push = 0; ctl.pushK = 0; }
@@ -2932,7 +2933,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     const g = gait();
 
     // presses wait in a short buffer until the fighter can act on them
-    if (input.jump) { input.jump = false; if (act !== 'crouch') ibuf.jump = BUF; }   // a press during the take-off squat is the same jump
+    if (input.jump) { input.jump = false; if (hero.act !== 'crouch') ibuf.jump = BUF; }   // a press during the take-off squat is the same jump
     if (!demo) btnTick(dt);
     if (input.attack) { ibuf.atk = input.attack; ibuf.atkT = BUF; input.attack = null; }
     if (input.dash) { input.dash = false; ibuf.dash = BUF; }
@@ -2943,35 +2944,35 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (ibuf.jump > 0) {
       const free = !locked || cancelOK();
       let used = true;
-      if (act === 'climb') used = false;
-      else if (!ctl.air && free && act !== 'crouch') {
+      if (hero.act === 'climb') used = false;
+      else if (!ctl.air && free && hero.act !== 'crouch') {
         ctl.charged = false;   // (no charged or held high jump: high places are climbed, CLIMB)
-        act = 'crouch'; actT = 0; queued = null; ctl.spin = 0;
-      } else if (ctl.air && coyT > 0 && act === 'air' && ctl.jumps <= 1) {   // coyote time: just walked off, a full ground jump
-        act = 'crouch'; actT = 9; ctl.air = false; ctl.charged = false; coyT = 0;
+        hero.act = 'crouch'; hero.actT = 0; queued = null; ctl.spin = 0;
+      } else if (ctl.air && coyT > 0 && hero.act === 'air' && ctl.jumps <= 1) {   // coyote time: just walked off, a full ground jump
+        hero.act = 'crouch'; hero.actT = 9; ctl.air = false; ctl.charged = false; coyT = 0;
       } else if (false) {   // (no double jump: a person cannot push off the air; high places are climbed)
-        ctl.jumps = 2; ctl.vu = DOUBLE_V; ctl.flipT = 0; tut('double'); act = 'air'; actT = 0;
+        ctl.jumps = 2; ctl.vu = DOUBLE_V; ctl.flipT = 0; tut('double'); hero.act = 'air'; hero.actT = 0;
         if (input.dir === ctl.face) ctl.spd = Math.max(ctl.spd, 50);
         sparks.push({ x: P[2].x, y: P[2].y + 8, t: 0.08 });
       } else used = false;
       ibuf.jump = used ? 0 : ibuf.jump - dt;
     }
     if (ibuf.atk) { if (tryAttack(ibuf.atk) || (ibuf.atkT -= dt) <= 0) ibuf.atk = null; }
-    const Wg = WEAPONS[weapon];
+    const Wg = WEAPONS[hero.weapon];
     if (Wg.gun) {   // guns fire on top of any movement: run, jump, squat
       gun.cd -= dt; gun.aimT -= dt; gun.recoil *= Math.exp(-12 * dt);
       if (!(Wg.auto && input.fireHeld)) gun.climb *= Math.exp(-5 * dt);
       if (gun.pumpT >= 0 && (gun.pumpT += dt / 0.4) >= 1) gun.pumpT = -1;
       if (gun.tapT > 0) gun.tapT -= dt;
       if (Wg.auto && (input.fireHeld || gun.tapT > 0)) gun.want = true; else gun.burst = 0;
-      const busy = !!MOVES[act] || act === 'rise' || act === 'roll' || act === 'hero' || act === 'dash';
+      const busy = !!MOVES[hero.act] || hero.act === 'rise' || hero.act === 'roll' || hero.act === 'hero' || hero.act === 'dash';
       if (gun.want && !busy) {
         gun.aimT = Math.max(gun.aimT, 0.5);
         if (gun.aimW > 0.75 && gun.cd <= 0) { fire(Wg); if (!(Wg.auto && input.fireHeld)) gun.want = false; }
       } else if (busy) gun.want = false;
     }
-    actT += dt;
-    if (ctl.air && act === 'air' && !ctl.tramp) {   // in the air near a ledge too high to land on: the hands catch its edge and he pulls up
+    hero.actT += dt;
+    if (ctl.air && hero.act === 'air' && !ctl.tramp) {   // in the air near a ledge too high to land on: the hands catch its edge and he pulls up
       const feet = ctl.y + 2;
       for (const s of SURF) {
         if (s === GROUND_S || s === ignoreS || s.bouncy || s.box || s.y >= feet - 1 || s.y < feet - CLIMB.reach) continue;   // (never up a crate)
@@ -2979,12 +2980,12 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         if (!input.jumpHeld || !(toward || under)) continue;   // only a held jump grabs (a quick press is just a jump): at the edge, or up under the ledge
         const ex = toward ? (ctl.face > 0 ? s.x0 : s.x1) : ctl.x;
         ctl.climb = { s, x0: ctl.x, y0: ctl.y, ex, x1: toward ? ex + ctl.face * 6 : ctl.x, y1: s.y - 2 };
-        act = 'climb'; actT = 0; ctl.vu = 0; ctl.spd = 0; queued = null; ctl.flipT = -1; ctl.spin = 0; tut('charge');
+        hero.act = 'climb'; hero.actT = 0; ctl.vu = 0; ctl.spd = 0; queued = null; ctl.flipT = -1; ctl.spin = 0; tut('charge');
         break;
       }
     }
-    if (act === 'climb') {   // the hands catch the edge and the body swings in under them, pulls up until the hips reach the ledge, then a knee over and stand
-      const C = ctl.climb, f = ctl.face, wx = C.ex - f * 3.5, t = actT;
+    if (hero.act === 'climb') {   // the hands catch the edge and the body swings in under them, pulls up until the hips reach the ledge, then a knee over and stand
+      const C = ctl.climb, f = ctl.face, wx = C.ex - f * 3.5, t = hero.actT;
       const h = clamp(t / CLIMB.hang, 0, 1), u = clamp((t - CLIMB.hang) / CLIMB.up, 0, 1), v = clamp((t - CLIMB.hang - CLIMB.up) / CLIMB.over, 0, 1);
       ctl.spd = 0;
       // the catch: a last lunge brings the hands to the edge (arms at full stretch ~43 px over the feet), with a small sag as they take
@@ -2992,17 +2993,17 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const y0 = Math.min(C.y0, C.y1 + 2 + 41), yHang = lerp(C.y0, y0, smooth(h)) + 1.2 * Math.sin(Math.PI * h), yPull = Math.min(y0, C.y1 + 14);
       if (v <= 0) { ctl.x = lerp(C.x0, wx, smooth(h)); ctl.y = u > 0 ? lerp(y0, yPull, smooth(u)) : yHang; }
       else { ctl.x = lerp(wx, C.x1, smooth(v)); ctl.y = lerp(yPull, C.y1, smooth(v)); }
-      if (t >= CLIMB.hang + CLIMB.up + CLIMB.over) { ctl.x = C.x1; ctl.climb = null; act = 'air'; actT = 0; landOn(C.s, 12); }
+      if (t >= CLIMB.hang + CLIMB.up + CLIMB.over) { ctl.x = C.x1; ctl.climb = null; hero.act = 'air'; hero.actT = 0; landOn(C.s, 12); }
     }
-    if (ctl.air && act !== 'climb') {
+    if (ctl.air && hero.act !== 'climb') {
       let gAir = ctl.vu > 0 ? G_UP : G_FALL;   // a tap rises fully: the jump height does not depend on a quick release
       ctl.hiT = -1;   // (no held high jump: a person cannot jump higher by holding on)
-      if (act === 'dash' && !rollingNow()) { gAir = actT < DASH.airDur * 0.7 ? 0 : G_FALL * 0.5; if (gAir === 0) ctl.vu = Math.max(0, ctl.vu * 0.8); }   // (the air dash hangs; a roll off a ledge falls)
+      if (hero.act === 'dash' && !rollingNow()) { gAir = hero.actT < DASH.airDur * 0.7 ? 0 : G_FALL * 0.5; if (gAir === 0) ctl.vu = Math.max(0, ctl.vu * 0.8); }   // (the air dash hangs; a roll off a ledge falls)
       const prevFoot = ctl.y + 2;
       ctl.y -= ctl.vu * dt; ctl.vu -= gAir * dt;
       if (ctl.baseY - ctl.y > ctl.cap && ctl.vu > 0) ctl.vu = 0;
       // air control: push on toward the facing side, or brake and turn around
-      if (act === 'dash') {}
+      if (hero.act === 'dash') {}
       else if (input.dir === ctl.face) ctl.spd = Math.max(ctl.spd, Math.min(WALK * 1.25, ctl.spd + 50 * dt));   // little steering in the air: the take-off sets the arc
       else if (input.dir === -ctl.face) { ctl.spd -= 120 * dt; if (ctl.spd < 0) { ctl.spd = -ctl.spd; ctl.face = input.dir; } }
       else if (!input.dir && !ctl.tramp) ctl.spd *= Math.exp(-2.6 * dt);   // no direction held: the drift dies off, so a jump lands near where it was aimed
@@ -3014,19 +3015,19 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       }
     }
     let ap = null;
-    if (ctl.rollS && act !== 'roll') { ctl.rollS = false; if (ctl.flipT < 0 && act !== 'kair') ctl.spin = 0; }
-    if (ctl.dashK && act !== 'dash') { ctl.dashK = null; if (ctl.flipT < 0 && act !== 'kair') ctl.spin = 0; }   // [feel] a dodge cut short
-    if (act === 'crouch') {
-      const dur = ctl.spd > WALK + 5 ? 0.07 : 0.11, e = Math.min(1, actT / dur);
+    if (ctl.rollS && hero.act !== 'roll') { ctl.rollS = false; if (ctl.flipT < 0 && hero.act !== 'kair') ctl.spin = 0; }
+    if (ctl.dashK && hero.act !== 'dash') { ctl.dashK = null; if (ctl.flipT < 0 && hero.act !== 'kair') ctl.spin = 0; }   // [feel] a dodge cut short
+    if (hero.act === 'crouch') {
+      const dur = ctl.spd > WALK + 5 ? 0.07 : 0.11, e = Math.min(1, hero.actT / dur);
       ap = mod(g, { ry: g[1] - 5 * e, lean: g[2] + 0.3 * e, a0s: -0.8, a0e: 0.3, a1s: -0.7, a1e: 0.3 });
-      if (actT >= dur) {
-        act = 'air'; actT = 0; ctl.air = true; ctl.jumps = 1; ctl.baseY = ctl.y;
+      if (hero.actT >= dur) {
+        hero.act = 'air'; hero.actT = 0; ctl.air = true; ctl.jumps = 1; ctl.baseY = ctl.y;
         ctl.vu = JUMP_V; ctl.cap = MAX_AIR; ctl.hiT = -1;   // one real jump, tap or hold alike
         tut('jump');
         if (input.dir === ctl.face) ctl.spd = clamp(ctl.spd * 1.1, 45, input.run ? 115 : WALK * 1.25);   // a walking jump carries a walk's worth, a running one more
         dust(ctl.x - 3, ctl.y + 1, 4); dust(ctl.x + 3, ctl.y + 1, 4);
       }
-    } else if (act === 'air') {
+    } else if (hero.act === 'air') {
       const k = smooth(clamp(0.5 - ctl.vu / 200, 0, 1)), rr = clamp(ctl.spd / RUN, 0, 1), ry = 17;
       // rising: lead knee drives up, fist punches the sky; falling: legs reach for the ground, arms out
       const rise = mod(IDLE, { ry, lean: 0.1 + 0.1 * rr, head: -0.1, f1x: 4, f1y: ry - 9, f0x: -4 - 3 * rr, f0y: ry - 17.4, a1s: 3.0, a1e: 0.15, a0s: -0.6, a0e: 0.4 });
@@ -3042,65 +3043,65 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
           ctl.spin = 2 * Math.PI * smooth(u);
         }
       }
-    } else if (act === 'climb') {   // (the arms are set on the edge by IK after the pose: climbArms)
-      const t = actT, u = clamp((t - CLIMB.hang) / CLIMB.up, 0, 1), v = clamp((t - CLIMB.hang - CLIMB.up) / CLIMB.over, 0, 1), sc = Math.sin(t * 30);
+    } else if (hero.act === 'climb') {   // (the arms are set on the edge by IK after the pose: climbArms)
+      const t = hero.actT, u = clamp((t - CLIMB.hang) / CLIMB.up, 0, 1), v = clamp((t - CLIMB.hang - CLIMB.up) / CLIMB.over, 0, 1), sc = Math.sin(t * 30);
       const hang = mod(IDLE, { ry: 18.5, lean: -0.05, head: -0.35, f0x: -1.5, f0y: 1.5, f1x: 1, f1y: 2.5, a0s: 3.0, a0e: 0.1, a1s: 3.0, a1e: 0.1 });   // hanging: legs loose, the head tipped up to the edge
       const pull = mod(IDLE, { ry: 15.5, lean: 0.25 + 0.15 * u, head: 0.05, f0x: 2 + sc, f0y: 6 + 2.5 * sc, f1x: 3.5 - sc, f1y: 9 - 2.5 * sc, a0s: 2.4, a0e: 1.4, a1s: 2.4, a1e: 1.4 });   // pulling: the feet scrabble on the wall
       const over = mod(IDLE, { ry: 11, lean: 0.75, head: 0.2, f0x: -4, f0y: 3, f1x: 5, f1y: 9, a0s: 0.3, a0e: 0.4, a1s: 0.3, a1e: 0.4 });   // the front knee up on the ledge, pressing down on the hands
       const stand = mod(IDLE, { lean: 0.15, f1x: 3, f1y: 1 });
       ap = v > 0 ? (v < 0.6 ? lerpA(pull, over, smooth(v / 0.6)) : lerpA(over, stand, smooth((v - 0.6) / 0.4))) : u > 0 ? lerpA(hang, pull, smooth(Math.min(1, u * 1.6))) : hang;
-    } else if (act === 'land') {
-      const e = Math.min(1, actT / ctl.landDur), s = Math.sin(Math.PI * e);
+    } else if (hero.act === 'land') {
+      const e = Math.min(1, hero.actT / ctl.landDur), s = Math.sin(Math.PI * e);
       ap = mod(g, { ry: g[1] - ctl.landDip * Math.pow(s, 0.7), lean: g[2] + 0.25 * s, a0s: 0.5, a0e: 0.6, a1s: 0.6, a1e: 0.6 });
-      if (actT >= ctl.landDur) act = null;
-    } else if (MOVES[act]) {   // (not atk: a cancel may have just replaced the attack)
-      const m = MOVES[act];
-      ap = keyAt(m.keys, actT);
-      if (!WEAPONS[weapon].gun) lunge(m, dt);
-      if (act === 'ah' && !ctl.slam && actT >= 0.38) { ctl.slam = true; const wg = weaponGeom(); slam(wg ? wg.tx : ctl.x + 14 * ctl.face, ctl.y + 2, 26, 1); }
-      if (act === 'aair' && !ctl.slam && actT >= 0.16) { ctl.slam = true; ctl.vu = Math.min(ctl.vu, -250); }
-      if (queued && !ctl.air && actT >= chainAt(m)) { const q = queued; queued = null; ctl.spin = 0; startAttack(q); }
-      else if (actT >= m.dur) { if (WSWING.test(act)) ctl.comboEnd = simTime; ctl.spin = 0; queued = null; act = ctl.air ? 'air' : input.downHeld && LOW_RE.test(act) ? 'squat' : 'guard'; actT = 0; }
-    } else if (act === 'grab') {   // the ending: reach over the bar for a bottle
-      ap = lerpA(g, mod(IDLE, { a1s: 1.2, a1e: 0.25, lean: 0.28, head: 0.12, a0s: 0.3 }), smooth(Math.min(1, actT / 0.3)));
-    } else if (act === 'drink') {   // bottle up, head back, a couple of swallows
-      ap = lerpA(g, mod(IDLE, { a1s: 2.5 + 0.05 * Math.sin(actT * 9), a1e: 2.7, head: -0.5, lean: -0.14, a0s: 0.15 }), smooth(Math.min(1, actT / 0.35)));
-    } else if (act === 'pet') {   // by the dog, the hand stroking its head
-      ap = lerpA(g, mod(IDLE, { a1s: 0.95 + 0.15 * Math.max(0, Math.sin(actT * 9)), a1e: 0.12, lean: 0.48, head: 0.4, a0s: 0.15, ry: IDLE[1] - 1.5 }), smooth(Math.min(1, actT / 0.3)));   // a tall dog: he bends a little and strokes its head
-    } else if (act === 'squat') {
+      if (hero.actT >= ctl.landDur) hero.act = null;
+    } else if (MOVES[hero.act]) {   // (not atk: a cancel may have just replaced the attack)
+      const m = MOVES[hero.act];
+      ap = keyAt(m.keys, hero.actT);
+      if (!WEAPONS[hero.weapon].gun) lunge(m, dt);
+      if (hero.act === 'ah' && !ctl.slam && hero.actT >= 0.38) { ctl.slam = true; const wg = weaponGeom(); slam(wg ? wg.tx : ctl.x + 14 * ctl.face, ctl.y + 2, 26, 1); }
+      if (hero.act === 'aair' && !ctl.slam && hero.actT >= 0.16) { ctl.slam = true; ctl.vu = Math.min(ctl.vu, -250); }
+      if (queued && !ctl.air && hero.actT >= chainAt(m)) { const q = queued; queued = null; ctl.spin = 0; startAttack(q); }
+      else if (hero.actT >= m.dur) { if (WSWING.test(hero.act)) ctl.comboEnd = simTime; ctl.spin = 0; queued = null; hero.act = ctl.air ? 'air' : input.downHeld && LOW_RE.test(hero.act) ? 'squat' : 'guard'; hero.actT = 0; }
+    } else if (hero.act === 'grab') {   // the ending: reach over the bar for a bottle
+      ap = lerpA(g, mod(IDLE, { a1s: 1.2, a1e: 0.25, lean: 0.28, head: 0.12, a0s: 0.3 }), smooth(Math.min(1, hero.actT / 0.3)));
+    } else if (hero.act === 'drink') {   // bottle up, head back, a couple of swallows
+      ap = lerpA(g, mod(IDLE, { a1s: 2.5 + 0.05 * Math.sin(hero.actT * 9), a1e: 2.7, head: -0.5, lean: -0.14, a0s: 0.15 }), smooth(Math.min(1, hero.actT / 0.35)));
+    } else if (hero.act === 'pet') {   // by the dog, the hand stroking its head
+      ap = lerpA(g, mod(IDLE, { a1s: 0.95 + 0.15 * Math.max(0, Math.sin(hero.actT * 9)), a1e: 0.12, lean: 0.48, head: 0.4, a0s: 0.15, ry: IDLE[1] - 1.5 }), smooth(Math.min(1, hero.actT / 0.3)));   // a tall dog: he bends a little and strokes its head
+    } else if (hero.act === 'squat') {
       ctl.squatT += dt;
       ap = ctl.duckT > 0 && !input.downHeld ? TRN.DUCK : SQUAT;
-    } else if (act === 'guard') {
+    } else if (hero.act === 'guard') {
       const br = Math.sin(simTime * 3.1);   // fighting stance breathes harder than idle
       ap = mod(GUARD, { ry: GUARD[1] + 0.3 * br, head: GUARD[3] - 0.03 * br, a0s: GUARD[8] + 0.05 * br, a1s: GUARD[10] + 0.05 * br });
-      if (actT > 1.4) act = null;
-    } else if (act === 'rise') {
-      ap = lerpA(RISE, g, smooth(Math.min(1, actT / 0.4)));
-      if (actT >= 0.4) act = null;
-    } else if (act === 'skid') {
+      if (hero.actT > 1.4) hero.act = null;
+    } else if (hero.act === 'rise') {
+      ap = lerpA(RISE, g, smooth(Math.min(1, hero.actT / 0.4)));
+      if (hero.actT >= 0.4) hero.act = null;
+    } else if (hero.act === 'skid') {
       ap = lerpA(g, TRN.SKID, clamp(0.5 + ctl.spd / 80, 0.5, 1));
       if (ctl.spd < 4) {
-        if (input.dir === -ctl.face) { ctl.face = input.dir; act = 'pivot'; ctl.pivT = 0.12; } else act = 'settle';
-        actT = 0;
+        if (input.dir === -ctl.face) { ctl.face = input.dir; hero.act = 'pivot'; ctl.pivT = 0.12; } else hero.act = 'settle';
+        hero.actT = 0;
       }
-    } else if (act === 'pivot') {
-      const e = Math.min(1, actT / ctl.pivT), big = ctl.pivT > 0.1;
+    } else if (hero.act === 'pivot') {
+      const e = Math.min(1, hero.actT / ctl.pivT), big = ctl.pivT > 0.1;
       ap = lerpA(g, TRN.PIVOT, big ? 1 - smooth(e) * 0.7 : 0.45 * Math.sin(Math.PI * e));
-      if (actT >= ctl.pivT) act = null;
-    } else if (act === 'start' || act === 'settle') {   // anticipation dip / small rock after a stop
-      const d = act === 'start' ? TRN.start : TRN.settle, s = Math.sin(Math.PI * Math.min(1, actT / d));
+      if (hero.actT >= ctl.pivT) hero.act = null;
+    } else if (hero.act === 'start' || hero.act === 'settle') {   // anticipation dip / small rock after a stop
+      const d = hero.act === 'start' ? TRN.start : TRN.settle, s = Math.sin(Math.PI * Math.min(1, hero.actT / d));
       ap = mod(g, { ry: g[1] - 1.8 * s, lean: g[2] + 0.14 * s, a0s: g[8] + 0.2 * s, a1s: g[10] + 0.2 * s });
-      if (actT >= d) act = null;
-    } else if (act === 'hero') {
-      ap = lerpA(TRN.HERO, g, smooth(clamp((actT - TRN.hero) / TRN.heroUp, 0, 1)));
-      if (actT >= TRN.hero + TRN.heroUp) act = null;
-    } else if (act === 'roll') {
-      const u = Math.min(1, actT / TRN.roll);
+      if (hero.actT >= d) hero.act = null;
+    } else if (hero.act === 'hero') {
+      ap = lerpA(TRN.HERO, g, smooth(clamp((hero.actT - TRN.hero) / TRN.heroUp, 0, 1)));
+      if (hero.actT >= TRN.hero + TRN.heroUp) hero.act = null;
+    } else if (hero.act === 'roll') {
+      const u = Math.min(1, hero.actT / TRN.roll);
       ap = lerpA(g, TRN.TUCK, Math.sqrt(Math.sin(Math.PI * u)));
-      ctl.spin = 2 * Math.PI * smooth(Math.min(1, actT / (TRN.roll * 0.85)));
-      if (u >= 1) { ctl.spin = 0; ctl.rollS = false; act = null; }
-    } else if (act === 'dash') {
-      const k = ctl.dashK, dur = k === 'air' ? DASH.airDur : k === 'back' ? DASH.backDur : DASH.dur, u = Math.min(1, actT / dur);
+      ctl.spin = 2 * Math.PI * smooth(Math.min(1, hero.actT / (TRN.roll * 0.85)));
+      if (u >= 1) { ctl.spin = 0; ctl.rollS = false; hero.act = null; }
+    } else if (hero.act === 'dash') {
+      const k = ctl.dashK, dur = k === 'air' ? DASH.airDur : k === 'back' ? DASH.backDur : DASH.dur, u = Math.min(1, hero.actT / dur);
       if (k === 'roll') {   // dodge roll: tuck and turn over once, fast out of the gate, easing into a run or a stop
         // [feel] tuck in fast on the first roll, stay balled through a chain, unfold over the last 30% of the last roll
         const tin = ctl.rollN > 1 ? 1 : smooth(clamp(u / 0.2, 0, 1)), tout = input.dashHeld && ctl.rollN < ROLL_MAX ? 1 : 1 - smooth(clamp((u - 0.7) / 0.3, 0, 1));
@@ -3116,33 +3117,33 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       } else ap = lerpA(TRN.ADASH, mod(AIR, {}), smooth(clamp((u - 0.6) / 0.4, 0, 1)));   // air dash: body flat, arms and legs swept back
       if (u >= 1) {
         ctl.spin = 0;
-        act = ctl.air ? 'air' : null; actT = 0;
+        hero.act = ctl.air ? 'air' : null; hero.actT = 0;
         if (k === 'roll' && ctl.chainRoll) {
-          if (!ctl.air && input.dashHeld && ctl.rollN < ROLL_MAX) { act = 'dash'; ctl.dashK = 'roll'; startRoll(input.dir || ctl.face); }   // keep rolling while U is held
+          if (!ctl.air && input.dashHeld && ctl.rollN < ROLL_MAX) { hero.act = 'dash'; ctl.dashK = 'roll'; startRoll(input.dir || ctl.face); }   // keep rolling while U is held
           else ctl.chainRoll = false;
         }
       }
-    } else if (act === 'teeter') {
-      ap = teeterPose(actT, ctl.edge * ctl.face);
-      if (ctl.spd > 1 || ctl.surf === GROUND_S) act = null;
+    } else if (hero.act === 'teeter') {
+      ap = teeterPose(hero.actT, ctl.edge * ctl.face);
+      if (ctl.spd > 1 || ctl.surf === GROUND_S) hero.act = null;
     }
 
     // [feel] the action pose (or the gait) and the body spin go through the pose blender
     const tp = (ap || g).slice(); tp[14] = ctl.spin;
     const fo = inertia(tp, dt), spin = fo[14];
     let fin = fo.slice(0, 14);
-    const hasGun = WEAPONS[weapon].gun;
+    const hasGun = WEAPONS[hero.weapon].gun;
     if (hasGun) fin = gunBody(fin, dt); else gun.aimW = 0;
     fin = secondaryMotion(fin, dt);   // [G1] weight, overlap, follow-through
     fin = worldPose(fin, dt);         // [G3] head look, hit flinch, pushing
     ctl.wr = fin[12]; ctl.yw = fin[13];
     let joints = fk(fin, ctl.x, ctl.y + ctl.stOff, ctl.face);
-    const rolling = act === 'dash' && ctl.dashK === 'roll';
+    const rolling = hero.act === 'dash' && ctl.dashK === 'roll';
     if (Math.abs(wrapA(spin)) > 1e-3 || (rolling && !ctl.air)) {   // rotate the whole body around the belly for the flip (a roll keeps its ground contact at the 2pi seam too)
       const a = spin * ctl.face, ca = Math.cos(a), sa = Math.sin(a);
       // a roll turns about the centre of the whole balled body, so it tumbles like a wheel; a flip turns about the belly
       let cx = (joints[1][0] + joints[2][0]) / 2, cy = (joints[1][1] + joints[2][1]) / 2;
-      if (rolling || act === 'roll') { cx = 0; cy = 0; for (const j of joints) { cx += j[0] / joints.length; cy += j[1] / joints.length; } }
+      if (rolling || hero.act === 'roll') { cx = 0; cy = 0; for (const j of joints) { cx += j[0] / joints.length; cy += j[1] / joints.length; } }
       joints = joints.map(([x, y]) => [cx + (x - cx) * ca - (y - cy) * sa, cy + (x - cx) * sa + (y - cy) * ca]);
       if (!ctl.air) {   // [feel] a flip finishing on the ground stays above it; a roll stays down on the ground, tumbling over it
         const low = Math.max(...joints.map(j => j[1])) - ctl.y;
@@ -3161,36 +3162,36 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       gunPose = null;
       if (gunArms && gunArmW > 0.01) { const nk = joints[1], e = smooth(gunArmW); for (let k = 0; k < 4; k++) joints[3 + k] = [lerp(joints[3 + k][0], nk[0] + gunArms[k][0] * ctl.face, e), lerp(joints[3 + k][1], nk[1] + gunArms[k][1], e)]; }
     }
-    if (act === 'climb' && ctl.climb) climbArms(joints);
+    if (hero.act === 'climb' && ctl.climb) climbArms(joints);
     setJoints(joints);
     tossRelease();
 
-    const m = MOVES[act];
+    const m = MOVES[hero.act];
     if (m) {
       const wg = m.blade ? weaponGeom() : null;
       const p = wg ? { x: wg.tx, y: wg.ty } : P[m.limb];
       const mid = wg ? { x: wg.x + wg.dx * wg.len * 0.45, y: wg.y + wg.dy * wg.len * 0.45 } : null;
-      if (act === 'tw' && !hitDone && actT >= 0.2) { hitDone = true; releaseThrow(); }
-      if (actT >= m.win[0] && actT <= m.win[1]) {
-        hitCtx = act;
+      if (hero.act === 'tw' && !hitDone && hero.actT >= 0.2) { hitDone = true; releaseThrow(); }
+      if (hero.actT >= m.win[0] && hero.actT <= m.win[1]) {
+        hitCtx = hero.act;
         if (!hitDone && (bagTouch(p.x, p.y) || (mid && bagTouch(mid.x, mid.y)))) { hitDone = true; atkHit = true; bagHit(p.x, p.y, ctl.face, m.power); if (wg) wear(); }
         for (const o of objs.slice()) {
-          if (o.hitBy === atkId || offPlat(o, ctl.lane)) continue;
+          if (o.hitBy === hero.atkId || offPlat(o, ctl.lane)) continue;
           // a weapon hits along its whole length; a fist or foot uses a strike box that reaches a little low for kicks
           const hit = wg ? segHitsObj(wg.x, wg.y, wg.tx, wg.ty, o, 1.5)
             : Math.abs(o.x - p.x) < (o.hw || o.r) + 4 && o.y - o.r < p.y + 9 && o.y + o.r > p.y - 5;
-          if (hit) { o.hitBy = atkId; atkHit = true; launchObj(o, clamp(p.x, o.x - o.r, o.x + o.r), clamp(p.y, o.y - o.r, o.y + o.r), ctl.face, m.power, m.up); if (wg) wear(); }
+          if (hit) { o.hitBy = hero.atkId; atkHit = true; launchObj(o, clamp(p.x, o.x - o.r, o.x + o.r), clamp(p.y, o.y - o.r, o.y + o.r), ctl.face, m.power, m.up); if (wg) wear(); }
         }
         const hp = hitEnemies(m, wg, p);
         if (hp) { atkHit = true; hitSpark(wg ? (hp.x + wg.x + (wg.tx - wg.x) * 0.7) / 2 : hp.x, wg ? (hp.y + wg.y + (wg.ty - wg.y) * 0.7) / 2 : hp.y, ctl.face, m.power, !!wg); if (wg) wear(); }
         hitCtx = null;
-      } else if (actT >= m.pre && actT < m.win[0]) hitEnemies(m, wg, p, true);
+      } else if (hero.actT >= m.pre && hero.actT < m.win[0]) hitEnemies(m, wg, p, true);
     }
   }
 
   function impact(i, p, v) {
     if (v > 60) dust(p.x, p.fl + p.r - 1, Math.min(6, Math.floor(v / 40)));
-    if (!ragKD && ((i === 0 && v > 85) || (i === 2 && v > 170))) ko = true;
+    if (!ragKD && ((i === 0 && v > 85) || (i === 2 && v > 170))) hero.ko = true;
     if (v > 160 && !reduceMotion) cam.shake = Math.max(cam.shake, 0.18);
   }
   function ragStep(dt) {
@@ -3225,8 +3226,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     });
     settleT = grabIdx < 0 && mv < 20 ? settleT + dt : 0;
     ragT = grabIdx < 0 ? ragT + dt : 0;
-    if (settleT > (ko ? 1.8 : 0.45) || (ragT > 5 && mv < 80)) {   // something jiggling on the body must not keep it down
-      if (playerHp <= 0 && DIF().perma) { if (!wasted) showWasted(); } else startGetup();   // Wicked: no getting up after a real K.O. (ko alone is also a hard knock to the head)
+    if (settleT > (hero.ko ? 1.8 : 0.45) || (ragT > 5 && mv < 80)) {   // something jiggling on the body must not keep it down
+      if (hero.hp <= 0 && DIF().perma) { if (!wasted) showWasted(); } else startGetup();   // Wicked: no getting up after a real K.O. (ko alone is also a hard knock to the head)
     }
   }
 
@@ -3238,7 +3239,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const SPRS = [sBob, sLean, sHead, sArmB, sArmF];
   let smAir = false, smVu = 0, smHs = 0, smAccL = 0;
   function secondaryMotion(q, dt) {
-    const atk = !!MOVES[act], gun = WEAPONS[weapon].gun;
+    const atk = !!MOVES[hero.act], gun = WEAPONS[hero.weapon].gun;
     const kA = (atk ? 0.3 : 1) * (gun ? 0.25 : 1), kH = (atk ? 0.4 : 1) * (gun ? 0.7 : 1);
     const o = q.slice();
     o[1] += clamp(sBob.x, -2, 2);
@@ -3252,14 +3253,14 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const BELT = C('#2a2236'), BELT_T = C('#463a5e');
   let tails = null;
   function beltAt() {
-    const nk = P[1], pl = P[2], f = mode === 'rag' ? ragFace : ctl.face, [ux, uy] = norm(nk.x - pl.x, nk.y - pl.y);
+    const nk = P[1], pl = P[2], f = hero.mode === 'rag' ? ragFace : ctl.face, [ux, uy] = norm(nk.x - pl.x, nk.y - pl.y);
     const wx = nk.x + (pl.x - nk.x) * 0.72, wy = nk.y + (pl.y - nk.y) * 0.72;
     return { wx, wy, bx: -uy * f, by: ux * f };   // waist point and the unit vector toward the front
   }
   function tailAnchor(k) { const b = beltAt(); return [b.wx - b.bx * 2.6, b.wy - b.by * 2.6 + k]; }
   function secondaryStep(dt) {
     // springs: drive in anim mode, fade out otherwise
-    if (mode === 'anim') {
+    if (hero.mode === 'anim') {
       smAccL += (ctl.accS - smAccL) * (1 - Math.exp(-4 * dt));
       const a = ctl.accS, hp = a - smAccL;   // hips speeding up in the facing direction: head and arms lag behind
       sprStep(sHead, -a * 0.2, dt); sprStep(sArmB, -a * 0.2, dt); sprStep(sArmF, -a * 0.24, dt);
@@ -3276,7 +3277,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         sBob.v -= 22 * k; sLean.v -= 0.9 * k; sHead.v += 1.6 * k;
       }
     } else for (const s of SPRS) { s.x *= Math.exp(-20 * dt); s.v = 0; }
-    smAir = mode === 'anim' && ctl.air; if (smAir) smVu = ctl.vu; smHs = hitStop;
+    smAir = hero.mode === 'anim' && ctl.air; if (smAir) smVu = ctl.vu; smHs = hitStop;
     // belt tails: verlet ropes like the headband ribbon, heavier and with less drag
     if (!tails) tails = [4, 3].map((n, k) => Array.from({ length: n }, () => { const [x, y] = tailAnchor(k); return { x, y, px: x, py: y }; }));
     tails.forEach((t, k) => {
@@ -3336,8 +3337,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     return true;
   }
   function worldPose(q, dt) {
-    const o = q.slice(), f = ctl.face, atk = !!MOVES[act];
-    if (act === 'rise' && actT <= dt * 1.5) { flX.fill(0); flV.fill(0); }   // fresh after a fall
+    const o = q.slice(), f = ctl.face, atk = !!MOVES[hero.act];
+    if (hero.act === 'rise' && hero.actT <= dt * 1.5) { flX.fill(0); flV.fill(0); }   // fresh after a fall
     flCd -= dt;
     // head look: the nearest live enemy in front, eye to eye; else the nearest object or the bag bottom
     const hd = P[0], ey0 = hd.x + f * 2.2, eyY = hd.y; let best = 70, tgt = 0, foe = false, fBest = 220;
@@ -3359,9 +3360,9 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       o[i] += flX[i];
     }
     // the front hand carries the object at his side; a bash is a one-handed overhand swing; [feel] blended in on the pick-up and out through the throw
-    const cOn = !!ctl.carry && mode === 'anim';
-    carryW += ((cOn ? 1 : 0) - carryW) * (1 - Math.exp(-(cOn ? 14 : act === 'tw' ? 6 : 14) * dt));
-    if (mode !== 'anim') carryW = 0;
+    const cOn = !!ctl.carry && hero.mode === 'anim';
+    carryW += ((cOn ? 1 : 0) - carryW) * (1 - Math.exp(-(cOn ? 14 : hero.act === 'tw' ? 6 : 14) * dt));
+    if (hero.mode !== 'anim') carryW = 0;
     if (carryW > 0.005) {
       const w = carryW, u = ctl.bashT > 0 ? 1 - ctl.bashT / CBASH : -1;   // the swing: up and back over the shoulder, then down through the front
       const a1s = u < 0 ? 0.55 : u < 0.4 ? lerp(0.55, 2.8, smooth(u / 0.4)) : lerp(2.8, 1.0, smooth((u - 0.4) / 0.6)), a1e = u < 0 ? 0.35 : 0.2;
@@ -3373,7 +3374,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // ===== [/G3] =====
 
   // long hair: three verlet strands rooted along the back of the head; they trail and float with movement
-  const faceNow = () => mode === 'rag' ? ragFace : ctl.face;
+  const faceNow = () => hero.mode === 'rag' ? ragFace : ctl.face;
   // shoulder-length straight hair: four locks from the crown down the back of the head, all cut level at the shoulders
   const HAIR = [{ up: 3.8, back: 2.0, n: 4, len: 2.3 }, { up: 2.6, back: 3.0, n: 4, len: 2.3 }, { up: 1.2, back: 3.5, n: 4, len: 2.1 }, { up: -0.2, back: 3.5, n: 3, len: 2.0 }];   // (straight, to the jaw and the nape)
   function hairAnchor(k) {
@@ -3416,7 +3417,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
 
   function step(dt) {
     bagStep(dt);
-    if (mode === 'rag') { input.jump = false; input.attack = null; ragStep(dt); }
+    if (hero.mode === 'rag') { input.jump = false; input.attack = null; ragStep(dt); }
     else animStep(dt);
     objStep(dt);
     enemyStep(dt);
@@ -3445,22 +3446,22 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
 
   function toRag() {
-    if (mode === 'rag') return;
-    mode = 'rag'; ragFace = ctl.face; settleT = 0; ragT = 0; ragKD = false; act = null; queued = null; gun.want = false; gun.aimT = 0;
+    if (hero.mode === 'rag') return;
+    hero.mode = 'rag'; ragFace = ctl.face; settleT = 0; ragT = 0; ragKD = false; hero.act = null; queued = null; gun.want = false; gun.aimT = 0;
     ctl.air = false; ctl.spd = 0; ctl.jumps = 0; ctl.flipT = -1; ctl.spin = 0;
   }
   function startGetup() {
-    mode = 'getup';
+    hero.mode = 'getup';
     gunPose = null;   // the gun rides in the hand until the fighter is up
     ctl.x = clamp(P[2].x, 12, W - 12); ctl.face = ragFace; ctl.spd = 0; ctl.air = false; ctl.vu = 0;
     ctl.surf = floorBelow(ctl.x, P[2].y, 0); ctl.y = ctl.surf.y - 2;
     gu = makeGetup(P.map(p => [p.x, p.y]), ctl.x, ctl.y, ctl.face);   // the knees bend the ragdoll's way: face stays ragFace
-    act = null; queued = null;
+    hero.act = null; queued = null;
   }
   function punchAt(x, y, power = 1) {
     const R = 22; let hit = false, top = 0;
     for (const p of P) top = Math.max(top, (1 - Math.hypot(p.x - x, p.y - y) / R) * power);
-    if (top > 0 && top < 0.45 && mode === 'anim') { flinch(x, y, top / 0.45, x, y); return true; }   // [G3] weak hit: flinch
+    if (top > 0 && top < 0.45 && hero.mode === 'anim') { flinch(x, y, top / 0.45, x, y); return true; }   // [G3] weak hit: flinch
     for (const p of P) {
       const dx = p.x - x, dy = p.y - y, d = Math.hypot(dx, dy);
       if (d >= R) continue;
@@ -3473,12 +3474,12 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     return hit;
   }
   function knockOver() {
-    const f = mode === 'rag' ? ragFace : ctl.face, h = P[0];
+    const f = hero.mode === 'rag' ? ragFace : ctl.face, h = P[0];
     punchAt(clamp(h.x + 7 * f, 0, W - 1), h.y + 1, 1.3);
   }
   function drop() {
     releaseGrab();
-    mode = 'rag'; ko = false; settleT = 0; ragT = 0; act = null; ragFace = Math.random() < 0.5 ? -1 : 1;
+    hero.mode = 'rag'; hero.ko = false; settleT = 0; ragT = 0; hero.act = null; ragFace = Math.random() < 0.5 ? -1 : 1;
     const pose = fk(IDLE, cam.x + cam.vw * (0.3 + Math.random() * 0.4), GROUND - 2, ragFace);
     const cx = pose[2][0], cy = pose[2][1], a = (Math.random() * 2 - 1) * Math.PI, ca = Math.cos(a), sa = Math.sin(a);
     const rot = pose.map(([x, y]) => [cx + (x - cx) * ca - (y - cy) * sa, cy + (x - cx) * sa + (y - cy) * ca]);
@@ -3493,7 +3494,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (openT >= 0) endOpening();
     endPh = null; endT = 0; endCam = null; dog = null; ctl.bottle = false; jumpEnd = false;
     releaseGrab();
-    mode = 'anim'; ko = false; wasted = false; bandT = 0; act = null; queued = null; wAct = 0; settleT = 0; ignoreS = null;
+    hero.mode = 'anim'; hero.ko = false; wasted = false; hero.bandT = 0; hero.act = null; queued = null; wAct = 0; settleT = 0; ignoreS = null;
     Object.assign(ctl, { x: START_X, y: GROUND - 2, face: 1, spd: 0, air: false, vu: 0, jumps: 0, flipT: -1, spin: 0, surf: GROUND_S });
     const j = fk(IDLE, ctl.x, ctl.y, 1);
     P.forEach((p, i) => { p.x = p.px = j[i][0]; p.y = p.py = j[i][1]; });
@@ -3557,13 +3558,13 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (P[2].x > wall) {   // pushed back to the stage line (walking, or flying there as a ragdoll)
       const dx = wall - P[2].x;
       for (const p of P) { p.x += dx; p.px = Math.min(p.px + dx, p.x); }
-      if (mode === 'anim') { ctl.x += dx; ctl.spd = Math.min(ctl.spd, 0); }
+      if (hero.mode === 'anim') { ctl.x += dx; ctl.spd = Math.min(ctl.spd, 0); }
       if (simTime - gateToastT > 6) { gateToastT = simTime; toast(`Stage ${i + 1} is not done`, 'Finish every lesson on the list to go on', true); }
     }
     if ((gateT += rdt) < 1) return;
     gateT = 0;
     const Z = ZONES[i], x1 = ZONES[i + 1].x0, todo = Z.tasks.map(([k]) => k).filter(k => !done.has(k));
-    if (P[2].x < Z.x0 || mode !== 'anim') return;   // (only while he is in the stage)
+    if (P[2].x < Z.x0 || hero.mode !== 'anim') return;   // (only while he is in the stage)
     if (WAVES[i] && spawned.has(i) && !(zoneAlive[i] > 0) && todo.some(k => GOON_TASKS.has(k))) {
       const x = clamp(P[2].x + 110, Z.x0 + 20, x1 - 20), g = spawnEnemy('goon', x, i); g.cdT = Math.max(g.cdT, 1.5);
       toast('A sparring partner', 'Another goon to practise on', true);
@@ -3617,7 +3618,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // knocked out: you get up with full health, and the fighters around you are thrown back so you are not hit again at once.
   // a second knock-out in a row in the boss arena clears its goons and staggers the boss
   function secondWind() {
-    invT = Math.max(invT, 1.2);
+    hero.invT = Math.max(hero.invT, 1.2);
     waves.push({ x: ctl.x, y: ctl.y + 1, t: 0 }); dust(ctl.x - 4, ctl.y + 1, 6); dust(ctl.x + 4, ctl.y + 1, 6);
     for (const e of enemies) if (!e.dead && Math.abs(e.x - ctl.x) < 60 && Math.abs(e.y - ctl.y) < 30) {
       const d = Math.sign(e.x - ctl.x) || 1;
@@ -3634,12 +3635,12 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function runTick(rdt) {
     if (!bossBeaten) runS.t += rdt * timeScale;
     for (const e of enemies) if (e.dead && !runS.seen.has(e)) { runS.seen.add(e); if (e !== boss) runS.kills++; }
-    if (playerHp < runS.hp) runS.dmg += runS.hp - playerHp;
-    runS.hp = playerHp;
-    if (playerHp <= 0 && !runS.down && mode === 'rag') { runS.down = true; kos++; runS.streak++; runS.koUp = true; }
-    if (mode !== 'rag') runS.down = false;
-    if (mode === 'getup' && runS.prevMode !== 'getup' && runS.koUp) { runS.koUp = false; secondWind(); }
-    runS.prevMode = mode;
+    if (hero.hp < runS.hp) runS.dmg += runS.hp - hero.hp;
+    runS.hp = hero.hp;
+    if (hero.hp <= 0 && !runS.down && hero.mode === 'rag') { runS.down = true; kos++; runS.streak++; runS.koUp = true; }
+    if (hero.mode !== 'rag') runS.down = false;
+    if (hero.mode === 'getup' && runS.prevMode !== 'getup' && runS.koUp) { runS.koUp = false; secondWind(); }
+    runS.prevMode = hero.mode;
     if (bossBeaten && endPh === null && !wasted) { endPh = 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card (not after a Wicked K.O.)
     if (bossBeaten && runS.endT < 0 && endPh === 'done' && !wasted) runS.endT = 0.4;
     if (runS.endT > 0 && (runS.endT -= rdt) <= 0) showResults();
@@ -3651,10 +3652,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       if (toastQ.length) { const [a, b] = toastQ.shift(); toast(a, b); }
     }
     runTick(rdt);
-    if (mode === 'anim') {
+    if (hero.mode === 'anim') {
       if (ctl.spd > 5 && ctl.spd < WALK + 6) tut('walk');
       if (ctl.spd > WALK + 20 && !ctl.air) tut('run');
-      for (const k of pickups) if (!endPh && !k.taken && !ctl.carry && (!weapon || k.w >= weapon || input.downHeld) && Math.abs(ctl.x - k.x) < 9 && ctl.y > GROUND - 12) {   // walk into a pickup (walking back past a lesser weapon keeps yours; squat to swap)
+      for (const k of pickups) if (!endPh && !k.taken && !ctl.carry && (!hero.weapon || k.w >= hero.weapon || input.downHeld) && Math.abs(ctl.x - k.x) < 9 && ctl.y > GROUND - 12) {   // walk into a pickup (walking back past a lesser weapon keeps yours; squat to swap)
         k.taken = true; equip(k.w, fullCharge(k.w)); tut('pick' + k.w);
         sparks.push({ x: k.x, y: k.y, t: 0 }); waves.push({ x: k.x, y: GROUND - 1, t: 0 });
         if (!pickToasted.has(k.w)) { pickToasted.add(k.w); toast(`${WEAPONS[k.w].name} acquired`, WEAPONS[k.w].gun ? 'Q fire · empty: Q throws it' : `tap Q ${WEAPONS[k.w].labels[0].toLowerCase()} · hold Q ${WEAPONS[k.w].labels[1].toLowerCase()}`, true); }
@@ -3674,7 +3675,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     // each stage's goons come out by where the hero really is (not by the stage panel, which waits while goons stand):
     // once its moves are learned (so each is taught in peace first), after 30 s in it, past its middle, near its exit, or at once
     // if he runs in (skipping the lessons: he wants a fight). A runner meets them ahead of him, not behind.
-    if (mode === 'anim' && !club && !demo) for (const key in WAVES) {
+    if (hero.mode === 'anim' && !club && !demo) for (const key in WAVES) {
       const i = +key; if (spawned.has(i) || P[2].x < ZONES[i].x0) continue;
       zoneTs[i] = (zoneTs[i] || 0) + (zc === i ? rdt * timeScale : 0);
       const learned = ZONES[i].tasks.every(([k]) => k.startsWith('kill') || done.has(k)), x1 = ZONES[i + 1].x0, mid = (ZONES[i].x0 + x1) / 2;
@@ -3696,7 +3697,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         g.cdT = Math.max(g.cdT, 0.9);
       });
     }
-    if (!boss && !bossBeaten && mode === 'anim' && club && slamDone) {   // inside the club, the door shut: the entrance
+    if (!boss && !bossBeaten && hero.mode === 'anim' && club && slamDone) {   // inside the club, the door shut: the entrance
       // the room goes dark but for one white spot; the crowd flinches back; the boss walks out of the far doorway to his mark under the light
       arena = { x0: 2440, x1: W - 12 }; spawnT = 6; arenaSpawned = 0;
       boss = spawnEnemy('boss', CLUB_DOORS[0], 'boss'); boss.intro = true; boss.introX = CLUB_DOORS[0] + 56; boss.face = 1;
@@ -3759,9 +3760,9 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // jump and attack fire when the step starts (again while the fighter is too busy to take them); `fn` runs once at the start.
   // to: walk to an x (a number or a function); face: then turn that way; tick(sdt): a step that drives the inputs itself.
   // LES(lesson, steps): a group that is skipped when the lesson is done and played again (up to 4 times) when it is not.
-  const landed_ = () => !ctl.air && act !== 'air' && act !== 'crouch';
-  const climbed_ = () => dT > 0.25 && landed_() && act !== 'climb';   // a held jump step: keep W down from the take-off until he stands again (up on the ledge)
-  const has = w => () => weapon === w;
+  const landed_ = () => !ctl.air && hero.act !== 'air' && hero.act !== 'crouch';
+  const climbed_ = () => dT > 0.25 && landed_() && hero.act !== 'climb';   // a held jump step: keep W down from the take-off until he stands again (up on the ledge)
+  const has = w => () => hero.weapon === w;
   const LES = (need, seq) => ({ need, seq });
   const ATBAG = { to: 598, face: 1 };
   // the closest loose object of some kinds on the fighter's level
@@ -3778,17 +3779,17 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     let o = null;
     for (const q of objs) if (q.maxHp && q.x > x0 && q.x < x1 && q.y + q.r > GROUND - 6 && (!o || Math.abs(q.x - ctl.x) < Math.abs(o.x - ctl.x))) o = q;
     if (!o) return true;
-    const Wp = WEAPONS[weapon], shoot = Wp.gun && charge[weapon] > 0, dx = o.x - ctl.x, side = Math.sign(dx) || 1, gap = shoot ? 34 : (o.hw || o.r) + (Wp.melee ? 12 : 8);
+    const Wp = WEAPONS[hero.weapon], shoot = Wp.gun && charge[hero.weapon] > 0, dx = o.x - ctl.x, side = Math.sign(dx) || 1, gap = shoot ? 34 : (o.hw || o.r) + (Wp.melee ? 12 : 8);
     if (Wp.gun) return true;   // bullets fly over a box on the street: keep the ammo for the goons
     const low = !Wp.melee && !o.hw && !(Wp.gun && !shoot);   // a low box: sweep it from a squat, or shoot it from a squat (standing, the shots fly over it)
-    if (MOVES[act]) { input.dir = 0; input.downHeld = low && LOW_RE.test(act); return false; }
+    if (MOVES[hero.act]) { input.dir = 0; input.downHeld = low && LOW_RE.test(hero.act); return false; }
     if (Math.abs(dx) > gap + 3) { input.dir = side; input.run = Math.abs(dx) > 50; input.fireHeld = false; input.downHeld = false; return false; }
     if (ctl.face !== side) { input.dir = side; input.downHeld = false; return false; }
     input.dir = 0;
     if (ctl.spd > 4) return false;
     if (shoot) { input.downHeld = true; input.fireHeld = !!Wp.auto; if ((demoAtkT -= sdt) <= 0) { input.attack = 'lp'; demoAtkT = 0.2; } return false; }
     if (Wp.gun) { input.attack = 'tw'; return false; }   // an empty gun: hurl it at the box
-    if (low) { input.downHeld = true; if (act === 'squat' && (demoAtkT -= sdt) <= 0) { input.attack = 'hk'; demoAtkT = 0.35; } return false; }   // squat (held), then a leg sweep
+    if (low) { input.downHeld = true; if (hero.act === 'squat' && (demoAtkT -= sdt) <= 0) { input.attack = 'hk'; demoAtkT = 0.35; } return false; }   // squat (held), then a leg sweep
     if ((demoAtkT -= sdt) <= 0) { input.attack = Wp.melee ? (Math.random() < 0.5 ? 'hp' : 'lp') : 'hp'; demoAtkT = 0.45; }
     return false;
   };
@@ -3817,13 +3818,13 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const hitBox = (kinds, a, low) => sdt => {
     const o = demoObj(kinds, 260);
     if (!o) return true;
-    if (low && !MOVES[act]) input.downHeld = Math.abs(o.x - ctl.x) <= (o.hw || o.r) + 14 && ctl.face === (Math.sign(o.x - ctl.x) || 1);   // in reach and facing it: squat, then sweep
+    if (low && !MOVES[hero.act]) input.downHeld = Math.abs(o.x - ctl.x) <= (o.hw || o.r) + 14 && ctl.face === (Math.sign(o.x - ctl.x) || 1);   // in reach and facing it: squat, then sweep
     const dx = o.x - ctl.x, side = Math.sign(dx) || 1, gap = (o.hw || o.r) + 11;
-    if (MOVES[act]) { input.dir = 0; return false; }
+    if (MOVES[hero.act]) { input.dir = 0; return false; }
     if (Math.abs(dx) > gap + 3) { input.dir = side; input.run = Math.abs(dx) > 60; return false; }
     if (ctl.face !== side) { input.dir = side; return false; }
     input.dir = 0;
-    if (ctl.spd < 4 && (!low || act === 'squat')) { input.attack = a; return true; }
+    if (ctl.spd < 4 && (!low || hero.act === 'squat')) { input.attack = a; return true; }
     return false;
   };
   // walk to the nearest goon of a stage that is still standing (the fight code takes over in range); hop up to one on a ledge
@@ -3834,7 +3835,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (!foe) return true;
     const dx = foe.x - ctl.x;
     input.dir = Math.abs(dx) > 4 ? Math.sign(dx) : 0; input.run = Math.abs(dx) > 50;
-    if (input.dir && !ctl.air && !MOVES[act]) for (const o of objs) {   // a box between him and the goon: hop it, do not shove it down the street
+    if (input.dir && !ctl.air && !MOVES[hero.act]) for (const o of objs) {   // a box between him and the goon: hop it, do not shove it down the street
       const ahead = (o.x - ctl.x) * input.dir - (o.hw || o.r);
       if (o.kind !== 'ball' && !o.carried && ahead > -3 && ahead < 12 && Math.abs(o.x - ctl.x) < Math.abs(dx) && Math.abs(o.y + o.r - (ctl.y + 2)) < 4) { ctl.face = input.dir; input.jump = true; break; }
     }
@@ -3866,18 +3867,18 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     LES('lk', [ATBAG, { attack: 'lk', dur: 0.6 }]),
     LES('hk', [ATBAG, { attack: 'hk', dur: 1.1 }]),
     LES('sweep', [ATBAG, { down: true, dur: 0.3 }, { down: true, attack: 'hk', dur: 0.7 }]),
-    LES('airkick', [ATBAG, { jump: true, until: () => ctl.air && act === 'air', max: 1 }, { attack: 'lk', dur: 0.1 }, { until: landed_, max: 3 }]),
+    LES('airkick', [ATBAG, { jump: true, until: () => ctl.air && hero.act === 'air', max: 1 }, { attack: 'lk', dur: 0.1 }, { until: landed_, max: 3 }]),
     LES('split', [{ tick: hitBox(['stack'], 'hp'), max: 8 }, { dur: 1.0 }]),                                         // break the stack
     LES('smash', [{ tick: hitBox(['crate', 'bigcrate'], 'lk', true), max: 8 }, { dur: 0.9 }]),
     LES('lift', [{ tick: liftTick, max: 10 }, { dur: 0.4 }]),
-    LES('toss', [{ tick: () => { if (!ctl.carry) return true; input.dir = 0; if (!MOVES[act]) input.attack = 'hp'; return false; }, max: 3 }, { dur: 0.5 }]),                             // then smash a box
+    LES('toss', [{ tick: () => { if (!ctl.carry) return true; input.dir = 0; if (!MOVES[hero.act]) input.attack = 'hp'; return false; }, max: 3 }, { dur: 0.5 }]),                             // then smash a box
     LES('kill1', [{ tick: hunt(1), max: 20 }]), { tick: smashAll(520, 900), max: 12 },   // clear the stage's crates
     // 3 · katana
     { dir: 1, run: true, until: has(1), max: 12 }, { dur: 0.5 },
     LES('ks', [{ attack: 'lp', dur: 0.4 }, { attack: 'lp', dur: 0.5 }]),
     LES('kh', [{ attack: 'lp', dur: 0.12 }, { attack: 'hp', dur: 1.0 }]),
     LES('sslash', [{ down: true, dur: 0.3 }, { down: true, attack: 'lp', dur: 0.6 }]),
-    LES('kair', [{ jump: true, until: () => ctl.air && act === 'air', max: 1 }, { attack: 'lp', dur: 0.1 }, { until: landed_, max: 3 }, { dur: 0.3 }]),
+    LES('kair', [{ jump: true, until: () => ctl.air && hero.act === 'air', max: 1 }, { attack: 'lp', dur: 0.1 }, { until: landed_, max: 3 }, { dur: 0.3 }]),
     LES('tw', [{ attack: 'tw', fn: () => { demoLost = 1; }, dur: 0.7 }, { seek: 1, run: true, until: has(1), max: 8 }]),   // throw, then fetch it
     LES('catch', [{ seek: 1, run: true, until: has(1), max: 8 }]),
     LES('kill2', [{ tick: hunt(2), max: 20 }]), { tick: smashAll(900, 1250), max: 12 },   // clear the stage's crates
@@ -3886,7 +3887,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     LES('al', [{ attack: 'lp', dur: 0.5 }]),
     LES('ah', [{ attack: 'lp', dur: 0.15 }, { attack: 'hp', dur: 1.2 }]),
     LES('aair', [{ dir: 1, until: () => ctl.x >= 1425 }, { dur: 0.2 }, { dir: 1, jump: true, until: climbed_, max: 3 },   // climb up onto the van
-      { dir: 1, until: () => ctl.x >= 1512 || ctl.air, max: 3 }, { dir: 1, jump: true, until: () => ctl.air && act === 'air', max: 1 }, { dir: 1, attack: 'lp', dur: 0.1 },
+      { dir: 1, until: () => ctl.x >= 1512 || ctl.air, max: 3 }, { dir: 1, jump: true, until: () => ctl.air && hero.act === 'air', max: 1 }, { dir: 1, attack: 'lp', dur: 0.1 },
       { until: landed_, max: 3 }, { dur: 0.5 }]),                                                         // plunge
     LES('kill3', [{ tick: hunt(3), max: 20 }]), { tick: smashAll(1250, 1600), max: 12 },   // clear the stage's crates
     // 5 · shotgun
@@ -3913,13 +3914,13 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     const pool = Wp.gun ? ['lp'] : Wp.melee ? ['lp', 'lp', 'hp'] : ['lp', 'lp', 'hp', 'lk', 'hk'];
     input.attack = pool[Math.floor(Math.random() * pool.length)]; demoAtkT = 0.3 + Math.random() * 0.25; input.fireHeld = false;
   }
-  const demoShoots = Wp => Wp.gun && charge[weapon] > 0;   // an empty gun is a club: bash with it
+  const demoShoots = Wp => Wp.gun && charge[hero.weapon] > 0;   // an empty gun is a club: bash with it
   // shoot or hit one foe: face it, then attack; guns from range
   function demoEngage(sdt, foe, Wp, quick) {
     const shoot = demoShoots(Wp), dx = foe.x - ctl.x, dir = Math.sign(dx) || 1, reach = shoot ? 105 : (Wp.len ? 19 : 13) + 4 * foe.s;
     if (ctl.face !== dir || Math.abs(dx) > reach) { input.dir = dir; input.run = Math.abs(dx) > 70; input.fireHeld = false; return; }
     input.dir = 0; input.run = false;
-    if (Wp.gun && !shoot) { input.fireHeld = false; if ((demoAtkT -= sdt) <= 0 && !MOVES[act]) { input.attack = 'lp'; demoAtkT = 0.15; } return; }   // empty: fire to hurl the gun
+    if (Wp.gun && !shoot) { input.fireHeld = false; if ((demoAtkT -= sdt) <= 0 && !MOVES[hero.act]) { input.attack = 'lp'; demoAtkT = 0.15; } return; }   // empty: fire to hurl the gun
     if (quick && !Wp.gun) { if ((demoAtkT -= sdt) <= 0) { input.attack = 'lp'; demoAtkT = 0.24; } return; }   // quick hits only: never stuck in a long recovery
     demoAttack(sdt, Wp);
   }
@@ -3933,13 +3934,13 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     demoEvT -= sdt;
     if (ctl.air) {   // in the air: strike as he comes down on him
       input.dir = dir; input.jumpHeld = false; input.downHeld = false;
-      if (adx < 28 && !MOVES[act] && !Wp.gun) input.attack = Wp.melee ? 'lp' : 'lk';
+      if (adx < 28 && !MOVES[hero.act] && !Wp.gun) input.attack = Wp.melee ? 'lp' : 'lk';
       return;
     }
     // a wind-up close by, or a shot on its way: roll through him or away, or jump over it
     const threat = enemies.find(e => !e.dead && !e.down && Math.abs(e.x - ctl.x) < (e.reach || 17) + 18 && Math.abs(e.y - ctl.y) < 16 && ((e.act && e.actT < 0 && e.actT > -0.3) || e.mark > 0));
     const shot = eshots.find(b => Math.abs(b.x - ctl.x) < 60 && Math.sign(b.vx) === Math.sign(ctl.x - b.x));
-    if ((threat || shot) && demoEvT <= 0 && !MOVES[act]) {
+    if ((threat || shot) && demoEvT <= 0 && !MOVES[hero.act]) {
       demoEvT = 0.7 + Math.random() * 0.4; demoCombo = null; input.downHeld = false;
       const r = Math.random();
       if (shot || r < 0.33) { input.dir = shot ? 0 : dir; input.jump = true; input.jumpHeld = false; return; }   // over it
@@ -3955,7 +3956,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if (ctl.face !== dir || adx > reach) {   // close in at a run; between 30 and 60 px out, sometimes a jump attack
       demoCombo = null; input.downHeld = false;
       input.dir = dir; input.run = adx > 36;
-      if (adx > 30 && adx < 60 && !MOVES[act] && Math.random() < sdt * 1.2) input.jump = true;
+      if (adx > 30 && adx < 60 && !MOVES[hero.act] && Math.random() < sdt * 1.2) input.jump = true;
       return;
     }
     input.dir = 0; input.run = false;
@@ -3964,7 +3965,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     if ((demoStepT -= sdt) > 0) { input.downHeld = !!(prev && prev.startsWith('d:')); return; }
     if (demoCi >= demoCombo.length) { demoCombo = null; demoStepT = 0.22 + Math.random() * 0.25; input.downHeld = false; return; }   // a breath between strings
     const a = demoCombo[demoCi], low = a.startsWith('d:');
-    if (low && act !== 'squat' && !MOVES[act]) { input.downHeld = true; demoStepT = 0.05; return; }   // drop into the squat first
+    if (low && hero.act !== 'squat' && !MOVES[hero.act]) { input.downHeld = true; demoStepT = 0.05; return; }   // drop into the squat first
     demoCi++; input.downHeld = low; input.attack = low ? a.slice(2) : a; demoStepT = 0.17;   // the next hit goes in on the chain
   }
   // boss arena: read the wind-ups, jump the ground slam, keep a gun at range, and clear the goons that come close first
@@ -3972,7 +3973,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function demoBoss(sdt) {
     const B = boss;
     input.downHeld = false;
-    const Wp = WEAPONS[weapon], shoot = demoShoots(Wp), sameLevel = e => Math.abs(e.y - ctl.y) < 14 * e.s;
+    const Wp = WEAPONS[hero.weapon], shoot = demoShoots(Wp), sameLevel = e => Math.abs(e.y - ctl.y) < 14 * e.s;
     if (ctl.air) {   // airborne: second jump on the way over, keep shooting what is in front
       input.jumpHeld = true;
       if (demoJ2 >= 0 && (demoJ2 -= sdt) < 0) input.jump = true;
@@ -3984,7 +3985,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     const bd = B.x - ctl.x, abd = Math.abs(bd), toward = Math.sign(bd) || ctl.face, away = -toward;
     const wall = away < 0 ? ctl.x - arena.x0 : arena.x1 - ctl.x;
     const hop = (dir, over) => { input.dir = dir; input.run = true; input.jump = true; input.jumpHeld = true; input.fireHeld = false; demoJ2 = over ? 0.2 : -1; demoKite = false; return true; };
-    const locked = !!MOVES[act] || act === 'rise' || act === 'hero' || act === 'roll';
+    const locked = !!MOVES[hero.act] || hero.act === 'rise' || hero.act === 'hero' || hero.act === 'roll';
     // 1 · the ground slam hurts anyone standing near it: be in the air when the fists land
     if (B.act === 'slam' && !B.slammed) {
       const tHit = (0.38 - B.actT) / 0.85, sx = B.x + B.face * 20 * B.s;
@@ -4029,28 +4030,28 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     input.dir = Math.sign(o.x - ctl.x) || 1; input.run = true; input.fireHeld = false; return true;
   }
   function demoFight(sdt) {
-    const Wh = WEAPONS[weapon], bossOn = boss && !boss.dead && arena;
-    if (demoLost && weapon === demoLost) demoLost = 0;
-    if (!ctl.air && mode === 'anim' && !MOVES[act]) {
+    const Wh = WEAPONS[hero.weapon], bossOn = boss && !boss.dead && arena;
+    if (demoLost && hero.weapon === demoLost) demoLost = 0;
+    if (!ctl.air && hero.mode === 'anim' && !MOVES[hero.act]) {
       const safe = x => !bossOn || Math.abs(x - boss.x) > 40 * boss.s / 1.75;
-      const band = playerHp < 70 && ammoBoxes.find(b => b.band && !demoGaveUp.has(b) && Math.abs(b.x - ctl.x) < 120 && Math.abs(b.y - ctl.y) < 14 && safe(b.x));
+      const band = hero.hp < 70 && ammoBoxes.find(b => b.band && !demoGaveUp.has(b) && Math.abs(b.x - ctl.x) < 120 && Math.abs(b.y - ctl.y) < 14 && safe(b.x));
       if (band && chase(band, sdt)) return true;   // hurt: go for a bandage
       const box = ammoBoxes.find(b => !b.band && !demoGaveUp.has(b) && Math.abs(b.x - ctl.x) < (bossOn ? 220 : 90) && Math.abs(b.y - ctl.y) < 14 && safe(b.x));
-      if (Wh.ammo && box && charge[weapon] < Wh.ammo * (bossOn ? 0.8 : 0.6) && chase(box, sdt)) return true;   // grab ammo
-      const it = demoLost && !weapon && thrown.find(t => !demoGaveUp.has(t) && t.stuck && t.w === demoLost && Math.abs(t.y - ctl.y) < 14 && safe(t.x));
+      if (Wh.ammo && box && charge[hero.weapon] < Wh.ammo * (bossOn ? 0.8 : 0.6) && chase(box, sdt)) return true;   // grab ammo
+      const it = demoLost && !hero.weapon && thrown.find(t => !demoGaveUp.has(t) && t.stuck && t.w === demoLost && Math.abs(t.y - ctl.y) < 14 && safe(t.x));
       const close = enemies.some(e => !e.dead && Math.abs(e.x - ctl.x) < 30 && Math.abs(e.y - ctl.y) < 14);
       if (it && !close && chase(it, sdt)) return true;   // fetch the thrown weapon
-      const foe = !bossOn && weapon === 1 && !done.has('throwhit') && done.has('tw') && enemies.find(e => !e.dead && Math.abs(e.y - ctl.y) < 12 && (e.x - ctl.x) * ctl.face > 35 && (e.x - ctl.x) * ctl.face < 100);
+      const foe = !bossOn && hero.weapon === 1 && !done.has('throwhit') && done.has('tw') && enemies.find(e => !e.dead && Math.abs(e.y - ctl.y) < 12 && (e.x - ctl.x) * ctl.face > 35 && (e.x - ctl.x) * ctl.face < 100);
       if (foe) { input.dir = 0; input.attack = 'tw'; demoLost = 1; return true; }   // show off a throw at a goon
     }
-    if (bossOn && !ctl.air && mode === 'anim' && !MOVES[act]) {
+    if (bossOn && !ctl.air && hero.mode === 'anim' && !MOVES[hero.act]) {
       const it = pocket.length < 3 && objs.find(o => o.pocket && o.safeT <= 0 && !demoGaveUp.has(o) && Math.abs(o.x - ctl.x) < 110 && Math.abs(o.x - boss.x) > 40 * boss.s / 1.75);
       if (it && chase(it, sdt)) return true;   // pick up what the crowd threw
       const bd = boss.x - ctl.x;
       if (pocket.length && Math.abs(bd) < 150 && Math.abs(bd) > 30) { if (ctl.face !== Math.sign(bd)) { input.dir = Math.sign(bd); return true; } input.dir = 0; input.attack = 'tw'; return true; }
     }
     if (bossOn) return demoBoss(sdt);
-    const Wp = WEAPONS[weapon], range = demoShoots(Wp) ? 130 : 110;
+    const Wp = WEAPONS[hero.weapon], range = demoShoots(Wp) ? 130 : 110;
     let foe = null;
     for (const e of enemies) if (!e.dead && Math.abs(e.x - ctl.x) < range && Math.abs(e.y - ctl.y) < 12 && (!foe || Math.abs(e.x - ctl.x) < Math.abs(foe.x - ctl.x))) foe = e;
     if (!foe) return false;
@@ -4061,7 +4062,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   let demoHopT = 0;
   function demoHurdle(sdt) {
     if (demoHopT > 0) { demoHopT -= sdt; input.jumpHeld = true; return; }
-    if (ctl.air || ctl.spd < 60 || MOVES[act] || pickups.some(k => !k.taken && (k.x - ctl.x) * ctl.face > -20 && (k.x - ctl.x) * ctl.face < 150)) return;
+    if (ctl.air || ctl.spd < 60 || MOVES[hero.act] || pickups.some(k => !k.taken && (k.x - ctl.x) * ctl.face > -20 && (k.x - ctl.x) * ctl.face < 150)) return;
     for (const o of objs) {
       const ahead = (o.x - ctl.x) * ctl.face - (o.hw || o.r);
       if (o.kind !== 'ball' && ahead > -3 && ahead < 20 && Math.abs(o.y + o.r - (ctl.y + 2)) < 4) { input.jump = true; input.jumpHeld = true; demoHopT = 0.3; return; }
@@ -4079,7 +4080,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   function demoTick(sdt) {
     demoSmash = false;
     if (!demo) return;
-    if (mode !== 'anim') { input.dir = 0; input.fireHeld = false; return; }   // knocked down: wait until the fighter is up again
+    if (hero.mode !== 'anim') { input.dir = 0; input.fireHeld = false; return; }   // knocked down: wait until the fighter is up again
     if ((demoSpawnT -= sdt) <= 0) {   // a goon or two now and then, from off screen on either side
       demoSpawnT = 3 + Math.random() * 5;
       if (!club && enemies.filter(e => !e.dead).length < 3) for (let k = 0, n = Math.random() < 0.4 ? 2 : 1; k < n; k++) {
@@ -4087,7 +4088,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
         const g = spawnEnemy('goon', x, 1 + Math.floor(Math.random() * 5)); g.cdT = Math.max(g.cdT, 0.8);
       }
     }
-    if (ctl.carry && !MOVES[act] && act !== 'rise') { input.dir = 0; input.attack = 'hp'; return; }   // something in hand: throw it
+    if (ctl.carry && !MOVES[hero.act] && hero.act !== 'rise') { input.dir = 0; input.attack = 'hp'; return; }   // something in hand: throw it
     if (demoFight(sdt)) return;   // a goon close by: deal with him first
     input.jumpHeld = false; input.downHeld = false; input.fireHeld = false;
     const dx = demoGoalX - ctl.x;
@@ -4127,19 +4128,19 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       if (tele || Math.abs(p.x - q.x) > HYST) q.x = p.x;
       if (tele || Math.abs(p.y - q.y) > HYST) q.y = p.y;
     }
-    if (mode !== 'anim' || tele) sqT = -9;
+    if (hero.mode !== 'anim' || tele) sqT = -9;
     else if (ctl.air !== dAir && (!ctl.air || ctl.vu > 0)) { sqT = simTime; sqK = ctl.air ? 1 : -1; }   // takeoff stretch, landing squash
     dAir = ctl.air;
-    const u = simTime - sqT, T = sqK > 0 ? T_UP : T_LAND, e = mode === 'anim' && u < T ? 1 - u / T : 0;
+    const u = simTime - sqT, T = sqK > 0 ? T_UP : T_LAND, e = hero.mode === 'anim' && u < T ? 1 - u / T : 0;
     const sy = 1 + sqK * SQ_Y * e, sx = 1 - sqK * SQ_X * e, cx = Dh[2].x, fy = ctl.y;
     for (let i = 0; i < P.length; i++) { D[i].x = cx + (Dh[i].x - cx) * sx; D[i].y = fy + (Dh[i].y - fy) * sy; }
-    const g = geomAt(D), m = mode === 'anim' && !tele && dt > 0 && MOVES[act];
+    const g = geomAt(D), m = hero.mode === 'anim' && !tele && dt > 0 && MOVES[hero.act];
     smear = bSmear = null;
-    if (m && actT < m.win[1] + 0.06 && actT >= m.win[0] - 0.05) {   // only the strike itself smears, not the wind-up
+    if (m && hero.actT < m.win[1] + 0.06 && hero.actT >= m.win[0] - 0.05) {   // only the strike itself smears, not the wind-up
       if (m.limb) {   // fast hand/foot: stretch it back toward where it was drawn last
         const li = m.limb, a = D[li], b = Dp[li], d = Math.hypot(b.x - a.x, b.y - a.y), q = P[li];
         if (d > 1.5 && Math.max(d / dt, Math.hypot(q.x - q.px, q.y - q.py) / DT) > SMEAR_V) { const k = Math.min(1, SMEAR_L / d); smear = { li, x: a.x + (b.x - a.x) * k, y: a.y + (b.y - a.y) * k }; }
-      } else if (m.blade && WEAPONS[weapon].melee && g && Dg) {   // fast blade: a wedge from the last tip to this one
+      } else if (m.blade && WEAPONS[hero.weapon].melee && g && Dg) {   // fast blade: a wedge from the last tip to this one
         const d = Math.hypot(g.tx - Dg.tx, g.ty - Dg.ty);
         if (d / dt > BLADE_V && d < 60) bSmear = { x: g.x, y: g.y, ax: Dg.tx, ay: Dg.ty, bx: g.tx, by: g.ty, len: g.len };
       }
@@ -4233,9 +4234,9 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     smearAt(6, 2.2, PAL.out); drawArm(nk, eF, hF, PAL.shirt, PAL.shirt, PAL.skin); smearAt(6, 1.2, PAL.shirt);
   }
   function drawWeapon() {
-    const g = Dg; if (!g || !WEAPONS[weapon].len) return;
+    const g = Dg; if (!g || !WEAPONS[hero.weapon].len) return;
     bladeSmear();
-    drawWeaponShape(WEAPONS[weapon].id, g, gun.pumpT >= 0.3 ? Math.sin(Math.PI * (gun.pumpT - 0.3) / 0.7) : 0);
+    drawWeaponShape(WEAPONS[hero.weapon].id, g, gun.pumpT >= 0.3 ? Math.sin(Math.PI * (gun.pumpT - 0.3) / 0.7) : 0);
   }
   function drawWeaponShape(id, g, pumpK) {
     const { x, y, dx, dy, s } = g, px = -dy * s, py = dx * s;   // px/py: the edge side, or "below" for guns
@@ -4365,7 +4366,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     const dx = DOOR_X + 16 - ctl.x, dy = GROUND - 2 - ctl.y;
     club = true; clubT = 0; slamDone = false;
     Object.assign(ctl, { x: ctl.x + dx, y: ctl.y + dy, face: 1, spd: 0, air: false, vu: 0, jumps: 0, flipT: -1, spin: 0, surf: GROUND_S, bounces: 0, tramp: false });
-    act = null; queued = null;
+    hero.act = null; queued = null;
     for (const p of P) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     for (const st of hair) for (const p of st) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
@@ -4373,7 +4374,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     rain.drops.length = 0; rain.splash.length = 0;
   }
   function clubTick(rdt) {
-    if (!club && fadeDir === 0 && mode === 'anim' && ctl.surf === GOAL && !ctl.air && ctl.x >= KIOSK_X - 4 && (demo || stageDone(ZONES.length - 2))) { fadeDir = 1; tut('enter'); }   // walk through the side door (once stage 7 is done)
+    if (!club && fadeDir === 0 && hero.mode === 'anim' && ctl.surf === GOAL && !ctl.air && ctl.x >= KIOSK_X - 4 && (demo || stageDone(ZONES.length - 2))) { fadeDir = 1; tut('enter'); }   // walk through the side door (once stage 7 is done)
     if (fadeDir === 1) { input.dir = 1; if ((fade += rdt * 2.2) >= 1) { fade = 1; enterClub(); fadeDir = -1; } }
     else if (fadeDir === -1 && (fade -= rdt * 1.6) <= 0) { fade = 0; fadeDir = 0; }
     if (club) {
@@ -4915,7 +4916,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const bx = sceneBox();
       return clamp(Math.min(1, 160 / (bx.x1 - bx.x0 + 24), 160 * CH / CW / (bx.y1 - bx.y0 + 20)), 0.4, 0.6);
     }
-    const run = mode === 'anim' ? clamp((Math.abs(ctl.spd) - WALK) / (RUN - WALK), 0, 1) : 0;
+    const run = hero.mode === 'anim' ? clamp((Math.abs(ctl.spd) - WALK) / (RUN - WALK), 0, 1) : 0;
     return 0.4 - 0.15 * run;
   }
   function updateCamera(rdt) {
@@ -4928,7 +4929,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     cam.vw = Math.min(CW, 2 * Math.round(80 / cam.zoom)); cam.vh = Math.min(CHMAX, 2 * Math.round(cam.vw * CH / CW / 2));   // (taller than the world when far out: the sky fills the top)
     if (endCam) { cam.xf = endCam.x - cam.vw / 2; cam.yf = clamp(GROUND - 14 - cam.vh * 0.6, 0, H - cam.vh); cam.v.x = cam.v.y = 0; cam.x = Math.round(cam.xf); cam.y = Math.round(cam.yf); return; }   // the ending's street shot
     if (openT >= 0) { cam.xf = OPEN.camX; cam.yf = clamp(GROUND - 14 - cam.vh * 0.6, 0, H - cam.vh); cam.v.x = cam.v.y = 0; cam.x = Math.round(cam.xf); cam.y = Math.round(cam.yf); return; }   // the opening: a locked shot
-    const look = mode === 'anim' ? ctl.face * ctl.spd * 0.35 : 0;
+    const look = hero.mode === 'anim' ? ctl.face * ctl.spd * 0.35 : 0;
     // follow the fighter, but slide so the whole fight stays in view (worked out for the view centre)
     let tx = P[2].x + look, ty = P[2].y + 17 - cam.vh * 0.22;   // his feet about 72 % of the way down the view: more street and roofs, less sky
     const bx = sceneBox();
@@ -6203,10 +6204,10 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     playerRig() {
       const [hd, nk, pl, eB, hB, eF, hF, kB, fB, kF, fF] = D, f = Dface, ZL = 2.2, ZA = 5.2, TZ = 1.5;
       {   // the depth of what he stands on: the surface under his feet when standing, else the one he will land on
-        let tz = this.bodyZ(ctl.lane, mode === 'anim' && !ctl.air ? ctl.surf : null);
-        if (act === 'climb' && ctl.climb) {   // climbing: on the block's front face while he hangs and pulls, then in over the top
+        let tz = this.bodyZ(ctl.lane, hero.mode === 'anim' && !ctl.air ? ctl.surf : null);
+        if (hero.act === 'climb' && ctl.climb) {   // climbing: on the block's front face while he hangs and pulls, then in over the top
           const C = ctl.climb, face = (C.s.step || C.s.landing ? T3.ZF + T3.STAIR : this.frontZ.get(C.s) ?? tz) + 3.5;
-          tz = lerp(face, tz, smooth(clamp((actT - CLIMB.hang - CLIMB.up) / CLIMB.over, 0, 1)));
+          tz = lerp(face, tz, smooth(clamp((hero.actT - CLIMB.hang - CLIMB.up) / CLIMB.over, 0, 1)));
         }
         this.bz = this.ease(this.hero, tz);
       }
@@ -6242,8 +6243,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       }
       this.head('hero', hd, nk, f, 'h' + Dlook, () => t3heroHead(Dlook));
       arm(nk, eF, hF, PAL.shirt, PAL.shirt, PAL.skin, ZA);
-      if (Dg && WEAPONS[weapon].len) this.weapon(WEAPONS[weapon].id, Dg, gun.pumpT >= 0.3 ? Math.sin(Math.PI * (gun.pumpT - 0.3) / 0.7) : 0, (wBack() ? -ZA : ZA) + this.bz, WEAPONS[weapon].melee ? ctl.yw : 0);
-      if (ctl.bottle && mode === 'anim') { const h = D[6], ox = Math.floor(h.x) - 12, oy = Math.floor(h.y) - 12; this.sprite(24, ox, oy, drawBottle, 2.4, ZA + this.bz, 'bottle'); }
+      if (Dg && WEAPONS[hero.weapon].len) this.weapon(WEAPONS[hero.weapon].id, Dg, gun.pumpT >= 0.3 ? Math.sin(Math.PI * (gun.pumpT - 0.3) / 0.7) : 0, (wBack() ? -ZA : ZA) + this.bz, WEAPONS[hero.weapon].melee ? ctl.yw : 0);
+      if (ctl.bottle && hero.mode === 'anim') { const h = D[6], ox = Math.floor(h.x) - 12, oy = Math.floor(h.y) - 12; this.sprite(24, ox, oy, drawBottle, 2.4, ZA + this.bz, 'bottle'); }
       let lo = W, hi = 0; for (const p of D) { lo = Math.min(lo, p.x); hi = Math.max(hi, p.x); }
       this.shadow(D[2].x, D[2].y, (hi - lo) / 2);
     },
@@ -6764,13 +6765,13 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // A lifted object bashes on a tap. A loaded gun fires on the press (hold the machine gun for a stream), an empty one is thrown at once
   const HOLD_T = 0.3;
   const btn = { p: { down: false, t: 0, done: false }, k: { down: false, t: 0, done: false } };
-  const holdCanThrow = () => !!(ctl.carry || pocket.length || WEAPONS[weapon].melee);
+  const holdCanThrow = () => !!(ctl.carry || pocket.length || WEAPONS[hero.weapon].melee);
   const foeInReach = () => { const r = 2 * (L.ua + L.fa); return enemies.some(e => !e.dead && Math.abs(e.x - ctl.x) <= r && (e.x - ctl.x) * ctl.face > -6 && Math.abs(e.y - ctl.y) < 24); };
   const holdThrows = k => k === 'p' && holdCanThrow() && !foeInReach();   // what a full hold will do: throw (true) or the heavy move
   function pressBtn(k) {
     const b = btn[k]; if (b.down) return;
     takeOver(); b.down = true; b.t = 0; b.done = false;
-    if (k === 'p') { input.fireHeld = true; const Wp = WEAPONS[weapon]; if (Wp.gun && !ctl.carry) { b.done = true; doAttack(charge[weapon] > 0 ? 'lp' : 'tw'); } }
+    if (k === 'p') { input.fireHeld = true; const Wp = WEAPONS[hero.weapon]; if (Wp.gun && !ctl.carry) { b.done = true; doAttack(charge[hero.weapon] > 0 ? 'lp' : 'tw'); } }
   }
   function releaseBtn(k) {
     const b = btn[k]; if (!b.down) return;
@@ -6873,9 +6874,9 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   const lpLabel = document.getElementById('c-lp').querySelector('span');
   const weaponEl = document.getElementById('r-weapon');
   function setWeapon(i) {
-    if (i === weapon) return;
-    weapon = i;
-    if (MOVES[act] && !/^(lk|hk|airkick|tw)/.test(act)) { act = ctl.air ? 'air' : null; ctl.spin = 0; }
+    if (i === hero.weapon) return;
+    hero.weapon = i;
+    if (MOVES[hero.act] && !/^(lk|hk|airkick|tw)/.test(hero.act)) { hero.act = ctl.air ? 'air' : null; ctl.spin = 0; }
     Object.assign(gun, { cd: 0, aimT: 0, aimW: 0, recoil: 0, climb: 0, pumpT: -1, want: false });
     weaponBtns.forEach(b => { b.setAttribute('aria-pressed', String(+b.dataset.w === i)); b.disabled = +b.dataset.w !== i; });   // a display: you hold one weapon
     lpLabel.textContent = WEAPONS[i].labels[0];
@@ -6926,12 +6927,12 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // ---------- the ending: a drink at the bar, the bottle smashed, out of the club; the dog waits on the street ----------
   const END = { bar: 2694, door: DOOR_X + 8, out: STAIR_X0 + 10, dogX: 2384, mid: 2318 };   // on the street he comes down off the fire escape; the dog waits under the lamp by the wall
   function endGo(ph) { endPh = ph; endT = 0; }
-  function endFinish() { endGo('done'); endCam = null; fade = 1; act = null; ctl.bottle = false; }
+  function endFinish() { endGo('done'); endCam = null; fade = 1; hero.act = null; ctl.bottle = false; }
   function endStreet() {   // cut to the street outside the club: the dog sits waiting by the wall
     club = false; ctl.bottle = false;
     for (let i = enemies.length - 1; i >= 0; i--) if (!enemies[i].dead) enemies.splice(i, 1);   // the street is quiet now
     const dx = END.out - ctl.x, dy = GROUND - 2 - ctl.y;
-    Object.assign(ctl, { x: END.out, y: GROUND - 2, face: 1, spd: 0, air: false, vu: 0, surf: GROUND_S }); act = null;
+    Object.assign(ctl, { x: END.out, y: GROUND - 2, face: 1, spd: 0, air: false, vu: 0, surf: GROUND_S }); hero.act = null;
     for (const p of P) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     for (const st of hair) for (const p of st) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
@@ -6943,12 +6944,12 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     for (const k of ['jump', 'jumpHeld', 'attack', 'fireHeld', 'dash', 'dashHeld', 'downHeld']) input[k] = k === 'attack' ? null : false;
     input.dir = 0; input.run = false;
     const walkTo = (x, face) => { const d = x - ctl.x; if (Math.abs(d) > 2) { input.dir = Math.sign(d); if (Math.abs(d) < 26) ctl.spd = Math.min(ctl.spd, TRN.stopV - 2); return false; } if (ctl.spd < 2) { ctl.face = face; return true; } return false; };   // a walk, eased in at the end so it stops without a skid
-    if (endPh === 'wait') { if (endT > 1.8 && mode === 'anim' && !ctl.air) { if (weapon) setWeapon(0); pocket.length = 0; endGo('tobar'); } }
-    else if (endPh === 'tobar') { if (walkTo(END.bar, 1) || endT > 12) { endGo('grab'); act = 'grab'; actT = 0; } }
-    else if (endPh === 'grab') { act = 'grab'; if (endT > 0.35) ctl.bottle = true; if (endT > 0.7) { endGo('drink'); act = 'drink'; actT = 0; } }
-    else if (endPh === 'drink') { act = 'drink'; if (endT > 1.7) { endGo('throw'); act = null; ctl.face = -1; } }
+    if (endPh === 'wait') { if (endT > 1.8 && hero.mode === 'anim' && !ctl.air) { if (hero.weapon) setWeapon(0); pocket.length = 0; endGo('tobar'); } }
+    else if (endPh === 'tobar') { if (walkTo(END.bar, 1) || endT > 12) { endGo('grab'); hero.act = 'grab'; hero.actT = 0; } }
+    else if (endPh === 'grab') { hero.act = 'grab'; if (endT > 0.35) ctl.bottle = true; if (endT > 0.7) { endGo('drink'); hero.act = 'drink'; hero.actT = 0; } }
+    else if (endPh === 'drink') { hero.act = 'drink'; if (endT > 1.7) { endGo('throw'); hero.act = null; ctl.face = -1; } }
     else if (endPh === 'throw') {
-      if (endT > 0.25 && act !== 'tw' && ctl.bottle) { ctl.bottle = false; pocket.unshift('bottle'); throwPocket(); }   // over the shoulder, across the room: it smashes
+      if (endT > 0.25 && hero.act !== 'tw' && ctl.bottle) { ctl.bottle = false; pocket.unshift('bottle'); throwPocket(); }   // over the shoulder, across the room: it smashes
       if (endT > 1.1) endGo('out');
     }
     else if (endPh === 'out') {
@@ -6959,9 +6960,9 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     else if (endPh === 'meet') {
       fade = Math.max(0, fade - rdt * 1.2);
       if (dog.x - ctl.x < 50) { dog.st = 'stand'; dog.wag = 1; }
-      if (walkTo(dog.x - 34, 1) || endT > 8) { endGo('pet'); act = 'pet'; actT = 0; dog.heart = 0; }
+      if (walkTo(dog.x - 34, 1) || endT > 8) { endGo('pet'); hero.act = 'pet'; hero.actT = 0; dog.heart = 0; }
     }
-    else if (endPh === 'pet') { act = 'pet'; dog.wag = 2; if (endT > 2.6) { act = null; endGo('leave'); } }
+    else if (endPh === 'pet') { hero.act = 'pet'; dog.wag = 2; if (endT > 2.6) { hero.act = null; endGo('leave'); } }
     else if (endPh === 'leave') {
       input.dir = -1; ctl.face = -1; ctl.spd = Math.min(ctl.spd, WALK * 0.8);
       dog.st = 'walk'; dog.face = -1; dog.wag = 1;
@@ -7105,8 +7106,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     plot(rx - 1, ry - 1, C('#ffd0dc'));
   }
   function drawBottle() {   // the bottle in his hand at the bar: dark green glass along the forearm, a bright edge
-    if (!ctl.bottle || mode !== 'anim') return;
-    const h = D[6], f = faceNow(), drink = act === 'drink';
+    if (!ctl.bottle || hero.mode !== 'anim') return;
+    const h = D[6], f = faceNow(), drink = hero.act === 'drink';
     const [ux, uy] = drink ? norm(-f * 0.55, 0.85) : [0, -1];   // from the base to the neck: upright, or tipped up (base high, neck down at his lips)
     const bx = drink ? h.x + f * 3.3 : h.x, by = drink ? h.y - 5 : h.y + 1;   // he grips the body; drinking, the base is up and out in front
     const glass = C('#2f6a44'), hi = C('#8ad0a0'), lab = C('#e8dcc0');
@@ -7322,7 +7323,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       if (q.t > QUAKE.life || q.x < (arena ? arena.x0 - 4 : 0) || q.x > (arena ? arena.x1 + 4 : W)) { quakes.splice(i, 1); continue; }
       for (let n = 0; n < 2; n++) particles.push({ x: q.x + (Math.random() - 0.5) * 4, y: q.y - 1, vx: q.dir * (20 + Math.random() * 40), vy: -60 - Math.random() * 70, life: 0.25 + Math.random() * 0.2, c: Math.random() < 0.5 ? PAL.dust1 : PAL.out });
       const k = 1 - q.t / QUAKE.life;   // it fades as it runs out
-      if (!q.hit && mode === 'anim' && !ctl.air && Math.abs(ctl.y + 2 - q.y) < 6 && Math.abs(ctl.x - q.x) < QUAKE.w) {   // on the ground when it passes: it knocks him off his feet
+      if (!q.hit && hero.mode === 'anim' && !ctl.air && Math.abs(ctl.y + 2 - q.y) < 6 && Math.abs(ctl.x - q.x) < QUAKE.w) {   // on the ground when it passes: it knocks him off his feet
         q.hit = true; hurtPlayer(Math.round(QUAKE.dmg * (0.6 + 0.4 * k)), ctl.x, ctl.y - 2, q.dir, true, 1.2);
       }
     }
@@ -7332,8 +7333,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     clubTick(rdt);
     updateCamera(rdt);
     tutTick(rdt);
-    const look = mode === 'anim' ? 'ok' : ko ? 'ko' : headSpeed > 120 ? 'shock' : 'ok';
-    render(look, mode === 'rag' ? ragFace : ctl.face);
+    const look = hero.mode === 'anim' ? 'ok' : hero.ko ? 'ko' : headSpeed > 120 ? 'shock' : 'ok';
+    render(look, hero.mode === 'rag' ? ragFace : ctl.face);
     if (mode3D) Three3D.frame(rdt);
 
     {   // [feel] screen shake: a random jitter plus a directional kick that springs back, both in whole world pixels
@@ -7356,28 +7357,28 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     }
 
     const airborne = P.every(p => p.y < p.fl - 1.5);
-    const state = mode === 'rag' ? (ko ? 'ko' : airborne ? 'air' : 'rag')
-      : mode === 'getup' || act === 'rise' ? 'getup'
-      : ctl.air || act === 'crouch' || act === 'land' ? 'jump'
-      : act === 'squat' ? 'squat'
-      : MOVES[act] || act === 'guard' ? 'fight'
+    const state = hero.mode === 'rag' ? (hero.ko ? 'ko' : airborne ? 'air' : 'rag')
+      : hero.mode === 'getup' || hero.act === 'rise' ? 'getup'
+      : ctl.air || hero.act === 'crouch' || hero.act === 'land' ? 'jump'
+      : hero.act === 'squat' ? 'squat'
+      : MOVES[hero.act] || hero.act === 'guard' ? 'fight'
       : ctl.spd > WALK + 8 ? 'run' : ctl.spd > 2 ? 'walk' : 'idle';
     if (shown.state !== state) { shown.state = state; statusEl.dataset.state = state; statusEl.textContent = LABELS[state]; }
-    show('speed', speedEl, ((mode === 'anim' ? ctl.spd : headSpeed) / PX_PER_M).toFixed(1));
+    show('speed', speedEl, ((hero.mode === 'anim' ? ctl.spd : headSpeed) / PX_PER_M).toFixed(1));
     show('hits', hitsEl, hits);
     show('bag', bagEl, landed);
     show('zoom', zoomEl, Math.round(cam.zoom * 100));
-    if (bandT > 0) bandT = Math.max(0, bandT - sdt);
-    if (mode === 'anim') playerHp = playerHp <= 0 ? 100 : Math.min(100, playerHp + (DIF().regen + (bandT > 0 ? BAND_REGEN : 0)) * sdt);   // back up with full health after a K.O.; the regen by difficulty, more with a bandage on
+    if (hero.bandT > 0) hero.bandT = Math.max(0, hero.bandT - sdt);
+    if (hero.mode === 'anim') hero.hp = hero.hp <= 0 ? 100 : Math.min(100, hero.hp + (DIF().regen + (hero.bandT > 0 ? BAND_REGEN : 0)) * sdt);   // back up with full health after a K.O.; the regen by difficulty, more with a bandage on
     if (ammoFlash > 0) ammoFlash -= rdt;
-    { const Wp = WEAPONS[weapon], full = fullCharge(weapon), c = charge[weapon];
+    { const Wp = WEAPONS[hero.weapon], full = fullCharge(hero.weapon), c = charge[hero.weapon];
       show('wname', wNameEl, Wp.name.toUpperCase());
       { const key = pocket.join(','); if (shown.pocket !== key) { shown.pocket = key; pocketEl.innerHTML = pocket.map(k => `<img src="${PICON[k]}" alt="${k}" title="${k}: hold Q to throw">`).join(''); } }   // the throwables, as icons
-      if (shown.wicon !== weapon) { shown.wicon = weapon; if (WICON[weapon]) wIconEl.src = WICON[weapon]; }
+      if (shown.wicon !== hero.weapon) { shown.wicon = hero.weapon; if (WICON[hero.weapon]) wIconEl.src = WICON[hero.weapon]; }
       show('ammo', ammoEl, !full ? '' : Wp.ammo ? `${c} / ${full}` : `${'▮'.repeat(Math.min(6, Math.ceil(c / full * 6)))}${'▯'.repeat(Math.max(0, 6 - Math.ceil(c / full * 6)))}`);
       ammoEl.className = 'ammo' + (ammoFlash > 0 ? ' gain' : full && c / full < 0.25 ? ' low' : ''); }
-    { const on = bandT > 0; if (regenEl.hidden === on) regenEl.hidden = !on; if (on) regenEl.style.setProperty('--p', (bandT / BAND_T).toFixed(3)); }   // the bandage ring
-    hpFill.style.width = playerHp.toFixed(0) + '%'; hpFill.style.background = playerHp < 30 ? 'var(--ko)' : playerHp < 60 ? 'var(--accent)' : 'var(--ok)';
+    { const on = hero.bandT > 0; if (regenEl.hidden === on) regenEl.hidden = !on; if (on) regenEl.style.setProperty('--p', (hero.bandT / BAND_T).toFixed(3)); }   // the bandage ring
+    hpFill.style.width = hero.hp.toFixed(0) + '%'; hpFill.style.background = hero.hp < 30 ? 'var(--ko)' : hero.hp < 60 ? 'var(--accent)' : 'var(--ok)';
     // kill feed: the last 5 kills from the last 30 s; older lines fade out
     while (kills.length && (simTime - kills[0].t > 30 || kills.length > 8)) { kills.shift(); feedDirty = true; }
     if (feedDirty || Math.floor(simTime * 4) !== shown.feedT) {
@@ -7403,7 +7404,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       document.title = `AUTOTEST ${kind} ${n}/${frames}`;
       if (n < frames) { setTimeout(chunk, 0); return; }
       const st = fnv(), bf = fnv();
-      st.add(q(ctl.x)); st.add(q(ctl.y)); st.add(q(playerHp)); for (const p of P) { st.add(q(p.x)); st.add(q(p.y)); }
+      st.add(q(ctl.x)); st.add(q(ctl.y)); st.add(q(hero.hp)); for (const p of P) { st.add(q(p.x)); st.add(q(p.y)); }
       for (const e of enemies) { st.add(q(e.x)); st.add(q(e.y)); st.add(q(e.hp)); st.add(e.dead ? 1 : 0); }
       for (const o of objs) { st.add(q(o.x)); st.add(q(o.y)); }
       st.add(kills.length); st.add(q(simTime));
