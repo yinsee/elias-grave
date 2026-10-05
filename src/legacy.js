@@ -1,6 +1,10 @@
 import { clamp, lerp, smooth, norm, snap, lerpA, segDist, smoothDamp } from './core/math.js';
 import { C, eShade } from './core/color.js';
 import { rng } from './core/rng.js';
+import { WEAPONS } from './sim/weapons/defs.js';
+import { KINDS, LIFTABLE, TOSS, FLOOR_BREAK, PUSH_BREAK } from './sim/objects/kinds.js';
+import { EPAL, BUILD, LOOK, ROLE, ZROLES, AROLES, AMIX, ETYPE } from './sim/enemies/roster.js';
+import { DIFFS } from './core/difficulty.js';
 
 (() => {
   'use strict';
@@ -1005,14 +1009,6 @@ import { rng } from './core/rng.js';
   // pre = start of the strike segment (the key before contact): from here a foe in reach is marked for the hit
   const strikeFrom = m => { let pre = m.win[0]; for (const [t] of m.keys) if (t < m.win[0] - 0.005) pre = t; return pre; };
   for (const k in MOVES) MOVES[k].pre = strikeFrom(MOVES[k]);
-  // off = blade angle against the forearm (melee); guns point along the forearm
-  const WEAPONS = [
-    { id: 'fists', name: 'Fists', labels: ['Punch', 'Heavy punch'] },
-    { id: 'katana', name: 'Katana', labels: ['Slash', 'Heavy slash'], melee: true, dura: 8, len: 15, off: -1.1 },
-    { id: 'axe', name: 'Axe', labels: ['Chop', 'Heavy chop'], melee: true, dura: 8, len: 13, off: -1.3 },
-    { id: 'shotgun', name: 'Shotgun', labels: ['Fire', 'Fire'], gun: true, ammo: 10, len: 15, forend: 10, cd: 0.65, pellets: 6, spread: 0.16, power: 70, speed: 520, life: 0.22, lift: 0.45, kick: 2.4, body: 1, push: 70, climb: 0 },
-    { id: 'mg', name: 'Machine gun', labels: ['Fire (hold)', 'Fire'], gun: true, ammo: 80, len: 18, forend: 11, cd: 0.08, pellets: 1, spread: 0.085, power: 45, speed: 640, life: 0.45, lift: 0.03, kick: 1.2, body: 0.4, push: 9, climb: 0, auto: true },
-  ];
   function keyAt(keys, t) {
     for (let i = 1; i < keys.length; i++) if (t <= keys[i][0]) {
       const [t0, a] = keys[i - 1], [t1, b, ez] = keys[i], u = (t - t0) / (t1 - t0);
@@ -1158,25 +1154,6 @@ import { rng } from './core/rng.js';
     hitFx(power);
   }
 
-  // ---------- loose objects: crates, bins and chairs slide and settle flat, kegs and balls roll ----------
-  const KINDS = {
-    crate: { r: 5, m: 2, e: 0.2, roll: false, hp: 260 },
-    barrel: { r: 5, m: 3, e: 0.15, roll: true, hp: 300 },
-    ball: { r: 3.5, m: 0.6, e: 0.7, roll: true, hp: 80 },
-    bigcrate: { r: 6, m: 3, e: 0.2, roll: false, hp: 420 },
-    // two big crates stacked: a box (hw = half width, r = half height) that slides but never tips; its top is a surface
-    stack: { r: 12, hw: 6, m: 12, e: 0.1, roll: false, hp: 700 },
-    // city clutter: a steel dustbin, a pile of bin bags, a cafe chair, a traffic cone
-    // every object takes hits like a crate: it cracks (chips fly) and breaks when its hp runs out
-    bin: { r: 5.5, m: 3, e: 0.15, roll: false, hp: 240 },
-    bag: { r: 4.5, m: 1.5, e: 0.05, roll: false, hp: 120 },
-    chair: { r: 5, m: 1, e: 0.3, roll: false, hp: 150 },
-    cone: { r: 4, m: 0.8, e: 0.25, roll: false, hp: 120 },
-    // tossed in by the club crowd during the boss fight: squat by one to pocket it, a Q hold with no goon in reach throws it (one use)
-    can: { r: 2, m: 0.3, e: 0.4, roll: true, pocket: true, hp: 40 },
-    bottle: { r: 2.5, m: 0.4, e: 0.2, roll: true, pocket: true, hp: 40 },
-    knife: { r: 2.5, m: 0.2, e: 0.1, roll: false, pocket: true, hp: 60 },
-  };
   const OBJ_START = [
     ['stack', 700, GROUND], ['crate', 770, GROUND], ['bin', 824, GROUND], ['cone', 850, GROUND], ['can', 872, GROUND], ['bottle', 884, GROUND],
     ['bag', 1024, GROUND], ['bin', 1046, GROUND], ['crate', 1180, hy(30)],
@@ -1295,7 +1272,6 @@ import { rng } from './core/rng.js';
   }
   // squat beside a loose object with empty hands to pick it up in one hand; a tap swings it, a hold throws it. It is not built for
   // fighting: the first goon it hits, it breaks on (shatterObj)
-  const LIFTABLE = new Set(['crate', 'bin', 'bag', 'chair', 'cone', 'barrel', 'bigcrate']);
   function carryStep(dt) {
     let c = ctl.carry;
     if (c && (!objs.includes(c) || mode !== 'anim')) { if (objs.includes(c)) { c.carried = false; c.vx = (Math.random() - 0.5) * 40; c.vy = -40; } ctl.carry = c = null; }   // knocked down: he drops it
@@ -1352,7 +1328,6 @@ import { rng } from './core/rng.js';
   // ---------- the club crowd throws things in: cans, bottles, knives to use on the boss ----------
   const pocket = [];   // up to 3 small throwables carried in the coat
   let crowdTossT = 4;
-  const TOSS = { can: { dmg: 10, power: 120, v: 230, up: 70, spin: 22 }, bottle: { dmg: 14, power: 150, v: 220, up: 80, spin: 18 }, knife: { dmg: 20, power: 170, v: 320, up: 20, spin: 0 } };
   const tossed = [];
   function crowdToss(dt) {
     if (!club || !boss || boss.dead || !slamDone) return;
@@ -1414,7 +1389,6 @@ import { rng } from './core/rng.js';
   }
   // floor objects are not built to travel: pushed or knocked along the ground for PUSH_BREAK px they come apart, and they break on
   // anything they run into at speed (another object; a goon, who goes down a little hurt)
-  const FLOOR_BREAK = new Set(['crate', 'bigcrate', 'stack', 'bin', 'cone', 'chair', 'barrel', 'bag', 'can', 'bottle', 'knife', 'ball']), PUSH_BREAK = 64;   // (every object)
   function objStep(dt) {
     boardStep(dt);
     crowdToss(dt);
@@ -1836,42 +1810,7 @@ import { rng } from './core/rng.js';
     return [A.x + (B.x - A.x) * b.t - uy * hw, A.y + (B.y - A.y) * b.t + ux * hw];
   }
   // enemy looks: mid-tone colors that still read under the night lighting; every head is a box with a flat top and a square jaw
-  const EPAL = {
-    skins: [['#e0b892', '#b48b68'], ['#cf9d74', '#a07552'], ['#ad7c5c', '#80583f'], ['#86604a', '#634333']],
-    hair: ['#2c1f18', '#4e3322', '#6e4c2c', '#24242c', '#8c867a', '#7a3a22'],
-    loud: ['#d8483a', '#5cb04e', '#8e6ad8', '#e0b040'],
-    shoe: '#1b1b22', steel: '#c9d2dc', steelD: '#7d8794', grip: '#5a3a26', iron: '#8a8f99', gun: '#767b8c', scar: '#e8a49a', glove: '#2e2a30',
-  };
-  // build: s = height, bw = bulk (limb and torso width), hk = head size
-  const BUILD = { lean: { s: 1, bw: 0.85, hk: 0.95, spd: 1.1, hp: 0.9 }, stocky: { s: 0.95, bw: 1.3, hk: 1.06, spd: 0.9, hp: 1.15 },
-    tall: { s: 1.1, bw: 0.95, hk: 1, spd: 1, hp: 1 }, buff: { s: 1.25, bw: 1.6, hk: 1.04, spd: 1, hp: 1 } };
-  // outfits: top = torso cut, hair = head top, beards = picked per goon; cols = [top, top shade] pairs, pants
-  const LOOK = {
-    leather: { build: 'stocky', top: 'jacket', hair: ['short', 'bald'], beards: ['full', 'stubble', 'chin', 'stache'], cols: [['#8a5634', '#653d24'], ['#5e5a66', '#45414c']], pants: ['#4a5a7c', '#4a4a3c'] },
-    hood: { build: 'lean', top: 'hood', hair: ['hood'], beards: ['stubble', 'goatee', 'chin', 'none'], cols: [['#5f826c', '#46604f'], ['#727488', '#545669'], ['#8e5252', '#6a3a3a']], pants: ['#3e3e4e', '#4a4a3c'] },
-    vest: { build: 'tall', top: 'vest', hair: ['mohawk', 'short'], beards: ['goatee', 'chin', 'stache', 'full'], cols: [['#6a80a6', '#4d5d7c'], ['#82603e', '#5f452c']], pants: ['#363c4c', '#544838'] },
-    coat: { build: 'tall', top: 'coat', hair: ['cap', 'short'], beards: ['stache', 'full', 'goatee'], cols: [['#50608e', '#3a466c'], ['#82404e', '#5e2e39'], ['#5a6860', '#424d47']], pants: ['#30303c'] },
-    tank: { build: 'stocky', top: 'tank', hair: ['bald', 'short'], beards: ['chin', 'full', 'goatee', 'stache'], cols: [['#cdc6b2', '#a6a08c'], ['#b8423e', '#8c302d']], pants: ['#4a5a7c', '#5c5242'] },
-    boss: { build: 'buff', top: 'tank', hair: ['bald'], beards: ['huge'], cols: [['#4c3c5e', '#382b46']], pants: ['#302440'] },
-  };
-  // roles: what a goon fights with. ranged = [near, far] range it keeps; aim = tell time before the shot
-  const ROLE = {
-    brawler: { reach: 17, dmg: 8, heavyDmg: 14, windup: 0.22, hp: 50, looks: ['tank', 'leather'], cmb: [['jab'], ['punch'], ['jab', 'jab'], ['jab', 'punch'], ['jab', 'jab', 'punch']] },
-    knife: { reach: 20, dmg: 9, heavyDmg: 13, windup: 0.16, hp: 45, w: 'knife', len: 5, off: -0.2, looks: ['hood'], cmb: [['stab'], ['stab', 'stab'], ['stab', 'slash'], ['slash', 'stab', 'stab']] },
-    pipe: { reach: 24, dmg: 10, heavyDmg: 17, windup: 0.3, hp: 60, w: 'pipe', len: 10, off: -1.1, looks: ['leather', 'vest'], cmb: [['chop'], ['hchop'], ['chop', 'chop']] },
-    machete: { reach: 23, dmg: 11, heavyDmg: 16, windup: 0.24, hp: 55, w: 'machete', len: 9, off: -1.1, looks: ['vest'], cmb: [['slash'], ['slash', 'chop'], ['hchop'], ['chop', 'slash']] },
-    thrower: { reach: 17, dmg: 6, heavyDmg: 10, windup: 0.22, hp: 45, w: 'tknife', len: 4, off: -0.2, ranged: [60, 115], shot: 6, aim: 0.45, looks: ['hood', 'coat'], cmb: [['jab']] },
-    pistol: { reach: 17, dmg: 6, heavyDmg: 10, windup: 0.22, hp: 45, w: 'pistol', len: 4.5, off: 0, ranged: [75, 135], shot: 7, aim: 0.6, looks: ['coat'], cmb: [['jab']] },
-  };
-  // difficulty: stage 1 bare hands, then hand weapons, knife throwers, pistols, mixed squads; the boss calls in tougher help over time
-  const ZROLES = { 1: ['brawler', 'brawler'], 2: ['brawler', 'knife', 'brawler'], 3: ['knife', 'thrower', 'pipe'], 4: ['machete', 'pistol', 'thrower', 'brawler'], 5: ['pistol', 'pipe', 'thrower', 'machete'] };
-  const AROLES = ['brawler', 'knife', 'brawler', 'thrower', 'pipe', 'knife', 'pistol', 'machete'], AMIX = ['knife', 'pipe', 'machete', 'thrower', 'pistol', 'brawler'];
   const pick = a => a[Math.floor(Math.random() * a.length)];
-  // s = size; poise = damage needed to stagger; cd = seconds between attacks
-  const ETYPE = {
-    goon: { s: 1, hp: 50, m: 1, speed: 30, reach: 17, dmg: 8, heavyDmg: 14, cd: [0.9, 1.7], poise: 0, windup: 0.22 },
-    boss: { s: 1.25, hp: 780, m: 6, speed: 27, reach: 22, dmg: 22, heavyDmg: 30, cd: [0.7, 1.4], poise: 30, windup: 0.35 },
-  };
   // lunge = a dash from mid range that ends in the heavy punch; w = the strike lands with the held weapon's tip
   const THR = { a1s: 3.5, a1e: 1.2, lean: -0.15, rx: -1, a0s: 1.2, a0e: 0.4 }, THR_OUT = { a1s: 1.5, a1e: 0.1, lean: 0.3, rx: 1.6, a0s: -0.4, a0e: 0.5 };
   const AIMP = { a1s: 1.57, a1e: 0, a0s: 1.3, a0e: 0.4, rx: -0.3, head: 0.05, lean: 0.02 };
@@ -1915,12 +1854,6 @@ import { rng } from './core/rng.js';
   const EFX = { sweat: C('#9fd3ff'), steam: C('#c9c4d4') };
   // difficulty: the goons' aggression doubles at each step (A = 1, 2, 4, 8). They rest 1/A as long between attacks, more of them
   // swing at once, they close in faster and back off less. The regen drops with it; on Wicked a K.O. ends the run. The demo plays Hard.
-  const DIFFS = [
-    { name: 'Easy', A: 1, regen: 2.5, tok: 2, side: 1, dura: 1.5 },   // dura: blade hits, times the weapon's own (8: Easy 12, Medium 8, Hard 6, Wicked 4)
-    { name: 'Medium', A: 2, regen: 1, tok: 3, side: 2, dura: 1 },
-    { name: 'Hard', A: 4, regen: 0, tok: 4, side: 2, dura: 0.75 },
-    { name: 'Wicked', A: 8, regen: 0, tok: 6, side: 3, perma: true, dura: 0.5 },
-  ];
   let diffSel = 1;
   const DIF = () => DIFFS[demo ? 2 : diffSel], dLv = () => Math.log2(DIF().A);   // dLv: 0 .. 3
   let eTokN = 0, eTokMax = 2, eShotN = 0, eSideT = 0, eHitKind = 0;   // melee / ranged attack tokens in use; side re-plan timer; 1 = melee hit, 2 = bullet
