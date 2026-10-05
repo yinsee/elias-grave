@@ -8,6 +8,7 @@ import { DIFFS } from './core/difficulty.js';
 import { PAL } from './assets/palettes/base.js';
 import { mod, IDLE, GUARD, SQUAT, RISE, SITUP, PUSHUP, GU_T, fitPose, getupPose, K, AIR, teeterPose } from './sim/hero/poses.js';
 import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
+import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './render2d/raster.js';
 
 (() => {
   'use strict';
@@ -55,33 +56,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // cam: x, y = the view's top-left corner in whole world pixels; vw, vh = the view size; zoom (1 = 160 px across);
   // xf, yf = the smooth camera position; v = the smoothDamp velocities; shake = shake time left (s); kick = the directional kick (world px)
   const cam = { x: 0, y: GROUND - 60, vw: 160, vh: 96, zoom: 1, xf: 0, yf: GROUND - 60, v: { x: 0, y: 0, z: 0 }, shake: 0, kick: { x: 0, y: 0 } };
-  // pickables (weapons, ammo, bandages, cans and bottles) are drawn with pickOn set: plot marks their pixels, and pickGlow rings them
-  let pickOn = false, pkX0 = 1e9, pkY0 = 1e9, pkX1 = -1, pkY1 = -1;
-  const pickMask = new Uint8Array(CW * CHMAX);
-  const plot = (x, y, c) => {
-    x -= cam.x; y -= cam.y; if (x < 0 || y < 0 || x >= cam.vw || y >= cam.vh) return; buf[y * CW + x] = c;
-    if (pickOn) { pickMask[y * CW + x] = 1; if (x < pkX0) pkX0 = x; if (x > pkX1) pkX1 = x; if (y < pkY0) pkY0 = y; if (y > pkY1) pkY1 = y; }
-  };
-  const plotV = (x, y, c) => { if (x < 0 || y < 0 || x >= cam.vw || y >= cam.vh) return; buf[y * CW + x] = c; };   // view coordinates
-  function disc(cx, cy, r, c) {
-    const r2 = r * r;
-    for (let y = Math.floor(cy - r); y <= Math.ceil(cy + r); y++)
-      for (let x = Math.floor(cx - r); x <= Math.ceil(cx + r); x++) {
-        const dx = x + 0.5 - cx, dy = y + 0.5 - cy;
-        if (dx * dx + dy * dy <= r2) plot(x, y, c);
-      }
-  }
-  function seg(ax, ay, bx, by, r, c) {
-    const dx = bx - ax, dy = by - ay;
-    const n = Math.max(1, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy))));
-    for (let i = 0; i <= n; i++) disc(snap(ax + dx * i / n), snap(ay + dy * i / n), r, c);
-  }
-  function line1(x0, y0, x1, y1, c) {
-    x0 = Math.floor(x0); y0 = Math.floor(y0); x1 = Math.floor(x1); y1 = Math.floor(y1);
-    const dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
-    let e = dx + dy;
-    for (;;) { plot(x0, y0, c); if (x0 === x1 && y0 === y1) break; const e2 = 2 * e; if (e2 >= dy) { e += dy; x0 += sx; } if (e2 <= dx) { e += dx; y0 += sy; } }
-  }
+  initRaster(buf, CW, CHMAX, cam);   // the 2D frame draws what the camera sees (render2d/raster.js: plot, disc, seg, line1, pickArt, withView)
 
   // ---------- level: a long tutorial yard, left to right ----------
   // zones: 1 moving (0-520), 2 bare hands (520-900), 3 katana, 4 axe, 5 shotgun, 6 machine gun, 7 the mattress pile and the club roof (2150-2400)
@@ -3725,8 +3700,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   // a soft gold ring round every pickable: a bright 1-px edge and a faint second ring, pulsing (added on top of the light pass)
   const PICK_GLOW = [255, 205, 110], PICK_Z = 9;   // PICK_Z: in 3D, pickables lying in the street stand this far in front of the front lane (past its crates)
   function pickGlow() {
-    if (pkX1 < 0) return;
-    const x0 = Math.max(0, pkX0 - 2), x1 = Math.min(cam.vw - 1, pkX1 + 2), y0 = Math.max(0, pkY0 - 2), y1 = Math.min(cam.vh - 1, pkY1 + 2), M = pickMask;
+    if (pickArt.x1 < 0) return;
+    const x0 = Math.max(0, pickArt.x0 - 2), x1 = Math.min(cam.vw - 1, pickArt.x1 + 2), y0 = Math.max(0, pickArt.y0 - 2), y1 = Math.min(cam.vh - 1, pickArt.y1 + 2), M = pickArt.mask;
     const a = 0.55 + 0.25 * Math.sin(simTime * 5);
     const at = (x, y) => x >= 0 && y >= 0 && x < cam.vw && y < cam.vh && M[y * CW + x] === 1;
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
@@ -3737,8 +3712,8 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const c = buf[i], add = (v, sh) => Math.min(255, (c >> sh & 255) + v * k);
       buf[i] = (255 << 24 | add(PICK_GLOW[2], 16) << 16 | add(PICK_GLOW[1], 8) << 8 | add(PICK_GLOW[0], 0)) >>> 0;
     }
-    for (let y = Math.max(0, pkY0); y <= Math.min(cam.vh - 1, pkY1); y++) M.fill(0, y * CW + Math.max(0, pkX0), y * CW + Math.min(cam.vw - 1, pkX1) + 1);
-    pkX0 = pkY0 = 1e9; pkX1 = pkY1 = -1;
+    for (let y = Math.max(0, pickArt.y0); y <= Math.min(cam.vh - 1, pickArt.y1); y++) M.fill(0, y * CW + Math.max(0, pickArt.x0), y * CW + Math.min(cam.vw - 1, pickArt.x1) + 1);
+    pickArt.x0 = pickArt.y0 = 1e9; pickArt.x1 = pickArt.y1 = -1;
   }
   function drawPickups() {
     for (const k of pickups) {
@@ -4771,7 +4746,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
     for (const L of [LANE.PLAT, LANE.FIGHT, LANE.FRONT]) {   // the lanes, back to front
       if (L === LANE.FRONT) drawTossed();   // pocket throws in flight: the front lane
       drawThrown(L); drawBoards(L);
-      for (const o of objs) if (objLane(o) === L) { pickOn = !!o.pocket && !o.carried; drawObj(o); pickOn = false; }
+      for (const o of objs) if (objLane(o) === L) { pickArt.on = !!o.pocket && !o.carried; drawObj(o); pickArt.on = false; }
       if (ctl.lane === L) drawShadow();
       drawEnemies(L);
       if (L === LANE.FIGHT) drawEShots();
@@ -4780,7 +4755,7 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       if (L === LANE.FRONT) drawDogHeart();
       if (L === LANE.PLAT) drawStairRails();   // the fire escape's outer rail: in front of anyone on the stairs, behind the street
     }
-    pickOn = true; drawPickups(); drawThrown('lying'); drawAmmo(); pickOn = false;   // weapons, ammo and bandages waiting to be picked up: on top, always in sight
+    pickArt.on = true; drawPickups(); drawThrown('lying'); drawAmmo(); pickArt.on = false;   // weapons, ammo and bandages waiting to be picked up: on top, always in sight
     if (!flags.club) glassReflect();
     drawGroundFx();
     lightPass();
@@ -5556,13 +5531,9 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
   }
   // draw with the 2D code into a size x size scratch window of buf whose top-left is world (ox, oy), and copy it out
   function t3capture(size, draw, ox = 0, oy = 0) {
-    const sx = cam.x, sy = cam.y, sw = cam.vw, sh = cam.vh;
-    cam.x = ox; cam.y = oy; cam.vw = size; cam.vh = size;
-    for (let y = 0; y < size; y++) buf.fill(0, y * CW, y * CW + size);
-    draw();
+    withView({ x: ox, y: oy, vw: size, vh: size }, draw);
     const out = new Uint32Array(size * size);
     for (let y = 0; y < size; y++) out.set(buf.subarray(y * CW, y * CW + size), y * size);
-    cam.x = sx; cam.y = sy; cam.vw = sw; cam.vh = sh;
     return out;
   }
   const t3hash = a => { let h = 2166136261; for (let i = 0; i < a.length; i++) h = Math.imul(h ^ a[i], 16777619); return h >>> 0; };
@@ -6514,23 +6485,21 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       const x0 = Math.round(sx + sw / 2 - TW / 2), y0 = Math.round(sy + sh / 2 - h * Math.min(z, 0) / D - TH / 2), gl = L.kind === 'glass';
       let any = false;
       for (let oy = 0; oy < TH; oy += CHMAX) for (let ox = 0; ox < TW; ox += CW) {
-        cam.x = x0 + ox; cam.y = y0 + oy; cam.vw = Math.min(CW, TW - ox); cam.vh = Math.min(CHMAX, TH - oy);
-        for (let y = 0; y < cam.vh; y++) buf.fill(0, y * CW, y * CW + cam.vw);
-        draw();
-        for (let y = 0; y < cam.vh; y++) for (let x = 0, r = y * CW, o = (oy + y) * L.dw + ox; x < cam.vw; x++) {
+        const tw = Math.min(CW, TW - ox), th = Math.min(CHMAX, TH - oy);
+        withView({ x: x0 + ox, y: y0 + oy, vw: tw, vh: th }, draw);
+        for (let y = 0; y < th; y++) for (let x = 0, r = y * CW, o = (oy + y) * L.dw + ox; x < tw; x++) {
           const c = buf[r + x];
           if (c) any = true;
           L.data[o + x] = !glow || !c ? c : EMIT.has(c) ? t3flag(c, 254) : gl && GLASS_C.has(c) ? t3flag(c, 253) : c;
         }
       }
-      if (!any) { L.mesh.visible = false; cam.x = sx; cam.y = sy; cam.vw = sw; cam.vh = sh; return; }   // nothing drawn: no upload, no plane
+      if (!any) { L.mesh.visible = false; return; }   // nothing drawn: no upload, no plane
       L.tex.needsUpdate = true;
       const p = L.mesh.geometry.attributes.position, uv = L.mesh.geometry.attributes.uv;
       p.setXYZ(0, x0, -y0, z); p.setXYZ(1, x0 + TW, -y0, z); p.setXYZ(2, x0, -(y0 + TH), z); p.setXYZ(3, x0 + TW, -(y0 + TH), z);
       uv.setXY(0, 0, 0); uv.setXY(1, TW / L.dw, 0); uv.setXY(2, 0, TH / L.dh); uv.setXY(3, TW / L.dw, TH / L.dh);
       p.needsUpdate = uv.needsUpdate = true;
       L.mesh.visible = true;
-      cam.x = sx; cam.y = sy; cam.vw = sw; cam.vh = sh;
     },
     updateLayers() {
       const { ZF } = T3;
@@ -6541,14 +6510,11 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
       if (!flags.club && cam.x < STAIR_X1 + 160 && cam.x + cam.vw > STAIR_X0 - 160) this.layer(this.lRail, drawStairRails, { z: ZF + T3.STAIR + 0.4 }); else this.lRail.mesh.visible = false;
       this.lFloor.mesh.visible = flags.club;
       if (flags.club) {   // drawClubFloor in camera-sized strips across the sheet
-        const F = this.lFloor, S = STREET + 1, sx = cam.x, sy = cam.y, sw = cam.vw, sh = cam.vh, step = 256;
+        const F = this.lFloor, S = STREET + 1, step = 256;
         for (let ox = 0; ox < F.w; ox += step) {
-          cam.x = F.x0 + ox; cam.y = GROUND; cam.vw = step; cam.vh = S;
-          for (let y = 0; y < S; y++) buf.fill(0, y * CW, y * CW + step);
-          drawClubFloor();
+          withView({ x: F.x0 + ox, y: GROUND, vw: step, vh: S }, drawClubFloor);
           for (let y = 0; y < S; y++) for (let x = 0; x < step; x++) { const c = buf[y * CW + x]; F.data[y * F.w + ox + x] = t3glow(c); }
         }
-        cam.x = sx; cam.y = sy; cam.vw = sw; cam.vh = sh;
         F.tex.needsUpdate = true;
       }
       this.layer(this.lMid, () => { drawTramp(); drawBag(); drawGroundFx(); });
