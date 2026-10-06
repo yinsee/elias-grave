@@ -3668,26 +3668,27 @@ import * as P9 from './levels/pier9.js';
   }
 
   // ---------- tutorial: zones, lessons, weapon pickups ----------
-  // the tutorial: every mechanic of the game, stage by stage, left to right
+  // the tutorial: every mechanic of the game, stage by stage, left to right.
+  // A task's text is 'Verb: how to do it'; [Q] in the text shows as a key cap (the objective panel shows the verb big, the how under it)
   const ZONES = [
-    { x0: -99, title: '1 · Move', tasks: [['walk', 'Walk: ← →'], ['run', 'Run: hold Shift (the menu can make running the default)'],
-      ['jump', 'Get onto the car roof: jump (↑) at its side and keep ↑ held; you grab the edge and pull up'], ['charge', 'Climb higher: hold ↑ as you jump at the bar roof or a scaffold'],
-      ['drop', 'Drop through a roof: hold ↓ and press Space'], ['roll', 'Dodge roll: Space (nothing hits you mid-roll)'], ['squatroll', 'Roll out of a run: press ↓ while running']] },
-    { x0: 520, title: '2 · Bare hands', tasks: [['lp', 'Jab: tap Q (twice = both hands)'], ['hp', 'Heavy punch: hold Q'], ['lk', 'Kick: tap W'], ['hk', 'Heavy kick: hold W (switches legs)'],
-      ['slp', 'Low jab: squat (↓), then tap Q'], ['slk', 'Low kick: squat (↓), then tap W'], ['sweep', 'Leg sweep: squat (↓), then hold W'], ['airkick', 'Flying kick: jump, then W'],
-      ['smash', 'Smash a crate to pieces (it cracks first)'], ['split', 'Break the crate stack with a heavy hit'],
-      ['lift', 'Pick up the dustbin: squat beside it with empty hands'], ['bash', 'Hit a goon with it: tap Q (it breaks on him)'], ['toss', 'Pick up another and throw it: hold Q with no goon in reach'],
-      ['pocket', 'Squat (↓) by a can or a bottle to pocket it (walk into one and you kick it)'], ['pockethit', 'Throw it at a goon: hold Q with no goon in reach'], ['kill1', 'Beat the 2 goons (they hit back)']] },
-    { x0: 900, title: '3 · Katana', tasks: [['pick1', 'Pick up the katana'], ['ks', 'Slash: tap Q'], ['kw', 'Heavy slash: hold Q close to a goon'], ['kh', 'Overhead finisher: tap Q, then hold Q'],
-      ['sslash', 'Low cut: squat (↓), then Q'], ['kair', 'Jump slash: jump, then Q'], ['tw', 'Throw the blade: hold ↓ and hold Q'], ['catch', 'Walk over the blade to pick it up'], ['kill2', 'Cut down the 3 goons']] },
-    { x0: 1250, title: '4 · Axe', tasks: [['pick2', 'Pick up the axe (your katana drops by the bench)'], ['al', 'Chop combo: tap Q (it switches hands)'], ['aw', 'Heavy chop: hold Q close to a goon'],
-      ['ah', 'Ground-slam finisher: tap Q, then hold Q close to a goon'], ['aair', 'Plunge: climb onto the van, jump off, then Q'], ['throwhit', 'Hit a goon with a thrown blade'],
-      ['swap', 'Swap weapons: squat (↓) on a weapon lying on the ground'], ['kill3', 'Chop down the 3 goons']] },
-    { x0: 1600, title: '5 · Shotgun', tasks: [['pick3', 'Pick up the shotgun'], ['fire3', 'Fire: Q'], ['runfire', 'Fire while running'], ['ammo', 'Load up: walk over an ammo box a goon drops'], ['kill4', 'Blast the 4 goons']] },
-    { x0: 1900, title: '6 · Machine gun', tasks: [['pick4', 'Pick up the machine gun'], ['burst', 'Hold Q to fire a burst (a tap fires a short one)'], ['airfire', 'Fire in the air'],
-      ['hurl', 'Out of ammo: press Q to hurl the gun'], ['kill5', 'Mow down the 4 goons']] },
-    { x0: 2150, title: '7 · The club roof', tasks: [['stairs', 'Walk up the fire escape'], ['top', 'Climb all the way to the club roof']] },
-    { x0: 2420, title: '8 · Boss', tasks: [['enter', 'Walk the red carpet into the club'], ['boss', 'Defeat the boss (his crew joins in; jump over the shockwave of his ground slam)']] },
+    { x0: -99, title: '1 · Move', tasks: [['walk', 'Walk: [←] [→]'], ['run', 'Run: hold [Shift] as you walk'],
+      ['jump', 'Climb onto the car: jump [↑] at its side and keep [↑] held'], ['charge', 'Climb higher: hold [↑] as you jump at a roof or a scaffold'],
+      ['drop', 'Drop through a roof: hold [↓] and press [Space]'], ['roll', 'Dodge roll: press [Space]. Nothing hits you mid-roll'], ['squatroll', 'Roll out of a run: press [↓] as you run']] },
+    { x0: 520, title: '2 · Bare hands', tasks: [['lp', 'Jab: tap [Q]. Twice for both hands'], ['hp', 'Heavy punch: hold [Q]'], ['lk', 'Kick: tap [W]'], ['hk', 'Heavy kick: hold [W]'],
+      ['slp', 'Low jab: hold [↓], tap [Q]'], ['slk', 'Low kick: hold [↓], tap [W]'], ['sweep', 'Leg sweep: hold [↓], hold [W]'], ['airkick', 'Flying kick: jump [↑], then tap [W]'],
+      ['smash', 'Smash a crate: hit it until it breaks'], ['split', 'Break the crate stack: hold [Q] or [W] next to it'],
+      ['lift', 'Lift the dustbin: hands empty, hold [↓] next to it'], ['bash', 'Hit a goon with it: tap [Q]'], ['toss', 'Throw a dustbin: lift one, hold [Q] with no goon near'],
+      ['pocket', 'Pocket a can or a bottle: hold [↓] next to it'], ['pockethit', 'Throw it at a goon: hold [Q] with no goon near'], ['kill1', 'Beat the 2 goons: they hit back']] },
+    { x0: 900, title: '3 · Katana', tasks: [['pick1', 'Take the katana: walk over it'], ['ks', 'Slash: tap [Q]'], ['kw', 'Heavy slash: hold [Q] near a goon'], ['kh', 'Overhead finisher: tap [Q], then hold [Q]'],
+      ['sslash', 'Low cut: hold [↓], tap [Q]'], ['kair', 'Jump slash: jump [↑], then tap [Q]'], ['tw', 'Throw the blade: hold [↓] and hold [Q]'], ['catch', 'Get the blade back: walk over it'], ['kill2', 'Cut down the 3 goons']] },
+    { x0: 1250, title: '4 · Axe', tasks: [['pick2', 'Take the axe: walk over it'], ['al', 'Chop combo: tap [Q] again and again'], ['aw', 'Heavy chop: hold [Q] near a goon'],
+      ['ah', 'Slam finisher: tap [Q], then hold [Q] near a goon'], ['aair', 'Plunge: jump off the van, then tap [Q]'], ['throwhit', 'Throw at a goon: hold [↓] and hold [Q]'],
+      ['swap', 'Swap weapons: hold [↓] on a weapon on the ground'], ['kill3', 'Chop down the 3 goons']] },
+    { x0: 1600, title: '5 · Shotgun', tasks: [['pick3', 'Take the shotgun: walk over it'], ['fire3', 'Fire: press [Q]'], ['runfire', 'Fire on the run: hold [Shift], press [Q]'], ['ammo', 'Reload: walk over an ammo box'], ['kill4', 'Blast the 4 goons']] },
+    { x0: 1900, title: '6 · Machine gun', tasks: [['pick4', 'Take the machine gun: walk over it'], ['burst', 'Burst fire: hold [Q]'], ['airfire', 'Fire in the air: jump [↑], hold [Q]'],
+      ['hurl', 'Out of ammo: press [Q] to throw the gun'], ['kill5', 'Mow down the 4 goons']] },
+    { x0: 2150, title: '7 · The club roof', tasks: [['stairs', 'Fire escape: walk up the stairs'], ['top', 'Club roof: climb to the top']] },
+    { x0: 2420, title: '8 · Boss', tasks: [['enter', 'Enter the club: walk the red carpet'], ['boss', 'Beat the boss: jump [↑] over his shockwave']] },
   ];
   const TOTAL = ZONES.reduce((n, z) => n + z.tasks.length, 0);
   const TUTKEYS = new Set(ZONES.flatMap(z => z.tasks.map(([k]) => k)));   // only these count: side events (tosshit, pocket, ammo...) are not lessons
@@ -3723,7 +3724,7 @@ import * as P9 from './levels/pier9.js';
   const AMMO_TASKS = new Set(['fire3', 'runfire', 'ammo', 'burst', 'airfire']);   // these need rounds
   const GOON_TASKS = new Set(['bash', 'pockethit', 'kw', 'kh', 'aw', 'ah', 'throwhit']);   // these need a goon in reach
   const PROP_TASKS = { smash: ['crate', 'bigcrate'], split: ['stack'], lift: [...LIFTABLE], toss: [...LIFTABLE], pocket: ['can', 'bottle'], pockethit: ['can', 'bottle'] };
-  let gateT = 0, gateToastT = -9;
+  let gateT = 0;
   const stageDone = i => ZONES[i].tasks.every(([k]) => done.has(k));
   const openStage = () => { for (let i = 0; i < ZONES.length; i++) if (!stageDone(i)) return i; return ZONES.length - 1; };
   function tutGate(rdt) {
@@ -3734,7 +3735,7 @@ import * as P9 from './levels/pier9.js';
       const dx = wall - P[2].x;
       for (const p of P) { p.x += dx; p.px = Math.min(p.px + dx, p.x); }
       if (hero.mode === 'anim') { ctl.x += dx; ctl.spd = Math.min(ctl.spd, 0); }
-      if (simTime - gateToastT > 6) { gateToastT = simTime; toast(`Stage ${i + 1} is not done`, 'Finish every lesson on the list to go on', true); }
+      obj.bump = 1.6;   // (UI) the objective panel pulses and says why the way is shut
     }
     if ((gateT += rdt) < 1) return;
     gateT = 0;
@@ -3889,13 +3890,55 @@ import * as P9 from './levels/pier9.js';
       cleared.add(i); runS.streak = 0;
       if (i + 1 < ZONES.length) toast(`Stage ${i + 1} clear`, `Next: ${ZONES[i + 1].title.replace(/^\d+ · /, '')} →`);
     });
-    // the stage's whole lesson list: done ones struck through; the way on stays shut until all are done
-    const Z = ZONES[z], left = Z.tasks.filter(([k]) => !done.has(k)).length;
-    const next = done.has('boss') ? 'The street is yours.' : left ? '' : z + 1 < ZONES.length ? 'All done here. Keep going right →' : '';
-    const shut = left && z + 1 < ZONES.length ? `<div class="gate">Finish every lesson to open stage ${z + 2}</div>` : '';
-    tutEl.innerHTML = `<span class="count">${done.size}/${TOTAL}</span><span class="stage-n">Stage ${z + 1} of ${ZONES.length} · ${Z.tasks.length - left}/${Z.tasks.length} done</span><h2>${Z.title}</h2>`
-      + `<ul>${Z.tasks.map(([k, t]) => `<li${done.has(k) ? ' class="done"' : ''}>${t}</li>`).join('')}</ul>${shut}${next ? `<div class="next">${next}</div>` : ''}`;
+    // the stage's whole lesson list (small, top right: a peek at a stage's start, or L): done ones struck through. The objective panel carries the one to do now
+    const Z = ZONES[z];
+    tutEl.innerHTML = `<span class="stage-n">Stage ${z + 1} of ${ZONES.length} · <kbd class="kc">L</kbd> list</span><h2>${Z.title}</h2>`
+      + `<ul>${Z.tasks.map(([k, t]) => `<li${done.has(k) ? ' class="done"' : ''}>${keyCaps(t)}</li>`).join('')}</ul>`;
   }
+  // ---------- the objective panel (DOM only: it reads the lessons, it never changes them) ----------
+  // one lesson at a time, big: the first lesson of the stage not done yet. A later one done early ticks off quietly;
+  // the shown one done: a check and a strike, a soft sound, then the next slides in. The gate pushing back makes it pulse.
+  const objEl = document.getElementById('obj'), objStageEl = document.getElementById('obj-stage'), objNEl = document.getElementById('obj-n'),
+    objFill = document.getElementById('obj-fill'), objVerbEl = document.getElementById('obj-verb'), objHowEl = document.getElementById('obj-how');
+  const obj = { key: null, z: -1, t: 0, bump: 0, list: false, peekT: 0, prog: '', cls: '' };
+  const escHtml = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const keyCaps = t => escHtml(t).replace(/\[([^[\]]{1,8})\]/g, '<kbd class="kc">$1</kbd>');   // '[Q]' in a lesson's text -> a key cap
+  const splitTask = t => { const i = t.indexOf(': '); return i < 0 ? [t, ''] : [t.slice(0, i), t.slice(i + 2)]; };   // 'Verb: how' -> the big line, the line under it
+  function objShow(key, z) {
+    obj.key = key; obj.z = z;
+    const task = ZONES[z].tasks.find(([k]) => k === key);
+    const [verb, how] = task ? splitTask(task[1]) : ['Stage clear', z + 1 < ZONES.length ? `Next: ${ZONES[z + 1].title.replace(/^\d+ · /, '')}. Walk right [→]` : ''];
+    objVerbEl.innerHTML = keyCaps(verb); objHowEl.innerHTML = keyCaps(how); objHowEl.hidden = !how;
+    objEl.classList.remove('done', 'enter'); objEl.classList.toggle('clear', !task); void objEl.offsetWidth; objEl.classList.add('enter');   // (restart the slide-in)
+  }
+  function objTick(rdt) {
+    const z = tutZone;
+    const hide = isP9() || z < 0 || flags.demo || flags.attract || sceneOn || openT >= 0 || !!endPh || menuShown || enc.introT >= 0 || flags.wasted || done.has('enter');
+    if (objEl.hidden !== hide) objEl.hidden = hide;
+    if (obj.peekT > 0) obj.peekT -= rdt;
+    if (obj.bump > 0) obj.bump -= rdt;
+    if (hide) { obj.key = null; obj.z = -1; obj.t = 0; return; }
+    const Z = ZONES[z], n = Z.tasks.filter(([k]) => done.has(k)).length, next = Z.tasks.find(([k]) => !done.has(k)), want = next ? next[0] : '#clear';
+    const prog = `${z}:${n}`;
+    if (obj.prog !== prog) {
+      obj.prog = prog;
+      objStageEl.textContent = `Stage ${Z.title}`; objNEl.textContent = `${n} / ${Z.tasks.length}`;
+      objFill.style.width = `${(n / Z.tasks.length * 100).toFixed(1)}%`;
+    }
+    if (obj.t > 0) { if ((obj.t -= rdt) > 0) return; }   // the check plays out, then the next one comes in
+    if (obj.key !== want || obj.z !== z) {
+      if (obj.key && obj.z === z && obj.key !== '#clear' && done.has(obj.key) && !objEl.classList.contains('done')) {   // the shown lesson is done: tick it off first
+        objEl.classList.remove('enter', 'blocked'); objEl.classList.add('done'); obj.t = 0.8; obj.cls = '';
+        gameAudio.sfx('ui_confirm', { vol: 0.3 });
+        return;
+      }
+      if (obj.z !== z) obj.peekT = 2.5;   // a new stage: show its whole list for a moment
+      objShow(want, z);
+    }
+    const cls = obj.bump > 0 && want !== '#clear' ? 'blocked' : '';
+    if (obj.cls !== cls) { obj.cls = cls; objEl.classList.toggle('blocked', !!cls); }
+  }
+  function toggleTaskList() { obj.list = !obj.list; obj.peekT = 0; }
   // the bench weapons: walk into one to take it (walking back past a lesser weapon keeps yours; squat to swap). Runs in the fixed step.
   function pickupStep() {
     if (hero.mode !== 'anim') return;
@@ -7302,6 +7345,7 @@ import * as P9 from './levels/pier9.js';
     else if (c === 'KeyQ') { if (!e.repeat) pressBtn('p'); }
     else if (c === 'KeyW') { if (!e.repeat) pressBtn('k'); }
     else if (c === 'Space') { takeOver(); input.dashHeld = true; if (!e.repeat) input.dash = true; }
+    else if (c === 'KeyL') { if (!e.repeat) toggleTaskList(); }   // the stage's whole lesson list, on or off
     else if (!DEV) return;   // the sandbox keys below need ?dev
     else if (c === 'KeyM') { if (!e.repeat) toggleDemo(); }   // the autopilot
     else if (c === 'KeyX') knockOver();
@@ -7838,7 +7882,7 @@ import * as P9 from './levels/pier9.js';
   const scripts = {};
   const loadScript = id => scripts[id] || (scripts[id] = fetch(`assets/cutscenes/${id}.json`).then(r => { if (!r.ok) throw new Error(`${r.status} ${id}`); return r.json(); }));
   async function playScene(kind, id) {
-    sceneOn = true; toastEl.hidden = true; sayEl.hidden = true;
+    sceneOn = true; toastEl.hidden = true; sayEl.hidden = true; objEl.hidden = true; obj.key = null;
     keys.left = keys.right = keys.shift = false; btn.p.down = btn.k.down = false; Object.assign(input, { dir: 0, run: false, jump: false, jumpHeld: false, downHeld: false, fireHeld: false, attack: null, dash: false, dashHeld: false });
     try { const sc = await loadScript(id); return await (kind === 'dialog' ? playDialog : playPanels)(sc, { root: stage, audio: csAudio, bus }); }
     catch (err) { console.warn('cutscene failed:', id, err); return { id, skipped: true }; }
@@ -8126,7 +8170,9 @@ import * as P9 from './levels/pier9.js';
     }
     bossBar.hidden = !(enc.boss && !enc.boss.dead);
     { const top = bossBar.hidden ? '8px' : '42px'; if (shown.tutTop !== top) { shown.tutTop = top; tutEl.style.top = top; } }   // the mission panel steps down under the boss bar
-    { const hide = isP9() ? !!endPh : done.has('enter'); if (shown.tutHide !== hide) { shown.tutHide = hide; tutEl.hidden = hide; } }   // inside the club the lesson panel goes: the boss bar and the card carry the fight
+    objTick(rdt);
+    { const hide = isP9() ? !!endPh : objEl.hidden || !(obj.list || obj.peekT > 0); if (shown.tutHide !== hide) { shown.tutHide = hide; tutEl.hidden = hide; }
+      if (shown.tutP9 !== isP9()) { shown.tutP9 = isP9(); tutEl.classList.toggle('lessons', !shown.tutP9); } }   // the street's lesson list: a peek at a stage's start, or L (inside the club it goes: the boss bar and the card carry the fight)
     if (enc.boss) { bossFill.style.width = (Math.max(0, enc.boss.hp / enc.boss.maxHp * 100) * bossBarK).toFixed(1) + '%'; show('bname', bossNameEl, enc.boss.name.toUpperCase()); }
     const tgt = null;
     if (tgt && false) { show('tname', tNameEl, tgt.dead ? tgt.name + ' — down' : tgt.name); tFill.style.width = Math.max(0, tgt.hp / tgt.maxHp * 100).toFixed(0) + '%'; }

@@ -18,6 +18,8 @@
     <canvas id="stage-canvas" aria-label="Pixel fighter tutorial level. Learn to move, fight bare-handed, then pick up and use a katana, an axe, a shotgun and a machine gun, and finish on the club roof."></canvas>
     <canvas id="three-canvas" class="hidden" aria-hidden="true"></canvas>
     <div id="tut" class="tut" aria-live="polite"></div>
+    <div id="obj" class="obj" hidden><div class="obj-top"><span id="obj-stage"></span><span id="obj-n"></span></div><div class="obj-bar"><i id="obj-fill"></i></div>
+      <div class="obj-now" aria-live="polite"><b class="obj-verb"><span class="obj-check" aria-hidden="true"></span><span id="obj-verb"></span></b><span id="obj-how" class="obj-how"></span></div><span class="obj-gate">Finish this to go on</span></div>
     <div id="toast" class="toast" hidden></div>
     <div id="card" class="card" hidden aria-live="polite"></div>
     <div id="say" class="say" hidden aria-live="polite"></div>
@@ -107,7 +109,7 @@
     </div>
   </div>
 
-  <p class="hint devonly">A tutorial level, left to right. The panel on the game view shows each lesson and ticks it off when you do it. Walk into a weapon to pick it up. You carry one weapon. With empty hands you walk over a weapon to take it; with a weapon in hand you squat (↓) on another to swap, and the old one drops. Hold ↓ and press Q to throw your weapon; walk over it to take it back. Guns do not refill by themselves: enemies sometimes drop ammo boxes, and you walk over a box to load it. A fire escape zig-zags up the club building to its roof. Space rolls a long way along the ground (then a short wait); in the air it is a dash. Attacks cannot hit you while you roll. Drag a body part to throw the fighter, or click near the body or an object to hit it. Goons wait in each stage and hit back; the boss waits at the far end. R restarts the tutorial. Demo (M) plays the whole tutorial by itself; press any control to take over. F switches to a 12 fps sprite look.</p>
+  <p class="hint devonly">A tutorial level, left to right. The panel at the top of the game view shows one lesson at a time and ticks it off when you do it; L shows the stage's whole list. Walk into a weapon to pick it up. You carry one weapon. With empty hands you walk over a weapon to take it; with a weapon in hand you squat (↓) on another to swap, and the old one drops. Hold ↓ and press Q to throw your weapon; walk over it to take it back. Guns do not refill by themselves: enemies sometimes drop ammo boxes, and you walk over a box to load it. A fire escape zig-zags up the club building to its roof. Space rolls a long way along the ground (then a short wait); in the air it is a dash. Attacks cannot hit you while you roll. Drag a body part to throw the fighter, or click near the body or an object to hit it. Goons wait in each stage and hit back; the boss waits at the far end. R restarts the tutorial. Demo (M) plays the whole tutorial by itself; press any control to take over. F switches to a 12 fps sprite look.</p>
   </details>
 </div>
 
