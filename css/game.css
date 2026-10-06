@@ -80,6 +80,11 @@
   .hud, .bossbar, .target, .hud-weapon, .tut, .toast { font-family: var(--display) !important; text-shadow: 0 1px 0 #000, 0 0 3px #000; }
   .hud { position: absolute; top: 8px; left: 10px; display: flex; gap: 8px; align-items: center; font: 700 13px/1 var(--display); color: var(--text); pointer-events: none; }
   .hud-label { letter-spacing: .08em; }
+  /* second winds: a lit diamond for each one left, a dark one for each spent */
+  .wind { display: flex; gap: 5px; align-items: center; padding-left: 2px; }
+  .wind i { width: 8px; height: 8px; transform: rotate(45deg); background: #2a1a26; border: 1px solid var(--line); box-shadow: 0 0 0 1px #000; }
+  .wind i.on { background: var(--accent); border-color: #fff3d6; }
+  .wind b { font: 500 11px/1 var(--mono, monospace); color: var(--ko); letter-spacing: .06em; }
   .hud-weapon { position: absolute; left: 10px; bottom: 8px; display: flex; align-items: center; gap: 8px; pointer-events: none; font: 700 15px/1 var(--display); color: var(--text); letter-spacing: .06em; }
   .hud-weapon .wtext { display: flex; flex-direction: column; gap: 4px; }
   .pocket { display: flex; gap: 3px; margin-top: 2px; }
