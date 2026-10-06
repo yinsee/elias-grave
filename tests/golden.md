@@ -13,9 +13,9 @@ A step that changes behaviour on purpose records new hashes here, with the reaso
 | `index.html?autotest=demo&frames=1200&view3d` | `97d2d0dc` | `99d61b63` | `d39d8e05` | 3D view: the same state hash as 2D |
 | `index.html?autotest=boss&frames=1800&view3d` | `a349580f` | `8bbe397b` | `d2ddfe0a` | 3D view: the same state hash as 2D |
 
-Merged main (7cff000), two runs each in headless Chrome, the same hashes both times. The demo state is the combat rework's (`97d2d0dc`):
-in this run no wave goon walks in from off screen while the fight camera differs. The boss run's state changed (`a349580f`): with the
-combat rework's demo the fight camera now moves `cam.x` before the off-screen spawn. The 2D buf hashes see the rim light; the 3D demo
+Merged main (7cff000), two runs each in headless Chrome, the same hashes both times. The demo state is the combat rework's (`97d2d0dc`).
+The boss run's state changed (`a349580f`); the only sim line that reads the camera is the off-screen wave spawn (see the feedback-layer
+notes below), so the fight camera is the likely cause (not traced step by step). The 2D buf hashes see the rim light; the 3D demo
 keeps its buf and l3, and the 3D boss buf and l3 follow the boss run's new state.
 
 ### The feedback layer on its own branch (base acc7610, before the combat rework)
