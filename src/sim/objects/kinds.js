@@ -21,3 +21,5 @@ export const KINDS = {
 export const LIFTABLE = new Set(['crate', 'bin', 'bag', 'chair', 'cone', 'barrel', 'bigcrate']);
 export const TOSS = { can: { dmg: 10, power: 120, v: 230, up: 70, spin: 22 }, bottle: { dmg: 14, power: 150, v: 220, up: 80, spin: 18 }, knife: { dmg: 20, power: 170, v: 320, up: 20, spin: 0 } };
 export const FLOOR_BREAK = new Set(['crate', 'bigcrate', 'stack', 'bin', 'cone', 'chair', 'barrel', 'bag', 'can', 'bottle', 'knife', 'ball']), PUSH_BREAK = 64;   // (every object)
+// small things a walk or a run kicks along: they skitter and roll on (no PUSH_BREAK); a hard knock or a goon still breaks them
+export const KICKS = new Set(['can', 'bottle', 'ball', 'cone']);

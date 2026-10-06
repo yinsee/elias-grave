@@ -3,7 +3,7 @@ import { C, eShade } from './core/color.js';
 import { rng } from './core/rng.js';
 import { WEAPONS } from './sim/weapons/defs.js';
 import { LOOT, STREET_DROPS } from './sim/weapons/drops.js';
-import { KINDS, LIFTABLE, TOSS, FLOOR_BREAK, PUSH_BREAK } from './sim/objects/kinds.js';
+import { KINDS, LIFTABLE, TOSS, FLOOR_BREAK, PUSH_BREAK, KICKS } from './sim/objects/kinds.js';
 import { EPAL, BUILD, LOOK, ROLE, ZROLES, AROLES, AMIX, ETYPE, STOCKY_POISE } from './sim/enemies/roster.js';
 import { DIFFS } from './core/difficulty.js';
 import { PAL } from './assets/palettes/base.js';
@@ -1320,7 +1320,7 @@ import * as P9 from './levels/pier9.js';
     for (const o of objs) {
       if (!FLOOR_BREAK.has(o.kind) || o.carried) continue;
       const sp = Math.abs(o.vx);
-      if (sp > 12 && Math.abs(o.vy) < 1 && !(o.ethrown > 0)) { o.pushD = (o.pushD || 0) + sp * dt; if (o.pushD > PUSH_BREAK) brk.add(o); }   // sliding along the ground (a kicked barrel rolls on)
+      if (sp > 12 && Math.abs(o.vy) < 1 && !(o.ethrown > 0) && !KICKS.has(o.kind)) { o.pushD = (o.pushD || 0) + sp * dt; if (o.pushD > PUSH_BREAK) brk.add(o); }   // sliding along the ground (a kicked barrel rolls on)
       else if (sp < 3) o.pushD = 0;
       if (Math.hypot(o.vx, o.vy) > 70 && !(o.thrown > 0) && !(o.ethrown > 0) && !o.crowd && !brk.has(o)) for (const e of enemies) {   // knocked into a goon: he goes down
         if (e.dead || e.down || e.clinch || e.fin || !e.J || offPlat(o, e.lane)) continue;
@@ -4646,7 +4646,7 @@ import * as P9 from './levels/pier9.js';
   const AMMO_TASKS = new Set(['fire3', 'runfire', 'ammo', 'burst', 'airfire']);   // these need rounds
   const GOON_TASKS = new Set(['bash', 'pockethit', 'kw', 'kh', 'aw', 'ah', 'throwhit', 'block', 'parry', 'pdodge', 'counter', 'ender', 'grab', 'gthrow', 'slam', 'focus', 'finisher']);   // these need a goon in reach
   const FIGHT_TASKS = new Set(['block', 'parry', 'pdodge', 'counter', 'ender', 'grab', 'gthrow', 'slam', 'focus', 'finisher']);   // learned on the stage's goons: they do not hold the goons back
-  const PROP_TASKS = { smash: ['crate', 'bigcrate'], split: ['stack'], lift: [...LIFTABLE], toss: [...LIFTABLE], pocket: ['can', 'bottle'], pockethit: ['can', 'bottle'] };
+  const PROP_TASKS = { smash: ['crate', 'bigcrate'], split: ['stack'], lift: [...LIFTABLE], bash: [...LIFTABLE], toss: [...LIFTABLE], pocket: ['can', 'bottle'], pockethit: ['can', 'bottle'] };
   let gateT = 0;
   const stageDone = i => ZONES[i].tasks.every(([k]) => done.has(k));
   const openStage = () => { for (let i = 0; i < ZONES.length; i++) if (!stageDone(i)) return i; return ZONES.length - 1; };
