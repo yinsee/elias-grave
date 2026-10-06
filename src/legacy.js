@@ -8,9 +8,13 @@ import { DIFFS } from './core/difficulty.js';
 import { PAL } from './assets/palettes/base.js';
 import { mod, IDLE, GUARD, SQUAT, RISE, SITUP, PUSHUP, GU_T, fitPose, getupPose, K, AIR, teeterPose } from './sim/hero/poses.js';
 import { CLIMB, MOVES, keyAt, TRN, DASH, STOP, DEF } from './sim/hero/moves.js';
-import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './render2d/raster.js';
+import { initRaster, pickArt, figArt, plot, plotV, disc, seg, line1, withView } from './render2d/raster.js';
 import { bus } from './core/events.js';
 import { gameAudio } from './audio/game.js';
+import { createMusicDirector } from './audio/director.js';
+import { createStyleMeter } from './feedback/style.js';
+import { createDanger } from './feedback/danger.js';
+import { gradeRun, rankHtml, rankName } from './feedback/results.js';
 import { playPanels } from './cutscene/panels.js';
 import { playDialog } from './cutscene/dialog.js';
 import * as P9 from './levels/pier9.js';
@@ -3819,6 +3823,7 @@ import * as P9 from './levels/pier9.js';
     enc.introT = -1; bossBarK = 1; hookPull = false; p9.bossDlg = p9.dlgDone = false; cardEl.hidden = true; cardT = 0;   // a restart mid-entrance: no input lock left behind
     if (isP9()) p9Reset();
     setCkpt('start', 0, true); ckBoss = false; slowT = 0; blk.parryT = blk.lockT = 0; hstr.n = 0; hstr.t = -9; ctl.stepV = 0;
+    styleM.reset(); director.reset();
   }
 
   // ---------- tutorial: zones, lessons, weapon pickups ----------
@@ -3859,6 +3864,21 @@ import * as P9 from './levels/pier9.js';
   let tutZone = -1, tutDirty = true, toastT = 0;
   const toastQ = [], cleared = new Set(), pickToasted = new Set(), wavePend = new Set();
   let toastSoft = false, softT = -9;
+  // feedback (src/feedback, src/audio/director.js): the style meter, the low-HP heartbeat and vignette, the music director.
+  // They listen to the bus and get what they need in fbTick(); they never change the sim.
+  const styleM = createStyleMeter(bus, stage), danger = createDanger(gameAudio, stage, tutEl), director = createMusicDirector(gameAudio, bus);
+  function fbTick(rdt) {
+    const play = !flags.attract && !flags.demo && openT < 0 && !endPh, gdt = rdt * timeScale;
+    styleM.tick(gdt, play && !flags.wasted);
+    danger.tick(gdt, hero.hp / 100, play && !flags.wasted && hero.mode !== 'rag');
+    let hot = 0, near = 0;
+    for (const e of enemies) if (!e.dead && e !== enc.boss && Math.abs(e.x - ctl.x) < 320) { near++; if (e.aggro && !e.intro) hot++; }
+    director.tick(rdt, { active: play && !flags.wasted, boss: !!enc.boss, hot, near });
+    // the meter sits at the top right, under the lesson panel when that shows
+    const top = tutEl.hidden || !tutEl.offsetHeight ? tutEl.style.top || '8px' : `${tutEl.offsetTop + tutEl.offsetHeight + 6}px`;
+    if (styleM.el.style.top !== top) styleM.el.style.top = top;
+  }
+  if (MANUAL) window.__fb = { style: styleM, danger, director };   // (tests: read the meter, the heartbeat count and the music state)
   function tut(ev) { if (openT >= 0) return; if (TUTKEYS.has(ev) && !done.has(ev)) { done.add(ev); tutDirty = true; } }
   bus.on('feat', tut);   // a feat (roll, sweep, pick1 ...) ticks its lesson
   // UI listeners: toasts and the kill feed (DOM and UI state only)
@@ -3986,10 +4006,10 @@ import * as P9 from './levels/pier9.js';
     if (flags.attract) return;
     emit('run:over', { result: 'cleared' });
     const t = Math.round(runS.t), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
-    const rank = kos === 0 && runS.dmg < 60 ? 'S' : kos === 0 && runS.dmg < 160 ? 'A' : kos <= 2 ? 'B' : 'C';
+    const r = gradeRun('ch1', { t: runS.t, kills: runS.kills, maxRank: styleM.maxRank, dmg: runS.dmg, kos }, !flags.demo);
     resultsEl.innerHTML = `<h2>Club cleared</h2><dl><dt>Difficulty</dt><dd>${DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${runS.kills}</dd>`
-      + `<dt>Damage taken</dt><dd>${Math.round(runS.dmg)}</dd><dt>Knock-outs</dt><dd>${kos}</dd><dt>Lessons</dt><dd>${done.size} / ${TOTAL}</dd></dl>`
-      + `<div class="rank">Rank<b>${rank}</b></div><small>Enter: on to the story · R: play the tutorial again</small>`;
+      + `<dt>Top style</dt><dd>${rankName(styleM.maxRank)}</dd><dt>Damage taken</dt><dd>${Math.round(runS.dmg)}</dd><dt>Knock-outs</dt><dd>${kos}</dd><dt>Lessons</dt><dd>${done.size} / ${TOTAL}</dd></dl>`
+      + `${rankHtml(r)}<small>Enter: on to the story · R: play the tutorial again</small>`;
     resultsEl.hidden = false; toastEl.hidden = true; toastT = 0; toastQ.length = 0;
   }
   // knocked out with a second wind left: it is spent, he gets up with DIF().rise HP, and the fighters around him are thrown back so he is not hit again at once.
@@ -4022,7 +4042,7 @@ import * as P9 from './levels/pier9.js';
     runS.prevMode = hero.mode;
     if (enc.bossBeaten && endPh === null && !flags.wasted) { endPh = isP9() ? 'p9wait' : 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card (not after a Wicked K.O.)
     if (enc.bossBeaten && runS.endT < 0 && endPh === 'done' && !flags.wasted && !isP9()) runS.endT = 0.4;   // (Pier 9 shows its own card after the outro)
-    if (runS.endT > 0 && (runS.endT -= rdt) <= 0) showResults();
+    if (runS.endT > 0 && (runS.endT -= rdt) <= 0) { runS.endT = 0; showResults(); }   // (once: a negative endT would arm it again)
   }
   function tutTick(rdt) {
     if (cardT > 0 && (cardT -= rdt) <= 0) cardEl.hidden = true;
@@ -5136,6 +5156,46 @@ import * as P9 from './levels/pier9.js';
       }
     }
   }
+  // the 2D rim light, the 3D fighter shader's numbers (Three3D, shade 2): a fighter's edge pixels that face a light pool catch
+  // its colour, in two hard steps: the silhouette ring at full strength, the ring inside it at half. Facing = the edge normal
+  // (toward the empty neighbours) against the direction to the light, lifted out of the screen as the 3D one is (z 12).
+  const RIM = { k: 0.35, z: 12 };
+  let rimE = new Uint8Array(0);
+  function rimPass() {
+    const M = figArt.mask, x0 = Math.max(1, figArt.x0), x1 = Math.min(cam.vw - 2, figArt.x1), y0 = Math.max(1, figArt.y0), y1 = Math.min(cam.vh - 2, figArt.y1);
+    if (figArt.x1 < 0) return;
+    const ls = lightList()[3], bw = x1 - x0 + 1, bh = y1 - y0 + 1;
+    if (bw > 0 && bh > 0) {
+      if (rimE.length < bw * bh) rimE = new Uint8Array(bw * bh);
+      const E = rimE; E.fill(0, 0, bw * bh);
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {   // 2 = the silhouette ring, 1 = the ring inside it
+        const i = y * CW + x; if (!M[i]) continue;
+        if (!M[i - 1] || !M[i + 1] || !M[i - CW] || !M[i + CW]) E[(y - y0) * bw + x - x0] = 2;
+      }
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const j = (y - y0) * bw + x - x0; if (E[j] || !M[y * CW + x]) continue;
+        if ((x > x0 && E[j - 1] === 2) || (x < x1 && E[j + 1] === 2) || (y > y0 && E[j - bw] === 2) || (y < y1 && E[j + bw] === 2)) E[j] = 1;
+      }
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const f = E[(y - y0) * bw + x - x0]; if (!f) continue;
+        let nx = 0, ny = 0;   // the edge normal: toward the empty pixels around it (the inner ring takes its outer neighbours' side)
+        for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) if ((dx || dy) && !M[(y + dy) * CW + x + dx]) { nx += dx; ny += dy; }
+        const nl = Math.hypot(nx, ny); if (!nl) continue;
+        nx /= nl; ny /= nl;
+        let r = 0, g = 0, b = 0;
+        for (let k = 0; k < ls.length; k++) {
+          const q = ls[k], dx = q[0] - x, dy = q[1] - y, d2 = dx * dx + dy * dy; if (d2 >= q[2]) continue;
+          const dl = Math.hypot(dx, dy, RIM.z), w = (1 - d2 / q[2]) * Math.max(0, (nx * dx + ny * dy) / dl);
+          r += q[3] * w; g += q[4] * w; b += q[5] * w;
+        }
+        if (r + g + b < 0.02) continue;
+        const s = RIM.k * 255 * (f === 2 ? 1 : 0.5), i = y * CW + x, c = buf[i];
+        buf[i] = (255 << 24 | Math.min(255, (c >> 16 & 255) + b * s) << 16 | Math.min(255, (c >> 8 & 255) + g * s) << 8 | Math.min(255, (c & 255) + r * s)) >>> 0;
+      }
+    }
+    for (let y = Math.max(0, figArt.y0); y <= Math.min(cam.vh - 1, figArt.y1); y++) M.fill(0, y * CW + Math.max(0, figArt.x0), y * CW + Math.min(cam.vw - 1, figArt.x1) + 1);
+    figArt.x0 = figArt.y0 = 1e9; figArt.x1 = figArt.y1 = -1;
+  }
   // the scene's light: an ambient tint, and pools [x, y (view), radius², r, g, b weights, glow] from lamps, lit windows, signs, club spots
   function lightList() {
     if (isP9()) return p9Lights();
@@ -5256,10 +5316,10 @@ import * as P9 from './levels/pier9.js';
       drawThrown(L); drawBoards(L);
       for (const o of objs) if (objLane(o) === L) { pickArt.on = !!o.pocket && !o.carried; drawObj(o); pickArt.on = false; }
       if (ctl.lane === L) drawShadow();
-      drawEnemies(L);
+      figArt.on = true; drawEnemies(L); figArt.on = false;
       if (L === LANE.FIGHT) drawEShots();
       if (L === LANE.FRONT) drawDog();
-      if (ctl.lane === L) { drawCharacter(look, face); drawBottle(); }
+      if (ctl.lane === L) { figArt.on = true; drawCharacter(look, face); figArt.on = false; drawBottle(); }
       if (L === LANE.FRONT) drawDogHeart();
       if (L === LANE.PLAT) drawStairRails();   // the fire escape's outer rail: in front of anyone on the stairs, behind the street
     }
@@ -5268,6 +5328,7 @@ import * as P9 from './levels/pier9.js';
     if (!flags.club) glassReflect();
     drawGroundFx();
     lightPass();
+    rimPass();
     reflectPass();
     pickGlow();   // over the lit scene: the pickables stand out
     drawBeams();
@@ -5420,7 +5481,11 @@ import * as P9 from './levels/pier9.js';
     // follow the fighter, but slide so the whole fight stays in view (worked out for the view centre)
     let tx = P[2].x + look, ty = P[2].y + 17 - cam.vh * 0.22;   // his feet about 72 % of the way down the view: more street and roofs, less sky
     const bx = sceneBox();
-    tx = bx.x1 - bx.x0 <= cam.vw - 16 ? clamp(tx, bx.x1 - cam.vw / 2 + 8, bx.x0 + cam.vw / 2 - 8) : (bx.x0 + bx.x1) / 2;
+    if (bx.x1 - bx.x0 > 52) {   // a fight: frame its middle (leaning to the hero), and keep him within 30 % of the view width of the centre
+      const m = cam.vw * 0.3; tx = lerp(P[2].x, (bx.x0 + bx.x1) / 2, 0.65);   // (the old slide-to-fit put him 8 px from the edge, the boss at the other)
+      if (bx.x1 - bx.x0 <= cam.vw - 16) tx = clamp(tx, bx.x1 - cam.vw / 2 + 8, bx.x0 + cam.vw / 2 - 8);
+      tx = clamp(tx, P[2].x - m, P[2].x + m);
+    } else tx = bx.x1 - bx.x0 <= cam.vw - 16 ? clamp(tx, bx.x1 - cam.vw / 2 + 8, bx.x0 + cam.vw / 2 - 8) : (bx.x0 + bx.x1) / 2;
     if (isP9() && enc.boss && enc.boss.intro) tx = enc.boss.x - 24;   // Pier 9: the entrance frames him as he walks out of the cold store
     ty = bx.y1 - bx.y0 <= cam.vh - 10 ? clamp(ty, bx.y1 - cam.vh / 2 + 5, bx.y0 + cam.vh / 2 - 5) : (bx.y0 + bx.y1) / 2;
     let cx = smoothDamp(cx0, tx, cam.v, 'x', 0.32, rdt), cy = smoothDamp(cy0, ty, cam.v, 'y', 0.4, rdt);
@@ -5461,7 +5526,7 @@ import * as P9 from './levels/pier9.js';
   //    puddles and blood pools), blended the way glassReflect() and reflectPass() blend them
   // three.js X = world x, Y = -world y, Z = depth toward the camera (0 = the fight lane).
   // ZF: the wall; ZS: the street's front edge; STAIR, GOAL: how far the fire escape and the roof balcony stand out of the wall (the fight lane is z = 0)
-  const T3 = { ZF: -34, ZS: 34, STAIR: 14, GOAL: 12, FOV: 20, PITCH: 16 * Math.PI / 180, PIX: 1, NL: 16 };
+  const T3 = { ZF: -34, ZS: 34, STAIR: 14, GOAL: 12, FOV: 20, PITCH: 16 * Math.PI / 180, PIX: 1, NL: 16, HEAD_YAW: 25 * Math.PI / 180 };   // HEAD_YAW: heads turn this far toward the camera
   const T3_GROUND = GROUND - 0.5;   // the street surface (feet stand on it)
   // Pier 9's 3D-only numbers: the bollards (as pier9.js paints them), the depth of the conveyor rail and the hall lamps, the chain colour
   const T3P9 = { BOLL: [30, 220, 300, 560, 1150, 1850, 2060], RZ: -8, LZ: -12, CHAIN: C('#4a4a52') };
@@ -6881,7 +6946,8 @@ import * as P9 from './levels/pier9.js';
       if (h.key !== key) { h.mesh.geometry.dispose(); h.mesh.geometry = build(); h.key = key; }
       const [dx, dy] = norm(nk.x - hd.x, nk.y - hd.y);
       h.mesh.position.set(hd.x, -hd.y, this.bz);
-      h.mesh.rotation.set(0, 0, Math.atan2(-dy, dx) + Math.PI / 2);
+      const roll = Math.atan2(-dy, dx) + Math.PI / 2;
+      h.mesh.rotation.set(0, -T3.HEAD_YAW * face * Math.cos(roll), roll);   // the face turns toward the camera (+z), less as the head tips over
       h.mesh.scale.set(face, 1, 1);
       h.mesh.visible = true; h.used = true;
     },
@@ -8112,8 +8178,9 @@ import * as P9 from './levels/pier9.js';
     endPh = 'done';
     emit('run:over', { result: 'cleared' });
     const t = Math.round(runS.t), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
+    const r = gradeRun('ch2', { t: runS.t, kills: runS.kills, maxRank: styleM.maxRank, dmg: runS.dmg, kos }, !flags.demo);
     resultsEl.innerHTML = `<h2>Pier 9 cleared</h2><dl><dt>Difficulty</dt><dd>${DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${runS.kills}</dd>`
-      + `<dt>Knock-outs</dt><dd>${kos}</dd></dl><small>Enter: back to the menu</small>`;
+      + `<dt>Top style</dt><dd>${rankName(styleM.maxRank)}</dd><dt>Damage taken</dt><dd>${Math.round(runS.dmg)}</dd><dt>Knock-outs</dt><dd>${kos}</dd></dl>${rankHtml(r)}<small>Enter: back to the menu</small>`;
     resultsEl.hidden = false; toastEl.hidden = true;
   }
   // cutscenes: the comic-panel and dialog players over the stage; the game waits (frame() does nothing) while one plays
@@ -8421,6 +8488,7 @@ import * as P9 from './levels/pier9.js';
     objTick(rdt);
     { const hide = isP9() ? !!endPh : objEl.hidden || !(obj.list || obj.peekT > 0); if (shown.tutHide !== hide) { shown.tutHide = hide; tutEl.hidden = hide; }
       if (shown.tutP9 !== isP9()) { shown.tutP9 = isP9(); tutEl.classList.toggle('lessons', !shown.tutP9); } }   // the street's lesson list: a peek at a stage's start, or L (inside the club it goes: the boss bar and the card carry the fight)
+    fbTick(rdt);
     if (enc.boss) { bossFill.style.width = (Math.max(0, enc.boss.hp / enc.boss.maxHp * 100) * bossBarK).toFixed(1) + '%'; show('bname', bossNameEl, enc.boss.name.toUpperCase()); }
     const tgt = null;
     if (tgt && false) { show('tname', tNameEl, tgt.dead ? tgt.name + ' — down' : tgt.name); tFill.style.width = Math.max(0, tgt.hp / tgt.maxHp * 100).toFixed(0) + '%'; }

@@ -78,6 +78,7 @@ function startWanted() {
 export const gameAudio = {
   get ctx() { return rt ? rt.ctx : null; },
   get unlocked() { return !!rt && rt.ctx.state === 'running'; },
+  get runtime() { return rt; },   // the audio.js runtime (null before the unlock): the music director shapes its music layer
   // panOf(x): a world x to a pan -1..1 (the game passes its camera)
   configure(opts = {}) { if (opts.panOf) panOf = opts.panOf; if (opts.volume != null) gameAudio.setVolume(opts.volume); },
   // call on a user gesture; safe to call often
