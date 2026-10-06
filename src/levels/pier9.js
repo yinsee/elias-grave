@@ -39,36 +39,66 @@ export const CONVEYOR_Y = hy(170);         // the rail
 export const TUNA = { top: hy(78), bottom: hy(34) };
 export const HOOK_COVER = [[2553, 2577, hy(27)], [2612, 2648, hy(32)]];   // hall props tall enough to stop Marchetti's hook (the 3-high fish crates, the podium): [x0, x1, top]   // a hanging tuna in the swing lane: crouch top (y 252) passes under 246
 
-export const SALT_LOOKS = {   // Saltmen outfits (src/sim/enemies/roster.js LOOK format, plus hat / boots / apron)
-  oilskin: { build: 'tall', top: 'coat', hair: ['souwester'], beards: ['full', 'stubble', 'stache', 'chin'], cols: [['#d8b02a', '#a8841c'], ['#cfa024', '#9c7618']], pants: ['#2e3038'], boots: '#17171c', hat: '#e0b828' },
+export const SALT_LOOKS = {   // Saltmen outfits (src/sim/enemies/roster.js LOOK format, plus hat / boots / apron / gear); each variant has its own shape and colour
+  oilskin: { build: 'tall', top: 'coat', hair: ['souwester'], beards: ['full', 'stubble', 'stache', 'chin'], cols: [['#d8b02a', '#a8841c'], ['#cfa024', '#9c7618']], pants: ['#2e3038'], boots: '#17171c', hat: '#e0b828', gear: 'rope' },   // a rope coil on the shoulder
+  slicker: { build: 'tall', top: 'coat', hair: ['cap'], beards: ['full', 'stubble', 'chin'], cols: [['#c8582a', '#94401c']], pants: ['#2e3038'], boots: '#17171c', hairC: '#3a3a40' },   // the gaffer: an orange slicker, a knit cap
   waders: { build: 'stocky', top: 'jacket', hair: ['cap'], beards: ['full', 'stubble', 'chin'], cols: [['#5a6268', '#444a50'], ['#4e5a52', '#3a443e']], pants: ['#4a5236'], boots: '#202418' },
   apron: { build: 'lean', top: 'vest', hair: ['souwester', 'short'], beards: ['stubble', 'goatee', 'stache'], cols: [['#d8d4c8', '#aaa69a']], pants: ['#c8a02a'], boots: '#17171c', hat: '#d0a824' },
   jersey: { build: 'lean', top: 'jacket', hair: ['cap'], beards: ['full', 'stubble', 'chin'], cols: [['#2a3450', '#1e2640']], pants: ['#3e3e4e'], boots: '#17171c' },
-  storeman: { build: 'tall', top: 'coat', hair: ['short'], beards: ['stache', 'goatee'], cols: [['#6a4a2e', '#4e3622']], pants: ['#30303c'] },
+  storeman: { build: 'tall', top: 'coat', hair: ['short'], beards: ['stache', 'goatee'], cols: [['#6a4a2e', '#4e3622']], pants: ['#30303c'], gear: 'clip' },   // a clipboard in the off hand
+  bulwark: { build: 'stocky', top: 'jacket', hair: ['souwester'], beards: ['full', 'chin'], cols: [['#2c3038', '#1e2228']], pants: ['#2a2c34'], boots: '#141418', hat: '#6a7078' },   // black rubber, a steel helmet, the hatch-lid shield
+  bosun: { build: 'buff', top: 'coat', hair: ['bald'], beards: ['huge'], cols: [['#d8b02a', '#a8841c']], pants: ['#3a3e4a'], boots: '#17171c', hairC: '#a8a49a', gear: 'chain' },   // an open oilskin, a grey beard, a chain on the forearm
   marchetti: { build: 'buff', top: 'tank', hair: ['bald'], beards: ['stubble'], cols: [['#d4ccb4', '#aaa28c']], pants: ['#24242c'], boots: '#141418', apron: '#bdb8aa', neck: true },
 };
-// variant -> base role (src/sim/enemies/roster.js ROLE) and look; `R` overrides the role's weapon data
+// variant -> base role (src/sim/enemies/roster.js ROLE) and look; `R` overrides the role's weapon data. type: the name the kill feed
+// shows; weapon: what he carries (drops). The rest are behaviour rows (docs/levels/01-pier9.md 4); each needs a different answer:
+//   props: lifts a crate, bin or barrel near him and throws it (near = the range he throws from) -> close in, or bat it back
+//   heavy: more overhead chops; low: share of his strings that open with a low stab -> block low (hold down with E) or jump
+//   gaff: the gaff pull (range px, windup s, v = hook px/s, pull px/s, cd s, miss = recovery s after a miss, chop = follow-up dmg) -> dodge through it
+//   clip / reload: shots before a reload, the reload window (s); max = alive at once -> rush him while he reloads
+//   shield: blows from the front ring off (turn = s he needs to turn round) -> get behind him, sweep him, throw something, or parry his bash
 export const SALTMEN = {
-  deckhand: { role: 'brawler', look: 'oilskin' },
-  pipeman: { role: 'pipe', look: 'waders' },
-  filleter: { role: 'knife', look: 'apron' },
-  gaffer: { role: 'machete', look: 'oilskin', R: { w: 'gaff', len: 12, reach: 25 } },
-  hookthrower: { role: 'thrower', look: 'jersey' },
-  tallyman: { role: 'pistol', look: 'storeman' },
+  deckhand: { role: 'brawler', look: 'oilskin', type: 'Deckhand', weapon: null, hpK: 1.1, props: { near: [40, 110], seek: 70, cd: 6, aim: 0.45 } },
+  pipeman: { role: 'pipe', look: 'waders', type: 'Pipeman', weapon: 'pipe', heavy: 0.4 },
+  filleter: { role: 'knife', look: 'apron', type: 'Filleter', weapon: 'knife', hpK: 0.9, low: 0.35 },
+  gaffer: { role: 'machete', look: 'slicker', type: 'Gaffer', weapon: 'gaff', R: { w: 'gaff', len: 12, reach: 25 },
+    gaff: { range: 64, windup: 0.35, v: 300, pull: 230, cd: [3.5, 6], miss: 0.8, chop: 11 } },
+  hookthrower: { role: 'thrower', look: 'jersey', type: 'Hookthrower', weapon: 'tknife' },
+  tallyman: { role: 'pistol', look: 'storeman', type: 'Tallyman', weapon: 'pistol', clip: 2, reload: 1.4, gap: 0.55, max: 2 },
+  bulwark: { role: 'shield', look: 'bulwark', type: 'Bulwark', weapon: 'shield', shield: { turn: 0.7 } },
+  bosun: { role: 'machete', look: 'bosun', type: 'Bosun', weapon: 'gaff', R: { w: 'gaff', len: 13, reach: 27 }, elite: 'bosun',
+    gaff: { range: 76, windup: 0.4, v: 330, pull: 250, cd: [4, 7], miss: 1.0, chop: 14 } },
 };
-// waves: trigger x, spawn sources, the roster by difficulty (E, M, H, W); `then` follows when half of this wave is down
+export const SALT_NAMES = ['Olsen', 'Kerr', 'Le Goff', 'Morvan', 'Tully', 'Brack', 'Haugen', 'Quinn', 'Pell', 'Skov', 'Dunne', 'Varg', 'Kell', 'Strand', 'Moan', 'Riou', 'Lind', 'Abbot', 'Hale', 'Kerrigan'];
+// Haak "the Bosun" (the elite of beat 7): his own stats by difficulty and his moves. His poise shrugs off light hits; his guard stops
+// every blow from the front but a combo ender (or a counter after a parry); he grabs a hero who turtles behind a block.
+export const BOSUN = {
+  name: 'Haak the Bosun', hp: [150, 175, 200, 230], poise: 18, speed: 26, dmg: 12, heavyDmg: 16, windup: 0.32, cd: [1.0, 1.8],
+  combos: [['chop'], ['slash', 'chop'], ['hchop'], ['chop', 'hchop']],
+  sweep: { windup: 0.5, r: 32, dmg: 14, rewrap: 1.0, cd: [5, 8] },   // the chain spins overhead, then sweeps all round: jump it, roll it or back off; 1 s to re-wrap it
+  kick: { r: 30, v: 230, cd: [6, 9] },                               // a barrel at his feet, kicked rolling at the hero
+  grab: { windup: 0.3, reach: 16, hold: 0.5, dmg: 16, cd: 4 },       // a red tell (no block stops it): dodge it, or hit him in the wind-up
+  guard: 0.6,                                                         // s his guard stays up after a read
+};
+// waves: trigger x, spawn sources, the roster by difficulty (E, M, H, W); `then` follows when half of this wave is down;
+// `after`: waits until that wave is all down (and the hero is past `at`); `half`: comes once that variant is under half health.
+// Each wave's first variant is its 'teacher' (the new one): it comes out first, nearest the hero.
 export const WAVES = [
   { id: 'w1', at: 280, from: [{ kind: 'door', x: 700 }, { kind: 'door', x: 980 }, { kind: 'fog', x: 1 }],
     roster: [['deckhand', 'filleter', 'deckhand', 'pipeman'], ['deckhand', 'filleter', 'pipeman', 'deckhand', 'pipeman', 'gaffer'],
       ['deckhand', 'filleter', 'pipeman', 'deckhand', 'pipeman', 'gaffer', 'filleter'], ['deckhand', 'filleter', 'pipeman', 'deckhand', 'pipeman', 'gaffer', 'filleter', 'gaffer']] },
   { id: 'w2', at: 1150, from: [{ kind: 'cdoor', x: 1291 }, { kind: 'cdoor', x: 1351 }, { kind: 'cdoor', x: 1661 }],
-    roster: [['deckhand', 'pipeman'], ['deckhand', 'pipeman', 'gaffer'], ['gaffer', 'pipeman', 'deckhand'], ['gaffer', 'pipeman', 'deckhand', 'gaffer']],
+    roster: [['deckhand', 'pipeman'], ['gaffer', 'deckhand', 'pipeman'], ['gaffer', 'pipeman', 'deckhand'], ['gaffer', 'pipeman', 'deckhand', 'gaffer']],
     then: 'w2b' },
   { id: 'w2b', perch: true, from: [{ kind: 'top', x: 1556, y: hy(171) }, { kind: 'top', x: 1720, y: hy(114) }, { kind: 'cdoor', x: 1661 }],
-    roster: [['hookthrower'], ['hookthrower', 'tallyman'], ['hookthrower', 'tallyman', 'filleter'], ['hookthrower', 'tallyman', 'filleter']] },
-  { id: 'w3', at: 1860, from: [{ kind: 'cdoor', x: 1892 }, { kind: 'door', x: 2160 }, { kind: 'fog', x: 1 }],
-    roster: [['filleter', 'gaffer', 'deckhand'], ['filleter', 'gaffer', 'deckhand', 'hookthrower'], ['filleter', 'gaffer', 'deckhand', 'hookthrower', 'pipeman'],
-      ['filleter', 'gaffer', 'deckhand', 'hookthrower', 'pipeman', 'gaffer']] },
+    roster: [['hookthrower'], ['tallyman', 'hookthrower'], ['tallyman', 'hookthrower', 'filleter'], ['tallyman', 'hookthrower', 'filleter', 'tallyman']] },
+  { id: 'w3', at: 1860, from: [{ kind: 'fog', x: 1 }, { kind: 'door', x: 2160 }, { kind: 'cdoor', x: 1892 }],
+    roster: [['bulwark', 'deckhand', 'filleter'], ['bulwark', 'deckhand', 'filleter', 'gaffer'], ['bulwark', 'deckhand', 'filleter', 'hookthrower', 'gaffer'],
+      ['bulwark', 'deckhand', 'filleter', 'hookthrower', 'gaffer', 'bulwark']] },
+  { id: 'wb', at: 2150, after: 'w3', from: [{ kind: 'shutter', x: 2381 }, { kind: 'door', x: 2160 }, { kind: 'fog', x: 1 }],
+    roster: [['bosun'], ['bosun', 'deckhand'], ['bosun', 'deckhand', 'deckhand'], ['bosun', 'deckhand', 'deckhand']] },
+  { id: 'wb2', half: 'bosun', from: [{ kind: 'door', x: 2160 }, { kind: 'fog', x: 1 }, { kind: 'fogL', x: 1 }],
+    roster: [['filleter'], ['gaffer'], ['filleter', 'gaffer'], ['filleter', 'gaffer', 'deckhand']] },
 ];
 // Sal "the Scale" Marchetti (docs/levels/01-pier9.md 5): stats per difficulty, his moves' numbers
 export const MARCHETTI = {
