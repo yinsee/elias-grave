@@ -8,6 +8,20 @@ A step that changes behaviour on purpose records new hashes here, with the reaso
 
 TABLE_TBD
 
+### Street blood, no stain in the air (branch fix-street-blood)
+
+| URL | state | buf | l3 | note |
+|---|---|---|---|---|
+| `index.html?autotest=demo&frames=1200` | `af279324` | `090f291a` | | 2D: unchanged from the base (6f4ca49) |
+| `index.html?autotest=boss&frames=1800` | `c82a5697` | `dde6bb4b` | | 2D (base: `8b84e8d9` / `ac6bdd37`) |
+| `index.html?autotest=demo&frames=1200&view3d` | `af279324` | `428e93fc` | `cddbc172` | 3D: unchanged from the base |
+| `index.html?autotest=boss&frames=1800&view3d` | `c82a5697` | `7781e9d5` | `6c05fb48` | 3D (base buf `bd80b093`, l3 `6035917a`); state = 2D |
+
+Two runs each in headless Chrome, each pair matched; 2D state = 3D state. The demo is unchanged (no blood reaches a ledge, a prop
+behind a wall drip, or the sky edge in it). The boss changes: a drop that lands on a ledge with no prop pixel under it, or a wall drip
+behind a prop, no longer calls `stain`/`gore`, so fewer `simRand` values are used and the random sequence shifts. The 3D buf also
+changes from the new gore sheets (per-part depth, sloped car glass, awnings).
+
 ### The drop rules on their branch (base acc7610)
 
 | URL | state | buf | l3 | note |

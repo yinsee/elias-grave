@@ -1508,7 +1508,7 @@ import * as P9 from './levels/pier9.js';
       const v = PROPS[i] && !flags.club ? vehAt(x) : -1;
       if (v >= 0) { if (VCAP[v] >= 12) return; VCAP[v]++; gore(i, BLOOD_D); return; }   // a vehicle: single pixels of the darkest blood, no runs, 12 at most
       if (flags.club && !PROPS[i]) { const ci = (y >> 4) * BCW + (x >> 4); if (BCAP[ci] >= 14) return; BCAP[ci]++; gore(i, BLOOD_D); return; }   // the club: a few dark spots
-      if (WALLM && !WALLM[i] && !WALLM[i + W]) { if (particles.length < 900) particles.push({ x: x + 0.5, y, vx: 0, vy: 10, life: 1.6, c: BLOOD[1], blood: true }); return; }   // open sky or sea: no wall to stick to, the drop falls
+      if (WALLM && !WALLM[i]) { if (particles.length < 900) particles.push({ x: x + 0.5, y, vx: 0, vy: 10, life: 1.6, c: BLOOD[1], blood: true }); return; }   // open sky or sea: no wall to stick to, the drop falls
       // walls, lamp posts and the scaffold: dark splashes, never bright paint; many run down to the street, leaving a light stain
       gore(i, simRand() < 0.5 ? BLOOD[1] : BLOOD_D);
       if (simRand() < 0.45 && drips.length < 900) drips.push({ x, y, a: 0, vol: 0.5 + simRand() * 0.9, wall: !PROPS[i] });
@@ -1557,8 +1557,8 @@ import * as P9 from './levels/pier9.js';
         const i0 = d.y * W + d.x, ny = d.y + 1;
         if (d.wall) {   // down the wall: a light stain where it ran, the wet drop below; at the foot of the wall it joins a pool in the street
           if (ny >= GROUND - 1) { stain(d.x, GROUND); d.vol = 0; break; }
-          if (WALLM && !WALLM[ny * W + d.x]) { gore(i0, STAIN_L); particles.push({ x: d.x + 0.5, y: d.y + 1, vx: 0, vy: 10, life: 1.6, c: BLOOD[1], blood: true }); d.vol = 0; break; }   // the wall ends: it drips off
-          gore(i0, STAIN_L); gore(ny * W + d.x, BLOOD[1]); d.y = ny; d.vol -= 0.012 * (1 - rain.k * 0.6);
+          if (WALLM && !WALLM[ny * W + d.x]) { if (!PROPS[i0]) gore(i0, STAIN_L); particles.push({ x: d.x + 0.5, y: d.y + 1, vx: 0, vy: 10, life: 1.6, c: BLOOD[1], blood: true }); d.vol = 0; break; }   // the wall ends: it drips off
+          if (!PROPS[i0]) gore(i0, STAIN_L); if (!PROPS[ny * W + d.x]) gore(ny * W + d.x, BLOOD[1]); d.y = ny; d.vol -= 0.012 * (1 - rain.k * 0.6);   // behind a car, the scaffold, the bar: it runs on unseen (no paint on the prop in front)
           if (d.vol <= 0) break;
           continue;
         }
@@ -6935,7 +6935,7 @@ import * as P9 from './levels/pier9.js';
       // Every block holds the platform lane (laneZ), so a body up on one stands inside its depth.
       const ZD = [28, 20, 16, 28, 30, 28, 16];   // PLATS 0-6 from the wall: sports car, corner bar, scaffold, saloon, van, pickup, scaffold
       const zone = new Int16Array(W * H).fill(-1), LIFT = new Uint8Array(W * H);
-      this.zones = []; this.zoneOf = zone;
+      this.zones = []; this.zoneOf = zone; this.awnG = [];
       this.frontZ = new Map([[GOAL, ZF + T3.GOAL]]);   // the front face of each platform's block: a climber hangs on it
       const mkZone = (z0, z1) => { this.zones.push({ z0, z1, x0: W, x1: -1, y0: H, y1: -1 }); return this.zones.length - 1; };
       // the fire escape: the landings take its whole depth; the flights alternate between a back and a front band, so a body
@@ -6977,16 +6977,20 @@ import * as P9 from './levels/pier9.js';
       // the facade's relief: cornices, fascias, pilasters, door steps and lanterns stand out of the wall; awnings slope out over the pavement
       for (const F of p9 ? this.p9Feat() : FEAT) {
         if (F.awn) {
-          const w = F.x1 - F.x0 + 1, h = F.y1 - F.y0 + 1, px = new Uint32Array(w * h);
+          const w = F.x1 - F.x0 + 1, h = F.y1 - F.y0 + 1, px = new Uint32Array(w * h), ix = [];
           for (let k = 0; k < h; k++) for (let x = F.xs(k); x <= F.x1; x++) {   // its own stripes (the shop window's top is painted over them in 2D)
             const c = F.col(x, k), i = (F.y0 + k) * W + x; px[k * w + x - F.x0] = c;
-            if (stat[i] === c && !LIFT[i]) LIFT[i] = 1;
+            if (stat[i] === c && !LIFT[i]) { LIFT[i] = 1; ix.push(i); }
           }
           const g = new THREE.BufferGeometry(), z1 = ZF + F.awn, n = new THREE.Vector3(0, F.awn, h).normalize();
           g.setAttribute('position', new THREE.Float32BufferAttribute([F.x0, -F.y0, ZF, F.x0 + w, -F.y0, ZF, F.x0, -(F.y0 + h), z1, F.x0 + w, -(F.y0 + h), z1], 3));
           g.setAttribute('normal', new THREE.Float32BufferAttribute([0, n.y, n.z, 0, n.y, n.z, 0, n.y, n.z, 0, n.y, n.z], 3));
           g.setAttribute('uv', new THREE.Float32BufferAttribute([0, 0, 1, 0, 0, 1, 1, 1], 2)); g.setIndex([0, 2, 1, 1, 2, 3]);
           add(new THREE.Mesh(g, t3mat({ map: t3tex(px, w, h), alphaTest: 0.5, side: THREE.DoubleSide }, 1)), 0, 1, 2);
+          // the blood on it, a hair off its face (the 2D view paints it on the awning; the wall sheet leaves these pixels out)
+          const gd = new Uint32Array(w * h), gt = t3tex(gd, w, h);
+          add(new THREE.Mesh(g.clone().translate(0, n.y * 0.15, n.z * 0.15), t3mat({ map: gt, alphaTest: 0.5 }, 0)));
+          this.awnG.push({ x0: F.x0, x1: F.x1, sheets: [{ g: gd, tex: gt, wi: Int32Array.from(ix), ti: Int32Array.from(ix, i => ((i / W | 0) - F.y0) * w + i % W - F.x0) }] });
           continue;
         }
         const id = mkZone(ZF, ZF + F.d), Z = this.zones[id];
@@ -7036,14 +7040,41 @@ import * as P9 from './levels/pier9.js';
           const k2 = PLATS.findIndex((s, n) => n < ZD.length && s.x0 <= Z.x1 && s.x1 >= Z.x0 && !VPARTS.some(v => (v.car || v.bed) && s.x0 >= v.x0 - 3 && s.x1 <= v.x1 + 3));
           if (k2 >= 0) { ZR = { ...Z, z1: ZF + ZD[k2] }; this.frontZ.set(PLATS[k2], ZR.z1); }
         }
+        const PP = Z.custom ? [] : parts(ZR, px, w, h);
         if (Z.custom) Z.custom(px, w, h, Z, add, propMat);   // (Pier 9: a model of its own, built from the block's pixels)
-        else for (const P of parts(ZR, px, w, h)) {
+        else for (const P of PP) {
           if (!P.px.some(Boolean)) continue;
           const m = add(new THREE.Mesh(t3voxels(P.px, w, h, 0, 0, P.d, !!Z.skin), propMat), 0, 1, 2);
           m.position.set(Z.x0, -Z.y0, P.z);
         }
-        Z.w = w; Z.h = h; Z.gore = new Uint32Array(w * h); Z.tex = t3tex(Z.gore, w, h);
-        add(new THREE.Mesh(t3quad(Z.x0, Z.y0, Z.x0 + w, Z.y0 + h, Z.z1 + 0.1, 0, 0, 1, 1), t3mat({ map: Z.tex, alphaTest: 0.5 }, 0)));
+        // the blood on this block lies on the face each pixel has in 3D: the front of the part it is in (a scaffold's upper poles
+        // are at its back; a bar beside a car is shallower than the car); a car's glass slopes in to the roof (one sheet per depth)
+        const fz = new Float32Array(w * h).fill(Z.custom ? Z.z1 : -1e9), cabs = [];
+        for (const P of PP) for (let o = 0; o < w * h; o++) if (P.px[o]) fz[o] = Math.max(fz[o], P.z + P.d / 2);
+        for (const v of cars) {
+          const c = v.car, g0 = c ? (c.box ? c.cx0 : c.cx0 - c.rs) : 0, g1 = c ? c.cx1 + c.ws : -1;
+          let cab = null;
+          if (c) { let t = 1e9; for (let x = g0; x <= g1; x++) t = Math.min(t, c.top(x)); cab = { x0: g0, y0: t, w: g1 - g0 + 1, h: c.beltY - t, ix: [] }; cabs.push(cab); }
+          for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+            const o = y * w + x, wx = Z.x0 + x, wy = Z.y0 + y; if (zone[wy * W + wx] !== id || fz[o] > -1e9 || !owns(v, wx, wy)) continue;
+            if (cab && wx >= g0 && wx <= g1 && wy >= cab.y0 && wy < c.beltY) { cab.ix.push(wy * W + wx); fz[o] = NaN; } else fz[o] = Z.z1 - 0.5;   // the glass, or the body's side
+          }
+        }
+        const byZ = new Map();
+        for (let o = 0; o < w * h; o++) {
+          const wi = (Z.y0 + (o / w | 0)) * W + Z.x0 + o % w; if (zone[wi] !== id || !(fz[o] > -1e9)) continue;
+          const k = Math.round(fz[o] * 10) / 10; if (!byZ.has(k)) byZ.set(k, []); byZ.get(k).push(wi);
+        }
+        Z.sheets = [];
+        const sheet = (x0, y0, sw, sh, ix, zt, zb) => {   // a gore sheet over a rectangle, its top edge at depth zt and its bottom at zb
+          const g = new Uint32Array(sw * sh), tex = t3tex(g, sw, sh), geo = t3quad(x0, y0, x0 + sw, y0 + sh, zt, 0, 0, 1, 1);
+          geo.attributes.position.setZ(2, zb); geo.attributes.position.setZ(3, zb);
+          add(new THREE.Mesh(geo, t3mat({ map: tex, alphaTest: 0.5 }, 0)));
+          Z.sheets.push({ g, tex, wi: Int32Array.from(ix), ti: Int32Array.from(ix, i => ((i / W | 0) - y0) * sw + i % W - x0) });
+        };
+        for (const [z, ix] of byZ) sheet(Z.x0, Z.y0, w, h, ix, z + 0.1, z + 0.1);
+        const zc = (Z.z0 + Z.z1) / 2, hw = (Z.z1 - Z.z0) / 2 - 0.5;   // (t3vehicle's glasshouse: hw - 1.6 at the belt, hw - 4.6 at the roof)
+        for (const cb of cabs) if (cb.ix.length) sheet(cb.x0, cb.y0, cb.w, cb.h, cb.ix, zc + hw - 4.5, zc + hw - 1.5);
       });
       this.findWindows(LIFT);
       this.gore = [];
@@ -7092,11 +7123,10 @@ import * as P9 from './levels/pier9.js';
         for (let d = 0; d <= STREET; d++) c.gf.set(GORE.subarray((GROUND + d) * W + c.x0, (GROUND + d) * W + c.x1), d * c.cw);
         c.tw.needsUpdate = c.tf.needsUpdate = true;
       }
-      this.zones.forEach((Z, id) => {
-        if (!Z.tex || !inView(Z.x0, Z.x1)) return;
-        for (let y = 0; y < Z.h; y++) for (let x = 0; x < Z.w; x++) { const i = (Z.y0 + y) * W + Z.x0 + x; Z.gore[y * Z.w + x] = this.zoneOf[i] === id ? GORE[i] : 0; }
-        Z.tex.needsUpdate = true;
-      });
+      for (const Z of [...this.zones, ...this.awnG]) {
+        if (!Z.sheets || !inView(Z.x0, Z.x1)) continue;
+        for (const s of Z.sheets) { for (let k = 0; k < s.wi.length; k++) s.g[s.ti[k]] = GORE[s.wi[k]]; s.tex.needsUpdate = true; }
+      }
     },
     // ----- a new level: the old world (street or Pier 9) goes, with every geometry, material and texture it made; the new one is built -----
     rebuildWorld() {
@@ -9208,7 +9238,10 @@ import * as P9 from './levels/pier9.js';
       }
       if (q.y >= fy) {
         if (q.blood) {
-          if (!fs.box) { stain(q.x, fy); const nx = q.x + (simRand() < 0.5 ? -1 : 1); if (simRand() < 0.5 && nx >= fs.x0 && nx <= fs.x1) stain(nx, fy); }   // a loose crate's top moves away: no stain left in the air
+          // a loose crate's top moves away: no stain left in the air. A ledge: on the prop's own top pixel (within 2 below the ledge
+          // line), or nowhere (not on the wall above a car roof, which the 3D view shows far behind the car)
+          const top = x => { if (fs === GROUND_S) return fy; x = Math.floor(x); for (let k = 0; k < 3; k++) if (PROPS[(Math.floor(fy) + k) * W + x]) return Math.floor(fy) + k; return -1; };
+          if (!fs.box) { let ty = top(q.x); if (ty >= 0) stain(q.x, ty); const nx = q.x + (simRand() < 0.5 ? -1 : 1); if (simRand() < 0.5 && nx >= fs.x0 && nx <= fs.x1 && (ty = top(nx)) >= 0) stain(nx, ty); }
           particles.splice(i, 1); continue;
         }
         q.y = fy - 1; q.vx *= 0.5; q.vy = 0;
@@ -9327,6 +9360,7 @@ import * as P9 from './levels/pier9.js';
     window.__peek = () => ({ x: Math.round(ctl.x), y: Math.round(ctl.y), lane: ctl.lane, surf: ctl.surf === GROUND_S ? 'ground' : ctl.surf === GOAL ? 'roof' : 'plat', air: ctl.air, mode: hero.mode, act: hero.act, hp: Math.round(hero.hp), wind: hero.wind, wasted: flags.wasted, bandT: +hero.bandT.toFixed(2), weapon: hero.weapon,
       club: flags.club, boss: enc.boss ? Math.round(enc.boss.hp) : null, quakes: quakes.length, enemies: enemies.filter(e => !e.dead).map(e => [Math.round(e.x), e.lane, Math.round(e.hp)]), kills: kills.length, lessons: done.size,
       pickups: pickups.map(k => k.taken ? 1 : 0).join(''), demo: flags.demo, attract: flags.attract });
+    window.__blood = { bleed, stain, GORE, PROPS, stat, SURF, PLATS, STEPS, floorBelow, particles, drips, W, GROUND, cam, get WALLM() { return WALLM; }, get T3() { return Three3D; }, open: () => ZONES.forEach(z => z.tasks.forEach(([k]) => done.add(k))) };   // (tests: the blood and what it lands on)
     window.__skipToBoss = () => { leaveTitle(); setDemo(false); skipToBoss(); };
     window.__sim = { enc, enemies, objs, ctl, hero, quakes, ammoBoxes, thrown, charge, loot, setWeapon, done, bus, makeObj, spawnEnemy, P, get hookPull() { return hookPull; }, get diffSel() { return diffSel; },
       blk, hstr, DEF, input, btn, get slowT() { return slowT; }, get ckpt() { return ckpt; }, get ragT() { return ragT; }, get flags() { return flags; }, setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; }, retry: () => retry(),
