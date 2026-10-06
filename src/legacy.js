@@ -7588,6 +7588,10 @@ import * as P9 from './levels/pier9.js';
   { const b = document.getElementById('c-dash');
     b.addEventListener('pointerdown', e => { e.preventDefault(); takeOver(); input.dash = true; input.dashHeld = true; b.setPointerCapture?.(e.pointerId); });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, () => { input.dashHeld = false; }); }
+  { const b = document.getElementById('c-block');   // block: hold it, like E; a fresh press is the parry try
+    const off = () => { input.blockHeld = false; b.classList.remove('held'); };
+    b.addEventListener('pointerdown', e => { e.preventDefault(); takeOver(); input.blockHeld = true; input.block = true; b.classList.add('held'); b.setPointerCapture?.(e.pointerId); });
+    b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('lostpointercapture', off); }
   for (const [id, k] of [['c-lp', 'p'], ['c-lk', 'k']]) {   // punch and kick buttons: tap or hold, like J and K
     const b = document.getElementById(id);
     const off = () => { releaseBtn(k); b.classList.remove('held'); };

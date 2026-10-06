@@ -26,7 +26,7 @@
     <nav id="menu" class="menu" aria-label="Game menu"><ul id="menu-list"></ul></nav>
     <div id="controls-card" class="controls-card" hidden role="dialog" aria-label="Controls"><h3>CONTROLS</h3><dl>
       <dt>← →</dt><dd>move</dd><dt>Shift</dt><dd id="cc-run">run</dd><dt>↑</dt><dd>jump · hold it at a ledge to climb</dd>
-      <dt>↓</dt><dd>squat · at a run: dodge roll · squat beside a crate or a bin to pick it up </dd><dt>Space</dt><dd>dodge roll · with ↓ held up on a roof: drop through it</dd>
+      <dt>↓</dt><dd>squat · at a run: dodge roll · squat beside a crate or a bin to pick it up </dd><dt>Space</dt><dd>short dodge (with ← or → held: that way; in the air: dash) · with ↓ held up on a roof: drop through it</dd><dt>E</dt><dd>hold: block light hits · tap just before a hit lands: parry</dd>
       <dt>Q</dt><dd>punch or swing · tap = light, hold = heavy</dd><dt>↓ + Q</dt><dd>throw what you hold</dd><dt>W</dt><dd>kick · tap = light, hold = heavy</dd>
       <dt>Esc</dt><dd>menu (pauses): view, camera, restart</dd></dl><small>Enter or Esc to close</small></div>
     <div class="hud hud-hp"><span class="hud-label">HP</span><div class="bar"><i id="hp-fill"></i></div></div>
@@ -36,7 +36,7 @@
     <div class="hud-weapon"><span class="wicon"><img id="w-icon" alt=""></span><span class="wtext"><span id="w-name">FISTS</span><span id="ammo" class="ammo"></span><span id="pocket" class="pocket"></span></span></div>
   </div>
 
-  <p class="keys"><b>← →</b> move · <b>Shift</b> run · <b>↑</b> jump (hold at a ledge: climb) · <b>↓</b> squat · <b>Space</b> roll (or <b>↓</b> at a run) · <b>Q</b> punch · <b>W</b> kick (tap = light, hold = heavy) · <b>↓</b>+<b>Q</b> throw · <b>Esc</b> menu</p>
+  <p class="keys"><b>← →</b> move · <b>Shift</b> run · <b>↑</b> jump (hold at a ledge: climb) · <b>↓</b> squat · <b>Space</b> dodge · <b>↓</b> at a run: roll · <b>Q</b> punch · <b>W</b> kick (tap = light, hold = heavy) · <b>E</b> block (tap: parry) · <b>↓</b>+<b>Q</b> throw · <b>Esc</b> menu</p>
   <details class="more">
   <summary>Controls and options</summary>
   <div class="readout" hidden>
@@ -56,7 +56,7 @@
         <button id="c-run" aria-pressed="false">Run <kbd>Shift</kbd></button>
         <button id="c-jump">Jump <kbd>↑</kbd></button>
         <button id="c-down" aria-label="Squat. Hold it and press jump to drop through a ledge">Squat <kbd>↓</kbd></button>
-        <button id="c-dash" aria-label="Dodge. Roll toward the held direction, step back with no direction, dash in the air. Attacks cannot hit you while it lasts">Dodge <kbd>Space</kbd></button>
+        <button id="c-dash" aria-label="Dodge. A short hop toward the held direction, back with no direction, a dash in the air. Attacks cannot hit you at its start">Dodge <kbd>Space</kbd></button>
       </div>
     </div>
     <div class="group">
@@ -64,6 +64,7 @@
       <div class="row">
         <button id="c-lp" class="primary" aria-label="Punch. Tap for a light hit, hold for a heavy hit. Hold squat and press it to throw what you hold"><span>Punch</span> <kbd>Q</kbd></button>
         <button id="c-lk" class="primary" aria-label="Kick. Tap for a light kick, hold for a heavy kick. Squat and hold for a leg sweep">Kick <kbd>W</kbd></button>
+        <button id="c-block" aria-label="Block. Hold to block light hits. Tap just before a hit lands to parry">Block <kbd>E</kbd></button>
       </div>
     </div>
     <div class="group" hidden>
@@ -107,7 +108,7 @@
     </div>
   </div>
 
-  <p class="hint devonly">A tutorial level, left to right. The panel on the game view shows each lesson and ticks it off when you do it. Walk into a weapon to pick it up. You carry one weapon. With empty hands you walk over a weapon to take it; with a weapon in hand you squat (↓) on another to swap, and the old one drops. Hold ↓ and press Q to throw your weapon; walk over it to take it back. Guns do not refill by themselves: enemies sometimes drop ammo boxes, and you walk over a box to load it. A fire escape zig-zags up the club building to its roof. Space rolls a long way along the ground (then a short wait); in the air it is a dash. Attacks cannot hit you while you roll. Drag a body part to throw the fighter, or click near the body or an object to hit it. Goons wait in each stage and hit back; the boss waits at the far end. R restarts the tutorial. Demo (M) plays the whole tutorial by itself; press any control to take over. F switches to a 12 fps sprite look.</p>
+  <p class="hint devonly">A tutorial level, left to right. The panel on the game view shows each lesson and ticks it off when you do it. Walk into a weapon to pick it up. You carry one weapon. With empty hands you walk over a weapon to take it; with a weapon in hand you squat (↓) on another to swap, and the old one drops. Hold ↓ and press Q to throw your weapon; walk over it to take it back. Guns do not refill by themselves: enemies sometimes drop ammo boxes, and you walk over a box to load it. A fire escape zig-zags up the club building to its roof. Space is a short dodge (in the air, a dash); ↓ at a run is a long roll. Attacks cannot hit you at the start of a dodge. Hold E to block; tap E just before a hit lands to parry. Drag a body part to throw the fighter, or click near the body or an object to hit it. Goons wait in each stage and hit back; the boss waits at the far end. R restarts the tutorial. Demo (M) plays the whole tutorial by itself; press any control to take over. F switches to a 12 fps sprite look.</p>
   </details>
 </div>
 
