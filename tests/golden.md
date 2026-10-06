@@ -4,9 +4,29 @@ Run with a static server (`tools/serve.py`, port 8765, no browser cache; or `pyt
 Two runs of the same URL must give the same hashes. A refactor step that keeps both hashes changed nothing.
 A step that changes behaviour on purpose records new hashes here, with the reason.
 
-## Current (main: + readable mobs, the Saltmen and the drop rules, 2026-10-06)
+## Current (main db738f4: + combo depth and focus, the slam, the Q/W controls, reinforcements, 2026-10-07)
 
-TABLE_TBD
+| URL | state | buf | l3 | note |
+|---|---|---|---|---|
+| `index.html?autotest=demo&frames=1200` | `dfa7b445` | `5438cdf3` | | 2D (attract demo, seed 1, 960x540 view) |
+| `index.html?autotest=boss&frames=1800` | `d8e18a0e` | `61597e44` | | 2D (skipToBoss + demo, seed 1) |
+| `index.html?autotest=demo&frames=1200&view3d` | `dfa7b445` | `51bae86d` | `15c0972f` | 3D view: the same state hash as 2D |
+| `index.html?autotest=boss&frames=1800&view3d` | `d8e18a0e` | `56611753` | `a57a0412` | 3D view: the same state hash as 2D |
+
+Each URL run twice in headless Chrome (a cold first launch can time out with the title `Elias Grave`: run it again); each pair matched,
+and the 3D state hashes equal the 2D ones. Reasons, in order on main since the drop rules:
+- The combo depth and focus merge (8993b7a): the demo takes finishers, Sandman time and the clinch; the fixed step runs on the hero's
+  clock (`wk`); last-kill slow motion (see the branch notes below).
+- The ground slam (6807514): the demo slams in the clinch and takes the slam finisher now and then (more `simRand` calls).
+- The controls (aa438fb, cc21cff, db738f4): Q and W only. The finisher is Q by a staggering beaten goon; Sandman time starts by itself;
+  no block, no parry (the demo's parry tap became a perfect dodge); the grab set W knee, Q elbow, ←/→ + Q shoulder throw, ↓ + Q slam,
+  ←/→ + W kick away; no wall-splats, no lpw; run is the default. The demo's choices and the goons' answers change from the first fight.
+- Reinforcement waves (34e833a): they come only from the player's stage spawner and Pier 9 waves, not the attract demo's own goons,
+  so they do not change these runs by themselves. The street boss crew (`DIFFS[].crew`) is behind the boss door (the boss run leaves the roof).
+- Kicked cans and bottles roll on (bb788b8, the lead's commit) were included in this run.
+- 2D and 3D art: the beaten and off-balance poses, no key caps or exposed diamonds over goons.
+
+Tests with `?manual`: `__pier9.kill(n)` kills at most n; `__sim` holds `foc`, `finE`, `wk`, `JUG`, `GRAB`, `FOCUS`, `FIN`, `OTG`, `DIVE`, `FLY`.
 
 ### The drop rules on their branch (base acc7610)
 
