@@ -5165,6 +5165,8 @@ import * as P9 from './levels/pier9.js';
   // ZF: the wall; ZS: the street's front edge; STAIR, GOAL: how far the fire escape and the roof balcony stand out of the wall (the fight lane is z = 0)
   const T3 = { ZF: -34, ZS: 34, STAIR: 14, GOAL: 12, FOV: 20, PITCH: 16 * Math.PI / 180, PIX: 1, NL: 16 };
   const T3_GROUND = GROUND - 0.5;   // the street surface (feet stand on it)
+  // Pier 9's 3D-only numbers: the bollards (as pier9.js paints them), the depth of the conveyor rail and the hall lamps, the chain colour
+  const T3P9 = { BOLL: [30, 220, 300, 560, 1150, 1850, 2060], RZ: -8, LZ: -12, CHAIN: C('#4a4a52') };
   const t3rgb = c => new THREE.Color((c & 255) / 255, (c >> 8 & 255) / 255, (c >> 16 & 255) / 255);
   const t3flag = (c, a) => ((c & 0xffffff) | (a << 24)) >>> 0;   // alpha 254: glows (no light); 253: glass or puddle (reflects)
   const t3glow = c => EMIT.has(c) ? t3flag(c, 254) : c;
@@ -5471,6 +5473,7 @@ import * as P9 from './levels/pier9.js';
     const X = [], hair = e.hair, bd = e.beard, HW = o.HW, HU = o.HU, HD = o.HD, W = o.W;
     if (hair === 'mohawk') X.push(t3box(-2.6 * k, HU - 0.4, -0.6 * k, k, HU + 2.4 * k, 0.6 * k, p.loud, 0.3));
     if (hair === 'cap') X.push(t3box(HW - 0.3, 1.4 * k, -W * 0.9, HW + 2.2 * k, 2.2 * k, W * 0.9, p.topB, 0.3));   // the brim
+    if (hair === 'souwester') X.push(t3box(-HW - 1.2 * k, 1.5 * k, -W - 1.6 * k, HW + 1.8 * k, 2.3 * k, W + 1.6 * k, p.hatB, 0.3), t3box(-HW - 1.4 * k, -2 * k, -W * 0.95, -HW + 0.4, 2.4 * k, W * 0.95, p.hat, 0.3));   // the sou'wester's brim all round, the flap down the back
     if (hair === 'hood') X.push(t3box(-HW - k, -k, -W - 0.7 * k, -HW + 1.2 * k, HU - 0.3 * k, W + 0.7 * k, p.top, 0.3), t3box(-HW, HU - 0.6 * k, -W - 0.7 * k, 0.8 * k, HU + 0.4 * k, W + 0.7 * k, p.top, 0.3));
     if (bd === 'huge') X.push(t3box(-1.6 * k, -HD - 3.4 * k, -W * 0.75, HW + 0.4, -HD + 0.6 * k, W * 0.75, p.hair, 0.3));
     if (bd === 'full') X.push(t3box(-0.6 * k, -HD - 1.2 * k, -W * 0.8, HW - 0.4 * k, -HD + 0.6 * k, W * 0.8, p.hair, 0.3));
@@ -5546,6 +5549,8 @@ import * as P9 from './levels/pier9.js';
     }
     if (id === 'pistol') return t3all([t3box(0, -0.6, -0.5, L, 0.7, 0.5, ECOL.gun, 0.3), t3box(-0.3, -3, -0.45, 1.4, -0.6, 0.45, ECOL.gun, 0.3)]);   // slide and grip
     if (id === 'pipe') return t3rod(0, L, 0.9, ECOL.iron, 8);
+    if (id === 'cleaver') return t3all([t3rod(0, 2.5, 0.6, ECOL.grip, 6), t3box(2.5, -3.0, -0.22, L, 0.2, 0.22, ECOL.steelD, 0.3), t3box(2.5, -3.4, -0.12, L, -3.0, 0.12, ECOL.steel, 0.2)]);   // a square cleaver: a deep blade under the grip line
+    if (id === 'gaff') return t3all([t3rod(-3, L, 0.5, PAL.wood, 6), t3rod(L, L + 2, 0.4, ECOL.steel, 6), t3box(L + 1.6, -2.5, -0.3, L + 2.2, 0, 0.3, ECOL.steel, 0.2), t3box(L + 0.6, -2.9, -0.3, L + 2.2, -2.3, 0.3, ECOL.steel, 0.2)]);   // a pole with a steel hook
     if (id === 'machete') return t3all([t3rod(0, 2.5, 0.6, ECOL.grip, 6), t3box(2.5, -1.1, -0.18, L, 0.9, 0.18, ECOL.steelD, 0.3), t3box(2.5, -1.5, -0.12, L - 0.5, -1.1, 0.12, ECOL.steel, 0.25)]);
     return t3all([t3rod(0, 1.8, 0.5, ECOL.grip, 6), t3box(1.8, -0.5, -0.12, L, 0.4, 0.12, ECOL.steel, 0.25)]);   // a knife
   }
@@ -5815,6 +5820,8 @@ import * as P9 from './levels/pier9.js';
       const g = this.world = new THREE.Group(); this.scene.add(g);
       const add = (mesh, ...ls) => { g.add(t3L(mesh, ...(ls.length ? ls : [0, 2]))); return mesh; };
       const { ZF, ZS } = T3, CHUNK = 1024, NF = H - GROUND - STREET - 1;
+      const p9 = isP9(); this.builtFor = LV.id;   // (frame() rebuilds the world when the level changes)
+      for (const v of VPARTS) v.built = false;
       // the props stand out of the wall at their own depth: each object is one block, found as a connected group of prop pixels.
       // Every block holds the platform lane (laneZ), so a body up on one stands inside its depth.
       const ZD = [28, 20, 16, 28, 30, 28, 16];   // PLATS 0-6 from the wall: sports car, corner bar, scaffold, saloon, van, pickup, scaffold
@@ -5829,9 +5836,11 @@ import * as P9 from './levels/pier9.js';
       for (let y = 0; y < GROUND; y++) for (let x = 0; x < W; x++) {
         const i = y * W + x; if (!PROPS[i] || !stat[i]) continue;
         LIFT[i] = 1;
+        if (p9) continue;   // (Pier 9: its blocks are named by p9Zones below)
         if (y >= GOAL.y - 1 && y <= GOAL.y + 4 && x >= GOAL.x0 - 1 && x <= GOAL.x1 + 1) zone[i] = zGoal;
         else if (x >= STAIR_X0 - 3 && x <= STAIR_X1 + 3 && y > GOAL.y + 4) { const s = flightAt(x, y); zone[i] = s && s.step ? zFl[s.k % 2] : zStairs; }
       }
+      if (p9) this.p9Zones(zone, LIFT, mkZone);
       const stack = [];
       for (let y = 0; y < GROUND; y++) for (let x = 0; x < W; x++) {   // the other props: one block per connected group
         const i0 = y * W + x; if (!LIFT[i0] || zone[i0] >= 0) continue;
@@ -5842,14 +5851,14 @@ import * as P9 from './levels/pier9.js';
           Z.x0 = Math.min(Z.x0, px); Z.x1 = Math.max(Z.x1, px); Z.y0 = Math.min(Z.y0, py); Z.y1 = Math.max(Z.y1, py);
           for (const j of [i - 1, i + 1, i - W, i + W, i - W - 1, i - W + 1, i + W - 1, i + W + 1]) if (j >= 0 && j < W * GROUND && Math.abs((j % W) - px) <= 1 && LIFT[j] && zone[j] < 0) { zone[j] = id; stack.push(j); }   // (8 ways: a diagonal brace stays with its scaffold)
         }
-        let k = PLATS.findIndex((s, n) => n < ZD.length && s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 && s.y <= Z.y1);
-        if (k < 0 && Z.x1 - Z.x0 > 14 && Z.y1 > GROUND - 45) k = PLATS.findIndex((s, n) => n < ZD.length && s.x0 - 40 <= Z.x1 && s.x1 + 40 >= Z.x0);   // a pickup's cab beside its bed
+        let k = p9 ? -1 : PLATS.findIndex((s, n) => n < ZD.length && s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 && s.y <= Z.y1);
+        if (k < 0 && !p9 && Z.x1 - Z.x0 > 14 && Z.y1 > GROUND - 45) k = PLATS.findIndex((s, n) => n < ZD.length && s.x0 - 40 <= Z.x1 && s.x1 + 40 >= Z.x0);   // a pickup's cab beside its bed
         if (Z.x1 - Z.x0 <= 14 && Z.y1 - Z.y0 >= 40) { Z.z0 = -12; Z.z1 = -8; }   // a street lamp: a tall thin post at the kerb
         else if (k >= 0) { Z.z0 = ZF; Z.z1 = ZF + ZD[k]; }
         else { Z.z0 = ZF; Z.z1 = ZF + 8; }
         for (const s of PLATS) if (s !== GOAL && s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 - 1 && s.y <= Z.y1) this.frontZ.set(s, Math.max(this.frontZ.get(s) ?? -99, Z.z1));   // every ledge on this block
       }
-      for (const px_ of PEDESTALS) {   // the iron benches the weapons wait on, out on the pavement
+      if (!p9) for (const px_ of PEDESTALS) {   // the iron benches the weapons wait on, out on the pavement
         const id = mkZone(-8, -2);
         const bench = (x, y) => (y >= GROUND - 7 && y <= GROUND - 2 && x >= px_ - 8 && x <= px_ + 8) || ((x === px_ - 5 || x === px_ - 4 || x === px_ + 5 || x === px_ + 6) && y >= GROUND - 5);   // slats and legs, as stat draws them
         for (let y = GROUND - 8; y < GROUND; y++) for (let x = px_ - 9; x <= px_ + 9; x++) { const i = y * W + x; if (stat[i] && !LIFT[i] && bench(x, y)) { LIFT[i] = 1; zone[i] = id; } }
@@ -5857,7 +5866,7 @@ import * as P9 from './levels/pier9.js';
       this.benchZ = -5;   // the weapons on them: at the back of the fight lane
       const propMat = this.propMat || (this.propMat = t3mat({ vertexColors: true }, 1));
       // the facade's relief: cornices, fascias, pilasters, door steps and lanterns stand out of the wall; awnings slope out over the pavement
-      for (const F of FEAT) {
+      for (const F of p9 ? this.p9Feat() : FEAT) {
         if (F.awn) {
           const w = F.x1 - F.x0 + 1, h = F.y1 - F.y0 + 1, px = new Uint32Array(w * h);
           for (let k = 0; k < h; k++) for (let x = F.xs(k); x <= F.x1; x++) {   // its own stripes (the shop window's top is painted over them in 2D)
@@ -5918,9 +5927,10 @@ import * as P9 from './levels/pier9.js';
           const k2 = PLATS.findIndex((s, n) => n < ZD.length && s.x0 <= Z.x1 && s.x1 >= Z.x0 && !VPARTS.some(v => (v.car || v.bed) && s.x0 >= v.x0 - 3 && s.x1 <= v.x1 + 3));
           if (k2 >= 0) { ZR = { ...Z, z1: ZF + ZD[k2] }; this.frontZ.set(PLATS[k2], ZR.z1); }
         }
-        for (const P of parts(ZR, px, w, h)) {
+        if (Z.custom) Z.custom(px, w, h, Z, add, propMat);   // (Pier 9: a model of its own, built from the block's pixels)
+        else for (const P of parts(ZR, px, w, h)) {
           if (!P.px.some(Boolean)) continue;
-          const m = add(new THREE.Mesh(t3voxels(P.px, w, h, 0, 0, P.d), propMat), 0, 1, 2);
+          const m = add(new THREE.Mesh(t3voxels(P.px, w, h, 0, 0, P.d, !!Z.skin), propMat), 0, 1, 2);
           m.position.set(Z.x0, -Z.y0, P.z);
         }
         Z.w = w; Z.h = h; Z.gore = new Uint32Array(w * h); Z.tex = t3tex(Z.gore, w, h);
@@ -5956,8 +5966,9 @@ import * as P9 from './levels/pier9.js';
         this.gore.push({ x0, x1, cw, gw, gf, tw, tf });
       }
       this.lift = LIFT; this.goreT = 0;
+      if (p9) { this.p9Build(add); return; }
       // the neon signs: a dark box off the wall; their animated faces are layers on its front (buildLayers)
-      const box = (x0, y0, x1, y1, z0, z1, c) => { const m = add(new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), t3mat({ color: t3rgb(c) }, 1))); m.position.set((x0 + x1) / 2, -(y0 + y1) / 2, (z0 + z1) / 2); };
+      const box =(x0, y0, x1, y1, z0, z1, c) => { const m = add(new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), t3mat({ color: t3rgb(c) }, 1))); m.position.set((x0 + x1) / 2, -(y0 + y1) / 2, (z0 + z1) / 2); };
       box(SIGN.x0, SIGN.y0, SIGN.x1 + 1, SIGN.y1 + 1, ZF, ZF + 5, C('#160d1c'));
       box(BLADE.x0, BLADE.y0, BLADE.x1 + 1, BLADE.y1 + 1, ZF, ZF + 4, C('#140b1a'));
       box(CHEV_X - 9, GROUND - 56, CHEV_X + 10, GROUND - 21, ZF, ZF + 4, C('#120d18'));
@@ -5978,9 +5989,206 @@ import * as P9 from './levels/pier9.js';
         Z.tex.needsUpdate = true;
       });
     },
+    // ----- a new level: the old world (street or Pier 9) goes, with every geometry, material and texture it made; the new one is built -----
+    rebuildWorld() {
+      const keep = new Set([this.propMat, this.cgm]), seen = new Set();
+      const free = m => {
+        if (!m || keep.has(m) || seen.has(m)) return; seen.add(m);
+        if (m.map) m.map.dispose();
+        if (m.uniforms) for (const u of Object.values(m.uniforms)) if (u && u.value && u.value.isTexture && u.value !== T3U.win.value && u.value !== T3U.flr.value && u.value !== T3U.blood.value) u.value.dispose();
+        m.dispose();
+      };
+      this.scene.remove(this.world);
+      this.world.traverse(o => { if (o.geometry) o.geometry.dispose(); if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(free); });
+      if (this.p9s) { for (const g of this.p9s.shut.values()) g.dispose(); this.p9s = null; }
+      this.roomTex.dispose();
+      this.world = null; this.zones = this.gore = this.people = this.peeks = null;
+      this.buildWorld();
+      this.buildWindows();
+    },
+
+    // ----- Pier 9 (src/levels/pier9.js): every block named, with its own depth and, where it pays, its own model -----
+    // the containers stand deep against the back (their tops are the platform lane), the crane is a lattice with its cab and its
+    // hanging container, the reefer truck has wheels, the lamps stand at the kerb, the drum is turned round; in the hall the ice
+    // crates, the podium, the counter and the freezer door stand off the wall
+    p9Zones(zone, LIFT, mkZone) {
+      const { ZF } = T3, Zs = this.zones, zc = ZF + 12;
+      const claim = (id, x0, y0, x1, y1, test, wall) => {
+        const Z = Zs[id];
+        for (let y = Math.max(0, y0); y <= Math.min(GROUND - 1, y1); y++) for (let x = Math.max(0, x0); x <= Math.min(W - 1, x1); x++) {
+          const i = y * W + x; if (!stat[i] || zone[i] >= 0 || (!PROPS[i] && !wall)) continue;
+          if (test && !test(x, y, stat[i])) continue;
+          LIFT[i] = 1; zone[i] = id;
+          if (x < Z.x0) Z.x0 = x; if (x > Z.x1) Z.x1 = x; if (y < Z.y0) Z.y0 = y; if (y > Z.y1) Z.y1 = y;
+        }
+        return Z;
+      };
+      const block = (z0, z1, o = {}) => { const id = mkZone(z0, z1); Object.assign(Zs[id], o); return id; };
+      const plat = x0 => PLATS.find(s => s.x0 === x0);
+      for (const lx of P9.LAMPS) claim(block(-12, -8), lx - 2, GROUND - 84, lx + 13, GROUND - 1, (x, y) => y <= GROUND - 80 || Math.abs(x - lx) <= (y >= GROUND - 5 ? 2 : 1));
+      for (const bx of T3P9.BOLL) claim(block(-11, -6, { skin: true }), bx - 3, GROUND - 9, bx + 3, GROUND - 1);
+      const chain = C('#3a3a44');
+      for (let i = 0; i + 1 < T3P9.BOLL.length; i++) { const a = T3P9.BOLL[i], c = T3P9.BOLL[i + 1]; if (c - a <= 300) claim(block(-9, -8), a + 3, GROUND - 8, c - 3, GROUND - 2, (x, y, k) => k === chain); }
+      claim(block(-20, -8, { custom: (px, w, h, Z, add, mat) => { const m = add(new THREE.Mesh(t3lathe(px, w, h, P9.DRUM_X - Z.x0 + 0.5, 0, 16), mat), 0, 1, 2); m.position.set(P9.DRUM_X + 0.5, -Z.y0, -14); } }), P9.DRUM_X - 6, GROUND - 15, P9.DRUM_X + 6, GROUND - 1);
+      for (const k of P9.PICKUPS) claim(block(-8, -2), k.x - 9, GROUND - 7, k.x + 9, GROUND - 1);   // the trestles the weapons lie on
+      claim(block(ZF, ZF + 2), 872, GROUND - 40, 888, GROUND - 16);   // the empty fire-axe case on the wall
+      // the crane
+      claim(block(zc - 4, zc + 4, { custom: this.p9Lattice(16, [0, 8]) }), 1700, 43, 2200, 53);
+      claim(block(zc - 6, zc + 6, { skin: true }), 1702, 32, 1730, 42);
+      claim(block(zc - 7, zc + 7, { custom: this.p9Lattice(18, null) }), 1790, 54, 1808, GROUND - 1);
+      claim(block(zc - 6, zc + 6, { skin: true }), 1810, 54, 1836, 74);
+      claim(block(zc - 5, zc + 5, { custom: (px, w, h, Z, add, mat) => { const B = t3mb(); for (const x of [1870, 1910]) for (const z of [zc - 5, zc + 5]) B.box(x, 54, z - 0.3, x + 1, 124, z + 0.3, C('#2a2a30')); add(new THREE.Mesh(B.geo(), mat), 0, 2); } }), 1870, 54, 1910, 123, x => x === 1870 || x === 1910);
+      claim(block(zc - 11, zc + 11, { skin: true }), 1850, 124, 1930, 166);
+      // the container stacks: deep boxes; a body on a stack stands inside its depth (the platform lane)
+      for (const [x0, x1, n] of P9.STACKS) { claim(block(ZF, ZF + 28, { skin: true }), x0, GROUND - n * P9.CRATE_U, x1, GROUND - 1); const s = plat(x0); if (s) this.frontZ.set(s, ZF + 28); }
+      // the reefer truck: the trailer and the cab extruded, real tyres at both sides
+      const T = P9.TRAILER;
+      claim(block(ZF + 2, ZF + 22, { custom: (px, w, h, Z, add, mat) => {
+        const wheels = [[T.x0 + 24, 7], [T.x0 + 40, 7], [T.x1 + 40, 7]], tr = new Uint32Array(w * h), cab = new Uint32Array(w * h), zm = (Z.z0 + Z.z1) / 2;
+        for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+          const c = px[y * w + x], X = Z.x0 + x, Y = Z.y0 + y; if (!c || wheels.some(([cx, r]) => Math.hypot(X - cx, Y - (GROUND - r - 1)) <= r + 1.2)) continue;
+          (X >= T.x1 + 4 ? cab : tr)[y * w + x] = c;
+        }
+        const parts = [t3voxels(tr, w, h, 0, 0, 20, true).translate(Z.x0, -Z.y0, zm), t3voxels(cab, w, h, 0, 0, 18, true).translate(Z.x0, -Z.y0, zm)];
+        for (const [cx, r] of wheels) for (const sd of [-1, 1]) parts.push(t3wheel(cx, GROUND - r - 1, zm + sd * 8.5, r, 3.4));
+        add(new THREE.Mesh(parts.reduce((a, b) => t3merge(a, b)), mat), 0, 1, 2);
+      } }), T.x0, T.y, T.x1 + 54, GROUND - 1);
+      { const s = plat(T.x0); if (s) this.frontZ.set(s, ZF + 22); }
+      // the hall's furniture (painted on the wall layer in 2D): ice crates, the auctioneer's podium, the counter, the freezer door
+      for (const [cx, n] of [[2565, 3], [2700, 2], [2452, 2]]) claim(block(ZF, ZF + 20, { skin: true }), cx - 12, GROUND - n * 9, cx + 12, GROUND - 1, null, true);
+      claim(block(ZF, ZF + 16, { skin: true }), 2612, GROUND - 32, 2648, GROUND - 1, null, true);
+      claim(block(ZF, ZF + 14, { skin: true }), 2466, GROUND - 10, 2500, GROUND - 1, null, true);
+      claim(block(ZF, ZF + 3, { skin: true }), 2756, GROUND - 58, 2798, GROUND - 1, null, true);
+    },
+    // a lattice girder (the crane's tower or jib): its painted side as two thin frames, front and back, and struts between them
+    // every `step` px along it (rows `chords` of the block for the jib; the two side columns for the tower)
+    p9Lattice(step, chords) {
+      return (px, w, h, Z, add, mat) => {
+        const zm = (Z.z0 + Z.z1) / 2, hd = (Z.z1 - Z.z0) / 2 - 0.8, yel = C('#c8a030'), B = t3mb();
+        const g = [t3voxels(px, w, h, 0, 0, 1.6, true).translate(Z.x0, -Z.y0, zm - hd), t3voxels(px, w, h, 0, 0, 1.6, true).translate(Z.x0, -Z.y0, zm + hd)];
+        if (chords) for (let x = Z.x0 + 1; x < Z.x1; x += step) for (const cy of chords) B.box(x, Z.y0 + cy + 0.2, zm - hd, x + 1.2, Z.y0 + cy + 1.4, zm + hd, yel);
+        else for (let y = Z.y0; y < Z.y1; y += step) for (const x of [Z.x0 + 1, Z.x1 - 2]) B.box(x, y, zm - hd, x + 1.2, y + 1.2, zm + hd, yel);
+        g.push(B.geo());
+        add(new THREE.Mesh(g.reduce((a, b) => t3merge(a, b)), mat), 0, 1, 2);
+      };
+    },
+    // the market's awning slopes out over the pavement (as the street's awnings do)
+    p9Feat() {
+      const [s0] = P9.MARKET.shutter, x0 = P9.MARKET.x0 + 8, x1 = s0 - 8, y0 = GROUND - 64;
+      return [{ awn: 12, x0: x0 - 5, x1: x1 + 5, y0, y1: y0 + 5, xs: k => x0 - k, col: (x, k) => x <= x1 + k ? stat[(y0 + k) * W + x] : 0 }];
+    },
+    // the parts with no 2D block: the hall (its back wall, roof beams, the conveyor rail, the lamps, the warning lamp), the shutter,
+    // the hatch lamp, the crane's beacon, the harbour water in front of the quay
+    p9Build(add) {
+      const { ZF, ZS } = T3, mat = this.propMat, S = this.p9s = { shut: new Map() }, HX = P9.HALL_X, ceil = GROUND - 184, rz = T3P9.RZ;
+      const grp = () => { const g = new THREE.Group(); this.world.add(g); return g; };
+      S.hall = grp(); S.out = grp();
+      const put = (g, mesh, ...ls) => { g.add(t3L(mesh, ...(ls.length ? ls : [0, 2]))); return mesh; };
+      {   // the hall's back wall: drawHall without what stands off it (the doors and the stopped clock stay painted)
+        const w = W - HX, h = GROUND, door = (x, y) => y >= GROUND - 50 && P9.HALL_DOORS.some(d => Math.abs(x - d) <= 7), clock = (x, y) => Math.hypot(x - 2620, y - (GROUND - 140)) <= 9.6;
+        const R = { buf, CW, cam, plot: (x, y, c) => { if (door(x, y) || clock(x, y)) plot(x, y, c); }, line1: (a, b, c, d, col) => { if (clock(a, b)) line1(a, b, c, d, col); } };
+        withView({ x: HX, y: 0, vw: w, vh: h }, () => P9.drawHall(R));
+        const px = new Uint32Array(w * h); for (let y = 0; y < h; y++) px.set(buf.subarray(y * CW, y * CW + w), y * w);
+        put(S.hall, new THREE.Mesh(t3quad(HX, 0, W, GROUND, ZF - 0.6, 0, 0, 1, 1), t3mat({ map: t3tex(px, w, h) }, 0)));
+        const cp = new Uint32Array(21 * 21); for (let y = 0; y < 21; y++) for (let x = 0; x < 21; x++) { const wx = 2610 + x, wy = GROUND - 150 + y; if (clock(wx, wy)) cp[y * 21 + x] = px[wy * w + wx - HX]; }
+        put(S.hall, new THREE.Mesh(t3voxels(cp, 21, 21, 0, 0, 1.4, true), mat)).position.set(2610, -(GROUND - 150), ZF + 0.1);   // the clock stands proud of the wall
+      }
+      {   // roof beams across the hall, the hangers and the conveyor rail, the enamel lamps on their cords
+        const B = t3mb(), truss = C('#2a2e36'), shades = [];
+        for (let x = HX + 20; x < W; x += 60) { B.box(x - 1.5, ceil - 3, ZF, x + 1.5, ceil, ZS - 8, truss); B.box(x - 0.4, ceil, rz - 0.4, x + 0.4, P9.CONVEYOR_Y - 2, rz + 0.4, truss); }
+        B.box(HX, P9.CONVEYOR_Y - 2, rz - 1.6, W, P9.CONVEYOR_Y + 1, rz + 1.6, C('#6a7078'));
+        B.box(HX, P9.CONVEYOR_Y - 2.4, rz - 1.7, W, P9.CONVEYOR_Y - 1.8, rz + 1.7, C('#9aa0a8'));
+        for (const lx of P9.HALL_LAMPS) {
+          const lz = T3P9.LZ;
+          B.box(lx - 0.25, ceil, lz - 0.25, lx + 0.25, GROUND - 124, lz + 0.25, truss);
+          B.box(lx - 1.4, GROUND - 121.5, lz - 1.4, lx + 1.4, GROUND - 119.6, lz + 1.4, t3flag(C('#fff4dc'), 254));   // the bulb
+          shades.push(t3turn([{ r0: 1.2, y0: 0, r1: 6.5, y1: -4.6, c: C('#2a5a4a') }, { r0: 0, y0: 0, r1: 1.2, y1: 0, n: 1, c: C('#2a5a4a') }], 16, 0, 0.4).translate(lx, -(GROUND - 124), lz));
+        }
+        put(S.hall, new THREE.Mesh([B.geo(), ...shades].reduce((a, b) => t3merge(a, b)), mat));
+        S.warn = put(S.hall, new THREE.Mesh(new THREE.BoxGeometry(7, 6, 2), new THREE.MeshBasicMaterial({ color: 0x000000 })), 0);
+        S.warn.position.set(2452, -(GROUND - 177), ZF + 1);
+      }
+      {   // outdoors: the shutter (rebuilt as it rolls), its box, the hatch lamp, the crane's beacon
+        const [s0, s1] = P9.MARKET.shutter, B = t3mb();
+        B.box(s0 - 3, GROUND - 61, ZF, s1 + 4, GROUND - 56, ZF + 4.5, C('#3a3c44'));
+        put(S.out, new THREE.Mesh(B.geo(), mat));
+        S.shutM = put(S.out, new THREE.Mesh(new THREE.BufferGeometry(), mat)); S.shutM.position.set(s0, -(GROUND - 56), ZF + 1.2);
+        S.hatch = put(S.out, new THREE.Mesh(new THREE.BoxGeometry(13, 3, 2), new THREE.MeshBasicMaterial({ color: 0x000000 })), 0); S.hatch.position.set(s0 + 29.5, -(GROUND - 63.5), ZF + 1.5);
+        S.beacon = put(S.out, new THREE.Mesh(new THREE.BoxGeometry(2.4, 2.4, 2.4), new THREE.MeshBasicMaterial({ color: 0x000000 })), 0); S.beacon.position.set(1824, -53, ZF + 12);
+      }
+      {   // the harbour, in front of the quay wall: dark slate with slow light bands and glints, fading into the fog
+        const g = new THREE.PlaneGeometry(W + 800, 320).rotateX(-Math.PI / 2).translate(W / 2, -(H - 4), ZS + 160);
+        const m = new THREE.ShaderMaterial({
+          uniforms: { t3Cam: T3U.cam },
+          vertexShader: 'varying vec3 vW; void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }',
+          fragmentShader: `uniform vec4 t3Cam; varying vec3 vW;
+            void main() {
+              float d = vW.z - ${ZS.toFixed(1)}, t = t3Cam.w, x = floor(vW.x), r = floor(d / 2.0);
+              float s = sin(x * 0.09 + r * 1.7 + t * 0.8) + sin(x * 0.031 - t * 0.5);
+              vec3 c = d < 2.0 ? vec3(0.54, 0.57, 0.64) : s > 1.55 ? vec3(0.48, 0.52, 0.59) : (s > 0.9 && mod(r, 2.0) > 0.5) ? vec3(0.24, 0.3, 0.37) : vec3(0.16, 0.21, 0.27);
+              c = mix(c, vec3(0.6, 0.64, 0.69), clamp(d / 300.0, 0.0, 1.0) * 0.6);
+              gl_FragColor = vec4(c, 1.0);
+            }`,
+        });
+        put(S.out, new THREE.Mesh(g, m), 0);
+      }
+    },
+    // the shutter with `open` rows rolled up (drawFront's slats)
+    p9ShutGeo(open) {
+      const [s0, s1] = P9.MARKET.shutter, w = s1 - s0 + 1, h = 56 - open, px = new Uint32Array(w * Math.max(1, h));
+      for (let j = 0; j < h; j++) for (let x = 0; x < w; x++) px[j * w + x] = j % 3 === 0 ? 0xff4e4a46 : j === h - 1 ? 0xff1b1226 : 0xff76706a;
+      return t3voxels(px, w, h, 0, 0, 1.2, true);
+    },
+    p9Frame() {
+      const S = this.p9s; if (!S) return;
+      const club = flags.club; S.hall.visible = club; S.out.visible = !club;
+      if (club) { S.warn.material.color.copy(this.col(p9.tuna.st === 'warn' && Math.floor(simTime * 8) % 2 === 0 ? 0xff313bff : 0xff201a60)); return; }
+      const open = Math.round(56 * clamp(p9.shutter, 0, 1));
+      if (open >= 56) S.shutM.visible = false;
+      else { let g = S.shut.get(open); if (!g) S.shut.set(open, g = this.p9ShutGeo(open)); S.shutM.geometry = g; S.shutM.visible = true; }
+      S.hatch.material.color.copy(this.col(p9.open ? 0xff40d060 : 0xff3030e0));
+      S.beacon.material.color.copy(this.col(Math.floor(simTime * 1.2) % 2 ? 0xff3030ff : 0xff1e1e26));
+    },
+    // the conveyor's tuna, where drawHallProps and drawTunaHazard put them: { x, top (the tail), len, a (the swing), z, chain from (cx, cy) }
+    p9TunaList() {
+      const out = [], t = simTime, B = enc.boss, ph = B && !B.dead ? B.ph : 0, hz = p9.tuna, sp = ph >= 2 ? 30 : 16, low = ph >= 2;
+      for (let i = 0; i < 4; i++) {
+        const x = P9.HALL_X + ((i * 95 + t * sp) % 380) - 10, chain = low ? 52 : 26;
+        if (x < P9.HALL_X + 4 || x > 2796 || (hz.st === 'swing' && Math.abs(x - hz.x) < 30)) continue;
+        out.push({ x, top: P9.CONVEYOR_Y + chain, len: 40, a: Math.sin(t * 1.3 + i) * (low ? 0.08 : 0.03), z: T3P9.RZ, cx: x, cy: P9.CONVEYOR_Y + 2, cz: T3P9.RZ });
+      }
+      if (hz.st === 'swing') { const pv = P9.TUNA.top - 6; out.push({ x: hz.x, top: pv, len: P9.TUNA.bottom - pv, a: hz.a, z: 0, cx: hz.x - Math.sin(hz.a) * 40, cy: P9.CONVEYOR_Y, cz: -4, hz: true }); }
+      return out;
+    },
+    p9Rig() {   // (in updateFighters) the tuna's chains, the swinging one's shadow
+      if (!isP9() || !flags.club) return;
+      this.bz = 0;
+      for (const q of this.p9TunaList()) {
+        this.seg(q.cx, q.cy, q.x, q.top, q.cz, 0.35, 0.25, T3P9.CHAIN);
+        if (q.hz) this.shadow(q.x, P9.TUNA.bottom, 8);
+      }
+    },
+    p9Models() {   // (in updateModels) the tuna themselves
+      if (!isP9() || !flags.club) return;
+      for (const q of this.p9TunaList()) { const m = this.model(this.geo('tuna' + q.len, () => this.p9TunaGeo(q.len))); m.position.set(q.x, -q.top, q.z); m.rotation.set(0, 0, q.a); }
+    },
+    // a frozen tuna hanging nose down from its tail (tunaAt's shape, turned round): blue-grey back, silver side, pale belly, frost
+    p9TunaGeo(len) {
+      const back = C('#3e5874'), side = C('#74808e'), belly = C('#aab2ba'), frost = C('#d8e0e6'), N = 14;   // (a touch darker than tunaAt's: the 3D shading adds a rim light)
+      const wd = dy => (dy < 5 ? 1 + dy * 0.3 : 6 * Math.sin(Math.PI * Math.min(1, (dy / len - 0.08) / 0.92)) + 1) * 0.9;
+      const tone = b => k => { const x = Math.cos((k + 0.5) / N * Math.PI * 2); return (k * 7 + b * 3) % 13 === 0 ? frost : x < -0.3 ? back : x > 0.4 ? belly : side; };
+      const bands = [{ r0: 0, y0: 0, r1: wd(0), y1: 0, n: 1, c: back }];
+      for (let dy = 0, b = 0; dy < len; dy += 2, b++) { const d1 = Math.min(len, dy + 2); bands.push({ r0: wd(dy), y0: -dy, r1: wd(d1), y1: -d1, c: tone(b) }); }
+      bands.push({ r0: 0, y0: -len, r1: wd(len), y1: -len, n: -1, c: side });
+      const parts = [t3turn(bands, N)];
+      for (let k = 0; k < 4; k++) for (const sd of [-1, 1]) parts.push(t3box(sd * (3 - k) - 0.55, -k - 0.55, -0.35, sd * (3 - k) + 0.55, -k + 0.55, 0.35, back, 0.25));   // the tail fork
+      return parts.reduce((a, b) => t3merge(a, b));
+    },
+
     // ----- the windows: holes in the facade, a real room behind each (walls, furniture, a lamp, the people), 3D frames and sills, a glass pane -----
     findWindows(LIFT) {
       const G = this.winG = new Uint8Array(W * GROUND), GC = new Set([WIN_A, WIN_B, C('#1d1c2a')]);
+      if (isP9()) GC.add(C('#1d2028'));   // the net loft's dark panes
       const wc = this.wallC = i => PROPS[i] ? STAT_BG[i] : LIFT[i] ? -1 : stat[i];   // the wall's own pixel (behind a prop: as it was before the prop), -1 for the facade relief
       for (let y = 1; y < GROUND - 1; y++) for (let x = 1; x < STREET_END; x++) { const i = y * W + x; if (GC.has(wc(i))) G[i] = 1; }
       for (let y = 1; y < GROUND - 1; y++) for (let x = 1; x < STREET_END; x++) {   // the shop's shelf dots: glass all round, so glass too
@@ -6108,12 +6316,12 @@ import * as P9 from './levels/pier9.js';
           const P2 = this.roomStore(); P2.room = id; P2.lamp = lamp;
           const cw2 = R.x1 + 2 - hw.cx; P2.fold(-cw2, 0, R.y0 - 1, R.y1 + 1, 0, C('#8a6030'));
           const m = new THREE.Mesh(P2.geo(), this.roomMat); m.position.set(R.x1 + 2, 0, zf - 2); m.scale.x = 0.04; m.frustumCulled = false;
-          this.scene.add(t3L(m, 0, 2)); this.peeks.push({ m, w: hw, k: 0 });
+          this.world.add(t3L(m, 0, 2)); this.peeks.push({ m, w: hw, k: 0 });
         }
         if (hw && hw.who) {   // the people: a whole body, lit from behind by the room's lamp
           const P3 = this.roomStore(); P3.room = id; P3.lamp = lamp;
           this.person(P3, shop ? 1 : hw.who, rbx);
-          const m = new THREE.Mesh(P3.geo(), this.roomMat); m.frustumCulled = false; this.scene.add(t3L(m, 0, 2));
+          const m = new THREE.Mesh(P3.geo(), this.roomMat); m.frustumCulled = false; this.world.add(t3L(m, 0, 2));
           this.people.push({ m, w: hw, R, x: hw.cx, kid: hw.who === 3 });
         }
       });
@@ -6441,7 +6649,7 @@ import * as P9 from './levels/pier9.js';
       this.bz = this.ease(e, this.bodyZ(e.lane, null));
       const leg = (h, k, ft, c, z) => {
         const [dx, dy] = norm(ft.x - k.x, ft.y - k.y);
-        this.seg(h.x, h.y, k.x, k.y, z, 1.5 * s * lw, s * lw, c); this.seg(k.x, k.y, ft.x, ft.y, z, 1.5 * s * lw, s * lw, c);
+        this.seg(h.x, h.y, k.x, k.y, z, 1.5 * s * lw, s * lw, c); this.seg(k.x, k.y, ft.x, ft.y, z, 1.5 * s * lw, s * lw, e.look.boots ? pal.shoe : c);   // (rubber boots to the knee)
         this.ball(ft.x, ft.y, z, 1.4 * s, s, pal.shoe);
         this.shoe(ft.x - dy * 0.6 * s * f, ft.y + dx * 0.6 * s * f, ft.x + dy * 2.8 * s * f + dx * 0.6, ft.y - dx * 2.8 * s * f + dy * 0.6, z, 1.15 * s, 1.45 * s, s, pal.shoe);
       };
@@ -6465,6 +6673,16 @@ import * as P9 from './levels/pier9.js';
         if (e.role === 'thrower') for (let i = 1; i <= 3; i++) this.ball(nk.x + (mx.x - nk.x) * i / 4 + nx * (1.5 - i) * s, nk.y + (mx.y - nk.y) * i / 4, fz, 0.5, 0, ECOL.steel);   // knives on the chest strap
       }
       leg(pl, kF, fF, pal.pants, ZL); if (top === 'coat') tail(kF, pal.top, ZL);
+      if (pal.apron) {   // the rubber apron from the chest to the knees (drawEnemy), wrapped over the body and both legs
+        const ax = (kB.x + kF.x) / 2, ay = (kB.y + kF.y) / 2, sx0 = nk.x + (pl.x - nk.x) * 0.3, sy0 = nk.y + (pl.y - nk.y) * 0.3;
+        this.seg(sx0, sy0, pl.x + (ax - pl.x) * 0.8, pl.y + (ay - pl.y) * 0.8, 0, tw * 0.8, 0.6 * s, pal.apron, Math.max(TZ, (ZL + 1.5 * s * lw) / (tw * 0.8)) * 1.08);
+      }
+      if (e.look.neck) { const [tx, ty] = norm(pl.x - nk.x, pl.y - nk.y), nx = ty * f; for (let i = -1; i <= 1; i++) this.ball(nk.x + nx * 1.2 * s + i, nk.y + 2 * s - Math.abs(i) * 0.5, tw * TZ * 0.85, 0.45, 0, Math.floor(simTime * 2 + i) % 5 === 0 ? PAL.white : PAL.gold); }   // the gold chain
+      if (e.kind === 'marchetti' && e.hook) {   // the meat hook on its chain, from his back hand (drawHookMarks)
+        const q = e.hook, h = J[4], d = e.face * (q.st === 'back' ? -1 : 1), st = ECOL.steel;
+        this.seg(h.x, h.y, q.x, q.y, -ZA * 0.5, 0.35, 0.25, T3P9.CHAIN);
+        this.seg(q.x, q.y, q.x + d * 1.6, q.y, -ZA * 0.5, 0.45, 0.25, st); this.seg(q.x + d * 1.6, q.y, q.x + d * 2.4, q.y + 1.6, -ZA * 0.5, 0.45, 0.25, st); this.seg(q.x + d * 2.4, q.y + 1.6, q.x + d, q.y + 3.2, -ZA * 0.5, 0.45, 0.25, st);
+      }
       const k = e.hk * s;
       { const glow = !e.dead && !!((e.act && e.actT < 0) || e.sp || e.ph === 2); this.head(e, hd, nk, f, (e.dead ? 'd' : glow ? 'g' : 'n') + k, () => t3goonHead(e, glow, e.dead)); }
       arm(nk, eF, hF, bare ? pal.skin : pal.top, bare ? pal.skin : pal.top, e.gloves ? pal.glove : pal.skin, ZA);
@@ -6521,6 +6739,7 @@ import * as P9 from './levels/pier9.js';
       for (const e of enemies) if (!e.dead) this.enemyRig(e);
       this.playerRig();
       if (dog && !flags.club) this.dogRig();
+      this.p9Rig();
       const nC = Math.min(this.nC, 1200), nS = Math.min(this.nS, 2400);
       for (const m of [this.cylF, this.cylO]) { m.count = nC; m.instanceMatrix.needsUpdate = true; }
       for (const m of [this.sphF, this.sphO]) { m.count = nS; m.instanceMatrix.needsUpdate = true; }
@@ -6656,6 +6875,7 @@ import * as P9 from './levels/pier9.js';
         const m = this.model(geo); m.position.set(b.x, -(b.y + 0.5), this.ease(b, this.laneZ[b.lane ?? LANE.FRONT])); m.rotation.set(0, 0, -b.a);
       }
       for (const b of eshots) if (b.k !== 'b') { const m = this.model(this.knifeGeo); m.position.set(b.x, -b.y, this.ease(b, this.laneZ[b.lane ?? LANE.FIGHT])); m.rotation.set(0, 0, -(b.t * 22)); }
+      this.p9Models();
       for (let i = this.nM; i < this.mpool.length; i++) this.mpool[i].visible = false;
       if (this.gpool) for (let i = this.nG; i < this.gpool.length; i++) this.gpool[i].visible = false;
     },
@@ -6689,6 +6909,8 @@ import * as P9 from './levels/pier9.js';
       this.lMid = mk(true, 5, true, '', 0);            // on the ground behind the fighters: shockwaves
       this.lFront = mk(true, 20, false, '', 0, 2);     // over the fighters: enemy marks and shots, the swap marker
       this.lFx = mk(false, 21, false, '', 0);          // over everything, unlit: tracers, flashes, particles, sparks, edge markers
+      this.lFire = mk(false, 6, true, '', 0);          // Pier 9: the fire in the drum, at the drum's depth
+      this.lCar = mk(true, 6, true, '', 0, 2);         // Pier 9: a container's (or the truck's) door swung open, on its front face
     },
     // draw into buf and copy into the layer's texture; a layer at depth z gets the window the camera sees at that depth
     // (wider, and shifted down by the lens shift), drawn in tiles of the buffer's size
@@ -6716,7 +6938,7 @@ import * as P9 from './levels/pier9.js';
     },
     updateLayers() {
       const { ZF } = T3;
-      if (flags.club) this.layer(this.lClub, () => { drawClub(); drawDancers(); }, { glow: true, z: ZF - 0.6 }); else this.lClub.mesh.visible = false;
+      if (flags.club && !isP9()) this.layer(this.lClub, () => { drawClub(); drawDancers(); }, { glow: true, z: ZF - 0.6 }); else this.lClub.mesh.visible = false;   // (the hall's wall is a mesh: p9Build)
       this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); }, { glow: true, z: flags.club ? ZF - 0.3 : ZF + 0.3 });
       this.layer(this.lSign, drawSign, { glow: true, z: ZF + 5.05 });
       this.layer(this.lBlade, drawStairSign, { glow: true, z: ZF + 4.05 });
@@ -6725,19 +6947,22 @@ import * as P9 from './levels/pier9.js';
       if (flags.club) {   // drawClubFloor in camera-sized strips across the sheet
         const F = this.lFloor, S = STREET + 1, step = 256;
         for (let ox = 0; ox < F.w; ox += step) {
-          withView({ x: F.x0 + ox, y: GROUND, vw: step, vh: S }, drawClubFloor);
+          withView({ x: F.x0 + ox, y: GROUND, vw: step, vh: S }, isP9() ? () => P9.drawHallFloor(R9) : drawClubFloor);
           for (let y = 0; y < S; y++) for (let x = 0; x < step; x++) { const c = buf[y * CW + x]; F.data[y * F.w + ox + x] = t3glow(c); }
         }
         F.tex.needsUpdate = true;
       }
-      this.layer(this.lMid, () => { drawTramp(); drawBag(); drawGroundFx(); });
+      this.layer(this.lMid, () => { drawTramp(); drawBag(); drawGroundFx(); if (isP9() && flags.club && p9.tuna.st === 'warn') P9.drawTunaHazard(R9, p9.tuna); });   // (the swing's red band on the floor; the tuna itself is a model)
+      this.p9Layers();
       this.layer(this.lFront, () => {
         // the marks of a body at depth: drawn where that body shows on this plane (z = 0), seen from the camera
         const t = Math.tan(T3.FOV * Math.PI / 360), D = (cam.vh / 2) / t, ccx = cam.x + cam.vw / 2, ccy = cam.y + cam.vh / 2 - D * Math.tan(T3.PITCH);
         for (const e of enemies) {
           const J = e.dead ? e.pts : e.J, bz = this.zw.get(e) ?? 0, sx = cam.x, sy = cam.y;
           if (J && Math.abs(bz) > 0.5) { const k = D / (D - bz); cam.x -= Math.round((J[2].x - ccx) * (k - 1)); cam.y -= Math.round((J[2].y - ccy) * (k - 1)); }
+          const hk = e.hook; if (hk) e.hook = null;   // (Marchetti's flying hook and chain are a model: enemyRig)
           drawEnemyMarks(e);
+          if (hk) e.hook = hk;
           cam.x = sx; cam.y = sy;
         }
         drawEShots(false);
@@ -6751,12 +6976,32 @@ import * as P9 from './levels/pier9.js';
         if (showSkel) for (const [a, b] of STICKS) line1(P[a].x, P[a].y, P[b].x, P[b].y, PAL.accent);
       });
     },
+    // Pier 9's extra layers: the drum fire (drawFxTop's flames only) at the drum's depth, and the doors that swing open on a
+    // container's or the truck's front face (drawSpawnFx draws them on the wall, behind the block)
+    p9Layers() {
+      const fireOn = isP9() && !flags.club && P9.DRUM_X > cam.x - 30 && P9.DRUM_X < cam.x + cam.vw + 30;
+      if (fireOn) {
+        const near = (x, y) => Math.abs(x - P9.DRUM_X) <= 12 && y > GROUND - 70 && y < GROUND;
+        const R = { cam, get t() { return simTime; }, plot: (x, y, c) => { if (near(x, y)) plot(x, y, c); }, blendPlot: (x, y, r, g, b, a) => { if (near(x, y)) blendPlot(x, y, r, g, b, a); } };
+        this.layer(this.lFire, () => P9.drawFxTop(R, p9.open), { z: -14 });
+      } else this.lFire.mesh.visible = false;
+      const cars = isP9() && !flags.club ? spawnFx.filter(f => f.kind === 'car' && f.t <= 0.4) : [];
+      const carZ = cars.length && cars[0].d.x0 >= P9.TRAILER.x0 - 2 ? T3.ZF + 22.2 : T3.ZF + 28.2;   // the truck's front face, or a container's
+      if (cars.length) this.layer(this.lCar, () => {
+        for (const f of cars) {   // as drawSpawnFx draws a car door
+          const d = f.d;
+          for (let y = d.y0; y < d.y1; y++) for (let x = d.x0; x <= d.x1; x++) plot(x, y, x === d.x1 || y === d.y0 || y === d.y1 - 1 ? PAL.out : d.col);
+          for (let y = d.y0 + 1; y < d.y1 - 1; y++) plot(d.x0 - 1, y, C('#3a2e22'));
+        }
+      }, { glow: true, z: carZ });
+      else this.lCar.mesh.visible = false;
+    },
     // the far scene, exactly as the 2D view draws it (sky, moon, clouds, far town, or the club's back wall and crowd), lit the same way
     updateBackground() {
-      if (flags.club) { this.scene.background = this.clubBg || (this.clubBg = t3rgb(C('#0d0913'))); return; }   // the club's wall is a layer in the world (updateLayers)
+      if (flags.club) { this.scene.background = isP9() ? this.hallBg || (this.hallBg = t3rgb(C('#101218'))) : this.clubBg || (this.clubBg = t3rgb(C('#0d0913'))); return; }   // the club's wall is a layer in the world (updateLayers); the hall's is a mesh (p9Build)
       this.scene.background = this.bgTex;
       buf.fill(0);
-      drawSky();
+      if (isP9()) P9.drawSky(R9); else drawSky();
       lightPass();
       this.bgData.set(buf);
       const t = this.bgTex; t.needsUpdate = true;
@@ -6769,6 +7014,9 @@ import * as P9 from './levels/pier9.js';
       const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(this.rainMax * 6), 3));
       this.rain = new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: new THREE.Color(170 / 255, 185 / 255, 220 / 255), transparent: true, opacity: 0.35, depthWrite: false }));
       this.rain.frustumCulled = false; this.rain.renderOrder = 15; this.scene.add(this.rain);
+      const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(this.rainMax * 3), 3));   // Pier 9: the sleet's wet flakes
+      this.flakes = new THREE.Points(fg, new THREE.PointsMaterial({ color: new THREE.Color(240 / 255, 244 / 255, 250 / 255), size: 1.5, sizeAttenuation: false, transparent: true, opacity: 0.7, depthWrite: false }));
+      this.flakes.frustumCulled = false; this.flakes.renderOrder = 15; this.scene.add(this.flakes);
       const cone = new THREE.CylinderGeometry(1 / 13, 1, 1, 18, 1, true);   // narrow end (+y) at the source, 13x wider at the far end
       this.beams = Array.from({ length: 5 }, () => {
         const m = new THREE.Mesh(cone, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
@@ -6782,15 +7030,19 @@ import * as P9 from './levels/pier9.js';
       m.scale.set(r1, len, r1); m.material.color.setRGB(...rgb); m.material.opacity = op; m.visible = true;
     },
     updateFx() {
-      const p = this.rain.geometry.attributes.position, n = flags.club ? 0 : Math.min(rain.drops.length, this.rainMax);
+      const p = this.rain.geometry.attributes.position, n = flags.club ? 0 : Math.min(rain.drops.length, this.rainMax), sleet = isP9();
+      if (this.rainSleet !== sleet) { this.rainSleet = sleet; const m = this.rain.material; if (sleet) { m.color.setRGB(226 / 255, 232 / 255, 240 / 255); m.opacity = 0.5; } else { m.color.setRGB(170 / 255, 185 / 255, 220 / 255); m.opacity = 0.35; } }   // Pier 9: sleet, whiter and steeper
       for (let i = 0; i < n; i++) {
-        const d = rain.drops[i], far = d.v < 290, l = far ? 3 : 5, onProp = floorBelow(d.x, d.y, 0) !== GROUND_S;
+        const d = rain.drops[i], far = d.v < (sleet ? 150 : 290), l = far ? 3 : 5, onProp = floorBelow(d.x, d.y, 0) !== GROUND_S;
         const z = onProp ? T3.ZF + 2 + (i * 7 % 15) : far ? -10 - (i * 7 % 9) : (i * 37 % 41) - 12;   // over a car or a scaffold: the drops fall onto it, not in front of it
-        p.setXYZ(i * 2, d.x, -d.y, z); p.setXYZ(i * 2 + 1, d.x + l / 3, -(d.y - l), z);
+        p.setXYZ(i * 2, d.x, -d.y, z); p.setXYZ(i * 2 + 1, d.x + (sleet ? l / 2 : l / 3), -(d.y - l), z);
       }
       p.needsUpdate = true; this.rain.geometry.setDrawRange(0, n * 2);
+      let nf = 0;
+      if (sleet) { const fp = this.flakes.geometry.attributes.position; for (let i = 0; i < n; i++) { const d = rain.drops[i]; if (d.flake) fp.setXYZ(nf++, d.x + 1, -(d.y + 1), d.v < 150 ? -10 - (i * 7 % 9) : (i * 37 % 41) - 12); } fp.needsUpdate = true; }
+      this.flakes.geometry.setDrawRange(0, nf);
       for (const b of this.beams) b.visible = false;
-      if (flags.club) clubSpots().forEach((sp, i) => this.beam(i, sp.fx, GROUND - 144, sp.x, GROUND - 2, 13, -3, sp.c.map(v => Math.min(1, v / 1.4)), 0.13));
+      if (flags.club && !isP9()) clubSpots().forEach((sp, i) => this.beam(i, sp.fx, GROUND - 144, sp.x, GROUND - 2, 13, -3, sp.c.map(v => Math.min(1, v / 1.4)), 0.13));
       else if (cam.x < GOAL.x1 + 60 && cam.x + cam.vw > GOAL.x0 - 60) [[GOAL.x0 + 8, 0, GOAL.y - 2], [GOAL.x1 - 8, 2.2, GOAL.y - 70]].forEach(([bx, ph, by], i) => {
         const a = Math.sin(simTime * 0.5 + ph) * 0.5;
         this.beam(i, bx, by, bx + Math.tan(a) * 220, by - 220, 13, T3.ZF + 2, [0.55, 0.55, 0.5], 0.09);
@@ -6821,12 +7073,14 @@ import * as P9 from './levels/pier9.js';
     },
     frame(rdt) {
       if (!this.renderer) return;
+      if (this.builtFor !== LV.id) this.rebuildWorld();   // the level changed (street <-> Pier 9)
       this.rdt = rdt;
       this.updateCamera();
       this.updateLights();
       this.updateBackground();
       this.updateLayers();
       this.updateWindows(rdt);
+      this.p9Frame();
       this.nM = 0;
       if (this.slots) for (const h of this.slots.values()) h.used = false;
       this.updateFighters();
@@ -6885,7 +7139,6 @@ import * as P9 from './levels/pier9.js';
   const threeCanvas = document.getElementById('three-canvas');
   const b3d = document.getElementById('b-3d');
   function setMode3D(on) {
-    if (on && isP9()) { toast('3D view', 'Pier 9 is not built for the 3D view yet: this level plays in 2D'); return; }
     mode3D = on;
     threeCanvas.classList.toggle('hidden', !on);
     if (b3d) { b3d.setAttribute('aria-pressed', on ? 'true' : 'false'); b3d.textContent = on ? '2D view' : '3D view'; }
@@ -7328,7 +7581,7 @@ import * as P9 from './levels/pier9.js';
   // kept in a snapshot the first time it is left, so going back restores them exactly. The caller then calls reset().
   const STREET_LV = LV, PIER9_LV = { id: 'pier9', title: 'Pier 9', startX: 60 };
   const LEVEL_LISTS = { PLATS, STEPS, LAMPS, WINL, FEAT, VPARTS, HOUSEWIN, DOORS, ALLEYS, CARDOORS, CLUB_DOORS, OBJ_START, pickups, VEH };
-  let streetSnap = null, p9Data = null, want3D = false;
+  let streetSnap = null, p9Data = null;
   function loadLevel(id) {
     if (LV.id === id) return;
     boards.length = 0; while (objs.length) removeObj(objs[0]);
@@ -7342,13 +7595,11 @@ import * as P9 from './levels/pier9.js';
           pickups: P9.PICKUPS.map(k => ({ w: k.w, x: k.x, y: restY(k.w) + (k.yOff || 0), taken: false, rack: !!k.rack })) };
       }
       d = p9Data; LV = PIER9_LV;
-      if (mode3D) { want3D = true; setMode3D(false); }   // the 3D view is not built for Pier 9: it plays in 2D
     } else { d = streetSnap; LV = STREET_LV; }
     for (const k in LEVEL_LISTS) { LEVEL_LISTS[k].length = 0; LEVEL_LISTS[k].push(...d[k]); }
     stat.set(d.stat); PROPS.set(d.PROPS); STAT_BG = d.STAT_BG; GOAL = d.GOAL;
     SURF.length = 0; SURF.push(GROUND_S, ...PLATS, ...TRAMPS);
     for (const w of HOUSEWIN) { w.off = false; w.peek = false; w.t = 0; w.lv = 1; }
-    if (id !== 'pier9' && want3D) { want3D = false; setMode3D(true); }
   }
   // the Pier 9 run: waves along the quay, the shutter, the boss in the hall, the conveyor's tuna, the ending
   const p9 = { w: {}, queue: [], shutter: 0, open: false, bossDlg: false, dlgDone: false, crewT: 0, obj: '', tuna: { st: 'off', t: 0, x: 0, dir: 1, a: 0, hit: null } };
@@ -7862,6 +8113,8 @@ import * as P9 from './levels/pier9.js';
         boss: enc.boss ? { hp: Math.round(enc.boss.hp), max: enc.boss.maxHp, ph: enc.boss.ph, sp: enc.boss.sp, act: enc.boss.act, x: Math.round(enc.boss.x), dead: enc.boss.dead, intro: !!enc.boss.intro } : null, tuna: p9.tuna.st, hookPull, endPh, kills: runS.kills, kos, wasted: flags.wasted,
         enemies: enemies.filter(e => !e.dead).map(e => [e.role, Math.round(e.x), Math.round(e.y), Math.round(e.hp), e.zone, e.down ? 'down' : '']) }),
       tp: x => { const dx = x - ctl.x; ctl.x += dx; for (const p of P) { p.x += dx; p.px += dx; } for (const st of hair) for (const p of st) { p.x += dx; p.px += dx; } if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; } cam.xf += dx; },
+      street: () => { leaveTitle(); setDemo(false); hideMenu(); loadLevel('street'); reset(); },   // back to the tutorial street
+      t3mem: () => Three3D.renderer ? { ...Three3D.renderer.info.memory, programs: Three3D.renderer.info.programs.length } : null,   // the 3D view's GPU objects (a level switch must not leak them)
       hurtBoss: n => { if (enc.boss) { enc.boss.hp = Math.max(1, enc.boss.hp - n); } }, hurtHero: n => { hero.hp = Math.max(1, hero.hp - n); }, setDiff: i => { diffSel = i; }, kill: () => { for (const e of enemies) if (!e.dead && e !== enc.boss) killEnemy(e, 1, 200, 0.3); } };
   } else requestAnimationFrame(frame);
 })();
