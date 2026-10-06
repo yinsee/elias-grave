@@ -163,3 +163,7 @@ Total: 16 lines, 99 s of speech, 0.9 MB.
 2. **Voices**: approve or replace the four reference voices. To change one, edit its recipe in `audio_voice.json` (`say_voice`, `pitch_st`, `ref_fx`), then `tools/voice.py --refs --only <speaker>` and `tools/voice.py --force --only <ids>`. A real actor's 5-10 s recording dropped in as `ref.wav` + `ref.txt` gives the best result with no code change.
 3. **Voice on or off**: the level doc says voice is optional (text by default). The lines exist; the game can play them with the captions or keep text only.
 4. **Loudness**: music sits at -16 LUFS and the music bus at 0.7; adjust after a play-through with sfx.
+
+## Approval (2026-10-06)
+
+The director listened to the music and the voices and approved them: the manifest seeds (title 1101, prologue 2102, docks_explore 3101, boss_marchetti 4101), the four character voices and the 16 voice lines, including marchetti_intro_01 as it is.
