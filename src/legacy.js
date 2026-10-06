@@ -2328,9 +2328,9 @@ import * as P9 from './levels/pier9.js';
       if (e.muz > 0) e.muz -= dt;
       if (e.down) { eDownStep(e, dt); continue; }
       const dx = px - e.x, adx = Math.abs(dx), dy = Math.abs(P[2].y - (e.y - 16 * e.s));
-      const aggro = adx < 200 && dy < (e.perch > 0 ? 200 : 80) * e.s && hero.mode !== 'getup', level = Math.abs(py - e.y) < 14;
+      const aggro = (adx < 200 || (e.kind === 'marchetti' && flags.club)) && dy < (e.perch > 0 ? 200 : 80) * e.s && hero.mode !== 'getup', level = Math.abs(py - e.y) < 14;
       e.fight = aggro && adx < 60 * e.s && !e.intro;
-      if (e.intro) { e.act = null; e.sp = null; e.tx = e.introX; e.run = 0.5; e.cdT = Math.max(e.cdT, 0.8); if (Math.abs(e.introX - e.x) <= 3) e.face = -1; }   // the entrance: a slow walk to his mark under the spot, nothing else
+      if (e.intro) { e.act = null; e.sp = null; e.tx = e.introX; e.run = e.kind === 'marchetti' ? 1 : 0.5; e.cdT = Math.max(e.cdT, 0.8); if (Math.abs(e.introX - e.x) <= 3) e.face = -1; }   // the entrance: a slow walk to his mark under the spot, nothing else
       else if (e.kind === 'marchetti') marchettiThink(e, dt, px, dx, adx, level, aggro);
       else if (e.type === 'boss') bossThink(e, dt, px, dx, adx, level, aggro); else goonThink(e, dt, px, dx, adx, level, aggro, pm);
       if (!e.air) {
@@ -4549,10 +4549,14 @@ import * as P9 from './levels/pier9.js';
       }
       if (enc.introT >= 0) {   // the entrance, 1.7 s: spot and walk, the name card at 0.5 s, the boss bar fills from 0.7 s, then the fight
         enc.introT += rdt;
-        if (enc.introT > 0.5 && cardT <= 0 && cardEl.hidden) { cardEl.innerHTML = isP9() ? `<b>${P9.MARCHETTI.name}</b><small>${P9.MARCHETTI.title}</small>` : `<b>${BOSS_NAME}</b><small>Owner of Club Noir</small>`; cardEl.hidden = false; cardT = 3.2; toastEl.hidden = true; toastT = 0; }
-        if (isP9() && enc.introT > 1.2 && !p9.bossDlg) { p9.bossDlg = true; cardEl.hidden = true; cardT = 0; playScene('dialog', 'marchetti_intro'); }   // the portrait dialog, then the fight
+        if (enc.introT > 0.5 && cardT <= 0 && cardEl.hidden && !(isP9() && p9.bossDlg)) { cardEl.innerHTML = isP9() ? `<b>${P9.MARCHETTI.name}</b><small>${P9.MARCHETTI.title}</small>` : `<b>${BOSS_NAME}</b><small>Owner of Club Noir</small>`; cardEl.hidden = false; cardT = 3.2; toastEl.hidden = true; toastT = 0; }
+        // Pier 9: he walks out to his mark (at most 4.5 s), the portrait dialog plays, and the fight starts when it closes
+        if (isP9() && !p9.bossDlg && enc.boss && (Math.abs(enc.boss.x - enc.boss.introX) <= 3 || enc.introT > 4.5)) {
+          p9.bossDlg = true; cardEl.hidden = true; cardT = 0;
+          playScene('dialog', 'marchetti_intro').then(() => { if (p9.bossDlg) p9.dlgDone = true; });
+        }
         bossBarK = clamp((enc.introT - 0.7) / 1, 0, 1);
-        if (enc.introT >= 1.7 || !enc.boss || enc.boss.dead) {
+        if ((isP9() ? p9.dlgDone : enc.introT >= 1.7) || !enc.boss || enc.boss.dead) {
           enc.introT = -1; bossBarK = 1; enc.spawnT = 3;
           if (enc.boss) { enc.boss.intro = false; enc.boss.cdT = 0.6; }
           for (const d of dancers) if (d.home0 != null) { d.home = d.home0; d.home0 = null; }
@@ -5119,6 +5123,7 @@ import * as P9 from './levels/pier9.js';
     let tx = P[2].x + look, ty = P[2].y + 17 - cam.vh * 0.22;   // his feet about 72 % of the way down the view: more street and roofs, less sky
     const bx = sceneBox();
     tx = bx.x1 - bx.x0 <= cam.vw - 16 ? clamp(tx, bx.x1 - cam.vw / 2 + 8, bx.x0 + cam.vw / 2 - 8) : (bx.x0 + bx.x1) / 2;
+    if (isP9() && enc.boss && enc.boss.intro) tx = enc.boss.x - 24;   // Pier 9: the entrance frames him as he walks out of the cold store
     ty = bx.y1 - bx.y0 <= cam.vh - 10 ? clamp(ty, bx.y1 - cam.vh / 2 + 5, bx.y0 + cam.vh / 2 - 5) : (bx.y0 + bx.y1) / 2;
     let cx = smoothDamp(cx0, tx, cam.v, 'x', 0.32, rdt), cy = smoothDamp(cy0, ty, cam.v, 'y', 0.4, rdt);
     cam.xf = cx - cam.vw / 2; cam.yf = cy - cam.vh / 2;
@@ -7345,11 +7350,11 @@ import * as P9 from './levels/pier9.js';
     if (id !== 'pier9' && want3D) { want3D = false; setMode3D(true); }
   }
   // the Pier 9 run: waves along the quay, the shutter, the boss in the hall, the conveyor's tuna, the ending
-  const p9 = { w: {}, queue: [], shutter: 0, open: false, bossDlg: false, crewT: 0, obj: '', tuna: { st: 'off', t: 0, x: 0, dir: 1, a: 0, hit: null } };
+  const p9 = { w: {}, queue: [], shutter: 0, open: false, bossDlg: false, dlgDone: false, crewT: 0, obj: '', tuna: { st: 'off', t: 0, x: 0, dir: 1, a: 0, hit: null } };
   const R9 = { buf, CW, cam, plot, plotV, line1, blendPlot: (x, y, r, g, b, a) => blendPlot(x, y, r, g, b, a), get t() { return simTime; } };
   function p9Reset() {
     p9.w = {}; for (const w of P9.WAVES) p9.w[w.id] = { out: false, n: 0 };
-    p9.queue.length = 0; p9.shutter = 0; p9.open = false; p9.bossDlg = false; p9.crewT = 0; p9.obj = '';
+    p9.queue.length = 0; p9.shutter = 0; p9.open = false; p9.bossDlg = false; p9.dlgDone = false; p9.crewT = 0; p9.obj = '';
     Object.assign(p9.tuna, { st: 'off', t: 0, hit: null }); hookPull = false; barkT = 0; sayEl.hidden = true;
     rain.k = rain.goal = 0.8; rain.drops.length = 0;
     setObjective('Pier 9', 'Find the collector');
