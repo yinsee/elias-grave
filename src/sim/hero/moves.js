@@ -217,10 +217,12 @@ Object.assign(MOVES, {
     K(0, {}, TRN.CLINCH), K(0.1, { f1x: 5, f1y: 9, rx: 0, lean: 0.15, a0s: 1.3, a0e: 0.9, a1s: 1.4, a1e: 0.7 }, TRN.CLINCH),
     K(0.15, KNEE_OUT, TRN.CLINCH, 'in'), K(0.22, KNEE_OUT, TRN.CLINCH), K(0.36, {}, TRN.CLINCH, 'out')] },
   // the clinch throw: heave him back, then swing him round and let go at 0.2 s
-  gtoss: { dur: 0.6, win: [9, 9], limb: 6, power: 0, up: 0, clinch: true, keys: [
-    K(0, {}, TRN.CLINCH), K(0.12, { lean: -0.35, rx: -1.8, ry: 14.6, head: 0.2, f0x: -9, f1x: 3, a0s: 1.0, a0e: 0.5, a1s: 1.1, a1e: 0.4 }, TRN.CLINCH),
-    K(0.2, { lean: 0.55, rx: 3, ry: 14.8, head: -0.2, f0x: -9, f1x: 6, a0s: 2.3, a0e: 0.2, a1s: 2.4, a1e: 0.15 }, TRN.CLINCH, 'in'),
-    K(0.34, { lean: 0.5, rx: 3, ry: 14.8, head: -0.2, f0x: -9, f1x: 6, a0s: 2.2, a0e: 0.3, a1s: 2.3, a1e: 0.25 }, TRN.CLINCH), K(0.6, {}, GUARD, 'out')] },
+  // the shoulder throw (seoi-nage, his back to the throw): turn in low, load him on the shoulder, heave him over the top and let go (GRAB.toss)
+  gtoss: { dur: 0.45, win: [9, 9], limb: 6, power: 0, up: 0, clinch: true, keys: [
+    K(0, {}, TRN.CLINCH), K(0.09, { ry: 13.4, lean: 0.45, rx: 0.4, head: 0.15, f0x: -6, f1x: 6, a0s: 1.7, a0e: 0.6, a1s: 1.9, a1e: 0.5 }),   // turned in, low
+    K(0.18, { ry: 12.2, lean: 0.8, rx: 1.2, head: 0.35, f0x: -7, f1x: 6, a0s: 2.5, a0e: 0.9, a1s: 2.7, a1e: 0.7 }),   // loaded: bent forward, him on the shoulder
+    K(0.3, { ry: 16.2, lean: -0.5, rx: -1.4, head: -0.55, f0x: -5, f1x: 8, a0s: 3.1, a0e: 0.3, a1s: 3.2, a1e: 0.2 }, GUARD, 'in'),   // over the top: up and back
+    K(0.45, {}, GUARD, 'out')] },
   // the ground slam (in the clinch, ↓ + W; or F + ↓ on a goon at finisher health): dip under him, press him overhead, drive him down into the floor
   // (win: the impact, SLAM.down[1]; it sets the chain point, so a stomp can follow)
   gslam: { dur: 0.82, win: [0.46, 0.5], limb: 6, power: 0, up: 0, clinch: true, keys: [
@@ -263,12 +265,12 @@ export const FINS = {
 // OTG: stomp and point-blank shot damage; at most otgN extra beats on the floor. DIVE: the shoot-dodge: v px/s for t s, h px high, inv s; down s on the floor
 export const JUG = { launch: 105, pop: 120, popK: 0.8, g: 1.2, gK: 0.35, dmgK: 0.88, max: 7, air: 5 };
 export const FLY = { vx: 250, vy: -45, fly: 0.75, crowd: 12 };
-export const GRAB = { hold: 1.6, knees: 3, knee: 7, elbow: 6, kick: 10, v: 235, vy: -100, fly: 0.9, self: 8, gap: 19 };   // knees: blows (knees, elbows) before the next one sends him off; elbow, kick: dmg
+export const GRAB = { hold: 1.6, knees: 3, knee: 7, elbow: 6, kick: 10, v: 230, vy: -40, fly: 0.9, self: 8, gap: 19, toss: [0.09, 0.18, 0.3] };   // toss: the shoulder throw's turn, load, release (s)   // knees: blows (knees, elbows) before the next one sends him off; elbow, kick: dmg
 export const OTG = { stomp: 12, shot: 1.4, n: 2, reach: 22 };
 export const DIVE = { v: 190, t: 0.55, h: 9, inv: 0.5, down: 0.3 };
 // SLAM: the ground slam. up = he is overhead (s), down = driven into the floor (the impact, s); lift = px over the hero's feet at the top,
 // fwd = px in front where he lands; dmg (no finisher); the shockwave floors the goons within r px (dy px up or down)
-export const SLAM = { up: [0.1, 0.3], down: [0.38, 0.46], lift: 38, fwd: 15, dmg: 22, r: 40, dy: 10 };
+export const SLAM = { up: [0.1, 0.3], down: [0.38, 0.46], lift: 38, fwd: 15, dmg: 22, r: 40, dy: 10, wave: 4 };   // wave: dmg to each goon the shockwave floors
 // focus (#6), the Sandman's meter: 0..max; Sandman time starts by itself at a full meter with 2+ goons in the fight (or a perfect dodge at a full
 // meter): dur s of world at slow x speed (the hero at full speed), drained as it runs (min: unused since F went). gain: per varied hit (rep: a repeat), ender, counter, juggle hit, knee, clinch throw,
 // perfect dodge, kill, a bullet that lands, a stomp; none while it runs. fin: a finisher on a goon at <= hp of his max; stop = hit-stop (4 frames);
