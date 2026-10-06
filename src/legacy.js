@@ -210,6 +210,7 @@ import * as P9 from './levels/pier9.js';
   // static world layer: street, facades, vehicles, lamps, the mattress pile (0 = see-through)
   const PROPS = new Uint8Array(W * H);   // pixels of solid street props (vehicles, scaffold, balcony, lamps) that blood sticks to
   let STAT_BG = null;   // the street before the props were drawn on it: the 3D view's wall behind a lamp post or a vehicle
+  let WALLM = null;   // the level's wall mask (1 = a wall or a prop is behind the pixel); null = a wall everywhere (the street)
   const stat = (() => {
     const b = new Uint32Array(W * H);
     const put = (x, y, c) => { if (x >= 0 && y >= 0 && x < W && y < H) b[y * W + x] = c; };
@@ -1496,6 +1497,7 @@ import * as P9 from './levels/pier9.js';
       const v = PROPS[i] && !flags.club ? vehAt(x) : -1;
       if (v >= 0) { if (VCAP[v] >= 12) return; VCAP[v]++; gore(i, BLOOD_D); return; }   // a vehicle: single pixels of the darkest blood, no runs, 12 at most
       if (flags.club && !PROPS[i]) { const ci = (y >> 4) * BCW + (x >> 4); if (BCAP[ci] >= 14) return; BCAP[ci]++; gore(i, BLOOD_D); return; }   // the club: a few dark spots
+      if (WALLM && !WALLM[i] && !WALLM[i + W]) { if (particles.length < 900) particles.push({ x: x + 0.5, y, vx: 0, vy: 10, life: 1.6, c: BLOOD[1], blood: true }); return; }   // open sky or sea: no wall to stick to, the drop falls
       // walls, lamp posts and the scaffold: dark splashes, never bright paint; many run down to the street, leaving a light stain
       gore(i, simRand() < 0.5 ? BLOOD[1] : BLOOD_D);
       if (simRand() < 0.45 && drips.length < 900) drips.push({ x, y, a: 0, vol: 0.5 + simRand() * 0.9, wall: !PROPS[i] });
@@ -1544,6 +1546,7 @@ import * as P9 from './levels/pier9.js';
         const i0 = d.y * W + d.x, ny = d.y + 1;
         if (d.wall) {   // down the wall: a light stain where it ran, the wet drop below; at the foot of the wall it joins a pool in the street
           if (ny >= GROUND - 1) { stain(d.x, GROUND); d.vol = 0; break; }
+          if (WALLM && !WALLM[ny * W + d.x]) { gore(i0, STAIN_L); particles.push({ x: d.x + 0.5, y: d.y + 1, vx: 0, vy: 10, life: 1.6, c: BLOOD[1], blood: true }); d.vol = 0; break; }   // the wall ends: it drips off
           gore(i0, STAIN_L); gore(ny * W + d.x, BLOOD[1]); d.y = ny; d.vol -= 0.012 * (1 - rain.k * 0.6);
           if (d.vol <= 0) break;
           continue;
@@ -6632,9 +6635,16 @@ import * as P9 from './levels/pier9.js';
         const t0x = nk.x + bx * 1.3, t0y = nk.y + by * 1.3, t1x = nk.x - ux * L * 0.62 + bx * 1.6, t1y = nk.y - uy * L * 0.62 + by * 1.6, [px, py] = norm(t1y - t0y, -(t1x - t0x));
         setQ(this.tie, [[t0x - px * 0.45, t0y - py * 0.45], [t0x + px * 0.45, t0y + py * 0.45], [t1x + px * 0.45, t1y + py * 0.45], [t1x - px * 0.45, t1y - py * 0.45]], z + 0.08);
       }
-      {   // the loose hair locks, behind the head
+      {   // the loose hair locks, behind the head: each lock tapers to its tip and sits back in depth, so the top locks do not stand
+        // up beside the skull as two "ears"; two in-between strands (averages of locks 0-1 and 1-2) fill the mass (3D only)
         const ox = hd.x - P[0].x, oy = hd.y - P[0].y;
-        hair.forEach((st, k) => { for (let i = 1; i < st.length; i++) this.seg(st[i - 1].x + ox, st[i - 1].y + oy, st[i].x + ox, st[i].y + oy, 0, 1.4, 0.9, k === 0 ? PAL.hairL : PAL.hair, 1.4); });
+        const lock = (st, zb, r0, c) => { for (let i = 1; i < st.length; i++) { const t0 = (i - 1) / (st.length - 1), t1 = i / (st.length - 1);
+          this.seg(st[i - 1].x + ox, st[i - 1].y + oy, st[i].x + ox, st[i].y + oy, zb - 0.5 * t1, r0 * (1 - 0.5 * (t0 + t1) / 2), 0.7, c, 1.2); } };
+        hair.forEach((st, k) => lock(st, -0.8 - 0.25 * k, k < 2 ? 1.15 : 1.35, k === 0 ? PAL.hairL : PAL.hair));
+        for (const [a, b, zb] of [[0, 1, 0.3], [1, 2, -1.9]]) {
+          const A = hair[a], B = hair[b], n = Math.min(A.length, B.length);
+          lock(Array.from({ length: n }, (_, i) => ({ x: (A[i].x + B[i].x) / 2, y: (A[i].y + B[i].y) / 2 })), zb, 1.0, PAL.hair);
+        }
       }
       this.head('hero', hd, nk, f, 'h' + Dlook, () => t3heroHead(Dlook));
       arm(nk, eF, hF, PAL.shirt, PAL.shirt, PAL.skin, ZA);
@@ -6665,7 +6675,7 @@ import * as P9 from './levels/pier9.js';
       const tw = 2.6 * s * bw, cut = top === 'coat' ? 1 : 0.7, mx = { x: nk.x + (pl.x - nk.x) * cut, y: nk.y + (pl.y - nk.y) * cut };
       this.seg(nk.x, nk.y, mx.x, mx.y, 0, tw, s, pal.top, TZ);
       if (cut < 1) this.seg(mx.x, mx.y, pl.x, pl.y, 0, tw, s, pal.pants, TZ);
-      if (bare || e.type === 'boss') { const [ux, uy] = norm(pl.x - nk.x, pl.y - nk.y); this.seg(mx.x - ux * 0.35 * s, mx.y - uy * 0.35 * s, mx.x + ux * 0.35 * s, mx.y + uy * 0.35 * s, 0, tw + 0.15, 0, pal.belt, TZ); }   // the belt: a thin line, as drawEnemy draws it
+      if ((bare || e.type === 'boss') && !pal.apron) { const [ux, uy] = norm(pl.x - nk.x, pl.y - nk.y); this.seg(mx.x - ux * 0.35 * s, mx.y - uy * 0.35 * s, mx.x + ux * 0.35 * s, mx.y + uy * 0.35 * s, 0, tw + 0.15, 0, pal.belt, TZ); }   // the belt: a thin line, as drawEnemy draws it
       {   // the chest: the vest's open front, the jacket's collar, the tank's neckline (as drawEnemy draws them)
         const [tx, ty] = norm(pl.x - nk.x, pl.y - nk.y), nx = ty * f, ny = -tx * f, fz = tw * TZ * 0.85;
         if (top === 'vest') this.seg(nk.x + nx * tw * 0.55, nk.y + ny * tw * 0.55, mx.x + nx * tw * 0.45, mx.y + ny * tw * 0.45, fz, 0.6 * s, 0, pal.skin, 0.4);
@@ -7595,11 +7605,12 @@ import * as P9 from './levels/pier9.js';
         p9Data = { stat: pt.b, PROPS: pt.props, STAT_BG: pt.bg, GOAL: { x0: -999, x1: -998, y: -999 }, PLATS: P9.surfaces(), STEPS: [], LAMPS: pt.lamps, WINL: pt.winl, FEAT: [], VPARTS: [],
           HOUSEWIN: pt.housewin, DOORS: pt.doors, ALLEYS: [], CARDOORS: pt.cdoors, CLUB_DOORS: P9.HALL_DOORS, OBJ_START: P9.OBJ_START, VEH: pt.veh,
           pickups: P9.PICKUPS.map(k => ({ w: k.w, x: k.x, y: restY(k.w) + (k.yOff || 0), taken: false, rack: !!k.rack })) };
+        p9Data.WALLM = pt.b.map((c, i) => c || pt.props[i] ? 1 : 0);   // (a Uint32Array of 0/1: the sky, the sea and the fog are 0)
       }
       d = p9Data; LV = PIER9_LV;
     } else { d = streetSnap; LV = STREET_LV; }
     for (const k in LEVEL_LISTS) { LEVEL_LISTS[k].length = 0; LEVEL_LISTS[k].push(...d[k]); }
-    stat.set(d.stat); PROPS.set(d.PROPS); STAT_BG = d.STAT_BG; GOAL = d.GOAL;
+    stat.set(d.stat); PROPS.set(d.PROPS); STAT_BG = d.STAT_BG; GOAL = d.GOAL; WALLM = d.WALLM || null;
     SURF.length = 0; SURF.push(GROUND_S, ...PLATS, ...TRAMPS);
     for (const w of HOUSEWIN) { w.off = false; w.peek = false; w.t = 0; w.lv = 1; }
   }
