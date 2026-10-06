@@ -4,14 +4,32 @@ Run with a static server (`python3 -m http.server 8765`) and open the URL; the p
 Two runs of the same URL must give the same hashes. A refactor step that keeps both hashes changed nothing.
 A step that changes behaviour on purpose records new hashes here, with the reason.
 
-## Current (combat rework, 2026-10-06)
+## Current (readable mobs and the Saltmen, 2026-10-06)
 
 | URL | state | buf | l3 | note |
 |---|---|---|---|---|
-| `index.html?autotest=demo&frames=1200` | `97d2d0dc` | `cc0931b9` | | 2D (attract demo, seed 1, 960x540 view) |
-| `index.html?autotest=boss&frames=1800` | `59a01970` | `ed268240` | | 2D (skipToBoss + demo, seed 1) |
-| `index.html?autotest=demo&frames=1200&view3d` | `97d2d0dc` | `99d61b63` | `d39d8e05` | 3D view: the same state hash as 2D |
-| `index.html?autotest=boss&frames=1800&view3d` | `59a01970` | `cfaa9fc5` | `8999f2ab` | 3D view: the same state hash as 2D |
+| `index.html?autotest=demo&frames=1200` | `92fb3f4e` | `7bb42149` | | 2D (attract demo, seed 1, 960x540 view) |
+| `index.html?autotest=boss&frames=1800` | `7afcc5eb` | `d11e6333` | | 2D (skipToBoss + demo, seed 1) |
+| `index.html?autotest=demo&frames=1200&view3d` | `92fb3f4e` | `03b6e245` | `6b974618` | 3D view: the same state hash as 2D |
+| `index.html?autotest=boss&frames=1800&view3d` | `7afcc5eb` | `bc6a1252` | `5075de6b` | 3D view: the same state hash as 2D |
+
+Readable-mob and Saltmen reasons (all four URLs run twice or more in headless Chrome; each set matched, and the 3D state hashes equal the 2D ones.
+A cold first launch can time out with the title still `Elias Grave`: run it again):
+- The demo plays Hard. Hard now allows 3 attack tokens (was 4) and at most 2 goons swinging at once, each new swing at least 0.25 s after
+  the last (`DIFFS` `tok`, `swing`, `gap`). Goons keep 14 px apart, token holders too (`sepStep`). Hard adds high-low mix-ups and a few
+  feints, a raised guard needs a combo ender (a lone heavy is blocked and often punished), and a predictable held heavy is read sooner (`enc.holdK`).
+- Goon rest and wind-up times use `cdA` (Wicked: as Hard), so Wicked is harder through feints and mix-ups, not speed.
+- Enemy bullets and thrown knives hit the goons in their way (bodies are cover).
+- Every goon gets a few new fields at spawn (two more `simRand` calls), so the random sequence shifts.
+- The 2D and 3D art changes: the rim flash on a melee wind-up, the glint on a ranged wind-up, the big arrow for a shooter off the screen.
+
+The previous hashes (combat rework): demo `97d2d0dc` / `cc0931b9` (3D buf `99d61b63`, l3 `d39d8e05`), boss `59a01970` / `ed268240` (3D buf `cfaa9fc5`, l3 `8999f2ab`).
+
+Pier 9 tests with `?manual`: `__pier9.spawn(v, x)` puts one Saltman of variant `v` (deckhand, pipeman, filleter, gaffer, hookthrower,
+tallyman, bulwark, bosun) at x; `__pier9.zoom(z)` and `__pier9.view3d(on)` set the camera and the view (not saved); `__pier9.peek()`
+lists each enemy as [variant, x, y, hp, wave, act, name] and shows `gaffHold`, `swingN`, `holdK`.
+
+### Earlier: the combat rework
 
 Combat rework reasons (all four URLs run twice in Chrome; each pair matched, and the 3D state hashes equal the 2D ones):
 - The demo plays differently: Space is now a short dodge (the long roll is ↓ at a run), and the demo parries (E tap), perfect-dodges

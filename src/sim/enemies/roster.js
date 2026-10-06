@@ -19,13 +19,16 @@ export const LOOK = {
 };
 // roles: what a goon fights with. ranged = [near, far] range it keeps; aim = tell time before the shot
 // poise = the damage one hit needs to stagger him (a stocky build adds STOCKY_POISE); armor = his swings ride through light hits (super armor)
+// weapon = what he carries, for drops and the kill feed (null: bare hands); w = how it is drawn and how it hits
 export const ROLE = {
-  brawler: { reach: 17, dmg: 8, heavyDmg: 14, windup: 0.22, hp: 50, poise: 6, looks: ['tank', 'leather'], cmb: [['jab'], ['punch'], ['jab', 'jab'], ['jab', 'punch'], ['jab', 'jab', 'punch']] },
-  knife: { reach: 20, dmg: 9, heavyDmg: 13, windup: 0.16, hp: 45, poise: 6, w: 'knife', len: 5, off: -0.2, looks: ['hood'], cmb: [['stab'], ['stab', 'stab'], ['stab', 'slash'], ['slash', 'stab', 'stab']] },
-  pipe: { reach: 24, dmg: 10, heavyDmg: 17, windup: 0.3, hp: 60, poise: 10, armor: true, w: 'pipe', len: 10, off: -1.1, looks: ['leather', 'vest'], cmb: [['chop'], ['hchop'], ['chop', 'chop']] },
-  machete: { reach: 23, dmg: 11, heavyDmg: 16, windup: 0.24, hp: 55, poise: 10, armor: true, w: 'machete', len: 9, off: -1.1, looks: ['vest'], cmb: [['slash'], ['slash', 'chop'], ['hchop'], ['chop', 'slash']] },
-  thrower: { reach: 17, dmg: 6, heavyDmg: 10, windup: 0.22, hp: 45, poise: 4, w: 'tknife', len: 4, off: -0.2, ranged: [60, 115], shot: 6, aim: 0.45, looks: ['hood', 'coat'], cmb: [['jab']] },
-  pistol: { reach: 17, dmg: 6, heavyDmg: 10, windup: 0.22, hp: 45, poise: 4, w: 'pistol', len: 4.5, off: 0, ranged: [75, 135], shot: 7, aim: 0.6, looks: ['coat'], cmb: [['jab']] },
+  brawler: { weapon: null, reach: 17, dmg: 8, heavyDmg: 14, windup: 0.22, hp: 50, poise: 6, looks: ['tank', 'leather'], cmb: [['jab'], ['punch'], ['jab', 'jab'], ['jab', 'punch'], ['jab', 'jab', 'punch']] },
+  knife: { weapon: 'knife', reach: 20, dmg: 9, heavyDmg: 13, windup: 0.16, hp: 45, poise: 6, w: 'knife', len: 5, off: -0.2, looks: ['hood'], cmb: [['stab'], ['stab', 'stab'], ['stab', 'slash'], ['slash', 'stab', 'stab']] },
+  pipe: { weapon: 'pipe', reach: 24, dmg: 10, heavyDmg: 17, windup: 0.3, hp: 60, poise: 10, armor: true, w: 'pipe', len: 10, off: -1.1, looks: ['leather', 'vest'], cmb: [['chop'], ['hchop'], ['chop', 'chop']] },
+  machete: { weapon: 'machete', reach: 23, dmg: 11, heavyDmg: 16, windup: 0.24, hp: 55, poise: 10, armor: true, w: 'machete', len: 9, off: -1.1, looks: ['vest'], cmb: [['slash'], ['slash', 'chop'], ['hchop'], ['chop', 'slash']] },
+  thrower: { weapon: 'tknife', reach: 17, dmg: 6, heavyDmg: 10, windup: 0.22, hp: 45, poise: 4, w: 'tknife', len: 4, off: -0.2, ranged: [60, 115], shot: 6, aim: 0.45, looks: ['hood', 'coat'], cmb: [['jab']] },
+  pistol: { weapon: 'pistol', reach: 17, dmg: 6, heavyDmg: 10, windup: 0.22, hp: 45, poise: 4, w: 'pistol', len: 4.5, off: 0, ranged: [75, 135], shot: 7, aim: 0.6, looks: ['coat'], cmb: [['jab']] },
+  // a steel shield in the front hand: every blow from the front rings off it (a sweep, a thrown object or a parried bash opens him; or hit him from behind)
+  shield: { weapon: 'shield', reach: 18, dmg: 7, heavyDmg: 12, windup: 0.3, hp: 70, poise: 14, w: 'shield', len: 0, off: 0, looks: ['leather'], cmb: [['bash'], ['jab', 'bash'], ['bash', 'bash']] },
 };
 export const STOCKY_POISE = 4;
 // difficulty: stage 1 bare hands, then hand weapons, knife throwers, pistols, mixed squads; the boss calls in tougher help over time
