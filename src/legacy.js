@@ -9,6 +9,7 @@ import { PAL } from './assets/palettes/base.js';
 import { mod, IDLE, GUARD, SQUAT, RISE, SITUP, PUSHUP, GU_T, fitPose, getupPose, K, AIR, teeterPose } from './sim/hero/poses.js';
 import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
 import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './render2d/raster.js';
+import { bus } from './core/events.js';
 
 (() => {
   'use strict';
@@ -20,6 +21,9 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   const SEED = QS.has('seed') ? +QS.get('seed') >>> 0 : AUTOTEST ? 1 : null;
   // the simulation's own random numbers (never Math.random: three.js and the audio use that, and must not shift the sim's sequence)
   const simRand = SEED != null ? rng(SEED) : Math.random;   // (mulberry32: the same seed gives the same run)
+  // the event bus (core/events.js, docs/architecture.md 2.5): the sim emits, synchronously; UI, audio and lessons listen.
+  // Listeners outside the sim must not change sim state (the autotest hashes stay the same with or without them).
+  const emit = bus.emit;
   const W = 2800, H = 320, GROUND = 280;      // world size and ground line, in world pixels
   // canvas: 640 px wide (25% zoom shows world pixels 1:1, 100% shows 160 px at 4x); its height follows the stage's shape; world scale 22 px = 1 m
   const CW = 640, CHMAX = 480;
@@ -713,7 +717,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   // people at their windows: a silhouette moves behind each lit pane; a fight in the street outside (a hit, a goon's swing, a shot)
   // sends them dark. The light fades out, and fades back in a while after it is over (w.lv: 0 dark .. 1 lit; both views read it).
   let fightX = -999, fightT = -99;
-  const noise = x => { fightX = x; fightT = simTime; };   // the neighbours notice
+  const noise = (x, loud) => { fightX = x; fightT = simTime; emit('noise', { x, loud: !!loud }); };   // the neighbours notice
   const WIN_OUT = 2.2, WIN_IN = 0.8, WIN_PEEK = 0.45;   // fade speeds (per s): off in about half a second, on in about 1.2 s; a peeker dims to 45 %
   function houseWinStep(dt) {
     const near = x => (simTime - fightT < 3.5 && Math.abs(fightX - x) < 180) || enemies.some(e => !e.dead && e.zone !== 'arena' && Math.abs(e.x - x) < 150 && Math.abs(e.x - P[2].x) < 120);
@@ -938,6 +942,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     landed++;
     if (quiet) { puff(x, y); bagFlash = Math.max(bagFlash, 0.03); return; }
     sparks.push({ x, y, t: 0 }); bagFlash = 0.07;
+    emit('hit', { by: 'melee', target: 'bag', x, y, dir, power: power / 200, force: power, dmg: 0, blade: false, weapon: hero.weapon });
     hitFx(power);
   }
 
@@ -981,7 +986,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   }
   // a heavy blow knocks the stack apart into two big crates
   function splitStack(o, dirx, power) {
-    removeObj(o); tut('split');
+    removeObj(o); emit('feat', 'split'); emit('object:break', { o, kind: o.kind, x: o.x, y: o.y, split: true });
     const k = power / 3 * 1.6;
     const lo = makeObj('bigcrate', o.x, o.y + 6), hi = makeObj('bigcrate', o.x, o.y - 6);
     lo.vx = o.vx + dirx * k * 0.45; lo.vy = -40;
@@ -1011,7 +1016,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (!objs.includes(o)) return;
     o.carried = false; o.thrown = 0;
     if (o.kind === 'crate' || o.kind === 'bigcrate' || o.kind === 'stack' || o.kind === 'chair') { o.vx *= 0.3; breakObj(o, dirx); return; }   // wood: boards and splinters
-    removeObj(o); tut('smash');
+    removeObj(o); emit('feat', 'smash'); emit(o.kind === 'bottle' ? 'glass:break' : 'object:break', { o, kind: o.kind, x: o.x, y: o.y });   // (a bottle is glass)
     hitStop = Math.max(hitStop, 0.06); sparks.push({ x: o.x, y: o.y, t: 0.04 });
     const cols = objCols(o);
     for (let i = 0; i < 16; i++) particles.push({ x: o.x + (simRand() - 0.5) * o.r * 2, y: o.y + (simRand() - 0.5) * o.r * 2,
@@ -1020,7 +1025,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.08);
   }
   function breakObj(o, dirx) {
-    removeObj(o); tut('smash');
+    removeObj(o); emit('feat', 'smash'); emit('object:break', { o, kind: o.kind, x: o.x, y: o.y });
     hitStop = Math.max(hitStop, 0.07); sparks.push({ x: o.x, y: o.y, t: 0.04 });
     const n = o.kind === 'bigcrate' ? 7 : 5;
     for (let i = 0; i < n; i++) boards.push({ x: o.x + (simRand() - 0.5) * o.r, y: o.y + (simRand() - 0.5) * o.r,
@@ -1065,14 +1070,14 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (!c && hero.mode === 'anim' && hero.act === 'squat' && !hero.weapon && !ctl.air && !demoSmash) {
       let best = null;
       for (const o of objs) if (LIFTABLE.has(o.kind) && !o.carried && Math.abs(o.x - ctl.x) < o.r + 9 && Math.abs(o.y + o.r - (ctl.y + 2)) < 6 && Math.hypot(o.vx, o.vy) < 40 && (!best || Math.abs(o.x - ctl.x) < Math.abs(best.x - ctl.x))) best = o;
-      if (best) { ctl.carry = c = best; ctl.bashT = 0; best.carried = true; best.a = 0; best.av = 0; best.liftT = 0.15; best.lx = best.x; best.ly = best.y; tut('lift'); dust(best.x, GROUND - 1, 2); }
+      if (best) { ctl.carry = c = best; ctl.bashT = 0; best.carried = true; best.a = 0; best.av = 0; best.liftT = 0.15; best.lx = best.x; best.ly = best.y; emit('feat', 'lift'); dust(best.x, GROUND - 1, 2); }
     }
     if (c && ctl.bashT > 0) {   // a bash: at the bottom of the swing it hits the first goon in front
       ctl.bashT -= dt;
       if (!ctl.bashHit && ctl.bashT < CBASH * 0.5) {
         ctl.bashHit = true;
         const e = enemies.find(e => !e.dead && !e.down && (e.x - ctl.x) * ctl.face > 0 && (e.x - ctl.x) * ctl.face < 22 + c.r && Math.abs(e.y - ctl.y) < 16);
-        if (e) { killBy = 5; damageEnemy(e, Math.round(6 + c.m * 4), ctl.face, 150 + c.m * 30, 0.2, c.x + ctl.face * c.r, c.y, false); killBy = null; hitFx(150 + c.m * 20); tut('bash'); ctl.carry = null; shatterObj(c, ctl.face); return; }   // one blow and it is in pieces
+        if (e) { killBy = 5; damageEnemy(e, Math.round(6 + c.m * 4), ctl.face, 150 + c.m * 30, 0.2, c.x + ctl.face * c.r, c.y, false); killBy = null; hitFx(150 + c.m * 20); emit('feat', 'bash'); ctl.carry = null; shatterObj(c, ctl.face); return; }   // one blow and it is in pieces
       }
       if (ctl.bashT <= 0) ctl.bashT = 0;
     }
@@ -1089,7 +1094,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     const f = ctl.face, k = 1 / Math.sqrt(o.m);
     const aim = aimAt(o.x, o.y, 160 + 110 * k + Math.max(0, ctl.spd) * 0.4, G);
     o.vx = aim.vx; o.vy = aim.vy; o.av = f * 9; o.safeT = 0.3;
-    tut('toss'); if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.05);
+    emit('feat', 'toss'); if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.05);
     hero.act = 'tw'; hero.actT = 0.2; hitDone = true; hero.atkId++;   // the throwing arm follows through
     return true;
   }
@@ -1104,7 +1109,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
         if (segDist(ax, ay, bx, by, o.x, o.y) < o.r + 4 * e.s) {
           o.hitIds.add(e); const d = Math.sign(o.vx) || 1;
           killBy = 5; damageEnemy(e, Math.round(8 + o.m * 6), d, 140 + o.m * 40, 0.3, o.x, o.y, false); killBy = null;
-          hitFx(160 + o.m * 30); tut('tosshit');
+          hitFx(160 + o.m * 30); emit('feat', 'tosshit');
           o.vx *= -0.3; o.vy = -60;
           shatterObj(o, d);   // it breaks on him
           break;
@@ -1131,7 +1136,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   function pocketStep(dt) {
     for (const o of objs.slice()) {
       if (!o.pocket || o.safeT > 0 || hero.mode !== 'anim' || pocket.length >= 3) continue;
-      if (!endPh && hero.act === 'squat' && Math.abs(o.x - ctl.x) < 9 && Math.abs(o.y - ctl.y) < 14) { pocket.push(o.kind); removeObj(o); tut('pocket'); sparks.push({ x: o.x, y: o.y - 3, t: 0.1 }); }   // squat by it to pocket it (walking into it kicks it along)
+      if (!endPh && hero.act === 'squat' && Math.abs(o.x - ctl.x) < 9 && Math.abs(o.y - ctl.y) < 14) { pocket.push(o.kind); removeObj(o); emit('feat', 'pocket'); emit('pickup', { kind: o.kind, pocket: true, x: o.x, y: o.y }); sparks.push({ x: o.x, y: o.y - 3, t: 0.1 }); }   // squat by it to pocket it (walking into it kicks it along)
     }
     for (let i = tossed.length - 1; i >= 0; i--) {   // pocket throws fly until they hit someone or land
       const q = tossed[i], T = TOSS[q.k];
@@ -1143,7 +1148,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
         if (segDist(ax, ay, bx, by, q.x, q.y) < 4 * e.s + 2) {
           killBy = q.k === 'knife' ? 1 : 5;
           damageEnemy(e, T.dmg, Math.sign(q.vx) || 1, T.power, 0.2, q.x, q.y, q.k === 'knife'); killBy = null;
-          hitFx(T.power); tut('pockethit');
+          hitFx(T.power); emit('feat', 'pockethit');
           if (q.k === 'bottle') for (let k = 0; k < 8; k++) particles.push({ x: q.x, y: q.y, vx: (simRand() - 0.5) * 120, vy: -30 - simRand() * 80, life: 0.4, c: k % 2 ? C('#2f7a3e') : C('#b8e0c0') });
           gone = true; break;
         }
@@ -1396,11 +1401,12 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       for (let k = 1, n = Math.ceil(g.len / 3); k <= n && !hit; k++) { b.px = b.x; b.py = b.y; b.x = g.x + (g.tx - g.x) * k / n; b.y = g.y + (g.ty - g.y) * k / n; hit = bulletHitsEnemy(b); }
       if (!hit) { b.px = b.x = g.tx; b.py = b.y = g.ty; bullets.push(b); }
     }
-    flashes.push({ x: g.tx, y: g.ty, dx: g.dx, dy: g.dy, t: 0, big: Wp.pellets > 1 }); noise(g.tx);   // a shot: every window near goes dark
+    flashes.push({ x: g.tx, y: g.ty, dx: g.dx, dy: g.dy, t: 0, big: Wp.pellets > 1 }); noise(g.tx, true);
+    emit('shot', { by: 'hero', weapon: hero.weapon, w: Wp.id, x: g.tx, y: g.ty, dir: ctl.face, pellets: Wp.pellets, auto: !!Wp.auto });   // a shot: every window near goes dark
     particles.push({ x: g.x, y: g.y - 1, vx: -ctl.face * (25 + simRand() * 30), vy: -50 - simRand() * 40, life: 0.7, c: PAL.gold });   // spent shell
     // recoil: the gun kicks, the muzzle climbs (the machine gun keeps climbing while you hold), the body is pushed back
-    if (Wp.auto) { if ((gun.burst = (gun.burst || 0) + 1) >= 6) tut('burst'); if (ctl.air) tut('airfire'); }
-    else { tut('fire3'); if (!ctl.air && ctl.spd > WALK + 10) tut('runfire'); }
+    if (Wp.auto) { if ((gun.burst = (gun.burst || 0) + 1) >= 6) emit('feat', 'burst'); if (ctl.air) emit('feat', 'airfire'); }
+    else { emit('feat', 'fire3'); if (!ctl.air && ctl.spd > WALK + 10) emit('feat', 'runfire'); }
     gun.cd = Wp.cd; gun.recoil = Wp.auto ? 0.7 + simRand() * 0.3 : 1;
     gun.climb = Math.min(0.2, gun.climb + Wp.climb);
     if (ctl.air && !Wp.auto) ctl.push = Math.min(ctl.push + Wp.push, 90);   // feet stay planted on the ground; only a shotgun blast shoves you in the air
@@ -1695,6 +1701,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (zone != null) zoneAlive[zone] = (zoneAlive[zone] || 0) + 1;
     e.name = type === 'boss' ? BOSS_NAME : gangName();
     if (typeof zone === 'number' && zone >= 3) { const k = 1 + 0.15 * (zone - 2); e.dmg = Math.round(e.dmg * k); e.heavyDmg = Math.round(e.heavyDmg * k); }   // later stages hit harder: a ramp up to the boss
+    emit('spawn', { enemy: e, type, source: zone, x });
     return e;
   }
   // pose: attack keyframes, a stagger, or a walk that turns into a guard up close; then scale the skeleton about the feet
@@ -1794,11 +1801,12 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     const vx = ctl.air ? ctl.face * ctl.spd : ctl.face * ctl.spd, into = Math.max(0, -dirx * vx);
     const braced = hero.act === 'squat' || hero.act === 'guard' ? 0.7 : 1;
     const impact = dmg * impK * (heavy ? 1.7 : 1) * (1 + into / 55) * (ctl.air ? 1.35 : 1) * braced;
+    emit('hurt', { dmg, x, y, dir: dirx, heavy: !!heavy || impact >= 18, outcome: hero.hp <= 0 ? 'ko' : impact >= 40 ? 'flying' : impact >= 18 ? 'down' : 'stagger' });
     bleed(x, y, dirx, 6 + Math.round(dmg / 2), 1 + Math.min(1, impact / 40));
     hitFx(Math.min(320, 90 + impact * 7));
     if (hero.hp <= 0 || impact >= 40) {   // sent flying
       toRag(); hits++;
-      if (hero.hp <= 0) { hero.ko = true; if (!DIF().perma) toast('K.O.', 'You get back up with full health'); }
+      if (hero.hp <= 0) { hero.ko = true; emit('ko', { perma: !!DIF().perma }); }
       // [feel] a short, heavy arc (~0.7 s, ~100 px): readable, and the camera does not have to chase it
       const fx = dirx * Math.min(170, 110 + impact * 1.4 + into * 0.4), fy = Math.min(140, 80 + impact);
       ragG = 0.9; ragGk = 1.7;
@@ -1827,6 +1835,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   }
   function damageEnemy(e, dmg, dirx, power, up, x, y, blade) {
     if (e === enc.boss) dmg = Math.max(1, Math.round(dmg * (enc.eHitKind === 2 ? 0.8 : 0.75)));   // the boss shrugs off part of every hit (guns no worse than fists)
+    emit('hit', { by: enc.eHitKind === 2 ? 'shot' : enc.eHitKind === 1 ? 'melee' : 'other', target: e, x, y, dir: dirx, power: power / 200, force: power, dmg, blade: !!blade,
+      weapon: killBy != null ? killBy : hero.weapon, isBoss: e === enc.boss });   // power: 1 = a solid blow (audio: > 1 sounds heavy)
     // a raised guard stops light melee from the front: chip damage, a spark, no stagger, and often a counter
     if (e.guardT > 0 && enc.eHitKind === 1 && power < 250 && e.face === -dirx && !e.act && !e.air && hitCtx !== 'sweep' && hitCtx !== 'slk') {   // (a low kick goes under the guard)
       dmg = Math.max(1, Math.round(dmg * 0.25)); e.hp -= dmg; e.flash = 0.04; landed++;
@@ -1879,7 +1889,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   const kills = []; let killBy = null, feedDirty = true;
   function killEnemy(e, dirx, power, up, hx, hy) {
     crowdReact(e.x, 0, true);   // somebody goes down: the crowd roars
-    if (e !== enc.boss) { kills.push({ name: e.name, w: killBy != null ? killBy : hero.weapon, t: simTime }); feedDirty = true; }
+    emit('kill', { enemy: e, weapon: killBy != null ? killBy : hero.weapon, zone: e.zone, isBoss: e === enc.boss, x: e.x, y: e.y });   // (the kill feed listens)
     e.dead = true; e.deadT = 0; e.act = null; e.down = false; e.diedAt = simTime;
     // the blow drives the body from where it landed: that part moves most (a head shot snaps the head back, a leg shot takes
     // the legs), the feet keep their grip on the floor, so he topples back over them; the strength sets how hard (1-3.5 m/s),
@@ -1899,10 +1909,10 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if ((e === enc.boss || simRand() < BAND_P) && ammoBoxes.filter(b => b.band).length < BAND_MAX)   // and a bandage now and then: walk over it for 30 s of regen
       ammoBoxes.push({ band: true, x: e.x, y: e.y - 12 * e.s, vx: -dirx * 20 + (simRand() - 0.5) * 60, vy: -120 - simRand() * 40, life: 30 });
     if (e !== enc.boss && simRand() < DROP_P) dropWeapon(e);   // and often a weapon, lying by the body
-    if (e.zone != null && --zoneAlive[e.zone] === 0 && typeof e.zone === 'number') tut('kill' + e.zone);
+    if (e.zone != null && --zoneAlive[e.zone] === 0 && typeof e.zone === 'number') emit('feat', 'kill' + e.zone);
     if (e === enc.boss) {
-      enc.bossBeaten = true; enc.arena = null; tut('boss'); crowdReact(e.x, 0, 'big');
-      toast('Boss defeated', 'Club Noir is yours. The street is yours.');
+      enc.bossBeaten = true; enc.arena = null; emit('feat', 'boss'); crowdReact(e.x, 0, 'big');
+      emit('boss:defeated', { boss: e, x: e.x });
       for (const g of enemies) if (!g.dead && g.zone === 'arena') killEnemy(g, Math.sign(g.x - e.x) || 1, 200, 0.5);
     }
   }
@@ -2106,6 +2116,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     const h = e.J[6], dir = e.face, px = P[2].x, d = Math.max(20, Math.abs(px - h.x));
     if (e.act === 'shoot') {
       const mx = h.x + dir * 4 * e.s, my = h.y, sp = 230;
+      emit('shot', { by: 'enemy', enemy: e, w: 'pistol', x: mx, y: my, dir, pellets: 1, auto: false });
       eshots.push({ k: 'b', x: mx, y: my, px: mx, py: my, vx: dir * sp, vy: clamp((e.ay - my) / (d / sp), -50, 50), life: 1, dmg: e.R.shot, t: 0 });
       e.muz = 0.07; dust(mx, my, 1); if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.03);
     } else {
@@ -2139,13 +2150,14 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (!aggro || e.sp || e.act || e.hurtT > 0 || e.air) return;
     if (e.ph === 1 && e.hp < e.maxHp * 0.5) {   // phase 2: a roar, then faster, with a charge and a jump slam
       e.ph = 2; e.sp = 'roar'; e.spT = 0; e.speed = 31; e.cd = [0.5, 1.0]; e.windup = 0.3; e.bigCd = 1.8; e.mark = 1;
-      toast('Boss enraged', 'Watch for the charge. Jump the shockwave of his slam. Punish the recovery.');
+      emit('boss:phase', { boss: e, phase: 2 }); emit('boss:telegraph', { boss: e, move: 'roar', t: 0.25, x: e.x });
       return;
     }
     if (e.ph === 2 && (e.bigCd -= dt) <= 0 && level && hero.mode === 'anim' && adx > 60 && adx < 200) {
       e.bigCd = 4.5 + simRand() * 2.5;
       e.sp = simRand() < 0.5 ? 'charge' : 'jslam'; e.spT = e.sp === 'charge' ? -0.7 : -0.55;
       e.leapt = false; e.hitP = false; e.face = dir; e.jx = px; e.mark = -e.spT;
+      emit('boss:telegraph', { boss: e, move: e.sp, t: -e.spT, x: e.x, mark: px });   // the wind-up: t s to the strike
       return;
     }
     if (adx > e.reach + 1) { e.tx = px - dir * e.reach * 0.65; return; }
@@ -2482,13 +2494,13 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
         if (hero.mode === 'anim' && Math.abs(ctl.x - b.x) < 9 && Math.abs(ctl.y - b.y) < 16) {
           hero.bandT = BAND_T; ammoBoxes.splice(i, 1);
           for (let k = 0; k < 5; k++) particles.push({ x: b.x, y: b.y - 2, vx: (simRand() - 0.5) * 50, vy: -50 - simRand() * 40, life: 0.45, c: PAL.white });
-          if (!pickToasted.has('band')) { pickToasted.add('band'); toast('Bandage', `Regen for ${BAND_T} s`, true); }
+          emit('pickup', { kind: 'bandage', x: b.x, y: b.y });
         }
         continue;
       }
       // walk over it: only a gun that is not full takes it, and it fills the gun
       if (hero.mode === 'anim' && Wp.ammo && charge[hero.weapon] < Wp.ammo && Math.abs(ctl.x - b.x) < 9 && Math.abs(ctl.y - b.y) < 16) {
-        charge[hero.weapon] = Wp.ammo; ammoFlash = 0.6; ammoBoxes.splice(i, 1); tut('ammo');
+        charge[hero.weapon] = Wp.ammo; ammoFlash = 0.6; ammoBoxes.splice(i, 1); emit('feat', 'ammo'); emit('pickup', { kind: 'ammo', w: hero.weapon, x: b.x, y: b.y });
         for (let k = 0; k < 5; k++) particles.push({ x: b.x, y: b.y - 2, vx: (simRand() - 0.5) * 50, vy: -50 - simRand() * 40, life: 0.45, c: PAL.gold });
       }
     }
@@ -2548,7 +2560,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     const aim = aimAt(h.x, h.y, (fast ? 215 : 175) + Math.max(0, ctl.spd) * 0.3, G * (heavy ? 0.85 : 0.55));
     thrown.push({ w, ch: charge[w], x: h.x, y: h.y, vx: aim.vx, vy: aim.vy, a: f > 0 ? -1.2 : Math.PI + 1.2,
       av: f * (fast ? 26 : Wp.gun ? 12 : 18), g: heavy ? 0.85 : 0.55, len: Wp.len, face: f, stuck: false, flat: !!Wp.gun, armed: true, hit: false, ids: new Set(), t: 0 });
-    setWeapon(0); if (Wp.gun) tut('hurl');
+    setWeapon(0); if (Wp.gun) emit('feat', 'hurl');
     if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.05);
   }
   // a goon's body leaves a random weapon by it (a gun part-loaded): walk over it with empty hands, or squat on it to swap.
@@ -2582,14 +2594,14 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
         t.near = near && t.armed;
         if (!near) t.armed = true;   // a weapon you just dropped waits until you step away
         else if (t.armed && !ctl.carry && (!hero.weapon || input.downHeld)) {
-          const had = hero.weapon; thrown.splice(i, 1); equip(t.w, t.ch); tut(had ? 'swap' : 'catch');
+          const had = hero.weapon; thrown.splice(i, 1); equip(t.w, t.ch); emit('feat', had ? 'swap' : 'catch'); emit('pickup', { kind: 'weapon', w: t.w, source: 'ground', x: t.x, y: t.y });
           sparks.push({ x: t.x, y: t.y - 4, t: 0.05 });
         }
         continue;
       }
       t.t += dt; t.vy += G * t.g * dt; t.x += t.vx * dt; t.y += t.vy * dt; t.a += t.av * dt;
       if (!hero.weapon && !ctl.carry && hero.mode === 'anim' && t.t > 0.2 && !(WEAPONS[t.w].gun && !t.drop) && Math.abs(t.x - ctl.x) < 14 && t.y > ctl.y - 56 && t.y < ctl.y + 4) {   // (a hand reaches up over the head too)   // it bounced back to him: bare hands snatch it out of the air
-        thrown.splice(i, 1); equip(t.w, t.ch); tut('catch'); sparks.push({ x: t.x, y: t.y, t: 0.05 }); continue;
+        thrown.splice(i, 1); equip(t.w, t.ch); emit('feat', 'catch'); emit('pickup', { kind: 'weapon', w: t.w, source: 'ground', x: t.x, y: t.y }); sparks.push({ x: t.x, y: t.y, t: 0.05 }); continue;
       }
       const tipx = t.x + Math.cos(t.a) * t.len * 0.5, tipy = t.y + Math.sin(t.a) * t.len * 0.5;
       let gone = false;
@@ -2600,7 +2612,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
           const id = WEAPONS[t.w].id, d = Math.sign(t.vx) || t.face, blade = !WEAPONS[t.w].gun;
           killBy = t.w;
           damageEnemy(e, id === 'axe' ? 45 : id === 'katana' ? 32 : 18, d, id === 'axe' ? 300 : blade ? 220 : 200, 0.35, t.x, t.y, blade);
-          killBy = null; hitCtx = 'tw'; hitFx(id === 'axe' ? 300 : 220); hitCtx = null; tut('throwhit');
+          killBy = null; hitCtx = 'tw'; hitFx(id === 'axe' ? 300 : 220); hitCtx = null; emit('feat', 'throwhit');
           t.hit = true; t.vx *= -0.2; t.vy = -70; t.av *= 0.4;
           if (blade && (t.ch -= 2) <= 0) { thrownBreak(t, i); gone = true; }
           break;
@@ -2667,7 +2679,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     else if (a === 'lk') a += kickLeg;
     else if (a === 'hk') { kickLeg ^= 1; a += kickLeg; }
     hero.act = a; hero.actT = 0; hitDone = false; hero.atkId++; ctl.slam = false;
-    tut(a.replace(/[0-9]$/, ''));
+    emit('swing', { move: a, weapon: hero.weapon, w: Wp.id, blade: !!Wp.melee, heavy: /^(hp|hk|kw|kh|aw|ah|shp|sweep)/.test(a), x: ctl.x, y: ctl.y, dir: ctl.face });
+    emit('feat', a.replace(/[0-9]$/, ''));
   }
   function startFall() {
     ctl.air = true; ctl.vu = 0; ctl.jumps = Math.max(ctl.jumps, 1); ctl.baseY = ctl.y; ctl.cap = MAX_AIR;
@@ -2679,7 +2692,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (s.bouncy && !input.downHeld) {   // trampoline: each bounce beats the landing that made it; hold S to stop
       const v = Math.min(TRAMP_MAX, Math.max(TRAMP_MIN, fv * TRAMP_GAIN + TRAMP_ADD) + (input.jumpHeld ? TRAMP_HOLD : 0));
       s.squish = 0.18;
-      ctl.bounces = (ctl.bounces || 0) + 1; tut('bounce'); if (ctl.bounces >= 3) tut('bounce3');
+      ctl.bounces = (ctl.bounces || 0) + 1; emit('feat', 'bounce'); if (ctl.bounces >= 3) emit('feat', 'bounce3');
       if (!reduceMotion && v > 280) cam.shake = Math.max(cam.shake, 0.06);
       {
         ctl.vu = v; ctl.jumps = 1; ctl.baseY = ctl.y; ctl.cap = 999; ctl.tramp = true;
@@ -2691,7 +2704,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     }
     if (s.bouncy) s.squish = 0.18;
     ctl.bounces = 0; ctl.tramp = false;
-    if (s === GOAL) tut('top');
+    emit('land', { x: ctl.x, y: s.y, v: fv, heavy: fv >= TRN.heavy, surface: s === GROUND_S ? 'ground' : 'ledge' });
+    if (s === GOAL) emit('feat', 'top');
     const plunge = hero.act === 'aair';
     if (plunge) slam(ctl.x + 9 * ctl.face, s.y, 40, 1.6);   // axe plunge lands
     ctl.air = false; ctl.jumps = 0; ctl.flipT = -1; ctl.spin = 0; ctl.surf = s;
@@ -2737,7 +2751,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     ctl.face = d; ctl.spd = Math.max(ctl.spd, DASH.v); ctl.dashK = 'roll'; ctl.chainRoll = true; ctl.flipT = -1; queued = null;
     hero.act = 'dash'; hero.actT = 0; hero.invT = Math.max(hero.invT, DASH.dur + 0.03);   // the whole roll dodges
     rollCd = DASH.dur + ROLL_CD;   // counted from the start: a roll cut short by an attack gets no early next roll
-    dust(ctl.x - d * 3, ctl.y + 1, 3); tut('roll');
+    dust(ctl.x - d * 3, ctl.y + 1, 3); emit('feat', 'roll'); emit('roll', { x: ctl.x, y: ctl.y, dir: d });
   }
   function tryDash() {
     if (dashCd > 0 || hero.mode !== 'anim' || hero.act === 'dash' || hero.act === 'hero' || hero.act === 'rise' || hero.act === 'crouch' || hero.act === 'climb') return false;
@@ -2749,6 +2763,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       ctl.airDash = true; ctl.dashK = 'air';
       if (d) ctl.face = d;
       ctl.spd = DASH.air; ctl.vu = Math.max(ctl.vu, 0);
+      emit('roll', { x: ctl.x, y: ctl.y, dir: ctl.face, air: true });
       sparks.push({ x: P[2].x - ctl.face * 4, y: P[2].y, t: 0.1 });
     } else {   // on the ground the dodge is always a roll: toward the held direction, or the way he faces
       if (rollCd > 0) return false;
@@ -2868,7 +2883,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     // squat while down is held; a squat held long enough charges a higher jump
     // squat pressed at a run: a dodge roll (like U), the way he is running; at a walk or standing, a plain squat
     const downEdge = input.downHeld && !ctl.downPrev; ctl.downPrev = input.downHeld;
-    if (downEdge && !ctl.air && hero.mode === 'anim' && ctl.spd > WALK + 10 && hero.act !== 'squat' && tryDash()) { ibuf.dash = 0; tut('squatroll'); }
+    if (downEdge && !ctl.air && hero.mode === 'anim' && ctl.spd > WALK + 10 && hero.act !== 'squat' && tryDash()) { ibuf.dash = 0; emit('feat', 'squatroll'); }
     const ducking = input.downHeld || ctl.duckT > 0;   // held down, or an automatic duck under a bullet
     if (!ctl.air && ducking && !locked && hero.act !== 'dash' && (free || ctl.duckT > 0) && hero.act !== 'pivot' && hero.act !== 'squat') { hero.act = 'squat'; hero.actT = 0; ctl.squatT = 0; }
     else if (hero.act === 'squat' && (!ducking || ctl.air)) { hero.act = null; ctl.squatEnd = simTime; }
@@ -2890,11 +2905,11 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       ctl.x = clamp(ctl.x, STAIR_X0, STAIR_X1); if (!ctl.air) ctl.spd = 0;
     }
     if (!ctl.air) {
-      if (nearStairs(ctl.x)) { const up = stairStep(ctl.x, ctl.y + 2, true, ctl.spd > 1 ? ctl.face : 0); if (up) { ctl.stOff += ctl.y - (up.y - 2); ctl.y = up.y - 2; ctl.surf = up; tut('stairs'); } }
+      if (nearStairs(ctl.x)) { const up = stairStep(ctl.x, ctl.y + 2, true, ctl.spd > 1 ? ctl.face : 0); if (up) { ctl.stOff += ctl.y - (up.y - 2); ctl.y = up.y - 2; ctl.surf = up; emit('feat', 'stairs'); } }
       let s = supportAt(ctl.x, ctl.y);
       if (!s && nearStairs(ctl.x)) { const dn = stairStep(ctl.x, ctl.y + 2, false); if (dn) { ctl.stOff += ctl.y - (dn.y - 2); ctl.y = dn.y - 2; s = dn; } }
       if (!s) { startFall(); coyT = COYOTE; }   // walked off a ledge: a jump still counts as a ground jump for a moment
-      else { ctl.surf = s; if (s === GOAL) tut('top'); }
+      else { ctl.surf = s; if (s === GOAL) emit('feat', 'top'); }
     }
     {   // [feel] on a flight the body is drawn on the slope through the tread centres (2 px up per 4 px), so a climb reads as one smooth line;
         // each 2 px step is added to the offset when it happens and the offset eases back, also through a take-off (no pop)
@@ -2905,7 +2920,10 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (!ctl.air) {
       const prev = ctl.phase;
       ctl.phase = (ctl.phase + gaitFreq(ctl.spd) * dt) % 1;
-      for (let i = 0; i < 2; i++) if ((ctl.phase + i * 0.5) % 1 < (prev + i * 0.5) % 1 && ctl.spd > 45) dust(P[i ? 10 : 8].x, ctl.y + 1, 2);
+      for (let i = 0; i < 2; i++) if ((ctl.phase + i * 0.5) % 1 < (prev + i * 0.5) % 1) {   // a foot strikes the ground
+        if (ctl.spd > 45) dust(P[i ? 10 : 8].x, ctl.y + 1, 2);
+        if (ctl.spd > 5) emit('step', { x: P[i ? 10 : 8].x, y: ctl.y, foot: i, run: ctl.spd > WALK + 8, wet: !flags.club });
+      }
     }
     const g = gait();
 
@@ -2915,7 +2933,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (input.attack) { ibuf.atk = input.attack; ibuf.atkT = BUF; input.attack = null; }
     if (input.dash) { input.dash = false; ibuf.dash = BUF; }
     if (ibuf.dash > 0 && input.downHeld && !ctl.air && ctl.surf !== GROUND_S && !ctl.surf.box && (!locked || cancelOK())) {   // squat + Space up on a ledge: drop through it
-      ignoreS = ctl.surf; ignoreT = 0.35; startFall(); tut('drop'); ibuf.dash = 0;
+      ignoreS = ctl.surf; ignoreT = 0.35; startFall(); emit('feat', 'drop'); ibuf.dash = 0;
     }
     if (ibuf.dash > 0) { if (tryDash()) { ibuf.dash = 0; ibuf.jump = 0; } else ibuf.dash -= dt; }   // (on the ground it is the roll)
     if (ibuf.jump > 0) {
@@ -2928,7 +2946,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       } else if (ctl.air && coyT > 0 && hero.act === 'air' && ctl.jumps <= 1) {   // coyote time: just walked off, a full ground jump
         hero.act = 'crouch'; hero.actT = 9; ctl.air = false; ctl.charged = false; coyT = 0;
       } else if (false) {   // (no double jump: a person cannot push off the air; high places are climbed)
-        ctl.jumps = 2; ctl.vu = DOUBLE_V; ctl.flipT = 0; tut('double'); hero.act = 'air'; hero.actT = 0;
+        ctl.jumps = 2; ctl.vu = DOUBLE_V; ctl.flipT = 0; emit('feat', 'double'); emit('jump', { x: ctl.x, y: ctl.y, double: true }); hero.act = 'air'; hero.actT = 0;
         if (input.dir === ctl.face) ctl.spd = Math.max(ctl.spd, 50);
         sparks.push({ x: P[2].x, y: P[2].y + 8, t: 0.08 });
       } else used = false;
@@ -2957,7 +2975,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
         if (!input.jumpHeld || !(toward || under)) continue;   // only a held jump grabs (a quick press is just a jump): at the edge, or up under the ledge
         const ex = toward ? (ctl.face > 0 ? s.x0 : s.x1) : ctl.x;
         ctl.climb = { s, x0: ctl.x, y0: ctl.y, ex, x1: toward ? ex + ctl.face * 6 : ctl.x, y1: s.y - 2 };
-        hero.act = 'climb'; hero.actT = 0; ctl.vu = 0; ctl.spd = 0; queued = null; ctl.flipT = -1; ctl.spin = 0; tut('charge');
+        hero.act = 'climb'; hero.actT = 0; ctl.vu = 0; ctl.spd = 0; queued = null; ctl.flipT = -1; ctl.spin = 0; emit('feat', 'charge');
         break;
       }
     }
@@ -3000,7 +3018,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       if (hero.actT >= dur) {
         hero.act = 'air'; hero.actT = 0; ctl.air = true; ctl.jumps = 1; ctl.baseY = ctl.y;
         ctl.vu = JUMP_V; ctl.cap = MAX_AIR; ctl.hiT = -1;   // one real jump, tap or hold alike
-        tut('jump');
+        emit('feat', 'jump'); emit('jump', { x: ctl.x, y: ctl.y, double: false });
         if (input.dir === ctl.face) ctl.spd = clamp(ctl.spd * 1.1, 45, input.run ? 115 : WALK * 1.25);   // a walking jump carries a walk's worth, a running one more
         dust(ctl.x - 3, ctl.y + 1, 4); dust(ctl.x + 3, ctl.y + 1, 4);
       }
@@ -3524,6 +3542,18 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   const toastQ = [], cleared = new Set(), pickToasted = new Set(), wavePend = new Set();
   let toastSoft = false, softT = -9;
   function tut(ev) { if (openT >= 0) return; if (TUTKEYS.has(ev) && !done.has(ev)) { done.add(ev); tutDirty = true; } }
+  bus.on('feat', tut);   // a feat (roll, sweep, pick1 ...) ticks its lesson
+  // UI listeners: toasts and the kill feed (DOM and UI state only)
+  bus.on('pickup', p => {
+    if (p.kind === 'weapon' && p.source === 'bench' && !pickToasted.has(p.w)) {
+      const Wp = WEAPONS[p.w]; pickToasted.add(p.w);
+      toast(`${Wp.name} acquired`, Wp.gun ? 'Q fire · empty: Q throws it' : `tap Q ${Wp.labels[0].toLowerCase()} · hold Q ${Wp.labels[1].toLowerCase()}`, true);
+    } else if (p.kind === 'bandage' && !pickToasted.has('band')) { pickToasted.add('band'); toast('Bandage', `Regen for ${BAND_T} s`, true); }
+  });
+  bus.on('ko', p => { if (!p.perma) toast('K.O.', 'You get back up with full health'); });
+  bus.on('kill', p => { if (!p.isBoss) { kills.push({ name: p.enemy.name, w: p.weapon, t: simTime }); feedDirty = true; } });
+  bus.on('boss:defeated', () => toast('Boss defeated', 'Club Noir is yours. The street is yours.'));
+  bus.on('boss:phase', p => { if (p.phase === 2) toast('Boss enraged', 'Watch for the charge. Jump the shockwave of his slam. Punish the recovery.'); });
   // the gate: a stage's lessons must all be done before the street opens on to the next one (the demo walks free).
   // A lesson that cannot be done any more is made possible again: a sparring goon when the stage's goons are down,
   // a fresh crate, stack, bin, can or bottle when the stage has none left.
@@ -3581,6 +3611,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   }
   function showWasted() {
     flags.wasted = true;
+    emit('run:over', { result: 'wasted' });
     const t = Math.round(runS.t), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
     resultsEl.innerHTML = `<h2>Wasted</h2><dl><dt>Difficulty</dt><dd>${DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${runS.kills}</dd>`
       + `<dt>Hits landed</dt><dd>${landed}</dd></dl><small>Enter or R to play again · Esc for the menu</small>`;
@@ -3588,6 +3619,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   }
   function showResults() {
     if (flags.attract) return;
+    emit('run:over', { result: 'cleared' });
     const t = Math.round(runS.t), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
     const rank = kos === 0 && runS.dmg < 60 ? 'S' : kos === 0 && runS.dmg < 160 ? 'A' : kos <= 2 ? 'B' : 'C';
     resultsEl.innerHTML = `<h2>Club cleared</h2><dl><dt>Difficulty</dt><dd>${DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${runS.kills}</dd>`
@@ -3633,8 +3665,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     }
     runTick(rdt);
     if (hero.mode === 'anim') {
-      if (ctl.spd > 5 && ctl.spd < WALK + 6) tut('walk');
-      if (ctl.spd > WALK + 20 && !ctl.air) tut('run');
+      if (ctl.spd > 5 && ctl.spd < WALK + 6) emit('feat', 'walk');
+      if (ctl.spd > WALK + 20 && !ctl.air) emit('feat', 'run');
       }
     // the stage panel switches with hysteresis: 24 px past a stage line going right, 24 px back over it going left, and never while the old stage's goons stand
     let zc = 0; while (zc + 1 < ZONES.length && P[2].x >= ZONES[zc + 1].x0) zc++;
@@ -3677,6 +3709,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       enc.arena = { x0: 2440, x1: W - 12 }; enc.spawnT = 6; enc.arenaSpawned = 0;
       enc.boss = spawnEnemy('boss', CLUB_DOORS[0], 'boss'); enc.boss.intro = true; enc.boss.introX = CLUB_DOORS[0] + 56; enc.boss.face = 1;
       enc.introT = 0; bossBarK = 0; spawnFx.push({ kind: 'club', x: CLUB_DOORS[0], t: 0 });
+      emit('boss:intro', { boss: enc.boss, name: BOSS_NAME });
       for (const d of dancers) { d.mood = 'shock'; d.t = 2.6; d.home0 = d.home; d.home = clamp(d.home + (d.home > enc.boss.introX ? 18 : -18), CLUB_X + 34, W - 24); }
       toastEl.hidden = true; toastT = 0; toastQ.length = 0;
     }
@@ -3699,9 +3732,9 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   function pickupStep() {
     if (hero.mode !== 'anim') return;
     for (const k of pickups) if (!endPh && !k.taken && !ctl.carry && (!hero.weapon || k.w >= hero.weapon || input.downHeld) && Math.abs(ctl.x - k.x) < 9 && ctl.y > GROUND - 12) {
-      k.taken = true; equip(k.w, fullCharge(k.w)); tut('pick' + k.w);
+      k.taken = true; equip(k.w, fullCharge(k.w)); emit('feat', 'pick' + k.w);
       sparks.push({ x: k.x, y: k.y, t: 0 }); waves.push({ x: k.x, y: GROUND - 1, t: 0 });
-      if (!pickToasted.has(k.w)) { pickToasted.add(k.w); toast(`${WEAPONS[k.w].name} acquired`, WEAPONS[k.w].gun ? 'Q fire · empty: Q throws it' : `tap Q ${WEAPONS[k.w].labels[0].toLowerCase()} · hold Q ${WEAPONS[k.w].labels[1].toLowerCase()}`, true); }
+      emit('pickup', { kind: 'weapon', w: k.w, source: 'bench', x: k.x, y: k.y });
     }
   }
   // the boss's slam shockwaves roll along the ground; one that passes under him while he stands knocks him down. Runs in the fixed step.
@@ -4373,9 +4406,10 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     cam.xf = CLUB_X; cam.yf = GROUND - 120; cam.v.x = cam.v.y = cam.v.z = 0;
     rain.drops.length = 0; rain.splash.length = 0;
+    emit('section:enter', { from: 'street', to: 'club' });
   }
   function clubTick(rdt) {
-    if (!flags.club && fadeDir === 0 && hero.mode === 'anim' && ctl.surf === GOAL && !ctl.air && ctl.x >= KIOSK_X - 4 && (flags.demo || stageDone(ZONES.length - 2))) { fadeDir = 1; tut('enter'); }   // walk through the side door (once stage 7 is done)
+    if (!flags.club && fadeDir === 0 && hero.mode === 'anim' && ctl.surf === GOAL && !ctl.air && ctl.x >= KIOSK_X - 4 && (flags.demo || stageDone(ZONES.length - 2))) { fadeDir = 1; emit('feat', 'enter'); }   // walk through the side door (once stage 7 is done)
     if (fadeDir === 1) { input.dir = 1; if ((fade += rdt * 2.2) >= 1) { fade = 1; enterClub(); fadeDir = -1; } }
     else if (fadeDir === -1 && (fade -= rdt * 1.6) <= 0) { fade = 0; fadeDir = 0; }
     if (flags.club) {
