@@ -10,6 +10,7 @@ import { mod, IDLE, GUARD, SQUAT, RISE, SITUP, PUSHUP, GU_T, fitPose, getupPose,
 import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
 import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './render2d/raster.js';
 import { bus } from './core/events.js';
+import { gameAudio } from './audio/game.js';
 
 (() => {
   'use strict';
@@ -59,7 +60,11 @@ import { bus } from './core/events.js';
   // cam: x, y = the view's top-left corner in whole world pixels; vw, vh = the view size; zoom (1 = 160 px across);
   // xf, yf = the smooth camera position; v = the smoothDamp velocities; shake = shake time left (s); kick = the directional kick (world px)
   const cam = { x: 0, y: GROUND - 60, vw: 160, vh: 96, zoom: 1, xf: 0, yf: GROUND - 60, v: { x: 0, y: 0, z: 0 }, shake: 0, kick: { x: 0, y: 0 } };
-  initRaster(buf, CW, CHMAX, cam);   // the 2D frame draws what the camera sees (render2d/raster.js: plot, disc, seg, line1, pickArt, withView)
+  initRaster(buf, CW, CHMAX, cam);
+  // audio (src/audio/game.js): a bus listener only. It starts on the first key or pointer press; the autotest never presses one
+  // (?autotest&audio unlocks it at once, to prove the hashes do not depend on it). Pan: where x sits across the view.
+  gameAudio.configure({ panOf: x => (x - cam.x) / (cam.vw / 2) - 1 });
+  if (!AUTOTEST) gameAudio.install(); else if (QS.has('audio')) gameAudio.unlock();   // the 2D frame draws what the camera sees (render2d/raster.js: plot, disc, seg, line1, pickArt, withView)
 
   // ---------- level: a long tutorial yard, left to right ----------
   // zones: 1 moving (0-520), 2 bare hands (520-900), 3 katana, 4 axe, 5 shotgun, 6 machine gun, 7 the mattress pile and the club roof (2150-2400)
@@ -3490,6 +3495,7 @@ import { bus } from './core/events.js';
     });
   }
   function reset() {
+    if (!flags.attract) gameAudio.playMusic('docks_explore', { volume: 0.45 });   // a game: the calm street track, low (the title screen plays the title theme)
     if (openT >= 0) endOpening();
     endPh = null; endT = 0; endCam = null; dog = null; ctl.bottle = false; jumpEnd = false;
     releaseGrab();
@@ -3553,6 +3559,8 @@ import { bus } from './core/events.js';
   bus.on('ko', p => { if (!p.perma) toast('K.O.', 'You get back up with full health'); });
   bus.on('kill', p => { if (!p.isBoss) { kills.push({ name: p.enemy.name, w: p.weapon, t: simTime }); feedDirty = true; } });
   bus.on('boss:defeated', () => toast('Boss defeated', 'Club Noir is yours. The street is yours.'));
+  bus.on('boss:intro', () => gameAudio.playMusic('docks_explore', { volume: 0.85 }));   // the same track, up (boss_marchetti is Level 1's)
+  bus.on('run:over', p => { if (p.result === 'wasted') gameAudio.stopMusic(2); });
   bus.on('boss:phase', p => { if (p.phase === 2) toast('Boss enraged', 'Watch for the charge. Jump the shockwave of his slam. Punish the recovery.'); });
   // the gate: a stage's lessons must all be done before the street opens on to the next one (the demo walks free).
   // A lesson that cannot be done any more is made possible again: a sparring goon when the stage's goons are down,
@@ -6813,7 +6821,7 @@ import { bus } from './core/events.js';
     }
   }
   const toggleRun = () => { takeOver(); runToggle = !runToggle; runBtn.setAttribute('aria-pressed', String(runToggle)); };
-  const toggleSlow = () => { timeScale = timeScale === 1 ? 0.25 : 1; slowBtn.setAttribute('aria-pressed', String(timeScale !== 1)); };
+  const toggleSlow = () => { timeScale = timeScale === 1 ? 0.25 : 1; slowBtn.setAttribute('aria-pressed', String(timeScale !== 1)); emit(timeScale !== 1 ? 'slowmo:start' : 'slowmo:end', { scale: timeScale }); };
   const toggleSkel = () => { showSkel = !showSkel; skelBtn.setAttribute('aria-pressed', String(showSkel)); };
   function setZoom(z) {
     zoomMode = z === 'auto' ? 'auto' : +z;
@@ -7165,11 +7173,12 @@ import { bus } from './core/events.js';
   let runAlways = false, menuShown = false, menuSel = 0, menuPauseTS = null;
   const menuEl = document.getElementById('menu'), menuList = document.getElementById('menu-list'), ccEl = document.getElementById('controls-card');
   const SETKEY = 'clubnoir.settings';
-  function saveSettings() { try { localStorage.setItem(SETKEY, JSON.stringify({ view3d: mode3D, runAlways, zoom: zoomMode, diff: diffSel })); } catch (err) {} }
+  function saveSettings() { try { localStorage.setItem(SETKEY, JSON.stringify({ view3d: mode3D, runAlways, zoom: zoomMode, diff: diffSel, vol: gameAudio.getVolume() })); } catch (err) {} }
   function loadSettings() {
     let st = null; try { st = JSON.parse(localStorage.getItem(SETKEY) || 'null'); } catch (err) {}
     if (!st) return;
     runAlways = !!st.runAlways;
+    if (typeof st.vol === 'number') gameAudio.setVolume(st.vol);
     if (st.diff >= 0 && st.diff < DIFFS.length) diffSel = st.diff;
     if (st.zoom != null) setZoom(String(st.zoom));
     if (st.view3d && typeof THREE !== 'undefined') setMode3D(true);
@@ -7182,6 +7191,9 @@ import { bus } from './core/events.js';
       { label: 'View', value: () => mode3D ? '3D' : '2D', change: () => { setMode3D(!mode3D); saveSettings(); } },
       { label: 'Shift', value: () => runAlways ? 'to walk' : 'to run', change: () => { runAlways = !runAlways; saveSettings(); } },
       { label: 'Camera', value: () => zoomMode === 'auto' ? 'Auto' : `${Math.round(zoomMode * 100)}%`, change: d => cycleZoom(d) },
+      { label: 'Volume', value: () => `${Math.round(gameAudio.getVolume() * 100)}%`, change: d => {   // master volume in 10 % steps (a click past 100 % goes to 0 %)
+        const v = Math.round(gameAudio.getVolume() * 10) + (d < 0 ? -1 : 1);
+        gameAudio.setVolume((v > 10 ? 0 : v < 0 ? 10 : v) / 10); gameAudio.sfx('ui_blip', { vol: 0.6 }); saveSettings(); } },
       { label: 'Full screen', value: () => document.fullscreenElement ? 'On' : 'Off', change: toggleFull },
       { label: 'Controls', act: () => { document.getElementById('cc-run').textContent = runAlways ? 'walk (you run by default)' : 'run'; ccEl.hidden = false; } },
     ];
@@ -7202,6 +7214,7 @@ import { bus } from './core/events.js';
   }
   function menuDo(dir) {   // dir 0: select; -1 / 1: change a setting
     const it = menuItems()[menuSel]; if (!it) return;
+    if (!dir && it.act) gameAudio.sfx('ui_confirm', { vol: 0.5 });
     if (it.change) it.change(dir || 1); else if (!dir && it.act) it.act();
     if (menuShown) drawMenu();
   }
@@ -7222,8 +7235,8 @@ import { bus } from './core/events.js';
     }
     if (!ccEl.hidden) { if (c === 'Escape' || c === 'Enter' || c === 'Space') ccEl.hidden = true; return true; }
     const n = menuItems().length;
-    if (c === 'ArrowUp') { menuSel = (menuSel - 1 + n) % n; drawMenu(); }
-    else if (c === 'ArrowDown') { menuSel = (menuSel + 1) % n; drawMenu(); }
+    if (c === 'ArrowUp') { menuSel = (menuSel - 1 + n) % n; drawMenu(); gameAudio.sfx('ui_blip', { vol: 0.35 }); }
+    else if (c === 'ArrowDown') { menuSel = (menuSel + 1) % n; drawMenu(); gameAudio.sfx('ui_blip', { vol: 0.35 }); }
     else if (c === 'ArrowLeft') menuDo(-1);
     else if (c === 'ArrowRight') menuDo(1);
     else if ((c === 'Enter' || c === 'Space') && !e.repeat) menuDo(0);
@@ -7234,7 +7247,7 @@ import { bus } from './core/events.js';
   const titleEl = document.getElementById('title');
   let titleFadeT = null;
   function startAttract() {
-    flags.attract = true; showMenu(true); titleEl.hidden = false; titleEl.classList.remove('faded'); document.body?.classList.add('attract'); setDemo(true);
+    flags.attract = true; gameAudio.playMusic('title'); showMenu(true); titleEl.hidden = false; titleEl.classList.remove('faded'); document.body?.classList.add('attract'); setDemo(true);
     clearTimeout(titleFadeT); titleFadeT = setTimeout(() => { if (flags.attract) titleEl.classList.add('faded'); }, 2500);   // the card fades out after 2.5 s; the demo plays on
   }
   function endAttract() { hideMenu(); flags.attract = false; clearTimeout(titleFadeT); titleEl.classList.remove('faded'); titleEl.hidden = true; document.body?.classList.remove('attract'); setDemo(false); reset(); startOpening(); }

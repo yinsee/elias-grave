@@ -155,7 +155,26 @@ Total: 16 lines, 99 s of speech, 0.9 MB.
 - **Saltman voices** ("That's him. The Sandman.") and barks: no voice defined yet; add a `saltman` entry (whisper mood) to `audio_voice.json`.
 - **Hale's docks outro line** and the Pier 9 outro voice-over.
 - **ChatTTS** is in the Hugging Face cache, but its Python package needs PyTorch, which is not installed (about 1 GB). It was skipped; the macOS `say` + F5 route gives four distinct voices without it.
-- Real-game wiring: the emitters must add the payload fields in section 3, and `index.html` must create the audio module (left to the refactor agent; this pass did not touch `src/legacy.js`, `index.html` or `css/`).
+- Real-game wiring: done (2026-10-06), see section 9.
+
+## 9. Game wiring (2026-10-06)
+
+`src/audio/game.js` exports `gameAudio` (also `window.gameAudio`). `src/legacy.js` configures it at boot and calls `gameAudio.install()`: the first key or pointer press creates the AudioContext, resumes it and binds `audio.bind(bus)` to the game bus (`src/core/events.js`). Before that press nothing is created. The autotest never presses a key, so audio cannot change its hashes; `?autotest=...&audio` unlocks audio at once to prove it (same hashes).
+
+| Call | Use |
+|---|---|
+| `gameAudio.playMusic(id, { volume, loop, fade })` | a music id or cue; a request before the unlock is kept and starts at the unlock |
+| `gameAudio.stopMusic(fade)` | fade out |
+| `gameAudio.voice(id)` | one voice line, music ducks; resolves when it ends (at once while locked) |
+| `gameAudio.sfx(name, { x, vol, pitch })` | any `sfx.js` sound; `x` is a world x for the pan |
+| `gameAudio.slowmo(on)` | or emit `slowmo:start` / `slowmo:end` (the dev slow-motion toggle does) |
+| `gameAudio.setVolume(v)` / `getVolume()` | master volume 0..1; the menu item "Volume" steps it by 10 % and saves it in the settings |
+
+Music today: `title` on the title screen; `docks_explore` at volume 0.45 in the tutorial street, up to 0.85 at the club boss intro; it fades out when the boss falls and stops on a Wicked K.O. `boss_marchetti` is not used: it is for Level 1.
+
+Event payloads the game emits (all synchronous, from the fixed sim step): `hit {by, target, x, y, dir, power (1 = a solid blow), force, dmg, blade, weapon, isBoss}`, `hurt {dmg, x, y, dir, heavy, outcome}`, `ko {perma}`, `kill {enemy, weapon, zone, isBoss, x, y}`, `pickup {kind: weapon|ammo|bandage|can|bottle|knife, w, source, x, y}`, `object:break {o, kind, x, y}`, `glass:break {o, kind: 'bottle', x, y}`, `shot {by, w, x, y, dir, pellets, auto}`, `swing {move, weapon, w, blade, heavy, x, y, dir}`, `roll {x, y, dir, air}`, `jump {x, y, double}`, `land {x, y, v, heavy, surface}`, `step {x, y, foot, run, wet}`, `spawn {enemy, type, source, x}`, `boss:intro {boss, name}`, `boss:phase {boss, phase}`, `boss:telegraph {boss, move, t, x, mark}`, `boss:defeated {boss, x}`, `section:enter {from, to}`, `run:over {result}`, `noise {x, loud}`, `feat` (a lesson key string).
+`game.js` adds sounds for `roll`, `swing`, `shot` (the machine gun plays one burst per 0.3 s), `step`, `land`, `boss:telegraph` and `run:over`; menu moves play `ui_blip`, menu actions `ui_confirm`.
+`sfx.js` uses its own random generator, never `Math.random`.
 
 ## 8. Choices for the director
 

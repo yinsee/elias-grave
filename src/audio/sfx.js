@@ -12,6 +12,11 @@
 
 const TAU = Math.PI * 2;
 
+// Its own random numbers (mulberry32), never Math.random: the game may seed Math.random for its tests, and sound
+// must not use up or shift a random sequence that the game reads.
+let rs = (Date.now() ^ 0x9e3779b9) >>> 0;
+function rand() { rs = (rs + 0x6D2B79F5) >>> 0; let t = Math.imul(rs ^ (rs >>> 15), 1 | rs); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }
+
 export function createSfx(ctx, { destination = ctx.destination, vary = true } = {}) {
   // ---- master chain: bus -> compressor -> master gain -> destination; a shared room reverb on a send
   const master = ctx.createGain();
@@ -41,7 +46,7 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
     const len = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(1, len, ctx.sampleRate), d = b.getChannelData(0);
     let last = 0;
     for (let i = 0; i < len; i++) {
-      const w = Math.random() * 2 - 1;
+      const w = rand() * 2 - 1;
       if (kind === 'brown') { last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; } else d[i] = w;
     }
     return b;
@@ -51,7 +56,7 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
     const len = Math.floor(ctx.sampleRate * sec), b = ctx.createBuffer(2, len, ctx.sampleRate);
     for (let ch = 0; ch < 2; ch++) {
       const d = b.getChannelData(ch);
-      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, decay) * (i < 200 ? i / 200 : 1);
+      for (let i = 0; i < len; i++) d[i] = (rand() * 2 - 1) * Math.pow(1 - i / len, decay) * (i < 200 ? i / 200 : 1);
     }
     return b;
   }
@@ -91,13 +96,13 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
     node.connect(f); node = f;
     if (drive) { const w = ctx.createWaveShaper(); w.curve = curve(drive); node.connect(w); node = w; }
     node.connect(g).connect(to);
-    s.start(t, Math.random() * 1.5); s.stop(t + (a + d) * v.k + 0.05);
+    s.start(t, rand() * 1.5); s.stop(t + (a + d) * v.k + 0.05);
     return { src: s, gain: g, filter: f };
   }
 
   // Inharmonic metal ring (several partials with their own decays).
   function ring(v, { f = 3000, ratios = [1, 1.47, 2.09, 2.76], at = 0, d = 0.4, vol = 0.2, to = v.out }) {
-    ratios.forEach((r, i) => tone(v, { f0: f * r * (1 + (Math.random() - 0.5) * 0.02), at, a: 0.001, d: d / (1 + i * 0.5), vol: vol / (1 + i * 0.6), to }));
+    ratios.forEach((r, i) => tone(v, { f0: f * r * (1 + (rand() - 0.5) * 0.02), at, a: 0.001, d: d / (1 + i * 0.5), vol: vol / (1 + i * 0.6), to }));
   }
 
   // A per-sound send to the reverb.
@@ -162,7 +167,7 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
     },
     mg_burst(v) {
       for (let i = 0; i < 6; i++) {
-        const j = { ...v, t: v.t + i * 0.075 * v.k, p: v.p * (1 + (Math.random() - 0.5) * 0.08) };
+        const j = { ...v, t: v.t + i * 0.075 * v.k, p: v.p * (1 + (rand() - 0.5) * 0.08) };
         noise(j, { filter: 'lowpass', f0: 7000, f1: 900, d: 0.09, vol: 0.85, drive: 7 });
         tone(j, { f0: 120, f1: 45, d: 0.08, vol: 0.8, drive: 5 });
         noise(j, { filter: 'highpass', f0: 3500, d: 0.01, vol: 0.6 });
@@ -172,7 +177,7 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
     },
     ricochet(v) {
       noise(v, { filter: 'highpass', f0: 4000, d: 0.012, vol: 0.7 });
-      const o = tone(v, { f0: 3800 + Math.random() * 800, f1: 1100, at: 0.01, a: 0.005, d: 0.42, vol: 0.4, sweep: 0.42 });
+      const o = tone(v, { f0: 3800 + rand() * 800, f1: 1100, at: 0.01, a: 0.005, d: 0.42, vol: 0.4, sweep: 0.42 });
       const lfo = ctx.createOscillator(), lg = ctx.createGain();      // the "wobble" of a spinning slug
       lfo.frequency.value = 38; lg.gain.value = 140 * v.p;
       lfo.connect(lg).connect(o.frequency);
@@ -191,11 +196,11 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
       tone(v, { type: 'triangle', f0: 140, f1: 60, d: 0.15, vol: 0.9, drive: 4 });
       noise(v, { buf: brown, filter: 'lowpass', f0: 1500, f1: 300, d: 0.2, vol: 0.8, drive: 2 });
       for (let i = 0; i < 9; i++) {                                  // splinter cracks
-        const at = Math.random() * 0.22;
-        noise(v, { filter: 'bandpass', f0: 600 + Math.random() * 1600, q: 3, at, d: 0.02 + Math.random() * 0.04, vol: 0.5 + Math.random() * 0.4, drive: 3 });
+        const at = rand() * 0.22;
+        noise(v, { filter: 'bandpass', f0: 600 + rand() * 1600, q: 3, at, d: 0.02 + rand() * 0.04, vol: 0.5 + rand() * 0.4, drive: 3 });
       }
       [240, 410, 620].forEach((f) => noise(v, { filter: 'bandpass', f0: f, q: 12, d: 0.25, vol: 0.6 }));   // wood body
-      for (let i = 0; i < 4; i++) noise(v, { filter: 'bandpass', f0: 900 + Math.random() * 900, q: 4, at: 0.25 + Math.random() * 0.35, d: 0.04, vol: 0.3 }); // debris
+      for (let i = 0; i < 4; i++) noise(v, { filter: 'bandpass', f0: 900 + rand() * 900, q: 4, at: 0.25 + rand() * 0.35, d: 0.04, vol: 0.3 }); // debris
       send(v, 0.15);
     },
     body_fall(v) {
@@ -210,7 +215,7 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
       noise(v, { buf: brown, filter: 'lowpass', f0: 380, d: 0.05, vol: 1.1 });                 // heel
       tone(v, { f0: 110, f1: 60, d: 0.04, vol: 0.3 });
       for (let i = 0; i < 3; i++)                                                              // splash droplets
-        noise(v, { filter: 'bandpass', f0: 1600 + Math.random() * 2000, f1: 900, q: 3, at: 0.01 + i * 0.025 + Math.random() * 0.02, d: 0.05 + Math.random() * 0.05, vol: 0.25 });
+        noise(v, { filter: 'bandpass', f0: 1600 + rand() * 2000, f1: 900, q: 3, at: 0.01 + i * 0.025 + rand() * 0.02, d: 0.05 + rand() * 0.05, vol: 0.25 });
       noise(v, { filter: 'highpass', f0: 2500, at: 0.015, a: 0.01, d: 0.08, vol: 0.12 });
     },
     dodge_whoosh(v) {
@@ -261,8 +266,8 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
   function glass(v, shards, len, vol) {
     noise(v, { filter: 'highpass', f0: 3000, d: 0.05, vol: vol * 0.9, drive: 2 });   // impact crack
     for (let i = 0; i < shards; i++) {
-      const at = Math.pow(Math.random(), 1.8) * len, f = 2200 + Math.random() * 6000;
-      tone(v, { f0: f, f1: f * 0.97, at, a: 0.001, d: 0.03 + Math.random() * 0.12, vol: vol * (0.08 + Math.random() * 0.12) * (1 - at / len * 0.6) });
+      const at = Math.pow(rand(), 1.8) * len, f = 2200 + rand() * 6000;
+      tone(v, { f0: f, f1: f * 0.97, at, a: 0.001, d: 0.03 + rand() * 0.12, vol: vol * (0.08 + rand() * 0.12) * (1 - at / len * 0.6) });
       if (i % 3 === 0) noise(v, { filter: 'bandpass', f0: f, q: 6, at, d: 0.04, vol: vol * 0.25 });
     }
   }
@@ -270,9 +275,9 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
   function play(name, { vol = 1, pan = 0, pitch = 1, when = 0 } = {}) {
     const fn = bank[name];
     if (!fn) { console.warn('sfx: unknown sound', name); return false; }
-    const p = pitch * (vary ? 1 + (Math.random() - 0.5) * 0.06 : 1);
+    const p = pitch * (vary ? 1 + (rand() - 0.5) * 0.06 : 1);
     const out = ctx.createGain();
-    out.gain.value = vol * (vary ? 1 + (Math.random() - 0.5) * 0.12 : 1);
+    out.gain.value = vol * (vary ? 1 + (rand() - 0.5) * 0.12 : 1);
     let node = out;
     if (pan && ctx.createStereoPanner) { const pn = ctx.createStereoPanner(); pn.pan.value = Math.max(-1, Math.min(1, pan)); out.connect(pn); node = pn; }
     node.connect(comp);
