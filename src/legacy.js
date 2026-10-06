@@ -1159,7 +1159,7 @@ import * as P9 from './levels/pier9.js';
   function pocketStep(dt) {
     for (const o of objs.slice()) {
       if (!o.pocket || o.safeT > 0 || hero.mode !== 'anim' || pocket.length >= 3) continue;
-      if (!endPh && hero.act === 'squat' && Math.abs(o.x - ctl.x) < 9 && Math.abs(o.y - ctl.y) < 14) { pocket.push(o.kind); removeObj(o); emit('feat', 'pocket'); emit('pickup', { kind: o.kind, pocket: true, x: o.x, y: o.y }); sparks.push({ x: o.x, y: o.y - 3, t: 0.1 }); }   // squat by it to pocket it (walking into it kicks it along)
+      if (!endPh && Math.abs(o.x - ctl.x) < 9 && Math.abs(o.y - ctl.y) < 14) { pocket.push(o.kind); removeObj(o); emit('feat', 'pocket'); emit('pickup', { kind: o.kind, pocket: true, x: o.x, y: o.y }); sparks.push({ x: o.x, y: o.y - 3, t: 0.1 }); }   // walk into it to pocket it (with the pocket full, he kicks it along instead)
     }
     for (let i = tossed.length - 1; i >= 0; i--) {   // pocket throws fly until they hit someone or land
       const q = tossed[i], T = TOSS[q.k];
@@ -1238,6 +1238,7 @@ import * as P9 from './levels/pier9.js';
       const sp = Math.hypot(o.vx, o.vy); if (sp > 420) { o.vx *= 420 / sp; o.vy *= 420 / sp; }
       if (o.flash > 0) o.flash -= dt;
       if (o.safeT > 0) o.safeT -= dt;
+      if (o.heroPush > 0) o.heroPush -= dt;
       if (o.surf) syncSurf(o);
     }
     // objects knock into each other
@@ -1258,7 +1259,7 @@ import * as P9 from './levels/pier9.js';
       a.x -= nx * s * ia; a.y -= ny * s * ia; b.x += nx * s * ib; b.y += ny * s * ib;
       const vn = (b.vx - a.vx) * nx + (b.vy - a.vy) * ny;
       if (vn < 0) {
-        if (vn < -60) for (const q of [a, b]) if (FLOOR_BREAK.has(q.kind) && !q.carried && Math.hypot(q.vx, q.vy) > 40) brk.add(q);   // a hard knock: it breaks
+        if (vn < -60) for (const q of [a, b]) if (FLOOR_BREAK.has(q.kind) && !q.carried && !(q.heroPush > 0) && Math.hypot(q.vx, q.vy) > 40) brk.add(q);   // a hard knock: it breaks
         const jn = -1.3 * vn / (ia + ib);
         a.vx -= jn * nx * ia; a.vy -= jn * ny * ia; b.vx += jn * nx * ib; b.vy += jn * ny * ib;
         const tang = (b.vx - a.vx) * -ny + (b.vy - a.vy) * nx;
@@ -1304,6 +1305,7 @@ import * as P9 from './levels/pier9.js';
           if (on < -80 && o.safeT <= 0 && hero.mode === 'anim' && flinch(o.x, o.y, clamp((-on - 60) / 110, 0.35, 1), cx, cy)) o.safeT = 0.2;   // [G3] moderate hit: flinch
           if (vn < 0) {
             o.vx -= nx * vn * 1.1; o.vy -= ny * vn * 1.1;
+            if (o.m >= 1 && !(o.thrown > 0)) { o.vx = clamp(o.vx, -45, 45); o.heroPush = 0.3; }   // a box, a bin, a barrel: walking or running into it nudges it along, it does not fly off and break
             if (o.m < 1 && !ctl.air && hero.mode === 'anim' && Math.abs(fvx) > 15 && o.y > P[2].y) {   // a can, a bottle, a cone at his feet: kicked skittering along
               o.vx = fvx * (1.3 + simRand() * 0.5) + nx * 15; o.vy = -25 - simRand() * 45 * Math.min(1, Math.abs(fvx) / 120); o.av += (simRand() - 0.5) * 20; o.safeT = 0.15;
             }
@@ -1320,7 +1322,7 @@ import * as P9 from './levels/pier9.js';
     for (const o of objs) {
       if (!FLOOR_BREAK.has(o.kind) || o.carried) continue;
       const sp = Math.abs(o.vx);
-      if (sp > 12 && Math.abs(o.vy) < 1 && !(o.ethrown > 0) && !KICKS.has(o.kind)) { o.pushD = (o.pushD || 0) + sp * dt; if (o.pushD > PUSH_BREAK) brk.add(o); }   // sliding along the ground (a kicked barrel rolls on)
+      if (sp > 12 && Math.abs(o.vy) < 1 && !(o.ethrown > 0) && !KICKS.has(o.kind) && !(o.heroPush > 0)) { o.pushD = (o.pushD || 0) + sp * dt; if (o.pushD > PUSH_BREAK) brk.add(o); }   // sliding along the ground (a kicked barrel rolls on)
       else if (sp < 3) o.pushD = 0;
       if (Math.hypot(o.vx, o.vy) > 70 && !(o.thrown > 0) && !(o.ethrown > 0) && !o.crowd && !brk.has(o)) for (const e of enemies) {   // knocked into a goon: he goes down
         if (e.dead || e.down || e.clinch || e.fin || !e.J || offPlat(o, e.lane)) continue;
@@ -4529,7 +4531,7 @@ import * as P9 from './levels/pier9.js';
       ['slam', 'Slam: in a grab, hold [↓] and press [Q]'], ['gkick', 'Kick away: in a grab, hold [←] or [→] and press [W]'],
       ['smash', 'Smash a crate: hit it until it breaks'], ['split', 'Break the crate stack: hold [Q] or [W] next to it'],
       ['lift', 'Lift the dustbin: hands empty, hold [↓] next to it'], ['bash', 'Hit a goon with it: tap [Q]'], ['toss', 'Throw a dustbin: lift one, hold [Q] with no goon near'],
-      ['pocket', 'Pocket a can or a bottle: hold [↓] next to it'], ['pockethit', 'Throw it at a goon: hold [Q] with no goon near'], ['kill1', 'Beat the goons: they hit back']] },
+      ['pocket', 'Pocket a can or a bottle: walk into it'], ['pockethit', 'Throw it at a goon: hold [Q] with no goon near'], ['kill1', 'Beat the goons: they hit back']] },
     { x0: 900, title: '3 · Katana', tasks: [['pick1', 'Take the katana: walk over it'], ['ks', 'Slash: tap [Q]'], ['kw', 'Heavy slash: hold [Q] near a goon'], ['kh', 'Overhead finisher: tap [Q], then hold [Q]'],
       ['sslash', 'Low cut: hold [↓], tap [Q]'], ['kair', 'Jump slash: jump [↑], then tap [Q]'], ['tw', 'Throw the blade: hold [Q] with no goon near'], ['catch', 'Get the blade back: walk over it'],
       ['focus', 'Sandman time: fill the focus bar, it starts by itself'], ['finisher', 'Finisher: when a beaten goon staggers, press [Q]'], ['kill2', 'Cut down the goons']] },
