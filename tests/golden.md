@@ -52,6 +52,9 @@ Combat tests with `?manual`: `window.__sim` also holds `blk` (parry window), `hs
 `slowT`, `ckpt`, `ragT`, `setDiff(i)` (also refills the second winds) and `retry()`; `__peek()` shows `wind` and `wasted`.
 Dispatch KeyboardEvents (Q, W, E, Space, arrows) with frames stepped between down and up.
 
+The tutorial objective panel (2026-10-06: one lesson at a time in `#obj`, new lesson texts with `[Q]` key caps, the L list, the gate pulse in place of the gate toast) kept all four URLs' hashes (state, buf, l3), run in Chrome.
+It is DOM only and hidden in the attract demo; the lesson ids, the gate and the lesson detection did not change.
+
 Options: `?seed=N` (repeatable random numbers), `?fixed` (clock steps exactly 1/60 s per frame), `?autotest=demo|boss&frames=N`, `?view3d`,
 `?manual` (no requestAnimationFrame: a test calls `window.__step(n)` and reads `window.__peek()`; `window.__skipToBoss()` starts at the club roof).
 
