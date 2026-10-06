@@ -53,7 +53,7 @@ export const SALT_LOOKS = {   // Saltmen outfits (src/sim/enemies/roster.js LOOK
 // variant -> base role (src/sim/enemies/roster.js ROLE) and look; `R` overrides the role's weapon data. type: the name the kill feed
 // shows; weapon: what he carries (drops). The rest are behaviour rows (docs/levels/01-pier9.md 4); each needs a different answer:
 //   props: lifts a crate, bin or barrel near him and throws it (near = the range he throws from) -> close in, or bat it back
-//   heavy: more overhead chops; low: share of his strings that open with a low stab -> block low (hold down with E) or jump
+//   heavy: more overhead chops; low: share of his strings that open with a low stab -> jump it, dodge it or parry it
 //   gaff: the gaff pull (range px, windup s, v = hook px/s, pull px/s, cd s, miss = recovery s after a miss, chop = follow-up dmg) -> dodge through it
 //   clip / reload: shots before a reload, the reload window (s); max = alive at once -> rush him while he reloads
 //   shield: blows from the front ring off (turn = s he needs to turn round) -> get behind him, sweep him, throw something, or parry his bash

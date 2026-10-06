@@ -192,15 +192,14 @@ export const DEF = {
 };
 // hit-stop per move (seconds the world freezes when it connects); moves not listed use their power
 export const STOP = { lp0: 0.05, lp1: 0.05, hp: 0.12, lk0: 0.06, lk1: 0.06, hk0: 0.12, hk1: 0.12, airkick: 0.08, ks0: 0.06, ks1: 0.06, kh: 0.12, kair: 0.07, al: 0.08, al1: 0.08, aw: 0.13, ks2: 0.05, kw: 0.1, ah: 0.15, aair: 0.1, gb: 0.08,
-  slp: 0.04, sweep: 0.09, sslash: 0.06, tw: 0.08, lpl: 0.1, lpw: 0.12, stomp: 0.08, knee: 0.07, gslam: 0.1 };
-// combo depth (#5): the fist string's 4th press is the ender (lpl: a rising uppercut that launches him; lpw, → held: a lunging cross that
-// sends him flying into a wall); a stomp on a goon on the floor; the clinch: knees (Q) and a throw (W)
+  slp: 0.04, sweep: 0.09, sslash: 0.06, tw: 0.08, lpl: 0.1, stomp: 0.08, knee: 0.07, gslam: 0.1, elbow: 0.08, gkick: 0.12 };
+// combo depth (#5): the fist string's 4th press is the ender (lpl: a rising uppercut that launches him into a juggle); a stomp on a goon on
+// the floor; the clinch: W knee, Q elbow, ←/→ + Q throw, ↓ + Q slam, ←/→ + W kick away
 // clinch: both hands on the back of his head, pulling him down onto the knee
 TRN.CLINCH = mod(GUARD, { rx: 0.5, ry: 15.2, lean: 0.3, head: 0.15, f0x: -7, f1x: 3, a0s: 1.45, a0e: 0.75, a1s: 1.6, a1e: 0.5 });
 // shoot-dodge (a dodge in Sandman time with a gun): a flat dive, belly down (DIVE) or back down with the feet toward the foe (DIVEB, a dive away)
 TRN.DIVE = mod(IDLE, { rx: 0, ry: 5, lean: 1.5, head: -1.1, f0x: -15, f0y: 6, f1x: -14, f1y: 8, a0s: 1.6, a0e: 0.2, a1s: 1.6, a1e: 0.1 });
 TRN.DIVEB = mod(IDLE, { rx: 0, ry: 5, lean: -1.45, head: 1.0, f0x: 14, f0y: 7, f1x: 15, f1y: 9, a0s: 1.5, a0e: 0.2, a1s: 1.6, a1e: 0.1 });
-const LPW_OUT = { rx: 4.2, lean: 0.6, ry: 15.2, head: -0.3, f0x: -7, f0y: 2, a0s: 1.68, a0e: 0, a1s: 0.4, a1e: 2.4 };
 const LPL_OUT = { ry: 16.8, lean: -0.12, rx: 2.2, head: -0.35, f0x: -4, a0s: 2.55, a0e: 0.55, a1s: 0.9, a1e: 2.1 };
 const KNEE_OUT = { f1x: 7, f1y: 13, rx: 1, lean: 0.35, head: 0.1, a0s: 1.15, a0e: 1.0, a1s: 1.3, a1e: 0.8 };
 const STOMP_OUT = { ry: 14.6, lean: 0.45, head: 0.5, f1x: 9, f1y: 0, a0s: 1.0, a0e: 1.5, a1s: 0.3, a1e: 0.8 };
@@ -209,10 +208,6 @@ Object.assign(MOVES, {
   lpl: { dur: 0.5, win: [0.12, 0.2], limb: 4, power: 250, up: 1.6, ender: true, lunge: 9, keys: [
     K(0, {}), K(0.07, { ry: 13.8, lean: 0.35, rx: 0.5, head: -0.2, a0s: 0.3, a0e: 2.0, a1s: 1.2, a1e: 2.0 }),
     K(0.13, LPL_OUT, GUARD, 'in'), K(0.22, { ...LPL_OUT, a0s: 2.65 }), K(0.5, {}, GUARD, 'out')] },
-  // the wall-splat: a quick coil, then the whole body behind a straight rear cross
-  lpw: { dur: 0.55, win: [0.12, 0.2], limb: 4, power: 280, up: 0.15, ender: true, lunge: 9, keys: [
-    K(0, {}), K(0.07, { rx: -1.8, lean: -0.15, ry: 15, a0s: 0.1, a0e: 2.5, a1s: 1.4, a1e: 1.5 }),
-    K(0.13, LPW_OUT, GUARD, 'in'), K(0.22, { ...LPW_OUT, rx: 4.4 }), K(0.55, {}, GUARD, 'out')] },
   // a stomp on a goon on the floor (↓ + W by him): the knee comes up high, the heel drives down
   stomp: { dur: 0.5, win: [0.2, 0.3], limb: 10, power: 200, up: 0.3, otg: true, keys: [
     K(0, {}), K(0.14, { ry: 16.6, lean: 0.3, head: 0.45, f1x: 7, f1y: 11, a0s: 0.9, a0e: 1.6, a1s: 0.5, a1e: 1.0 }),
@@ -235,7 +230,13 @@ Object.assign(MOVES, {
     K(0.46, { ry: 11.6, lean: 1.0, rx: 3.2, head: -0.3, f0x: -9, f1x: 7, a0s: 0.95, a0e: 0.15, a1s: 1.05, a1e: 0.1 }, GUARD, 'in'),   // driven down
     K(0.62, { ry: 11.8, lean: 0.95, rx: 3.2, head: -0.25, f0x: -9, f1x: 7, a0s: 0.9, a0e: 0.2, a1s: 1.0, a1e: 0.15 }), K(0.82, {}, GUARD, 'out')] },
 });
-for (const k of ['lpl', 'lpw', 'stomp', 'knee', 'gtoss', 'gslam']) MOVES[k].pre = strikeFrom(MOVES[k]);
+// in the clinch: Q, an elbow across his face (the rear arm folded, the point driven at his head); ←/→ + W, a kick that sends him flying
+MOVES.elbow = { dur: 0.34, win: [0.13, 0.19], limb: 5, power: 210, up: 0.2, clinch: true, keys: [
+  K(0, {}, TRN.CLINCH), K(0.08, { rx: -0.8, lean: -0.12, head: 0.05, a1s: 2.3, a1e: 2.7, a0s: 1.45, a0e: 0.75 }, TRN.CLINCH),
+  K(0.14, { rx: 1.3, lean: 0.38, head: -0.15, a1s: 1.55, a1e: 2.8, a0s: 1.4, a0e: 0.8 }, TRN.CLINCH, 'in'),
+  K(0.2, { rx: 1.4, lean: 0.4, head: -0.15, a1s: 1.5, a1e: 2.8, a0s: 1.4, a0e: 0.8 }, TRN.CLINCH), K(0.34, {}, TRN.CLINCH, 'out')] };
+MOVES.gkick = { ...MOVES.hk1, win: [0.3, 0.36], power: 280, clinch: true };   // (the heavy kick's keys; he leaves at win[0])
+for (const k of ['lpl', 'stomp', 'knee', 'gtoss', 'gslam', 'elbow', 'gkick']) MOVES[k].pre = strikeFrom(MOVES[k]);
 // the finishers (#6), one per weapon class: f = fists, k = katana, a = axe, g = gun. gap: where he stands from the goon; hit: the killing blow (s);
 // kneel: the goon drops to his knees for it. The gun's arms are held by the gun's IK (only the body moves)
 export const FINS = {
@@ -256,22 +257,22 @@ export const FINS = {
 };
 // combo depth tuning (sim). JUG: a launched goon is juggled while his hips are air px over the floor: each hit pops him pop px/s up (x popK per hit),
 // his fall speeds up (gravity x g x (1 + gK per hit)); launch = the launcher's pop, a hit does dmgK per hit less; max hits, then he just drops (no infinite).
-// SPLAT: the wall-splat flight (vx, vy px/s, fly s); a body that meets a wall, a vehicle or a crate in flight sticks for stick s (dmg to him);
-// a body in flight hits the goons in its way for crowd dmg and floors them. GRAB: hold = s before he breaks free with no knee or throw;
-// knees (Q) at most; knee dmg; the throw (W): v, vy px/s, fly s, self = dmg to the thrown goon; gap = px between the two in the clinch.
+// FLY: the kick-away's flight (vx, vy px/s, fly s); a body in flight hits the goons in its way for crowd dmg and floors them, and a wall
+// stops it (he drops). GRAB: hold = s before he breaks free with no blow; knees = blows before the next one sends him off; knee, elbow,
+// kick dmg; the throw (←/→ + Q): v, vy px/s, fly s, self = dmg to the thrown goon; gap = px between the two in the clinch.
 // OTG: stomp and point-blank shot damage; at most otgN extra beats on the floor. DIVE: the shoot-dodge: v px/s for t s, h px high, inv s; down s on the floor
 export const JUG = { launch: 105, pop: 120, popK: 0.8, g: 1.2, gK: 0.35, dmgK: 0.88, max: 7, air: 5 };
-export const SPLAT = { vx: 250, vy: -45, fly: 0.75, stick: 0.45, dmg: 10, crowd: 12 };
-export const GRAB = { hold: 1.6, knees: 3, knee: 7, v: 235, vy: -100, fly: 0.9, self: 8, gap: 19 };
+export const FLY = { vx: 250, vy: -45, fly: 0.75, crowd: 12 };
+export const GRAB = { hold: 1.6, knees: 3, knee: 7, elbow: 6, kick: 10, v: 235, vy: -100, fly: 0.9, self: 8, gap: 19 };   // knees: blows (knees, elbows) before the next one sends him off; elbow, kick: dmg
 export const OTG = { stomp: 12, shot: 1.4, n: 2, reach: 22 };
 export const DIVE = { v: 190, t: 0.55, h: 9, inv: 0.5, down: 0.3 };
 // SLAM: the ground slam. up = he is overhead (s), down = driven into the floor (the impact, s); lift = px over the hero's feet at the top,
 // fwd = px in front where he lands; dmg (no finisher); the shockwave floors the goons within r px (dy px up or down)
 export const SLAM = { up: [0.1, 0.3], down: [0.38, 0.46], lift: 38, fwd: 15, dmg: 22, r: 40, dy: 10 };
 // focus (#6), the Sandman's meter: 0..max; Sandman time starts by itself at a full meter with 2+ goons in the fight (or a perfect dodge at a full
-// meter): dur s of world at slow x speed (the hero at full speed), drained as it runs (min: unused since F went). gain: per varied hit (rep: a repeat), ender, counter, juggle hit, wall-splat, knee, clinch throw, parry,
+// meter): dur s of world at slow x speed (the hero at full speed), drained as it runs (min: unused since F went). gain: per varied hit (rep: a repeat), ender, counter, juggle hit, knee, clinch throw,
 // perfect dodge, kill, a bullet that lands, a stomp; none while it runs. fin: a finisher on a goon at <= hp of his max; stop = hit-stop (4 frames);
 // cam = the punch-in time (s). last/boss: the auto slow-motion (real s) on the last kill of a wave and on the boss kill
 export const FOCUS = { max: 100, min: 25, dur: 3, slow: 0.3, last: 0.6, boss: 1.2,
-  gain: { hit: 4, rep: 1, ender: 8, ctr: 6, jug: 5, splat: 10, knee: 3, gthrow: 8, parry: 15, pdodge: 12, kill: 4, shot: 0.6, otg: 3, slam: 10 } };
-export const FIN = { hp: 0.3, reach: 34, stop: 4 / 60, cam: 0.7, wall: 26 };   // wall: his back within this many px of a wall: the fists' finisher is the wall slam
+  gain: { hit: 4, rep: 1, ender: 8, ctr: 10, jug: 5, knee: 3, gthrow: 8, parry: 0, pdodge: 20, kill: 4, shot: 0.6, otg: 3, slam: 10 } };
+export const FIN = { hp: 0.3, reach: 34, stop: 4 / 60, cam: 0.7, open: 0.6 };   // open: s a goon at finisher health stays finisher-ready after a landed hit
