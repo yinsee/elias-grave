@@ -1,0 +1,35 @@
+{
+  "id": "prologue_outro",
+  "title": "Prologue: the bill",
+  "music": "music:prologue",
+  "musicEnd": "stop",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:prologue_end_01", "rain": true, "tint": "cold", "minTime": 1.5,
+        "shot": "Grey dawn. Firemen carry a covered stretcher. A burned hand hangs out, wearing Bell's gold signet ring. Nero sniffs the hand, then turns away calmly.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "prologue_06", "text": "They said it was Bell. The ring said so. The dog said nothing." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:prologue_end_02", "minTime": 1.5,
+        "shot": "Close-up. The hero's hands hold a half-burned ledger page: Debt of L. Malaspina: 4,000,000. Transferred to the man who broke the club. Collector: S. Marchetti, Pier 9.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "prologue_07", "text": "Underworld rule: break a man, inherit his debts. They had sent me the bill." }
+        ] },
+      { "image": "panel:prologue_end_03", "rain": true, "minTime": 1,
+        "shot": "The hero pulls the silver tuning fork out of the charred door frame. Rain runs down his face. Nero sits beside him, ears up.",
+        "lines": [
+          { "type": "say", "speaker": "Elias", "style": "bubble", "at": [5, 6], "tail": "right", "voice": "prologue_08", "text": "Who." }
+        ] }
+    ] },
+    { "layout": "full", "panels": [
+      { "image": "panel:prologue_end_04", "minTime": 1.5,
+        "sfx": { "text": "RRRING", "at": [24, 12] },
+        "shot": "A payphone on the corner rings. The hero picks it up. Cut-in: a man in a trench coat in a phone booth across town, face hidden by a hat brim (Inspector Hale).",
+        "lines": [
+          { "type": "say", "speaker": "Hale · phone", "pos": "bottom", "align": "right", "voice": "prologue_09", "text": "The fork means the Choir. Start at Pier 9. And keep your head down." }
+        ] }
+    ] }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "docks_outro",
+  "title": "Pier 9: the freezer",
+  "musicEnd": "keep",
+  "_todo": "Panel art is being generated (assets/art/panels/docks/docks_outro_0N.png). No voice lines yet (Marchetti, Elias VO, Hale): add ids docks_outro_01..04 to assets/prompts/audio_voice.json, then fill 'voice' here.",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:docks_outro_01", "tint": "cold", "minTime": 1.5,
+        "shot": "Inside the freezer, blue light, frost breath. Marchetti lies against the cash crates, his cleaver frozen into the floor. The hero kneels over him, one hand on the gold necklace.",
+        "lines": [
+          { "type": "say", "speaker": "Marchetti", "pos": "bottom", "align": "right", "text": "I just collect... The fire came from below. Switch's rats." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:docks_outro_02", "minTime": 1,
+        "shot": "Close-up. A cash crate lid is open. Stacks of bills, each band stamped with an old brass Line 0 metro token.",
+        "lines": [
+          { "type": "vo", "pos": "top", "text": "Old metro tokens. The money took the train nobody rides anymore." }
+        ] },
+      { "image": "panel:docks_outro_03", "rain": true, "minTime": 1,
+        "shot": "Exterior. Sleet turns to rain. The hero walks away from the market. Steam rises from a street grate marked Saint-Ambrose, Ligne 0. Nero waits at the stairs.",
+        "lines": [
+          { "type": "vo", "pos": "bottom", "text": "Saint-Ambrose station. Closed for thirty years. Open for business." }
+        ] }
+    ] },
+    { "layout": "full", "panels": [
+      { "image": "panel:docks_outro_04", "rain": true, "minTime": 1.5,
+        "sfx": { "text": "RRRING", "at": [24, 12] },
+        "shot": "A payphone on the market gate rings. Cut-in: Hale in a phone booth, hat brim low, rain on the glass.",
+        "lines": [
+          { "type": "say", "speaker": "Hale · phone", "pos": "bottom", "align": "right", "text": "Switch runs the tunnels. Take a light. And take the dog." }
+        ] }
+    ] }
+  ]
+}

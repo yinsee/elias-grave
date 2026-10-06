@@ -1,0 +1,42 @@
+{
+  "id": "prologue_intro",
+  "title": "Prologue: Three Nights Later",
+  "music": "music:prologue",
+  "musicEnd": "keep",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:prologue_intro_01", "rain": true, "minTime": 1.5,
+        "shot": "Wide, high angle. A narrow old-town street in heavy rain. The hero walks under a streetlamp with Nero at his heel. A small shop sign glows amber: Bell & Sons, Horloger.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "prologue_01", "text": "Three nights since Club Noir. The rain had not stopped. Neither had the clocks." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:prologue_intro_02", "minTime": 1,
+        "shot": "Interior, warm amber light. Clocks on every wall. Augustin Bell puts a bowl of soup on the bench. The hero sits, still in his wet coat.",
+        "lines": [
+          { "type": "say", "speaker": "Bell", "pos": "top", "voice": "prologue_02", "text": "Eat, Elias. You look like a man who broke something expensive." }
+        ] },
+      { "image": "panel:prologue_intro_03", "minTime": 1,
+        "shot": "Close-up on Bell's face, half in shadow, pipe smoke curling. His eyes are serious.",
+        "lines": [
+          { "type": "say", "speaker": "Bell", "pos": "bottom", "voice": "prologue_03", "text": "Malaspina was a tenor. There is a whole choir. And every choir needs someone to keep time." }
+        ] }
+    ] },
+    { "layout": "full", "panels": [
+      { "image": "panel:prologue_intro_04", "rain": true, "minTime": 1.5,
+        "sfx": { "text": "Mmmmmm...", "at": [30, 14] },
+        "shot": "Night. Exterior, low angle. A black car idles outside, wipers moving. A gloved hand strikes a silver tuning fork against the shop door frame.",
+        "lines": [
+          { "type": "vo", "pos": "bottom", "align": "left", "voice": "prologue_04", "text": "In this city, a tuning fork is a death notice." }
+        ] }
+    ] },
+    { "layout": "full", "panels": [
+      { "image": "panel:prologue_intro_05", "rain": true, "sound": "glass_large", "minTime": 2,
+        "shot": "The shop explodes outward. Glass and clock faces fly into the rain. In the foreground, Nero drags the hero out of the doorway by his collar.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "prologue_05", "text": "The dog pulled me out. Nobody pulled Bell out." }
+        ] }
+    ] }
+  ]
+}

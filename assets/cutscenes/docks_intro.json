@@ -1,0 +1,37 @@
+{
+  "id": "docks_intro",
+  "title": "Pier 9",
+  "music": "music:docks_explore",
+  "musicLoop": true,
+  "musicEnd": "keep",
+  "_todo": "Panel art is being generated (assets/art/panels/docks/docks_intro_0N.png). Saltman voice lines (panels 2 and 4) do not exist yet. Re-check bubble/caption positions against the final art.",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:docks_intro_01", "rain": true, "tint": "cold", "minTime": 1.5,
+        "shot": "Wide. Grey-blue dawn over the docks. Sleet falls slant across cranes and stacked containers. A tiny figure (the hero) walks along the quay edge. A fog horn's sound lines cross the panel.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "docks_intro_01", "text": "Pier 9. Where the city guts its fish, and its debts." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:docks_intro_02", "minTime": 1,
+        "shot": "Medium. Saltmen in yellow oilskins drag a fish crate past a burning oil drum. One looks up; the cigarette drops from his lips.",
+        "lines": [
+          { "type": "say", "speaker": "Saltman (whispering)", "pos": "top", "text": "That's him. The Sandman." }
+        ] },
+      { "image": "panel:docks_intro_03", "minTime": 1,
+        "sfx": { "text": "Mmmmmm...", "at": [50, 16] },
+        "shot": "Close-up on the hero's hand. He drops the scorched tuning fork onto a fish crate. Ring lines in red.",
+        "lines": [
+          { "type": "vo", "pos": "bottom", "voice": "docks_intro_03", "text": "I brought their bell back. Let them hear it ring." }
+        ] }
+    ] },
+    { "layout": "full", "panels": [
+      { "image": "panel:docks_intro_04", "rain": true, "minTime": 1.5,
+        "shot": "Low angle. Six Saltmen spread out with hooks, pipes and knives, lit red by the drum. The hero takes off his coat.",
+        "lines": [
+          { "type": "say", "speaker": "Saltman", "pos": "bottom", "align": "right", "text": "Sandman's just a story. Get him!" }
+        ] }
+    ] }
+  ]
+}

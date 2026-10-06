@@ -1,0 +1,14 @@
+{
+  "id": "marchetti_intro",
+  "title": "Marchetti",
+  "music": "music:docks_boss_p1",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_cold" },
+  "right": { "id": "marchetti", "name": "SAL \"THE SCALE\" MARCHETTI", "role": "Tenor · Pier 9", "portrait": "portrait:marchetti_amused" },
+  "lines": [
+    { "speaker": "marchetti", "mood": "amused", "voice": "marchetti_intro_01", "text": "The Sandman. I thought you were a bedtime story they tell to scare tenors." },
+    { "speaker": "elias", "mood": "cold", "voice": "marchetti_intro_02", "text": "The watchmaker." },
+    { "speaker": "marchetti", "mood": "smug", "voice": "marchetti_intro_03", "text": "Business. You broke Malaspina, you carry his debt. Rules are rules." },
+    { "speaker": "elias", "mood": "cold", "voice": "marchetti_intro_04", "text": "Then collect." },
+    { "speaker": "marchetti", "mood": "furious", "voice": "marchetti_intro_05", "text": "With pleasure. I'll weigh you by the pound!" }
+  ]
+}

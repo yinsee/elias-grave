@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Elias Grave: cutscene test bench</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../css/cutscene.css">
+<style>
+  :root { color-scheme: dark; --bg: #1a1726; --panel: #241f36; --line: #3a3252; --text: #efe6d8; --muted: #a79dbd; --accent: #ffb347;
+    --display: "Pixelify Sans", "Courier New", monospace; --mono: "IBM Plex Mono", ui-monospace, Menlo, monospace; }
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 16px; background: var(--bg); color: var(--text); font: 13px/1.5 var(--mono); }
+  h1 { margin: 0 0 4px; font: 700 22px/1.1 var(--display); letter-spacing: .04em; }
+  p.note { margin: 0 0 12px; color: var(--muted); }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 0 0 12px; }
+  button { font: 500 13px/1 var(--mono); background: var(--panel); color: var(--text); border: 2px solid var(--line); box-shadow: 0 3px 0 var(--line); padding: 9px 12px; cursor: pointer; }
+  button:hover { border-color: var(--muted); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+  label { color: var(--muted); display: inline-flex; gap: 6px; align-items: center; }
+  /* a stand-in for the game stage: 16:9, letterboxed like index.html */
+  .stage { position: relative; width: min(100%, calc((100vh - 150px) * 16 / 9)); max-width: 1280px; aspect-ratio: 16 / 9; border: 2px solid var(--line); overflow: hidden;
+    background: linear-gradient(180deg, #1d2333 0%, #2b2238 55%, #120f18 56%, #0b0a10 100%); }
+  .stage.phone { max-width: 390px; }
+  .stage .fake { position: absolute; inset: 0; display: grid; place-items: center; font: 700 18px/1 var(--display); color: #6a6184; letter-spacing: .2em; }
+  #log { margin-top: 12px; color: var(--muted); white-space: pre-wrap; max-height: 220px; overflow: auto; font-size: 12px; }
+</style>
+</head>
+<body>
+<h1>Cutscene test bench</h1>
+<p class="note">Serve the repo root (<code>python3 -m http.server 8765</code>), open /tests/cutscene.html. Enter / Space / click: next line. Escape or SKIP: end the scene.</p>
+<div class="bar">
+  <button data-play="prologue_intro">Prologue intro</button>
+  <button data-play="prologue_outro">Prologue outro</button>
+  <button data-play="marchetti_intro">Marchetti dialog</button>
+  <button data-play="docks_intro">Docks intro (placeholders)</button>
+  <button data-play="docks_outro">Docks outro (placeholders)</button>
+  <label><input type="checkbox" id="auto"> auto-advance</label>
+  <label><input type="checkbox" id="phone"> phone width (390 px)</label>
+  <label><input type="checkbox" id="mute"> mute</label>
+</div>
+<div class="stage" id="stage"><div class="fake">GAME VIEW</div></div>
+<div id="log"></div>
+
+<script type="module">
+import { createAudio } from '../src/audio/audio.js';
+import { playPanels } from '../src/cutscene/panels.js';
+import { playDialog } from '../src/cutscene/dialog.js';
+
+const $ = (s) => document.querySelector(s);
+const logEl = $('#log');
+const log = (...a) => { const s = a.map((x) => typeof x === 'string' ? x : JSON.stringify(x)).join(' '); logEl.textContent = s + '\n' + logEl.textContent; };
+
+let audio = null;
+try { audio = createAudio({ base: '../' }); } catch (e) { log('no audio:', e.message); }
+const unlock = () => audio && audio.unlock();
+window.addEventListener('pointerdown', unlock, { once: true });
+window.addEventListener('keydown', unlock, { once: true });
+
+// a stand-in event bus (core/events.js shape) that logs what the players emit
+const handlers = new Map();
+const bus = {
+  on(t, fn) { (handlers.get(t) || handlers.set(t, []).get(t)).push(fn); return () => {}; },
+  emit(t, p) { log('event', t, p); (handlers.get(t) || []).forEach((fn) => fn(p)); },
+};
+// keys that leak to the "game" while a scene plays would show up here
+window.addEventListener('keydown', (e) => { if (busy) log('LEAK to game: key', e.key); });
+
+let busy = false;
+const T = window.__cs = { results: [], busy: () => busy, play };
+async function play(name) {
+  if (busy) return;
+  busy = true;
+  if (audio) audio.setVolume('master', $('#mute').checked ? 0 : 1);
+  try {
+    const script = await fetch(`../assets/cutscenes/${name}.json`).then((r) => r.json());
+    const opts = { root: $('#stage'), audio, bus, base: '../', auto: $('#auto').checked };
+    const res = script.lines ? await playDialog(script, opts) : await playPanels(script, opts);
+    log('done', res);
+    T.results.push(res);
+  } catch (e) {
+    log('ERROR', e.message); console.error(e);
+  } finally { busy = false; }
+}
+document.querySelectorAll('[data-play]').forEach((b) => b.addEventListener('click', (e) => { e.currentTarget.blur(); play(b.dataset.play); }));
+$('#phone').addEventListener('change', (e) => $('#stage').classList.toggle('phone', e.target.checked));
+</script>
+</body>
+</html>

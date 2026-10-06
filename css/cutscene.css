@@ -1,0 +1,182 @@
+/* Cutscenes: comic panels (src/cutscene/panels.js) and the portrait dialog (src/cutscene/dialog.js).
+   The overlay covers its root (the game stage) and scales with it through container units (cqw/cqh). */
+.cs {
+  --cs-ink: #060509;           /* gutters */
+  --cs-paper: #e8d5a0;         /* voice-over caption */
+  --cs-paper-2: #d6bd7f;
+  --cs-paper-ink: #22170a;
+  --cs-white: #f4efe6;         /* balloons, as the in-game .say bubble */
+  --cs-black: #15101c;
+  --cs-amber: #ffb347;
+  --cs-red: #ff4a5c;
+  --cs-text: #efe6d8;
+  --cs-muted: #a79dbd;
+  --cs-display: var(--display, "Pixelify Sans", "Courier New", monospace);
+  --cs-mono: var(--mono, "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace);
+  --cs-fs: clamp(11px, 1.85cqw, 22px);
+  --g: max(6px, 2.6cqh);
+  position: absolute; inset: 0; z-index: 30;
+  container: cs / size;
+  overflow: hidden; line-height: normal; text-align: left;
+  font: 500 var(--cs-fs)/1.4 var(--cs-mono); color: var(--cs-text);
+  user-select: none; -webkit-user-select: none; touch-action: manipulation; cursor: pointer;
+  animation: cs-fade .35s ease-out;
+  transition: opacity .35s ease;
+}
+/* cq units on .cs itself would see the viewport, so the scaled font size is set one level down */
+.cs > * { font-size: var(--cs-fs); }
+.cs-dialog > * { font-size: clamp(11px, 2cqw, 22px); }
+.cs.out { opacity: 0; }
+.cs-panels { background: var(--cs-ink); }
+
+/* ---------- comic pages ---------- */
+.cs-stage { position: absolute; inset: 0; }
+.cs-page { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: var(--g); padding: var(--g); box-sizing: border-box; transition: opacity .25s ease; }
+.cs-page.out { opacity: 0; }
+.cs-panel { position: relative; margin: 0; flex: none; aspect-ratio: 16 / 9; }
+.layout-full .cs-panel { width: min(calc(100cqw - 2 * var(--g)), calc((100cqh - 2 * var(--g)) * 16 / 9)); }
+.layout-full .cs-panel.past { display: none; }
+.cs-panel.pending { visibility: hidden; }
+.layout-full .cs-panel.pending { display: none; }
+.layout-row.n2 .cs-panel { width: min(calc((100cqw - 3 * var(--g)) / 2), calc((100cqh - 2 * var(--g)) * 16 / 9)); }
+.layout-row.n3 .cs-panel { width: calc((100cqw - 4 * var(--g)) / 3); }
+.layout-row.n2 .cs-panel:nth-child(1) { margin-top: -6cqh; }            /* a comic page, not a grid: stagger */
+.layout-row.n2 .cs-panel:nth-child(2) { margin-top: 6cqh; }
+.cs-panel.current { animation: cs-in .34s cubic-bezier(.2, .8, .2, 1) backwards; }
+.cs-frame { position: absolute; inset: 0; overflow: hidden; background: #0d0b12; border: 2px solid #000;
+  box-shadow: 0 0 0 1px rgba(232, 220, 190, .38), 0 8px 26px rgba(0, 0, 0, .65); transition: filter .4s ease; }
+.cs-panel.past .cs-frame { filter: brightness(.5) saturate(.6); }
+.cs-frame img { display: block; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; image-rendering: crisp-edges;
+  animation: cs-drift 16s ease-out forwards; }
+.cs-frame.tint-sepia img { filter: sepia(.85) contrast(1.05) brightness(.95); }
+.cs-frame.tint-cold img { filter: saturate(.6) hue-rotate(-12deg) brightness(.9); }
+/* missing art: a dark placeholder that names the shot */
+.cs-frame.missing { background: repeating-linear-gradient(135deg, #0d0b12 0 12px, #13101b 12px 24px); }
+.cs-missing { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6em;
+  padding: 6% 10%; box-sizing: border-box; text-align: center; color: #8f86a6; font: 500 clamp(10px, 1.45cqw, 16px)/1.5 var(--cs-mono); }
+.cs-missing b { font: 700 1.05em/1 var(--cs-display); letter-spacing: .14em; color: var(--cs-amber); }
+.cs-missing p { margin: 0; max-width: 44em; }
+.cs-port .cs-missing { font-size: clamp(10px, 1.6cqw, 16px); }
+
+/* rain over exterior panels: a small tile of streaks, moved in steps (cheap, pixel-like) */
+.cs-rain { position: absolute; inset: 0; pointer-events: none; opacity: .55;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='96' height='160'%3E%3Cg stroke='%23c9d4ea' stroke-opacity='.35' stroke-width='1'%3E%3Cpath d='M10 0l-4 22M58 30l-4 22M34 84l-4 22M82 110l-4 22M70 4l-3 16M22 120l-3 16'/%3E%3C/g%3E%3C/svg%3E");
+  animation: cs-rain .45s steps(6) infinite; }
+/* film grain over the whole scene */
+.cs-grain { position: absolute; inset: -40%; pointer-events: none; z-index: 4; opacity: .075;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: cs-grain .5s steps(4) infinite; }
+
+/* ---------- captions and balloons ---------- */
+.cs-caps { position: absolute; left: 2.5%; right: 2.5%; display: flex; flex-direction: column; gap: .5em; pointer-events: none; z-index: 2; }
+.cs-caps.top { top: 3.5%; align-items: flex-start; }
+.cs-caps.bottom { bottom: 3.5%; align-items: flex-end; }
+.cs-caps:empty { display: none; }
+.cs-cap { max-width: min(68%, 34em); padding: .55em .85em .6em; border: 2px solid #120c06; box-shadow: 3px 3px 0 rgba(0, 0, 0, .85); animation: cs-pop .2s ease-out backwards; }
+.cs-cap.right { align-self: flex-end; }
+.cs-cap.left { align-self: flex-start; }
+.cs-cap.vo { background: linear-gradient(175deg, var(--cs-paper), var(--cs-paper-2)); color: var(--cs-paper-ink); font-weight: 500; }
+.cs-cap.say { background: var(--cs-white); color: var(--cs-black); font-weight: 600; }
+.cs-tag { display: block; margin-bottom: .3em; font: 700 .78em/1 var(--cs-display); letter-spacing: .14em; text-transform: uppercase; color: #8e1e28; }
+.cs-bubble { position: absolute; z-index: 2; max-width: 46%; padding: .6em .95em .65em; background: var(--cs-white); color: var(--cs-black);
+  border: 2px solid var(--cs-black); border-radius: 1.1em; font-weight: 600; box-shadow: 2px 3px 0 rgba(0, 0, 0, .55); animation: cs-pop .2s ease-out backwards; }
+.cs-bubble::before, .cs-bubble::after { content: ""; position: absolute; width: 0; height: 0; border-style: solid; }
+.cs-bubble::before { bottom: -1em; border-width: 1em .55em 0; border-color: var(--cs-black) transparent transparent; }
+.cs-bubble::after { bottom: calc(-1em + 3.5px); border-width: calc(1em - 3px) calc(.55em - 2px) 0; border-color: var(--cs-white) transparent transparent; }
+.cs-bubble.tail-left::before { left: 18%; } .cs-bubble.tail-left::after { left: calc(18% + 2px); }
+.cs-bubble.tail-right::before { right: 18%; } .cs-bubble.tail-right::after { right: calc(18% + 2px); }
+.cs-bubble.tail-none::before, .cs-bubble.tail-none::after { display: none; }
+.cs-bubble .cs-tag { color: #6a5e78; }
+.cs-text.typed::after { content: " \25BC"; font-size: .7em; color: #8e1e28; animation: cs-blink 1s steps(2) infinite; }
+.cs-dlg-text .cs-text.typed::after { color: var(--cs-amber); }
+.cs-sfx { position: absolute; z-index: 1; transform: translate(-50%, -50%) rotate(-7deg); pointer-events: none; white-space: nowrap;
+  font: 700 clamp(18px, 4.6cqw, 58px)/1 var(--cs-display); letter-spacing: .1em; color: #f1f3f6;
+  text-shadow: 2px 2px 0 #000, -2px 2px 0 #000, 2px -2px 0 #000, -2px -2px 0 #000, 0 0 14px #ff3048, 0 0 28px #b0182c;
+  animation: cs-sfx .7s cubic-bezier(.2, 1.4, .4, 1) backwards, cs-hum .09s linear .7s infinite alternate; }
+
+/* captions outside the art: beside a row of panels, or when the stage is tall (phone portrait) */
+.layout-row .cs-caps { left: 0; right: 0; }
+.layout-row .cs-cap { max-width: 100%; font-size: .8em; line-height: 1.35; }
+.layout-row .cs-caps.top { top: auto; bottom: calc(100% + var(--g) * .7); }
+.layout-row .cs-caps.bottom { bottom: auto; top: calc(100% + var(--g) * .7); }
+@container cs (max-width: 640px) {
+  .layout-row.cs-page .cs-panel { width: min(calc(100cqw - 2 * var(--g)), calc((100cqh - 2 * var(--g)) * 16 / 9)); }
+  .layout-row.cs-page .cs-panel:nth-child(n) { margin-top: 0; }
+  .layout-row .cs-panel.past, .layout-row .cs-panel.pending { display: none; }
+  .layout-row .cs-caps { left: 2.5%; right: 2.5%; }
+  .layout-row .cs-cap { max-width: 82%; }
+  .layout-row .cs-caps.top { top: auto; bottom: 3.5%; }       /* row captions sat outside the art; low on the art they hide fewer faces */
+  .layout-row .cs-caps.bottom { bottom: 3.5%; top: auto; }
+  .cs-cap, .cs-bubble { max-width: 82%; }
+  .cs-bubble { max-width: 60%; }
+}
+@container cs (aspect-ratio < 4 / 3) {
+  .cs-caps { left: 0 !important; right: 0 !important; }
+  .cs-cap { max-width: 100% !important; }
+  .cs-caps.top { top: auto !important; bottom: calc(100% + var(--g) * .7) !important; }
+  .cs-caps.bottom { bottom: auto !important; top: calc(100% + var(--g) * .7) !important; }
+}
+
+/* ---------- shared chrome ---------- */
+.cs-skip { all: unset; position: absolute; top: max(6px, 1.4cqh); right: max(8px, 1.4cqw); z-index: 6; cursor: pointer; padding: .45em .7em;
+  font: 700 clamp(10px, 1.15cqw, 14px)/1 var(--cs-display); letter-spacing: .16em; color: rgba(239, 230, 216, .5); text-shadow: 0 1px 0 #000; }
+.cs-skip:hover, .cs-skip:focus-visible { color: #ffe14f; text-shadow: 0 0 8px #c99a10, 0 1px 0 #000; }
+.cs-skip:focus-visible { outline: 2px solid var(--cs-amber); outline-offset: 2px; }
+.cs-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* ---------- portrait dialog ---------- */
+.cs-dialog { --box-h: max(64px, 24cqh); --port-h: min(66cqh, 52cqw);
+  background: linear-gradient(to top, rgba(6, 5, 9, .96) 0, rgba(6, 5, 9, .7) 34%, rgba(6, 5, 9, .38) 70%, rgba(6, 5, 9, .5) 100%); }
+.cs-dialog::before, .cs-dialog::after { content: ""; position: absolute; left: 0; right: 0; height: 6cqh; background: #000; z-index: 0; animation: cs-bar .45s ease-out backwards; }
+.cs-dialog::before { top: 0; } .cs-dialog::after { bottom: 0; height: 2cqh; }
+.cs-port { position: absolute; z-index: 1; bottom: calc(3cqh + var(--box-h) - 7cqh); height: var(--port-h); aspect-ratio: 208 / 256;
+  transition: filter .25s ease, transform .25s ease; }
+.cs-port.left { left: 4cqw; animation: cs-port-l .45s cubic-bezier(.2, .8, .2, 1) backwards; }
+.cs-port.right { right: 4cqw; animation: cs-port-r .45s cubic-bezier(.2, .8, .2, 1) backwards; }
+.cs-port-frame { position: relative; width: 100%; height: 100%; overflow: hidden; background: #0d0b12; border: 2px solid #000;
+  box-shadow: 0 0 0 2px #3a3252, 0 12px 30px rgba(0, 0, 0, .7); transition: box-shadow .25s ease; }
+.cs-port-frame img { display: block; width: 100%; height: 100%; object-fit: cover; image-rendering: pixelated; image-rendering: crisp-edges; }
+.cs-port.dim { filter: brightness(.36) saturate(.35); transform: scale(.95) translateY(2cqh); }
+.cs-port.left.active .cs-port-frame { box-shadow: 0 0 0 2px var(--cs-amber), 0 0 26px rgba(255, 179, 71, .28), 0 12px 30px rgba(0, 0, 0, .7); }
+.cs-port.right.active .cs-port-frame { box-shadow: 0 0 0 2px var(--cs-red), 0 0 26px rgba(255, 74, 92, .3), 0 12px 30px rgba(0, 0, 0, .7); }
+.cs-port.swap img { animation: cs-swap .25s ease-out; }
+.cs-port.active[data-mood="furious"], .cs-port.active[data-mood="angry"] { animation: cs-shake .4s linear; }
+.cs-dlg-box { position: absolute; z-index: 3; left: 3cqw; right: 3cqw; bottom: 3cqh; min-height: var(--box-h); box-sizing: border-box;
+  padding: 1.35em 1.2em .8em; background: rgba(10, 8, 16, .95); border: 2px solid #3a3252; box-shadow: 0 4px 0 #000, inset 0 0 0 1px #000;
+  animation: cs-box .4s cubic-bezier(.2, .8, .2, 1) .1s backwards; transition: border-color .2s; }
+.cs-dlg-box[data-side="left"] { border-color: #7a5a2c; }
+.cs-dlg-box[data-side="right"] { border-color: #7a2a36; }
+.cs-plate { position: absolute; top: -.95em; left: 1em; display: flex; align-items: baseline; gap: .7em; padding: .32em .8em .3em;
+  background: #0a0810; border: 2px solid currentColor; box-shadow: 0 2px 0 #000; color: var(--cs-amber); white-space: nowrap; }
+.cs-plate b { font: 700 .92em/1 var(--cs-display); letter-spacing: .1em; text-shadow: 0 0 8px currentColor; }
+.cs-plate small { font: 700 .62em/1 var(--cs-display); letter-spacing: .18em; color: var(--cs-muted); text-transform: uppercase; }
+.cs-plate small:empty { display: none; }
+.cs-dlg-box[data-side="right"] .cs-plate { left: auto; right: 1em; color: var(--cs-red); }
+.cs-dlg-text { margin: 0; min-height: 2.9em; font: 500 1em/1.45 var(--cs-mono); color: var(--cs-text); text-shadow: 0 1px 0 #000; }
+.cs-dlg-box[data-mood="furious"] .cs-dlg-text { color: #ffd2c8; font-weight: 600; }
+@container cs (max-width: 640px) {
+  .cs-dialog { --box-h: max(56px, 27cqh); --port-h: min(58cqh, 52cqw); }
+  .cs-dlg-box { left: 2cqw; right: 2cqw; padding: 1.2em .9em .6em; }
+  .cs-plate small { display: none; }
+}
+
+/* ---------- motion ---------- */
+@keyframes cs-fade { from { opacity: 0; } }
+@keyframes cs-in { from { opacity: 0; transform: translateX(calc(var(--enter, 1) * 4%)) scale(.965); } }
+@keyframes cs-drift { from { transform: scale(1); } to { transform: scale(1.06); } }
+@keyframes cs-pop { from { opacity: 0; transform: translateY(6px) scale(.97); } }
+@keyframes cs-blink { 50% { opacity: 0; } }
+@keyframes cs-rain { to { background-position: -24px 160px; } }
+@keyframes cs-grain { 25% { transform: translate(-6%, 4%); } 50% { transform: translate(5%, -7%); } 75% { transform: translate(-3%, 8%); } }
+@keyframes cs-sfx { from { opacity: 0; transform: translate(-50%, -50%) rotate(-7deg) scale(1.8); } }
+@keyframes cs-hum { from { transform: translate(-50%, -50%) rotate(-7deg); } to { transform: translate(calc(-50% + 1px), calc(-50% - 1px)) rotate(-6.5deg); } }
+@keyframes cs-bar { from { transform: scaleY(0); } }
+@keyframes cs-port-l { from { opacity: 0; transform: translateX(-35%); } }
+@keyframes cs-port-r { from { opacity: 0; transform: translateX(35%); } }
+@keyframes cs-box { from { opacity: 0; transform: translateY(30%); } }
+@keyframes cs-swap { from { filter: brightness(2.2) contrast(1.3); } }
+@keyframes cs-shake { 10%, 50%, 90% { translate: -3px 0; } 30%, 70% { translate: 3px 1px; } }
+.cs.reduced *, .cs.reduced, .cs.reduced::before, .cs.reduced::after { animation: none !important; transition: none !important; }
+@media (prefers-reduced-motion: reduce) {
+  .cs *, .cs, .cs::before, .cs::after { animation: none !important; transition: none !important; }
+}
