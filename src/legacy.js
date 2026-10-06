@@ -4215,9 +4215,9 @@ import * as P9 from './levels/pier9.js';
       ['lift', 'Lift the dustbin: hands empty, hold [↓] next to it'], ['bash', 'Hit a goon with it: tap [Q]'], ['toss', 'Throw a dustbin: lift one, hold [Q] with no goon near'],
       ['pocket', 'Pocket a can or a bottle: hold [↓] next to it'], ['pockethit', 'Throw it at a goon: hold [Q] with no goon near'], ['kill1', 'Beat the 2 goons: they hit back']] },
     { x0: 900, title: '3 · Katana', tasks: [['pick1', 'Take the katana: walk over it'], ['ks', 'Slash: tap [Q]'], ['kw', 'Heavy slash: hold [Q] near a goon'], ['kh', 'Overhead finisher: tap [Q], then hold [Q]'],
-      ['sslash', 'Low cut: hold [↓], tap [Q]'], ['kair', 'Jump slash: jump [↑], then tap [Q]'], ['tw', 'Throw the blade: hold [↓] and hold [Q]'], ['catch', 'Get the blade back: walk over it'], ['kill2', 'Cut down the 3 goons']] },
+      ['sslash', 'Low cut: hold [↓], tap [Q]'], ['kair', 'Jump slash: jump [↑], then tap [Q]'], ['tw', 'Throw the blade: hold [Q] with no goon near'], ['catch', 'Get the blade back: walk over it'], ['kill2', 'Cut down the 3 goons']] },
     { x0: 1250, title: '4 · Axe', tasks: [['pick2', 'Take the axe: walk over it'], ['al', 'Chop combo: tap [Q] again and again'], ['aw', 'Heavy chop: hold [Q] near a goon'],
-      ['ah', 'Slam finisher: tap [Q], then hold [Q] near a goon'], ['aair', 'Plunge: jump off the van, then tap [Q]'], ['throwhit', 'Throw at a goon: hold [↓] and hold [Q]'],
+      ['ah', 'Slam finisher: tap [Q], then hold [Q] near a goon'], ['aair', 'Plunge: jump off the van, then tap [Q]'], ['throwhit', 'Throw it at a goon: hold [Q] from a distance'],
       ['swap', 'Swap weapons: hold [↓] on a weapon on the ground'], ['kill3', 'Chop down the 3 goons']] },
     { x0: 1600, title: '5 · Shotgun', tasks: [['pick3', 'Take the shotgun: walk over it'], ['fire3', 'Fire: press [Q]'], ['runfire', 'Fire on the run: hold [Shift], press [Q]'], ['ammo', 'Reload: walk over an ammo box'], ['kill4', 'Blast the 4 goons']] },
     { x0: 1900, title: '6 · Machine gun', tasks: [['pick4', 'Take the machine gun: walk over it'], ['burst', 'Burst fire: hold [Q]'], ['airfire', 'Fire in the air: jump [↑], hold [Q]'],
@@ -7969,10 +7969,11 @@ import * as P9 from './levels/pier9.js';
   // one button punches (or swings the weapon), one kicks. The press starts the light move at once; still held at DEF.heavyT, the light
   // is cut into the heavy one (a jab that turns into the heavy punch; from a squat a low jab into the body blow, a low kick into the sweep).
   // With something to throw (a pocket item, a lifted object) and no goon in reach, the punch waits instead: a tap is the light move (a bash
-  // with a lifted object), a hold to DEF.throwT throws it. A held blade is never thrown by a hold alone: ↓ + hold Q throws it (the press is the
-  // low cut, cut into the throw at DEF.throwT). A loaded gun fires on the press (hold the machine gun for a stream), an empty one is thrown at once
+  // with a lifted object), a hold to DEF.throwT throws it. A held blade works the same: near a goon the hold is the heavy, with none in reach
+  // it throws the blade; ↓ + hold Q throws it too (the press is the low cut, cut into the throw). A loaded gun fires on the press (hold the
+  // machine gun for a stream), an empty one is thrown at once
   const btn = { p: { down: false, t: 0, done: false }, k: { down: false, t: 0, done: false } };
-  const holdCanThrow = () => !!(ctl.carry || pocket.length);
+  const holdCanThrow = () => !!(ctl.carry || pocket.length || WEAPONS[hero.weapon].melee);
   const foeInReach = () => { const r = 2 * (L.ua + L.fa); return enemies.some(e => !e.dead && Math.abs(e.x - ctl.x) <= r && (e.x - ctl.x) * ctl.face > -6 && Math.abs(e.y - ctl.y) < 24); };
   const holdThrows = k => k === 'p' && holdCanThrow() && !foeInReach();   // what a full hold will do: throw (true) or the heavy move
   function pressBtn(k) {
