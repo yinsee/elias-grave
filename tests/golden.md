@@ -4,14 +4,24 @@ Run with a static server (`python3 -m http.server 8765`) and open the URL; the p
 Two runs of the same URL must give the same hashes. A refactor step that keeps both hashes changed nothing.
 A step that changes behaviour on purpose records new hashes here, with the reason.
 
-## Current (from migration step 6, 2026-10-06)
+## Current (combat rework, 2026-10-06)
 
 | URL | state | buf | l3 | note |
 |---|---|---|---|---|
-| `index.html?autotest=demo&frames=1200` | `5ae6a552` | `e8b8b31b` | | 2D (attract demo, seed 1, 960x540 view) |
-| `index.html?autotest=boss&frames=1800` | `daa2ec28` | `397917f1` | | 2D (skipToBoss + demo, seed 1) |
-| `index.html?autotest=demo&frames=1200&view3d` | `5ae6a552` | `d2d255f9` | `0e3d61c3` | 3D view: the same state hash as 2D |
-| `index.html?autotest=boss&frames=1800&view3d` | `daa2ec28` | `571dd39e` | `0cc1f74f` | 3D view: the same state hash as 2D |
+| `index.html?autotest=demo&frames=1200` | `97d2d0dc` | `cc0931b9` | | 2D (attract demo, seed 1, 960x540 view) |
+| `index.html?autotest=boss&frames=1800` | `59a01970` | `ed268240` | | 2D (skipToBoss + demo, seed 1) |
+| `index.html?autotest=demo&frames=1200&view3d` | `97d2d0dc` | `99d61b63` | `d39d8e05` | 3D view: the same state hash as 2D |
+| `index.html?autotest=boss&frames=1800&view3d` | `59a01970` | `cfaa9fc5` | `8999f2ab` | 3D view: the same state hash as 2D |
+
+Combat rework reasons (all four URLs run twice in Chrome; each pair matched, and the 3D state hashes equal the 2D ones):
+- The demo plays differently: Space is now a short dodge (the long roll is ↓ at a run), and the demo parries (E tap), perfect-dodges
+  and tech-rolls by timing instead of rolling on any wind-up. Its strings meet the new rules: goon poise by role, armor on pipe and
+  machete swings, string damage scaling, knock-downs only from an ender, a sweep, kh/ah/aair or a heavy counter-hit, and goons that
+  slip a lone heavy.
+- Knock-downs end sooner (at most 1.2 s on the floor), and a K.O. spends a second wind and rises at 35-50 HP (no full heal).
+
+The previous hashes (migration step 6 to the play-test fixes): demo `5ae6a552` / `e8b8b31b` (3D buf `d2d255f9`, l3 `0e3d61c3`),
+boss `daa2ec28` / `397917f1` (3D buf `571dd39e`, l3 `0cc1f74f`).
 
 Step 6 reasons:
 - The simulation draws its random numbers from its own seeded generator (`simRand`), not from `Math.random`.
@@ -37,6 +47,10 @@ They were play-tested with `?manual` (`window.__sim` holds the live sim state fo
 
 The play-test fixes for audio, visuals and UI (2026-10-06: hit sounds by move and outcome, the Pier 9 wall mask for blood, the 3D belt and hair, the title logo, key labels, fonts) kept all four URLs' hashes (state, buf, l3), two runs each.
 The blood wall mask is null on the street, the 3D belt and hair changes touch only the Pier 9 boss and the hero's 3D hair (the 3D hashes did not see a change), and the rest is audio, HTML and CSS.
+
+Combat tests with `?manual`: `window.__sim` also holds `blk` (parry window), `hstr` (the hero's string), `DEF` (timings), `input`,
+`slowT`, `ckpt`, `ragT`, `setDiff(i)` (also refills the second winds) and `retry()`; `__peek()` shows `wind` and `wasted`.
+Dispatch KeyboardEvents (Q, W, E, Space, arrows) with frames stepped between down and up.
 
 Options: `?seed=N` (repeatable random numbers), `?fixed` (clock steps exactly 1/60 s per frame), `?autotest=demo|boss&frames=N`, `?view3d`,
 `?manual` (no requestAnimationFrame: a test calls `window.__step(n)` and reads `window.__peek()`; `window.__skipToBoss()` starts at the club roof).
