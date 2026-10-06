@@ -1940,6 +1940,7 @@ import * as P9 from './levels/pier9.js';
     if (e === enc.boss) {
       enc.bossBeaten = true; enc.arena = null; emit('feat', 'boss'); crowdReact(e.x, 0, 'big');
       emit('boss:defeated', { boss: e, x: e.x });
+      if (!flags.demo && !flags.attract) unlock(isP9() ? 'ch2' : 'ch1');   // a real win opens the next chapter
       for (const g of enemies) if (!g.dead && g.zone === 'arena') killEnemy(g, Math.sign(g.x - e.x) || 1, 200, 0.5);
     }
   }
@@ -3751,7 +3752,7 @@ import * as P9 from './levels/pier9.js';
     const rank = kos === 0 && runS.dmg < 60 ? 'S' : kos === 0 && runS.dmg < 160 ? 'A' : kos <= 2 ? 'B' : 'C';
     resultsEl.innerHTML = `<h2>Club cleared</h2><dl><dt>Difficulty</dt><dd>${DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${runS.kills}</dd>`
       + `<dt>Damage taken</dt><dd>${Math.round(runS.dmg)}</dd><dt>Knock-outs</dt><dd>${kos}</dd><dt>Lessons</dt><dd>${done.size} / ${TOTAL}</dd></dl>`
-      + `<div class="rank">Rank<b>${rank}</b></div><small>R to play again</small>`;
+      + `<div class="rank">Rank<b>${rank}</b></div><small>Enter: on to the story · R: play the tutorial again</small>`;
     resultsEl.hidden = false; toastEl.hidden = true; toastT = 0; toastQ.length = 0;
   }
   // knocked out: you get up with full health, and the fighters around you are thrown back so you are not hit again at once.
@@ -7240,7 +7241,8 @@ import * as P9 from './levels/pier9.js';
     if (menuKey(e)) { e.preventDefault(); return; }   // the menu has the keys while it is open (the title screen, or Esc in a game)
     if (openT >= 0) { if ((c === 'Escape' || c === 'Enter') && !e.repeat) endOpening(); return; }
     if (isP9() && endPh === 'done' && !flags.wasted) { if (c === 'Enter' && !e.repeat && !resultsEl.hidden) quitToTitle(); return; }   // Pier 9 cleared: Enter goes back to the menu
-    if (flags.wasted || (endPh === 'done' && !resultsEl.hidden)) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) reset(); return; }   // the Wasted or Club cleared card: only a restart (Esc opens the menu above)
+    if (flags.wasted) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) reset(); return; }   // the Wasted card: only a restart (Esc opens the menu above)
+    if (endPh === 'done' && !resultsEl.hidden) { if (!e.repeat && c === 'Enter') startChapter1(); else if (!e.repeat && c === 'KeyR') reset(); return; }   // Club cleared: Enter goes on with the story (prologue, then Pier 9), R plays the tutorial again
     if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) { if (isP9()) p9Outro(); else endFinish(); } return; }   // the ending: Esc or Enter jumps to the card
     // the keys: arrows move (up jumps, down squats), Q punches, W kicks, Space rolls, Shift runs
     if (c === 'ArrowLeft') { keys.left = true; takeOver(); }
@@ -7823,10 +7825,15 @@ import * as P9 from './levels/pier9.js';
   }
   const toggleFull = () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch (err) {} };
   let menuPage = 'main';   // 'main' or 'chapter' (the chapter list)
+  // progress: which chapters are open. The tutorial always is; each boss beaten in a real game (never the demo) opens the next one
+  const PROGKEY = 'eliasgrave.progress';
+  const progress = (() => { try { return JSON.parse(localStorage.getItem(PROGKEY) || '{}') || {}; } catch (err) { return {}; } })();
+  function unlock(id) { if (progress[id]) return; progress[id] = true; try { localStorage.setItem(PROGKEY, JSON.stringify(progress)); } catch (err) {} }
+  const lockedItem = (label, boss) => ({ label, value: () => 'Locked', act: () => toast('Locked', `Beat ${boss} to open this chapter`) });
   function menuItems() {
     if (menuPage === 'chapter') return [
       { label: 'Tutorial: The Street', act: () => { menuPage = 'main'; startTutorial(); } },
-      { label: 'Prologue + Pier 9', act: () => { menuPage = 'main'; startChapter1(); } },
+      progress.ch1 ? { label: 'Prologue + Pier 9', act: () => { menuPage = 'main'; startChapter1(); } } : lockedItem('Prologue + Pier 9', 'Malaspina in the tutorial'),
       { label: 'Back', act: () => { menuPage = 'main'; menuSel = 0; } },
     ];
     const items = [
