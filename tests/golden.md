@@ -50,6 +50,29 @@ Pier 9 tests with `?manual`: `__pier9.spawn(v, x)` puts one Saltman of variant `
 tallyman, bulwark, bosun) at x; `__pier9.zoom(z)` and `__pier9.view3d(on)` set the camera and the view (not saved); `__pier9.peek()`
 lists each enemy as [variant, x, y, hp, wave, act, name] and shows `gaffHold`, `swingN`, `holdK`.
 
+### Combo depth and focus on its branch (base b120624: the combat rework)
+
+| URL | state | buf | l3 | note |
+|---|---|---|---|---|
+| `index.html?autotest=demo&frames=1200` | `428d5053` | `f616d5b5` | | 2D (attract demo, seed 1, 960x540 view) |
+| `index.html?autotest=boss&frames=1800` | `4f8864db` | `be84bbc8` | | 2D (skipToBoss + demo, seed 1) |
+| `index.html?autotest=demo&frames=1200&view3d` | `428d5053` | `da93f804` | `5598769a` | 3D view: the same state hash as 2D |
+| `index.html?autotest=boss&frames=1800&view3d` | `4f8864db` | `52b6b14a` | `b02b27c7` | 3D view: the same state hash as 2D |
+
+Combo depth and focus reasons (each URL run twice in headless Chrome; each pair matched, and the 3D state hashes equal the 2D ones):
+- The demo takes a finisher when the F prompt shows, uses Sandman time with a full meter and 2+ goons near, plays the fist string
+  (Q x4, with → held for the wall-splat), knees and throws a goon it walks into while he reels. Its random numbers shift with these choices.
+- The fixed step is now on the hero's clock: the world takes `wk` of each step (1, or FOCUS.slow in Sandman time, when the other steps are
+  `heroStep`). The hero's i-frames count down after his own move (they counted at the start of `enemyStep`); particles, sparks, waves and
+  flashes run on the world clock. With wk = 1 this is one full step per tick as before.
+- The last kill of a wave and the boss kill get a beat of slow motion (`slowMo`); the enders step in further (`m.lunge`), and no heavy's step-in
+  is stopped by a goon lying on the floor.
+
+The previous hashes (combat rework): demo `97d2d0dc` / `cc0931b9` (3D buf `99d61b63`, l3 `d39d8e05`), boss `59a01970` / `ed268240` (3D buf `cfaa9fc5`, l3 `8999f2ab`).
+
+Combo and focus tests with `?manual`: `window.__sim` also holds `foc` (the meter: `m`, Sandman time left: `t`), `finE` (the goon the
+finisher prompt is over), `wk`, `finCam`, `equip(w)` and the tuning tables `JUG`, `GRAB`, `FOCUS`, `FIN`, `OTG`, `DIVE`, `SPLAT`.
+
 ### Earlier: the combat rework
 
 Combat rework reasons (all four URLs run twice in Chrome; each pair matched, and the 3D state hashes equal the 2D ones):

@@ -30,7 +30,10 @@ const FEATS = {
   // the Saltmen and the Bosun: each answer to a variant's trick
   lowblock: 35, lowhop: 30, gaffslip: 50, reloadpunish: 40, shieldbreak: 50, flank: 25, guardbreak: 50,
   propreturn: 45, propdrop: 25, propdodge: 25, chainhop: 40, grabslip: 45, cover: 30,
+  // combo depth and focus: enders, juggles, the clinch, the finishers (juggle, otg and bodyhit repeat: the DMC rule)
+  finisher: 90, ender: 35, juggle: 25, wallsplat: 45, grab: 15, gthrow: 40, otg: 25, sdive: 40, bodyhit: 30, slam: 60,
 };
+const RULED = new Set(['parry', 'counter', 'perfectdodge', 'juggle', 'otg', 'bodyhit', 'ender']);   // these score less each time they repeat
 const featName = (f) => String(f && typeof f === 'object' ? f.name || f.feat || f.id || '' : f || '').toLowerCase().replace(/3/g, 'three').replace(/[^a-z]/g, '');
 
 export const rankOf = (pts) => { let r = -1; for (let i = 0; i < RANKS.length; i++) if (pts >= RANKS[i].at) r = i; return r; };
@@ -57,7 +60,7 @@ export function createStyleMeter(bus, parent) {
   }
   function feat(name) {
     if (name === 'parry') { if (parryTick === tickN) return; parryTick = tickN; }   // a 'parry' event and a 'parry' feat: one parry
-    const v = FEATS[name]; if (v) add(name === 'parry' || name === 'counter' || name === 'perfectdodge' ? moveScore(name, v) : v);
+    const v = FEATS[name]; if (v) add(RULED.has(name) ? moveScore(name, v) : v);
   }
 
   bus.on('hit', (p = {}) => {

@@ -7,8 +7,8 @@ import { KINDS, LIFTABLE, TOSS, FLOOR_BREAK, PUSH_BREAK } from './sim/objects/ki
 import { EPAL, BUILD, LOOK, ROLE, ZROLES, AROLES, AMIX, ETYPE, STOCKY_POISE } from './sim/enemies/roster.js';
 import { DIFFS } from './core/difficulty.js';
 import { PAL } from './assets/palettes/base.js';
-import { mod, IDLE, GUARD, SQUAT, RISE, SITUP, PUSHUP, GU_T, fitPose, getupPose, K, AIR, teeterPose } from './sim/hero/poses.js';
-import { CLIMB, MOVES, keyAt, TRN, DASH, STOP, DEF } from './sim/hero/moves.js';
+import { mod, IDLE, GUARD, SQUAT, RISE, SITUP, PUSHUP, KNEEL, GU_T, fitPose, getupPose, K, AIR, teeterPose } from './sim/hero/poses.js';
+import { CLIMB, MOVES, keyAt, TRN, DASH, STOP, DEF, FINS, JUG, SPLAT, GRAB, OTG, DIVE, FOCUS, FIN } from './sim/hero/moves.js';
 import { initRaster, pickArt, figArt, plot, plotV, disc, seg, line1, withView } from './render2d/raster.js';
 import { bus } from './core/events.js';
 import { gameAudio } from './audio/game.js';
@@ -1323,7 +1323,7 @@ import * as P9 from './levels/pier9.js';
       if (sp > 12 && Math.abs(o.vy) < 1 && !(o.ethrown > 0)) { o.pushD = (o.pushD || 0) + sp * dt; if (o.pushD > PUSH_BREAK) brk.add(o); }   // sliding along the ground (a kicked barrel rolls on)
       else if (sp < 3) o.pushD = 0;
       if (Math.hypot(o.vx, o.vy) > 70 && !(o.thrown > 0) && !(o.ethrown > 0) && !o.crowd && !brk.has(o)) for (const e of enemies) {   // knocked into a goon: he goes down
-        if (e.dead || e.down || !e.J || offPlat(o, e.lane)) continue;
+        if (e.dead || e.down || e.clinch || e.fin || !e.J || offPlat(o, e.lane)) continue;
         const [ax, ay, bx, by] = capsule(e.J);
         if (segDist(ax, ay, bx, by, o.x, o.y) < (o.hw || o.r) + 3 * e.s) {
           const d = Math.sign(o.vx) || 1;
@@ -1382,6 +1382,7 @@ import * as P9 from './levels/pier9.js';
   function holdGun(j) {
     const Wp = WEAPONS[hero.weapon], f = ctl.face, r = gun.recoil, nk = j[1];
     let th = hero.act === 'gb' ? 0 : lerp(0.65, 0, gun.aimW) - Wp.lift * r - gun.climb;   // radians below level
+    if (ctl.aimDnT > 0) th = Math.max(th, ctl.aimDn - Wp.lift * r * 0.5);   // the muzzle down: a point-blank shot at a goon on the floor, a finisher at a kneeling one
     let dx = Math.cos(th) * f, dy = Math.sin(th);
     if (ctl.spin) { const a = ctl.spin * f, c = Math.cos(a), sn = Math.sin(a); [dx, dy] = [dx * c - dy * sn, dx * sn + dy * c]; }
     const thrust = hero.act === 'gb' ? 4 * Math.sin(Math.PI * clamp((hero.actT - 0.08) / 0.3, 0, 1)) : 0;
@@ -1672,6 +1673,8 @@ import * as P9 from './levels/pier9.js';
     grabW: mod(GUARD, { lean: 0.2, rx: -0.5, ry: 14.6, head: -0.1, a0s: 0.7, a0e: 0.3, a1s: 0.9, a1e: 0.3 }),    // arms spread wide, low: a bear hug coming
     carry: mod(IDLE, { a0s: 3.0, a0e: 0.3, a1s: 3.1, a1e: 0.25, lean: -0.08 }),                                // both hands up under a load over the head
     reload: mod(GUARD, { head: 0.45, lean: 0.12, ry: 15.4, a0s: 0.95, a0e: 1.5, a1s: 0.7, a1e: 1.85 }),           // chin down, the revolver broken open at the belt
+    held: mod(GUARD, { ry: 13.5, lean: 1.0, head: -0.45, rx: -2, f0x: -7, f1x: 3, a0s: 0.6, a0e: 1.5, a1s: 0.9, a1e: 1.4 }),   // in the hero's clinch: doubled over, his head pulled down
+    beg: mod(KNEEL, { lean: 0.15, head: 0.25, a0s: 0.3, a0e: 0.6, a1s: 0.6, a1e: 1.2 }),   // a finisher: on his knees
   };
   const EWIND = { lunge: EP.lungeW, chop: EP.raise, hchop: EP.raise2, throw: EP.throwW, shoot: EP.aim,
     punch: mod(MOVES.hp.keys[1][1], { lean: -0.28, rx: -2.2, ry: 14.8, a0s: -0.3, a0e: 2.4 }),   // rear fist cocked way back
@@ -1690,7 +1693,7 @@ import * as P9 from './levels/pier9.js';
   // the lunge dashes in its coil, then strikes: the coil is held through the dash
   EMOVES.lunge = { ...EMOVES.lunge, t0: 0, pre: 0.14, keys: [[0, EP.lungeW.slice()], [0.14, EP.lungeW.slice()], ...MOVES.hp.keys.slice(2)] };
   const CMB = ROLE.brawler.cmb;   // goon strings
-  const EFX = { sweat: C('#9fd3ff'), steam: C('#c9c4d4') };
+  const EFX = { sweat: C('#9fd3ff'), steam: C('#c9c4d4'), key: C('#1a1220') };
   // difficulty: the goons' aggression doubles at each step (A = 1, 2, 4, 8). They rest 1/A as long between attacks, more of them
   // swing at once, they close in faster and back off less. The regen drops with it; on Wicked a K.O. ends the run. The demo plays Hard.
   let diffSel = 1;
@@ -1777,7 +1780,9 @@ import * as P9 from './levels/pier9.js';
   // pose: attack keyframes, a stagger, or a walk that turns into a guard up close; then scale the skeleton about the feet
   function poseEnemy(e, dt) {
     let t, air = e.air;
-    if (e.act && e.actT >= 0) t = keyAt(EMOVES[e.act].keys, e.actT);
+    if (e.clinch) t = EP.held;
+    else if (e.fin) t = e.fin === 'kneel' ? EP.beg : lerpA(GUARD, EHURT, 1);   // a finisher: he reels, or drops to his knees
+    else if (e.act && e.actT >= 0) t = keyAt(EMOVES[e.act].keys, e.actT);
     else if (e.act) {   // wind-up: rock back, coil low, raise the weapon, cock the arm or aim; a held tell trembles with the load
       t = (EWIND[e.act] || EP.wind).slice();
       if (e.actT < -0.08) { t[0] += 0.35 * Math.sin(simTime * 47 + e.seed * 9); t[2] += 0.025 * Math.sin(simTime * 39 + e.seed * 5); }
@@ -1836,6 +1841,7 @@ import * as P9 from './levels/pier9.js';
       sparks.push({ x: e.x + e.face * 6, y: e.y - 14, t: 0 }); emit('sfx', { name: 'hook_clank', x: e.x, vol: 0.9, pitch: 0.8 }); emit('feat', 'shieldbreak');
       for (let k = 0; k < 8; k++) particles.push({ x: e.x + e.face * 6, y: e.y - 12, vx: (simRand() - 0.5) * 90, vy: -40 - simRand() * 70, life: 0.4, c: k % 2 ? ECOL.steel : ECOL.iron });
     }
+    e.jug = null; e.fly = null; e.splat = 0; e.clinch = false; e.fin = null;
     e.down = true; e.downT = 0; e.gu = null; e.act = null; e.hurtT = 0; e.guardT = 0; e.crouchT = 0; e.react = null; e.feint = false; e.fkX = e.fkV = 0;
     eRelease(e); e.face = -dirx || e.face; e.cdT = Math.max(e.cdT, 0.6);
     const chop = ctx !== 'sweep' && ctx !== 'hp', sweep = ctx === 'sweep', k = Math.min(power, 320) / e.m * 0.6;   // (taken off his feet, not launched)
@@ -1858,9 +1864,13 @@ import * as P9 from './levels/pier9.js';
     if (!e.gu) {
       eRagStep(e, dt);
       const Q = e.pts; let mv = 0;
-      for (const p of Q) if (p.y >= p.fl - 0.6) p.px = p.x - (p.x - p.px) * Math.exp(-9 * dt);   // the body scrapes to a stop on the floor
+      if (e.fly) flyStep(e, dt);
+      if (e.splat > 0) { e.splat -= dt; for (const p of Q) { if ((p.x - e.splatX) * e.splatD > 0) p.x = e.splatX; p.px = p.x; } }   // stuck to the wall: he slides down it
+      if (e.jug && e.downT > 0.15 && !jugAir(e)) e.jug = null;   // down on the floor: the juggle is over (a stomp or a point-blank shot from here)
+      if (!e.fly && !e.jug) for (const p of Q) if (p.y >= p.fl - 0.6) p.px = p.x - (p.x - p.px) * Math.exp(-9 * dt);   // the body scrapes to a stop on the floor
       for (const p of Q) mv = Math.max(mv, Math.hypot(p.x - p.px, p.y - p.py) / dt);
       e.x = clamp(Q[2].x, enc.arena && e.zone === 'arena' || e === enc.boss ? 2440 : 8, W - 10); e.y = floorBelow(e.x, Q[2].y, 0).y - 2; e.J = Q;
+      if (e.fly || e.splat > 0 || jugAir(e)) return;   // (in the air or on the wall: no get-up yet)
       if ((e.downT > 0.8 && mv < 15) || e.downT > DEF.floor) {   // settled (or DEF.floor s on the floor at most): fit the pose (unscaled about the feet) and get up
         const s = e.s; e.gu = makeGetup(Q.map(p => [e.x + (p.x - e.x) / s, e.y + (p.y - e.y) / s]), e.x, e.y, e.face);
       }
@@ -1869,7 +1879,57 @@ import * as P9 from './levels/pier9.js';
     e.gu.t += dt;
     const s = e.s;
     e.J = getupJoints(e.gu, e.x, e.y, e.face).map(([x, y]) => ({ x: e.x + (x - e.x) * s, y: e.y + (y - e.y) * s }));
-    if (e.gu.t >= GU_T[2]) { e.down = false; e.gu = null; e.pts = null; e.q = RISE.slice(); e.riseT = 0.35; e.vx = e.vy = 0; e.air = false; e.cdT = Math.max(e.cdT, 0.4); }
+    if (e.gu.t >= GU_T[2]) { e.down = false; e.gu = null; e.pts = null; e.jug = e.fly = null; e.splat = 0; e.otgN = 0; e.q = RISE.slice(); e.riseT = 0.35; e.vx = e.vy = 0; e.air = false; e.cdT = Math.max(e.cdT, 0.4); }
+  }
+  // ---------- combo depth (#5): juggles, bodies in flight, wall-splats, OTG ----------
+  const jugAir = e => !!(e.down && e.jug && !e.dead && e.pts && e.pts[2].y < e.pts[2].fl - JUG.air);   // launched and still in the air: a juggle hit pops him up again
+  function ragFly(e, vx, vy, spin) {   // knocked off his feet into the air: every joint moves at (vx, vy), turned by spin (rad/s) about the hips
+    knockDown(e, Math.sign(vx) || 1, 0, 'hp');
+    const c = e.pts[2];
+    for (const p of e.pts) { const ox = p.x - c.x, oy = p.y - c.y; p.px = p.x - (vx - oy * spin) * DT; p.py = p.y - (vy + ox * spin) * DT; }
+  }
+  function jugHit(e, dirx, power, up) {   // each juggle hit pops him up less, and he falls faster (JUG): no infinite
+    const J = e.jug; J.n++; e.downT = 0;
+    const pop = J.n > JUG.max ? 0 : JUG.pop * JUG.popK ** (J.n - 1) * clamp(0.7 + up * 0.4, 0.7, 1.3), vx = dirx * (12 + power * 0.04);
+    for (const p of e.pts) { p.px = p.x - vx * DT; p.py = p.y + pop * DT; }   // (Verlet: the step's move is the speed)
+    emit('feat', 'juggle'); focGain(FOCUS.gain.jug);
+  }
+  function otgHit(e, dirx) {   // a blow on a goon on the floor: the body jolts; the first OTG.n keep him down a beat longer
+    for (const p of e.pts) { p.py = p.y + 35 * DT; p.px = p.x - dirx * 10 * DT; }
+    if ((e.otgN = (e.otgN || 0) + 1) <= OTG.n) e.downT = Math.max(0, e.downT - 0.3);
+    emit('feat', 'otg'); focGain(FOCUS.gain.otg);
+  }
+  function wallX(d, x) {   // the wall a body flying d-ward at x meets: the level's ends, the street's end wall, the club's or the arena's walls (null: none)
+    const lo = enc.arena ? enc.arena.x0 : flags.club && !isP9() ? DOOR_X + 2 : 8, hi = enc.arena ? enc.arena.x1 : !flags.club && !isP9() ? STREET_END + 6 : W - 10;
+    return d < 0 && x <= lo + 1 ? lo : d > 0 && x >= hi - 1 ? hi : null;
+  }
+  function flyStep(e, dt) {   // a body in flight (a clinch throw, the wall-splat ender): it hits the goons and boxes in its way, and sticks to a wall it meets
+    const F = e.fly, Q = e.pts, c = Q[2], vx = (c.x - c.px) / dt, d = F.d;
+    let lead = c.x; for (const p of Q) lead = d > 0 ? Math.max(lead, p.x) : Math.min(lead, p.x);
+    const wx = Math.abs(vx) > 40 ? wallX(d, lead) : null;
+    if (wx != null) { splat(e, wx, d); return; }
+    if ((F.t -= dt) <= 0 || Math.abs(vx) < 50) { e.fly = null; return; }
+    for (const g of enemies) {
+      if (g === e || g.dead || g.down || g.clinch || g.fin || F.ids.has(g) || !g.J || Math.abs(g.y - e.y) > 30) continue;
+      const [ax, ay, bx, by] = capsule(g.J);
+      if (segDist(ax, ay, bx, by, c.x, c.y) < 5 * g.s + 4) {   // into a goon: both go down
+        F.ids.add(g); killBy = 5; damageEnemy(g, SPLAT.crowd, d, 260, 0.3, c.x, c.y, false); killBy = null;
+        if (!g.dead && !g.down) knockDown(g, d, 240, 'hp');   // (a boss only flinches)
+        hitFx(220); sparks.push({ x: c.x, y: c.y, t: 0 }); emit('feat', 'bodyhit');
+        for (const p of Q) p.px = p.x - (p.x - p.px) * 0.6;   // the pile-up costs him speed
+      }
+    }
+    for (const o of objs) if (!o.carried && !F.ids.has(o) && objNear(o, c.x, c.y).d < 3) { F.ids.add(o); launchObj(o, c.x, c.y, d, 230, 0.3); for (const p of Q) p.px = p.x - (p.x - p.px) * 0.7; }
+  }
+  function splat(e, wx, d) {   // a body in flight meets a wall: it sticks there a beat (SPLAT.stick s), then slides down it
+    e.fly = null; e.splat = SPLAT.stick; e.splatX = wx - d * 2; e.splatD = d;
+    const c = e.pts[2];
+    for (const p of e.pts) { if ((p.x - e.splatX) * d > 0) p.x = e.splatX; p.px = p.x; p.py = p.y; }
+    e.hp -= SPLAT.dmg; e.flash = 0.08;
+    bleed(e.splatX, c.y - 4, -d, 14, 1.3); dust(e.splatX, c.y, 4); sparks.push({ x: e.splatX, y: c.y - 4, t: 0 });
+    hitStop = Math.max(hitStop, 0.1); shakeIt(0.2, 2); kickCam(d, 0, 2);
+    emit('feat', 'wallsplat'); emit('wallsplat', { enemy: e, x: e.splatX, y: c.y, dir: d }); focGain(FOCUS.gain.splat);
+    if (e.hp <= 0) killEnemy(e, -d, 120, 0, e.splatX, c.y);
   }
   function hitsPlayer(x, y, r) {
     if (hero.mode !== 'anim' || hero.invT > 0) return false;
@@ -1900,6 +1960,7 @@ import * as P9 from './levels/pier9.js';
       }
     }
     hstr.n = 0; hstr.t = -9;   // hit: his string is broken
+    if (ctl.grab) grabFree(30);   // hit in the clinch: he lets go
     hero.hp = Math.max(0, hero.hp - dmg); hero.invT = 0.45;
     const vx = ctl.air ? ctl.face * ctl.spd : ctl.face * ctl.spd, into = Math.max(0, -dirx * vx);
     const braced = hero.act === 'squat' || hero.act === 'guard' ? 0.7 : 1;
@@ -1909,7 +1970,7 @@ import * as P9 from './levels/pier9.js';
     hitFx(Math.min(320, 90 + impact * 7));
     if (hero.hp <= 0 || impact >= 40) {   // sent flying
       toRag(); hits++;
-      if (hero.hp <= 0) { hero.ko = true; emit('ko', { perma: !!DIF().perma }); }
+      if (hero.hp <= 0) { hero.ko = true; emit('ko', { perma: !!DIF().perma }); if (foc.t > 0) endFocus(); }
       // [feel] a short, heavy arc (~0.7 s, ~100 px): readable, and the camera does not have to chase it
       const fx = dirx * Math.min(170, 110 + impact * 1.4 + into * 0.4), fy = Math.min(140, 80 + impact);
       ragG = 0.9; ragGk = 1.7;
@@ -1947,7 +2008,7 @@ import * as P9 from './levels/pier9.js';
     e.act = null; e.combo = null; e.struck = true; e.pendH = null; e.feint = false; e.react = null; e.guardT = 0; e.mark = 0; eRelease(e);
     e.hurtT = DEF.parry.stag * (boss ? 0.75 : 1); e.hurtK = 1; e.exposed = e.hurtT + 0.25; e.fkV += 40; e.vx += dirx * (boss ? 30 : 70);
     hitSpark(x, y, -dirx, 260, true); sparks.push({ x, y: y - 2, t: 0 }); flashes.push({ x, y, dx: -dirx, dy: -0.4, t: 0, big: true });
-    emit('parry', { x, y, dir: dirx, enemy: e, isBoss: boss }); emit('feat', 'parry');
+    emit('parry', { x, y, dir: dirx, enemy: e, isBoss: boss }); emit('feat', 'parry'); focGain(FOCUS.gain.parry);
   }
   let lowHintT = -99;   // a low blow went under his standing guard: say how to stop it (at most every 25 s)
   function lowHint() { if (simTime - lowHintT < 25) return; lowHintT = simTime; toast('A low attack', 'A standing guard does not stop it: hold ↓ with E, or jump', true); }
@@ -1965,20 +2026,20 @@ import * as P9 from './levels/pier9.js';
     for (const q of quakes) if (!q.hit && (ctl.x - q.x) * q.dir > -2 && (ctl.x - q.x) * q.dir / QUAKE.v < DEF.pd.win) return q;
     return null;
   }
-  let slowT = 0;   // real seconds of perfect-dodge slow motion left
+  let slowT = 0, slowWhy = '';   // real seconds of slow motion left (a perfect dodge, the last kill of a wave, the boss kill), and why
+  function slowMo(t, why) { if (slowT <= 0 && foc.t <= 0) emit('slowmo:start', { scale: DEF.pd.slow, reason: why }); slowT = Math.max(slowT, t); slowWhy = why; }
   function tryPerfect() {
     const t = pdThreat(); if (!t) return;
     hero.invT = Math.max(hero.invT, 0.3);   // the blow goes through where he was
     if (t.act !== undefined && t.J) { t.exposed = Math.max(t.exposed || 0, DEF.pd.expose); t.cdT = Math.max(t.cdT, 0.8); if (t.type === 'goon') eRelease(t); }
-    if (slowT <= 0) emit('slowmo:start', { scale: DEF.pd.slow, reason: 'pdodge' });
-    slowT = DEF.pd.slowT; sparks.push({ x: P[1].x, y: P[1].y, t: 0.05 });
+    slowMo(DEF.pd.slowT, 'pdodge'); focGain(FOCUS.gain.pdodge); sparks.push({ x: P[1].x, y: P[1].y, t: 0.05 });
     for (let k = 0; k < 6; k++) particles.push({ x: P[2].x + (simRand() - 0.5) * 10, y: P[2].y - simRand() * 16, vx: -ctl.face * (30 + simRand() * 40), vy: -20 - simRand() * 30, life: 0.3, c: PAL.white });   // an afterimage of dust where he was
     emit('pdodge', { x: ctl.x, y: ctl.y, enemy: t.act !== undefined ? t : null }); emit('feat', 'pdodge');
   }
   // the hero's string: his hits that land within DEF.str.gap s of each other. n = hits in it, last = the last move (lp0/lp1 -> lp), rep = repeats of it in a row;
   // k = this swing's damage scale (DMC rule: a repeat scores less; a heavy that opens is weak, a heavy after 2+ varied hits is the ender)
   const hstr = { n: 0, last: null, rep: 0, t: -9, atk: -1, k: 1, ender: false, ctrAtk: -1, holdOf: -1 };   // holdOf: the atkId of a light cut into a heavy by the hold
-  const HEAVY_B = /^(hp|hk|shp|sweep|kw|kh|aw|ah|aair)$/, KD_B = /^(hp|hk|kw|aw|kh|ah|aair|sweep)$/, KD_ALWAYS = /^(sweep|kh|ah|aair)$/;
+  const HEAVY_B = /^(hp|hk|shp|sweep|kw|kh|aw|ah|aair|lpl|lpw)$/, KD_B = /^(hp|hk|kw|aw|kh|ah|aair|sweep)$/, KD_ALWAYS = /^(sweep|kh|ah|aair)$/;
   function strHit() {   // once per swing (a swing through two goons is one link)
     if (hstr.atk === hero.atkId) return;
     if (simTime - hstr.t > DEF.str.gap) { hstr.n = 0; hstr.last = null; hstr.rep = 0; }
@@ -2009,6 +2070,16 @@ import * as P9 from './levels/pier9.js';
       e.vx += dirx * power / e.m * (power >= 250 ? 0.5 : 0.25);
       emit('sfx', { name: enc.eHitKind === 2 ? 'ricochet' : 'hook_clank', x, vol: 0.55, pitch: 1.35 });
       if (enc.eHitKind === 1 && !e.act && simRand() < 0.35 + 0.3 * e.agg) e.punish = 0.5;   // he bashes back
+      return;
+    }
+    const gain = () => { if (mel) focGain((hstr.rep === 0 ? FOCUS.gain.hit : hstr.rep === 1 ? FOCUS.gain.rep : 0) + (ender ? FOCUS.gain.ender : 0) + (ctr ? FOCUS.gain.ctr : 0)); else if (enc.eHitKind === 2) focGain(FOCUS.gain.shot); };   // varied hits fill the focus meter, spam does not
+    if (e.down) {   // a body in the air (a juggle hit) or on the floor (a stomp, a point-blank shot)
+      const jug = jugAir(e);
+      if (jug) dmg = Math.max(1, Math.round(dmg * JUG.dmgK ** e.jug.n));
+      hitEv('clean', dmg); gain(); e.hp -= dmg; e.flash = 0.08; landed++;
+      bleed(x, y, dirx, Math.round(2 + dmg / 4), 1); bodyStain(e, x, y, 1);
+      if (e.hp <= 0) { killEnemy(e, dirx, power, up, x, y); return; }
+      if (jug) jugHit(e, dirx, power, up); else otgHit(e, dirx);
       return;
     }
     // a raised guard stops light melee from the front: chip damage, a spark, no stagger, and often a counter.
@@ -2045,7 +2116,7 @@ import * as P9 from './levels/pier9.js';
     const zone = !e.J ? 'body' : y < e.J[1].y + 1 ? 'head' : y > e.J[2].y + 2 ? 'legs' : 'body';
     e.fkZone = zone;
     if (zone === 'head') dmg = Math.round(dmg * 1.35); else if (zone === 'legs') { dmg = Math.max(1, Math.round(dmg * 0.8)); e.limpT = 0.8; }
-    hitEv('clean', dmg);
+    hitEv('clean', dmg); gain();
     if (ctr && mel && hstr.ctrAtk !== hero.atkId) { hstr.ctrAtk = hero.atkId; emit('feat', 'counter'); }
     if (e.reloadT > 0 && !e.rpun && enc.eHitKind) { e.rpun = true; emit('feat', 'reloadpunish'); }   // caught the Tallyman mid-reload
     if (e.carry) { dropCarry(e); if (enc.eHitKind === 1) emit('feat', 'propdrop'); }   // hit with a prop over his head: he drops it
@@ -2059,6 +2130,12 @@ import * as P9 from './levels/pier9.js';
     const stag = (!e.sp || reel) && !(e.ctrArmor > 0 && power < 200) && !armored && (broke || (ctr && goon) || dmg >= (e.recT > 0 || reel ? e.poise * 0.4 : e.poise));   // big moves have armor; so does a counter against light hits
     const ctx = enc.eHitKind === 1 && hitCtx, mv = ctx && MOVES[ctx], pushK = (mv && mv.push) || 1;
     e.fkV += 48 * clamp(power / 260, 0.3, 1.1) * (e.type === 'boss' ? 0.8 : 1);   // the flinch spring
+    if (goon && (base === 'lpl' || base === 'lpw') && !e.sp) {   // the fist string's ender: launched into a juggle, or sent flying (into a wall: a splat)
+      emit('feat', 'ender');
+      if (base === 'lpl') { ragFly(e, dirx * 12, -JUG.launch, dirx * 2.5); e.jug = { n: 1 }; }
+      else { ragFly(e, dirx * SPLAT.vx, SPLAT.vy, dirx * 1.5); e.fly = { t: SPLAT.fly, d: dirx, ids: new Set() }; }
+      return;
+    }
     // a knock-down takes a combo ender (a heavy after 2+ hits), a sweep, an overhead finisher (kh, ah, aair) or a heavy counter-hit; a lone heavy only staggers
     if (goon && base && !e.sp && !armored && ((KD_ALWAYS.test(base) && !e.elite) || ((ender || ctr) && KD_B.test(base)))) {   // (the Bosun: only an ender or a counter floors him)
       knockDown(e, dirx, power * pushK, base === 'sweep' ? 'sweep' : /^(hp|hk|kw|aw)$/.test(base) ? 'hp' : base); return;
@@ -2079,10 +2156,11 @@ import * as P9 from './levels/pier9.js';
   function killEnemy(e, dirx, power, up, hx, hy) {
     crowdReact(e.x, 0, true);   // somebody goes down: the crowd roars
     emit('kill', { enemy: e, weapon: killBy != null ? killBy : hero.weapon, zone: e.zone, isBoss: e === enc.boss, x: e.x, y: e.y });   // (the kill feed listens)
-    e.dead = true; e.deadT = 0; e.act = null; e.down = false; e.diedAt = simTime;
+    e.dead = true; e.deadT = 0; e.act = null; e.down = false; e.diedAt = simTime; e.clinch = false; e.fin = null; e.jug = e.fly = null; e.splat = 0;
     if (e.carry) dropCarry(e);
     if (gaffHold === e) gaffHold = null;
     e.held = 0; e.reloadT = 0;
+    if (enc.eHitKind || killBy != null) focGain(FOCUS.gain.kill);
     // the blow drives the body from where it landed: that part moves most (a head shot snaps the head back, a leg shot takes
     // the legs), the feet keep their grip on the floor, so he topples back over them; the strength sets how hard (1-3.5 m/s),
     // and only a rising blow lifts him, a little. No flight.
@@ -2096,9 +2174,12 @@ import * as P9 from './levels/pier9.js';
     bleed(e.J[1].x, e.J[1].y, dirx, e.type === 'boss' ? 60 : !hero.weapon && killBy == null && enc.eHitKind === 1 ? 7 : 24, 1.4);   // beaten down with fists: less blood
     bodyStain(e, hx ?? e.J[1].x, hy ?? e.J[1].y + 3, !hero.weapon && killBy == null && enc.eHitKind === 1 ? 4 : 10);
     lootDrop(e, dirx);   // his weapon, an ammo box, a bandage (docs/drops.md)
-    if (e.zone != null && --zoneAlive[e.zone] === 0 && typeof e.zone === 'number') emit('feat', 'kill' + e.zone);
+    if (e.zone != null && --zoneAlive[e.zone] === 0) {
+      if (typeof e.zone === 'number') emit('feat', 'kill' + e.zone);
+      if (e.zone !== 'arena' && e.zone !== 'boss' && !(isP9() && p9.queue.some(q => q.wave === e.zone))) slowMo(FOCUS.last, 'lastkill');   // the last of a wave: a beat of slow motion
+    }
     if (e === enc.boss) {
-      enc.bossBeaten = true; enc.arena = null; emit('feat', 'boss'); crowdReact(e.x, 0, 'big');
+      enc.bossBeaten = true; enc.arena = null; emit('feat', 'boss'); crowdReact(e.x, 0, 'big'); slowMo(FOCUS.boss, 'boss');
       emit('boss:defeated', { boss: e, x: e.x });
       if (!flags.demo && !flags.attract) unlock(isP9() ? 'ch2' : 'ch1');   // a real win opens the next chapter
       for (const g of enemies) if (!g.dead && g.zone === 'arena') killEnemy(g, Math.sign(g.x - e.x) || 1, 200, 0.5);
@@ -2110,7 +2191,7 @@ import * as P9 from './levels/pier9.js';
   function hitEnemies(m, wg, p, pre) {
     let any = null;
     for (const e of enemies) {
-      if (e.dead || e.down || e.hitBy === hero.atkId) continue;
+      if (e.dead || e.clinch || e.fin || e.hitBy === hero.atkId || (m.otg ? !e.down || jugAir(e) : e.down && !jugAir(e))) continue;   // (a stomp hits only a body on the floor; a juggle, one in the air)
       const [ax, ay, bx, by] = capsule(e.J), rr = 4 * e.s;
       let hx = p.x, hy = p.y, hit = false;
       if (wg) for (let i = 0; i <= 5 && !hit; i++) { hx = wg.x + (wg.tx - wg.x) * i / 5; hy = wg.y + (wg.ty - wg.y) * i / 5; hit = segDist(ax, ay, bx, by, hx, hy) < rr + 1.5; }
@@ -2140,7 +2221,7 @@ import * as P9 from './levels/pier9.js';
   function eRagStep(e, dt) {
     const Q = e.pts;
     for (const p of Q) p.fl = bodyFloor(p.x, p.y, p.r, Q[2].y).y - p.r;   // (bodies pass through one another: each lies on the street or a ledge)
-    const gk = e.down && e.downT < 0.4 ? 1.6 : 1;   // [feel] a knock-down slams to the floor, it does not float
+    const gk = e.splat > 0 ? 0.12 : e.jug ? JUG.g * (1 + JUG.gK * (e.jug.n - 1)) : e.fly ? 1 : e.down && e.downT < 0.4 ? 1.6 : 1;   // [feel] a knock-down slams to the floor, it does not float; a juggle falls faster each hit
     for (const p of Q) { const vx = (p.x - p.px) * DAMP, vy = (p.y - p.py) * DAMP; p.px = p.x; p.py = p.y; p.x += vx; p.y += vy + G * gk * dt * dt; }
     for (let k = 0; k < 8; k++) {
       for (const [a, b, lo, hi] of e.cons) solveDist(Q[a], Q[b], lo, hi);
@@ -2248,7 +2329,7 @@ import * as P9 from './levels/pier9.js';
       const fear = 1 - e.agg + (e.retreatT > 0 ? 0.5 : 0), lone = !(simTime - hstr.t <= DEF.str.gap && hstr.n >= 2);   // (a heavy that ends a string is not read in time)
       if (pm.power >= 250 && lone) enc.holdK = Math.min(3, enc.holdK + 1);
       if (e.elite) { if (simRand() < 0.85) { e.react = 'guard'; e.reactT = 0.03 + simRand() * 0.05; } }   // the Bosun reads everything: his guard is up
-      else if (pm.power >= 250) {
+      else if (pm.power >= 250 && !pm.ender) {   // (a string's ender comes too fast to read)
         if (dLv() >= 1 && lone && e.dodgeCd <= 0 && simRand() < [0, 0.25, 0.55, 0.75][dLv()] + holdRead) { e.react = 'side'; e.reactT = 0.04 + simRand() * 0.08; }
         else if (e.dodgeCd <= 0 && !e.shield && simRand() < 0.25 + 0.4 * fear) { e.react = 'dodge'; e.reactT = 0.06 + simRand() * 0.1; }
       }
@@ -2733,7 +2814,6 @@ import * as P9 from './levels/pier9.js';
     }
   }
   function enemyStep(dt) {
-    if (hero.invT > 0) hero.invT -= dt;
     if (!isP9() && enc.boss && !enc.boss.dead && enc.arena && enc.arenaSpawned < 10 && (enc.spawnT -= dt) <= 0) {   // the boss calls in his crew: one every 3 s (4.5 s once enraged), 10 in all
       enc.spawnT = enc.boss.ph > 1 ? 4.5 : 3;
       if (enemies.filter(g => !g.dead && g.zone === 'arena').length < 4) {
@@ -2766,6 +2846,7 @@ import * as P9 from './levels/pier9.js';
       if (e.rimT > 0) e.rimT -= dt;
       if (e.glint > 0) e.glint -= dt;
       if (e.down) { eDownStep(e, dt); continue; }
+      if (e.clinch || e.fin) { e.vx = e.vy = 0; e.air = false; e.act = null; poseEnemy(e, dt); continue; }   // in the clinch or a finisher: the hero moves him
       const dx = px - e.x, adx = Math.abs(dx);   // (no height leash: a ledge does not shake them off)
       const aggro = e.aggro = (adx < (e.alert ? 600 : 200) || (e.kind === 'marchetti' && flags.club)) && hero.mode !== 'getup', level = Math.abs(py - e.y) < 14;
       e.fight = aggro && adx < 60 * e.s && !e.intro;
@@ -3037,6 +3118,11 @@ import * as P9 from './levels/pier9.js';
       const mx = Math.floor(hd.x), my = Math.floor(hd.y - r - (e.type === 'boss' ? 13 : 12)), mc = blink ? PAL.white : BLOOD[2], w = e.type === 'boss' ? 2 : 1;
       for (let k = 0; k < w; k++) { for (let y = 0; y < 4; y++) plot(mx + k, my + y, mc); plot(mx + k, my + 5, mc); }
     }
+    if (e === finE) {   // a finisher is on: an F key cap over his head (the ring blinks)
+      const x0 = Math.floor(hd.x) - 4, y0 = Math.floor(hd.y - r - 17), rc = blink ? PAL.white : PAL.accent, F = ['###', '#..', '##.', '#..', '#..'];
+      for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) plot(x0 + x, y0 + y, x === 0 || y === 0 || x === 8 || y === 8 ? O : x === 1 || y === 1 || x === 7 || y === 7 ? rc : F[y - 2]?.[x - 3] === '#' ? PAL.white : EFX.key);
+      return;
+    }
     if (e.exposed > 0 && !(e.mark > 0)) {   // exposed (after a parry or a perfect dodge): a gold diamond over the head, hit him now
       const mx = Math.floor(hd.x), my = Math.floor(hd.y - r - 9), mc = blink ? PAL.white : PAL.accent;
       plot(mx, my - 2, mc); plot(mx - 1, my - 1, mc); plot(mx + 1, my - 1, mc); plot(mx - 2, my, mc); plot(mx + 2, my, mc); plot(mx - 1, my + 1, mc); plot(mx + 1, my + 1, mc); plot(mx, my + 2, mc); plot(mx, my, PAL.accent);
@@ -3093,7 +3179,7 @@ import * as P9 from './levels/pier9.js';
   let queued = null, hitDone = false, wAct = 0, apSm = IDLE.slice(), lastHand = 0, kickLeg = 1;
   let hitStop = 0, bagFlash = 0, ragT = 0;
   let ragG = 0, ragGk = 1, ragKD = false;   // extra fall gravity: seconds left, factor; the fall is a knock-down (no K.O. from it)
-  const input = { dir: 0, run: false, jump: false, jumpHeld: false, downHeld: false, fireHeld: false, attack: null, dashHeld: false, block: false, blockHeld: false };   // block: a press of E (blockHeld: held)
+  const input = { dir: 0, run: false, jump: false, jumpHeld: false, downHeld: false, fireHeld: false, attack: null, dashHeld: false, block: false, blockHeld: false, focus: false };   // focus: a press of F   // block: a press of E (blockHeld: held)
   let grabIdx = -1, target = { x: 0, y: 0 }, pv = { x: 0, y: 0 }, lastMove = 0, lastPtr = null;
   let headSpeed = 0, simTime = 0;
   // shake amplitude in world px (1 light, 2 heavy, 3 slams); it decays over the shake time. Sites that only set shake get one from its length
@@ -3314,6 +3400,137 @@ import * as P9 from './levels/pier9.js';
   }
   function setJoints(j) { P.forEach((p, i) => { p.px = p.x; p.py = p.y; p.x = j[i][0]; p.y = j[i][1]; }); }
 
+  // ---------- focus (#6): the Sandman's meter. Varied hits, parries, perfect dodges and counters fill it (FOCUS.gain); F spends it on
+  // Sandman time: the world at FOCUS.slow speed while he runs at full speed (frame() gives him extra steps of his own: heroStep) ----------
+  const foc = { m: 0, t: 0 };   // m: the meter (0..FOCUS.max); t: Sandman time left (real s)
+  let wk = 1, accW = 0;   // the world's share of the hero's clock (FOCUS.slow in Sandman time), and the world's step clock
+  function focGain(n) { if (foc.t <= 0 && n > 0) foc.m = Math.min(FOCUS.max, foc.m + n); }   // (it does not fill while it runs)
+  function startFocus() {
+    foc.t = foc.m / FOCUS.max * FOCUS.dur; wk = FOCUS.slow;
+    if (slowT <= 0) emit('slowmo:start', { scale: FOCUS.slow, reason: 'focus' });
+    emit('focus:start', { meter: foc.m, t: foc.t }); emit('feat', 'focus');
+    sparks.push({ x: P[1].x, y: P[1].y, t: 0.05 });
+  }
+  function endFocus(quiet) {
+    if (foc.t <= 0 && wk === 1) return;
+    foc.t = 0; wk = 1;
+    if (!quiet) { if (slowT <= 0) emit('slowmo:end', { scale: 1, reason: 'focus' }); emit('focus:end', { meter: foc.m }); }
+  }
+  // ---------- the clinch (#5): walk into a reeling goon (fists, nothing in hand) to grab him; Q knees him (GRAB.knees), W throws him (← or → aims) ----------
+  function grabFoe() {   // a goon he can take hold of now: reeling from a heavy blow or a counter, or exposed after a parry or a perfect dodge, right in front
+    if (hero.weapon || ctl.carry || ctl.air || hero.mode !== 'anim' || input.dir !== ctl.face || input.downHeld || !(hero.act === null || hero.act === 'start' || hero.act === 'guard' || hero.act === 'settle' || hero.act === 'land' || (MOVES[hero.act] && !MOVES[hero.act].clinch && cancelOK()))) return null;   // (→ held out of a blow that landed: straight into the clinch)
+    for (const e of enemies) {
+      if (e.type !== 'goon' || e.elite || e.dead || e.down || e.clinch || e.fin || e.air || !(e.exposed > 0 || (e.hurtT > 0 && !e.hurtLight)) || Math.abs(e.y - ctl.y) > 8) continue;
+      const ahead = (e.x - ctl.x) * ctl.face; if (ahead > 0 && ahead < 18 + 3 * e.s) return e;
+    }
+    return null;
+  }
+  function startGrab(e) {
+    ctl.grab = { e, t: 0, n: 0 }; e.clinch = true; eRelease(e);
+    Object.assign(e, { act: null, combo: null, guardT: 0, react: null, feint: false, hurtT: 0, exposed: 0, mark: 0, vx: 0, slide: 0, face: -ctl.face });
+    hero.act = 'clinch'; hero.actT = 0; queued = null; ctl.spd = 0;
+    hitStop = Math.max(hitStop, 0.05);
+    emit('feat', 'grab'); emit('grab', { enemy: e, x: e.x, y: e.y });
+  }
+  function grabFree(push) {   // he lets go, or the goon wrestles free: they step apart
+    const G = ctl.grab; if (!G) return;
+    ctl.grab = null; const e = G.e; e.clinch = false;
+    if (!e.dead && !e.down) { e.hurtT = 0.25; e.hurtLight = true; e.vx = ctl.face * push; e.cdT = Math.max(e.cdT, 0.4); }
+    if (hero.act === 'clinch' || hero.act === 'knee') { hero.act = 'guard'; hero.actT = 0; queued = null; }
+  }
+  function grabStep(dt) {   // (animStep) he holds the goon's head in front of him; left alone too long, the goon breaks free
+    const G = ctl.grab; if (!G) return;
+    const e = G.e;
+    if (e.dead || !e.clinch || hero.mode !== 'anim' || ctl.air || !(hero.act === 'clinch' || hero.act === 'knee' || hero.act === 'gtoss')) { grabFree(30); return; }
+    if ((G.t += dt) > GRAB.hold && hero.act === 'clinch') { grabFree(60); ctl.push = 40; ctl.pushK = 12; return; }
+    e.x = ctl.x + ctl.face * GRAB.gap; e.y = ctl.y; e.face = -ctl.face; e.vx = e.vy = 0; e.air = false;
+  }
+  function kneeHit() {   // the knee lands: a body blow (no guard in the clinch)
+    const G = ctl.grab, e = G.e; G.n++; G.t = 0;
+    const x = P[9].x + ctl.face * 2, y = P[9].y - 2;
+    hitCtx = 'knee'; enc.eHitKind = 1; damageEnemy(e, GRAB.knee, ctl.face, MOVES.knee.power, 0.3, x, y, false); enc.eHitKind = 0;
+    hitFx(MOVES.knee.power); hitCtx = null; hitSpark(x, y, ctl.face, 160, false); focGain(FOCUS.gain.knee);
+  }
+  function startGrabThrow(d) {   // W: swing him round to the held side and let go (throwHeld, at 0.2 s)
+    const G = ctl.grab; if (!G) return;
+    if (d !== ctl.face) { ctl.face = d; G.e.x = ctl.x + d * GRAB.gap; G.e.face = -d; }
+    queued = null; startAttack('gtoss');
+  }
+  function throwHeld() {   // let go at the top of the swing: he flies at his crew; the body hurts and floors the goons it hits (flyStep)
+    const G = ctl.grab; if (!G) return;
+    ctl.grab = null; const e = G.e, d = ctl.face; e.clinch = false;
+    e.hp = Math.max(1, e.hp - GRAB.self);
+    ragFly(e, d * GRAB.v, GRAB.vy, d * 2.5); e.fly = { t: GRAB.fly, d, ids: new Set() };
+    hitStop = Math.max(hitStop, 0.06); shakeIt(0.12, 1); dust(ctl.x, ctl.y + 1, 3);
+    emit('feat', 'gthrow'); emit('throw', { enemy: e, x: e.x, y: e.y, dir: d }); focGain(FOCUS.gain.gthrow);
+  }
+  // ---------- OTG (#5): ↓ + W by a goon on the floor stomps him; ↓ + Q with a loaded gun shoots him point blank ----------
+  function otgFoe() {   // a goon on the floor (not in the air) by his feet
+    let best = null;
+    for (const e of enemies) {
+      if (!e.down || e.dead || !e.pts || jugAir(e) || e.fly || Math.abs(e.y - ctl.y) > 10) continue;
+      const dx = e.pts[2].x - ctl.x; if (Math.abs(dx) > OTG.reach) continue;
+      if (!best || Math.abs(dx) < Math.abs(best.pts[2].x - ctl.x)) best = e;
+    }
+    return best;
+  }
+  function pbShot(e, Wp) {   // the muzzle down at him, one round point blank (all of a shotgun's pellets)
+    const c = e.pts[2]; ctl.face = Math.sign(c.x - ctl.x) || ctl.face;
+    charge[hero.weapon]--; gun.cd = Wp.cd; gun.aimT = 0.5; gun.recoil = 1; ctl.aimDn = 0.9; ctl.aimDnT = 0.35;
+    enc.eHitKind = 2; damageEnemy(e, Math.round(Wp.power * Wp.pellets / 9 * OTG.shot), ctl.face, 200, 0.2, c.x, c.y - 1, false); enc.eHitKind = 0;
+    flashes.push({ x: c.x - ctl.face * 5, y: c.y - 6, dx: ctl.face * 0.6, dy: 0.8, t: 0, big: true }); hitSpark(c.x, c.y, ctl.face, 200, false);
+    hitStop = Math.max(hitStop, 0.06); shakeIt(0.1, 1); noise(c.x, true);
+    emit('shot', { by: 'hero', weapon: hero.weapon, w: Wp.id, x: c.x, y: c.y, dir: ctl.face, pellets: Wp.pellets, auto: !!Wp.auto, otg: true });
+    if (charge[hero.weapon] <= 0) outOfAmmo();
+  }
+  // ---------- the shoot-dodge (#6): a dodge in Sandman time with a gun is a flat dive, the gun up and firing at full speed (Max Payne) ----------
+  function startDive(d) {
+    let foe = null;   // the gun stays on the nearest goon: a dive away from him is on the back, feet first
+    for (const e of enemies) if (!e.dead && !e.down && Math.abs(e.y - ctl.y) < 30 && Math.abs(e.x - ctl.x) < 160 && (!foe || Math.abs(e.x - ctl.x) < Math.abs(foe.x - ctl.x))) foe = e;
+    if (foe) ctl.face = Math.sign(foe.x - ctl.x) || ctl.face;
+    ctl.dive = { d, back: d !== ctl.face, landed: false }; ctl.dashK = null; ctl.spd = 0; ctl.stepV = 0; queued = null; ctl.flipT = -1; ctl.spin = 0;
+    hero.act = 'sdive'; hero.actT = 0; hero.invT = Math.max(hero.invT, DIVE.inv); gun.aimT = Math.max(gun.aimT, 0.5);
+    dust(ctl.x - d * 3, ctl.y + 1, 3); emit('feat', 'sdive'); emit('feat', 'dodge'); emit('roll', { x: ctl.x, y: ctl.y, dir: d, dive: true });
+    tryPerfect();
+  }
+  // ---------- finishers (#6): F by a reeling goon low on health (the prompt shows over him): a short kill, one per weapon class ----------
+  let finE = null;   // the goon a finisher can take now
+  const finCam = { t: 0, x: 0, y: 0 };   // the camera's punch-in: time left (real s), the point it closes on
+  const finKind = () => { const Wp = WEAPONS[hero.weapon]; return Wp.gun ? 'g' : Wp.id === 'katana' ? 'k' : Wp.id === 'axe' ? 'a' : 'f'; };
+  function finFoe() {
+    if (hero.mode !== 'anim' || ctl.air || ctl.carry || ctl.grab || !(hero.act === null || hero.act === 'guard' || hero.act === 'land' || hero.act === 'settle' || hero.act === 'start' || hero.act === 'block' || (MOVES[hero.act] && cancelOK()))) return null;
+    let best = null;
+    for (const e of enemies) {
+      if (e.type !== 'goon' || e.elite || e.dead || e.down || e.clinch || e.fin || e.air || e.hp > Math.max(12, e.maxHp * FIN.hp) || !(e.exposed > 0 || e.hurtT > 0) || Math.abs(e.y - ctl.y) > 8) continue;
+      const d = Math.abs(e.x - ctl.x); if (d < FIN.reach * e.s && (!best || d < Math.abs(best.x - ctl.x))) best = e;
+    }
+    return best;
+  }
+  function startFin(e) {
+    const k = finKind(), F = FINS[k], d = Math.sign(e.x - ctl.x) || ctl.face;
+    ctl.face = d; ctl.fin = { e, k, x0: ctl.x, done: false }; finE = null;
+    hero.act = 'fin'; hero.actT = 0; queued = null; ctl.spd = 0; ctl.stepV = 0; ctl.push = 0; ctl.spin = 0; hero.invT = Math.max(hero.invT, F.dur + 0.15);
+    e.fin = F.kneel ? 'kneel' : 'reel'; eRelease(e);
+    Object.assign(e, { act: null, combo: null, guardT: 0, react: null, feint: false, hurtT: 0, exposed: 0, mark: 0, vx: 0, slide: 0, face: -d });
+    Object.assign(finCam, { t: FIN.cam, x: (ctl.x + e.x) / 2, y: e.y - 16 });
+    if (k === 'g') gun.aimT = F.dur;
+  }
+  function finHit() {   // the killing blow: 4 frames of hit-stop, the camera in close
+    const C = ctl.fin, e = C.e, F = FINS[C.k], d = ctl.face, Wp = WEAPONS[hero.weapon]; C.done = true;
+    if (e.dead) return;
+    const head = C.k === 'g' || C.k === 'k', hx = head ? e.J[0].x : (e.J[1].x + e.J[2].x) / 2, hy = head ? e.J[0].y : (e.J[1].y + e.J[2].y) / 2;
+    e.fin = null;
+    if (C.k === 'g') {   // the gun: one round at his head
+      if (charge[hero.weapon] > 0) charge[hero.weapon]--;
+      const g = weaponGeom(); if (g) flashes.push({ x: g.tx, y: g.ty, dx: g.dx, dy: g.dy, t: 0, big: true });
+      gun.recoil = 1; noise(hx, true); emit('shot', { by: 'hero', weapon: hero.weapon, w: Wp.id, x: hx, y: hy, dir: d, pellets: 1, auto: false, fin: true });
+    }
+    hitCtx = 'fin'; enc.eHitKind = C.k === 'g' ? 2 : 1; damageEnemy(e, e.hp + 99, d, F.power, F.up, hx, hy, C.k === 'k' || C.k === 'a'); enc.eHitKind = 0;
+    hitFx(F.power); hitCtx = null; hitStop = FIN.stop;
+    bleed(hx, hy, d, 26, 1.6); hitSpark(hx, hy, d, 300, C.k === 'k' || C.k === 'a'); shakeIt(0.25, 3); kickCam(d, 0.3, 2.5);
+    if (C.k === 'a') slam(hx + d * 4, ctl.y + 2, 26, 1);
+    emit('feat', 'finisher'); emit('finisher', { enemy: e, weapon: C.k, x: hx, y: hy });
+  }
   const WSWING = /^(ks[0-2]|al1?)$/;   // the light blade swings that build a combo
   function startAttack(a, nc) {   // nc: a hold that began from neutral (its own first swing does not count as a combo)
     // light kicks repeat with the current leg; a heavy kick switches to the other leg, which then stays current
@@ -3323,6 +3540,7 @@ import * as P9 from './levels/pier9.js';
     const combo = !nc && (MOVES[hero.act] && WSWING.test(hero.act) || simTime - ctl.comboEnd < 0.45);
     if (a === 'lp') {
       if (Wp.melee) { const n = Wp.id === 'katana' ? 3 : 2; ctl.combo = combo ? (ctl.combo + 1) % n : 0; a = Wp.id === 'katana' ? 'ks' + ctl.combo : ctl.combo ? 'al1' : 'al'; }
+      else if (!nc && !ctl.air && hstr.last === 'lp' && hstr.rep >= 2 && hstr.atk === hero.atkId && simTime - hstr.t <= DEF.str.gap) a = input.dir === ctl.face ? 'lpw' : 'lpl';   // the 4th of a jab string: the ender (→ held: the wall-splat)
       else { lastHand ^= 1; a = 'lp' + lastHand; }
     } else if (a === 'hp') {
       a = Wp.melee ? (Wp.id === 'katana' ? (combo ? 'kh' : 'kw') : combo ? 'ah' : 'aw') : Wp.gun ? 'tw' : 'hp';   // (guns are never clubs: an empty gun is thrown, a loaded one fires, see tryAttack)
@@ -3331,7 +3549,7 @@ import * as P9 from './levels/pier9.js';
     else if (a === 'lk') a += kickLeg;
     else if (a === 'hk') { kickLeg ^= 1; a += kickLeg; }
     hero.act = a; hero.actT = 0; hitDone = false; hero.atkId++; ctl.slam = false;
-    emit('swing', { move: a, weapon: hero.weapon, w: Wp.id, blade: !!Wp.melee, heavy: /^(hp|hk|kw|kh|aw|ah|shp|sweep)/.test(a), x: ctl.x, y: ctl.y, dir: ctl.face });
+    emit('swing', { move: a, weapon: hero.weapon, w: Wp.id, blade: !!Wp.melee, heavy: /^(hp|hk|kw|kh|aw|ah|shp|sweep|lpl|lpw|stomp)/.test(a), x: ctl.x, y: ctl.y, dir: ctl.face });
     emit('feat', a.replace(/[0-9]$/, ''));
   }
   function startFall() {
@@ -3378,7 +3596,7 @@ import * as P9 from './levels/pier9.js';
   // ----- feel: input buffer, coyote time, cancels, dodge, pose blending -----
   // BUF: a press waits this long for the fighter to be free; COYOTE: a ground jump still works this long after walking off a ledge
   const BUF = 0.12, COYOTE = 0.1;
-  const ibuf = { jump: 0, atk: null, atkT: 0, dash: 0, blk: 0 };
+  const ibuf = { jump: 0, atk: null, atkT: 0, dash: 0, blk: 0, foc: 0 };
   let dashCd = 0, atkHit = false, hitAtk = -1, hitCtx = null, coyT = 0, gunArmW = 0, gunArms = null;
   const isLight = m => m.dur < 0.5;
   // a queued attack starts here: the rest of the recovery is cut, the pose blend hides the cut
@@ -3416,8 +3634,9 @@ import * as P9 from './levels/pier9.js';
     tryPerfect();
   }
   function tryDash(kind) {   // kind 'roll': the long roll (↓ at a run); else on the ground the short dodge, in the air the air dash
-    if (dashCd > 0 || hero.mode !== 'anim' || hero.act === 'dash' || hero.act === 'hero' || hero.act === 'rise' || hero.act === 'crouch' || hero.act === 'climb' || hero.act === 'gbreak') return false;
+    if (dashCd > 0 || hero.mode !== 'anim' || hero.act === 'dash' || hero.act === 'hero' || hero.act === 'rise' || hero.act === 'crouch' || hero.act === 'climb' || hero.act === 'gbreak' || hero.act === 'fin' || hero.act === 'sdive' || hero.act === 'gtoss') return false;
     if (MOVES[hero.act] && !(ctl.air ? hero.actT > (MOVES[hero.act].win || [0, MOVES[hero.act].dur])[1] && hero.act !== 'aair' : cancelOK())) return false;
+    if (ctl.grab) grabFree(20);   // a dodge out of the clinch lets him go
     const d = input.dir;
     queued = null; ctl.slam = false; ctl.flipT = -1;
     if (ctl.air) {
@@ -3431,7 +3650,8 @@ import * as P9 from './levels/pier9.js';
     } else if (kind === 'roll') {   // the long roll: toward the held direction, or the way he faces
       if (rollCd > 0) return false;
       hero.act = null; startRoll(d || ctl.face); dashCd = DASH.cd; return true;
-    } else { startStep(d); return true; }
+    } else if (foc.t > 0 && WEAPONS[hero.weapon].gun) { startDive(d || ctl.face); dashCd = DASH.cd; return true; }   // Sandman time with a gun: the shoot-dodge
+    else { startStep(d); return true; }
     hero.act = 'dash'; hero.actT = 0; dashCd = DASH.cd;
     hero.invT = Math.max(hero.invT, DASH.inv);
     return true;
@@ -3441,7 +3661,14 @@ import * as P9 from './levels/pier9.js';
   const lowOf = (a, Wp) => a === 'tw' ? 'tw' : Wp.gun ? 'tw' : Wp.melee && (a === 'lp' || a === 'hp') ? 'sslash' : LOW[a] || a;
   const CBASH = 0.36;   // a bash with a lifted object: it comes down in front of him and back up
   function tryAttack(a) {   // true when the press is used up
-    if (hero.act === 'climb') return false;
+    if (hero.act === 'climb' || hero.act === 'fin' || (hero.act === 'sdive' && !WEAPONS[hero.weapon].gun)) return false;
+    if (ctl.grab) {   // the clinch: Q knees him (GRAB.knees, then Q throws too), W throws him (← or → aims)
+      if (hero.act === 'gtoss') return true;
+      const m = MOVES[hero.act];
+      if (a === 'lk' || a === 'hk' || ctl.grab.n >= GRAB.knees) { if (m && hero.actT < m.dur * 0.6) return false; startGrabThrow(input.dir || ctl.face); return true; }
+      if (hero.act === 'knee') { if (hero.actT < 0.12) return false; queued = 'knee'; return true; }
+      startAttack('knee'); return true;
+    }
     if (ctl.carry) {   // a bin or a crate in one hand: a tap swings it, a hold throws it; kicks wait
       if (MOVES[hero.act] || hero.act === 'rise') return false;
       if (a === 'lp') { if (!(ctl.bashT > 0)) { ctl.bashT = CBASH; ctl.bashHit = false; } return true; }
@@ -3459,6 +3686,7 @@ import * as P9 from './levels/pier9.js';
       if (MOVES[hero.act] || hero.act === 'rise' || hero.act === 'roll' || hero.act === 'crouch' || hero.act === 'hero' || hero.act === 'dash') return false;
       ctl.flipT = -1; ctl.spin = 0; startAttack('tw'); return true;
     }
+    if (Wp.gun && a === 'lp' && input.downHeld && !ctl.air && charge[hero.weapon] > 0 && !MOVES[hero.act]) { const f = otgFoe(); if (f) { if (gun.cd > 0) return false; pbShot(f, Wp); return true; } }   // ↓ + Q by a goon on the floor: point blank
     if (Wp.gun && (a === 'lp' || (a === 'hp' && charge[hero.weapon] > 0))) { gun.want = true; if (Wp.auto) gun.tapT = 0.28; return true; }   // no gun bash: a held punch fires too   // a tap on the machine gun fires a short burst
     if (ctl.air) {
       if (hero.act !== 'air' && !(hero.act === 'dash' && hero.actT > DASH.airDur * 0.5)) return false;
@@ -3466,7 +3694,10 @@ import * as P9 from './levels/pier9.js';
       if (air) { ctl.flipT = -1; ctl.spin = 0; startAttack(air); }
       return true;
     }
-    if (hero.act === 'crouch' || hero.act === 'hero' || hero.act === 'rise' || hero.act === 'gbreak') return false;
+    if (hero.act === 'crouch' || hero.act === 'hero' || hero.act === 'rise' || hero.act === 'gbreak' || hero.act === 'sdive') return false;
+    if (a === 'lk' && input.downHeld && !MOVES[hero.act]?.otg) { const f = otgFoe(); if (f) {   // ↓ + W by a goon on the floor: a stomp
+      if (MOVES[hero.act]) { if (hero.actT < MOVES[hero.act].dur * 0.3) return false; queued = 'stomp'; return true; }
+      ctl.face = Math.sign(f.pts[2].x - ctl.x) || ctl.face; startAttack('stomp'); return true; } }
     if (hero.act === 'roll' || hero.act === 'dash') { if (hero.actT < (hero.act === 'roll' ? TRN.roll * 0.55 : ctl.dashK === 'step' ? DEF.step.atk : DASH.dur * 0.55)) return false; startAttack(a); return true; }
     const m = MOVES[hero.act], low = input.downHeld && (hero.act === 'squat' || LOW_RE.test(hero.act || ''));   // attacks from a squat stay low, and so does a chain of them
     if (m) { if (hero.actT < m.dur * 0.3) return false; queued = low ? lowOf(a, Wp) : a; return true; }
@@ -3477,9 +3708,9 @@ import * as P9 from './levels/pier9.js';
   // a step into the blow: grounded heavy strikes slide the fighter forward over the last moment before contact
   function lunge(m, dt) {
     if (ctl.air || !m.keys || !m.win || isLight(m)) return;
-    const d = 4.5, t0 = m.win[0] - 0.08, t1 = m.win[0] + 0.03;
+    const d = m.lunge || 4.5, t0 = m.win[0] - 0.08, t1 = m.win[0] + 0.03;   // (lunge: the string's enders step in further)
     if (hero.actT <= t0 || hero.actT > t1 || ((BAG_X - ctl.x) * ctl.face > -4 && (BAG_X - ctl.x) * ctl.face < 16)) return;
-    for (const e of enemies) { const ahead = (e.x - ctl.x) * ctl.face; if (!e.dead && ahead > -4 && ahead < 14 + 6 * e.s && Math.abs(e.y - ctl.y) < 20) return; }   // never step into a foe
+    for (const e of enemies) { const ahead = (e.x - ctl.x) * ctl.face; if (!e.dead && !e.down && ahead > -4 && ahead < (m.lunge ? 9 + 2 * e.s : 14 + 6 * e.s) && Math.abs(e.y - ctl.y) < 20) return; }   // never step into a foe
     ctl.x += ctl.face * d / (t1 - t0) * dt;
   }
   // pose blending by inertialization: when the target pose jumps (a new action, a weapon swap, a cut flip),
@@ -3521,7 +3752,7 @@ import * as P9 from './levels/pier9.js';
     dashCd -= dt; coyT -= dt; rollCd -= dt; if (ctl.duckT > 0) ctl.duckT -= dt;
     if (blk.parryT > 0) blk.parryT -= dt; if (blk.lockT > 0) blk.lockT -= dt;
     const guardAct = hero.act === 'block' || hero.act === 'parry';   // (a jump, a dodge or an attack comes out of these at once)
-    const atk = !!MOVES[hero.act], locked = atk || guardAct || hero.act === 'gbreak' || hero.act === 'rise' || hero.act === 'roll' || hero.act === 'hero' || hero.act === 'dash' || hero.act === 'climb';
+    const atk = !!MOVES[hero.act], locked = atk || guardAct || hero.act === 'gbreak' || hero.act === 'rise' || hero.act === 'roll' || hero.act === 'hero' || hero.act === 'dash' || hero.act === 'climb' || hero.act === 'clinch' || hero.act === 'fin' || hero.act === 'sdive';
     if (hero.act === 'block' && input.dir === -ctl.face && !ctl.air) ctl.face = input.dir;   // the guard turns on the spot
     if (hero.act === 'teeter' && (input.dir || ctl.air)) hero.act = null;
     const free = hero.act === null || hero.act === 'guard' || hero.act === 'land' || hero.act === 'settle' || hero.act === 'start' || hero.act === 'pivot' || hero.act === 'teeter';
@@ -3565,6 +3796,8 @@ import * as P9 from './levels/pier9.js';
     ctl.x += ctl.face * ctl.spd * dt;
     if (ctl.push > 0.5) { ctl.x -= ctl.face * ctl.push * dt; ctl.push *= Math.exp(-(ctl.pushK || 9) * dt); } else { ctl.push = 0; ctl.pushK = 0; }
     if (ctl.stepV) { ctl.x += ctl.face * ctl.stepV * dt; ctl.stepV *= Math.exp(-12 * dt); if (Math.abs(ctl.stepV) < 3) ctl.stepV = 0; }   // the short dodge: d px, most of it in the first 0.2 s
+    if (hero.act === 'sdive' && hero.actT < DIVE.t) ctl.x += ctl.dive.d * DIVE.v * (1 - 0.45 * hero.actT / DIVE.t) * dt;   // the shoot-dodge's flight
+    if (hero.act === 'fin') { const C = ctl.fin, F = FINS[C.k]; ctl.x = lerp(C.x0, C.e.x - ctl.face * F.gap * C.e.s, smooth(Math.min(1, hero.actT / 0.12))); }   // a finisher: one step to his spot
     if ((ctl.x < 10 && openT < 0) || ctl.x > W - 10) { ctl.x = clamp(ctl.x, 10, W - 10); ctl.spd = 0; }
     if (enc.arena && (ctl.x < enc.arena.x0 || ctl.x > enc.arena.x1)) { ctl.x = clamp(ctl.x, enc.arena.x0, enc.arena.x1); ctl.spd = 0; }
     if (!flags.club && ctl.y < GOAL.y + 4 && ctl.x > KIOSK_X - 2 && ctl.x < GOAL.x1 + 30) { ctl.x = KIOSK_X - 2; ctl.spd = 0; }   // the kiosk wall: nobody walks off the roof's right end
@@ -3593,6 +3826,7 @@ import * as P9 from './levels/pier9.js';
       }
     }
     const g = gait();
+    if (!ctl.grab) { const ge = grabFoe(); if (ge) startGrab(ge); }   // walked into a reeling goon: the clinch
 
     // presses wait in a short buffer until the fighter can act on them
     if (input.jump) { input.jump = false; if (hero.act !== 'crouch') ibuf.jump = BUF; }   // a press during the take-off squat is the same jump
@@ -3620,6 +3854,16 @@ import * as P9 from './levels/pier9.js';
       ibuf.jump = used ? 0 : ibuf.jump - dt;
     }
     if (ibuf.atk) { if (tryAttack(ibuf.atk) || (ibuf.atkT -= dt) <= 0) ibuf.atk = null; }
+    // F: by a reeling goon low on health, the finisher; else Sandman time (FOCUS.min in the meter), or, while it runs, its end
+    if (input.focus) { input.focus = false; ibuf.foc = BUF; }
+    if (ibuf.foc > 0) {
+      const fe = finFoe();
+      if (fe) { startFin(fe); ibuf.foc = 0; }
+      else if (foc.t > 0) { endFocus(); ibuf.foc = 0; }
+      else if (foc.m >= FOCUS.min && hero.mode === 'anim') { startFocus(); ibuf.foc = 0; }
+      else ibuf.foc -= dt;
+    }
+    if (ctl.aimDnT > 0) ctl.aimDnT -= dt;
     // block: hold E. A fresh press opens the parry window (DEF.parry.win s); a press within DEF.parry.lock s of the last one opens none (no mashing)
     if (input.block) { input.block = false; ibuf.blk = BUF; }
     if (ibuf.blk > 0) {
@@ -3733,7 +3977,24 @@ import * as P9 from './levels/pier9.js';
       if (hero.act === 'ah' && !ctl.slam && hero.actT >= 0.38) { ctl.slam = true; const wg = weaponGeom(); slam(wg ? wg.tx : ctl.x + 14 * ctl.face, ctl.y + 2, 26, 1); }
       if (hero.act === 'aair' && !ctl.slam && hero.actT >= 0.16) { ctl.slam = true; ctl.vu = Math.min(ctl.vu, -250); }
       if (queued && !ctl.air && hero.actT >= chainAt(m)) { const q = queued; queued = null; ctl.spin = 0; startAttack(q); }
-      else if (hero.actT >= m.dur) { if (WSWING.test(hero.act)) ctl.comboEnd = simTime; ctl.spin = 0; queued = null; hero.act = ctl.air ? 'air' : input.downHeld && LOW_RE.test(hero.act) ? 'squat' : 'guard'; hero.actT = 0; }
+      else if (hero.actT >= m.dur) { if (WSWING.test(hero.act)) ctl.comboEnd = simTime; ctl.spin = 0; queued = null; hero.act = ctl.air ? 'air' : ctl.grab ? 'clinch' : input.downHeld && LOW_RE.test(hero.act) ? 'squat' : 'guard'; hero.actT = 0; }
+    } else if (hero.act === 'clinch') {   // both hands on the back of his head
+      ap = mod(TRN.CLINCH, { ry: TRN.CLINCH[1] + 0.3 * Math.sin(simTime * 5), lean: TRN.CLINCH[2] + 0.04 * Math.sin(simTime * 5) });
+    } else if (hero.act === 'fin') {   // a finisher: its keys, the kill on its hit key, then back to the stance
+      const F = FINS[ctl.fin.k];
+      ap = keyAt(F.keys, hero.actT);
+      if (ctl.fin.k === 'g') { gun.aimT = Math.max(gun.aimT, 0.1); ctl.aimDn = F.aim; ctl.aimDnT = 0.05; }   // the muzzle at his head
+      if (!ctl.fin.done && hero.actT >= F.hit) finHit();
+      if (hero.actT >= F.dur) { if (ctl.fin.e.fin) ctl.fin.e.fin = null; ctl.fin = null; hero.act = 'guard'; hero.actT = 0; }
+    } else if (hero.act === 'sdive') {   // the shoot-dodge: up and flat through the air, then on the floor a beat, the gun on them all the while
+      const u = hero.actT / DIVE.t, D = ctl.dive.back ? TRN.DIVEB : TRN.DIVE;
+      gun.aimT = Math.max(gun.aimT, 0.2);
+      if (u < 1) { ctl.diveH = DIVE.h * Math.sin(Math.PI * u); ap = lerpA(GUARD, D, smooth(clamp(u / 0.25, 0, 1))); }
+      else {
+        ctl.diveH = 0; ap = mod(D, { ry: 3.5 });
+        if (!ctl.dive.landed) { ctl.dive.landed = true; dust(ctl.x - 6, ctl.y + 1, 4); dust(ctl.x + 6, ctl.y + 1, 4); shakeIt(0.08, 1); emit('land', { x: ctl.x, y: ctl.y, v: 120, heavy: true, surface: 'ground' }); }
+        if (hero.actT >= DIVE.t + DIVE.down) { hero.act = 'rise'; hero.actT = 0; ctl.dive = null; }
+      }
     } else if (hero.act === 'grab') {   // the ending: reach over the bar for a bottle
       ap = lerpA(g, mod(IDLE, { a1s: 1.2, a1e: 0.25, lean: 0.28, head: 0.12, a0s: 0.3 }), smooth(Math.min(1, hero.actT / 0.3)));
     } else if (hero.act === 'drink') {   // bottle up, head back, a couple of swallows
@@ -3819,7 +4080,8 @@ import * as P9 from './levels/pier9.js';
     fin = secondaryMotion(fin, dt);   // [G1] weight, overlap, follow-through
     fin = worldPose(fin, dt);         // [G3] head look, hit flinch, pushing
     ctl.wr = fin[12]; ctl.yw = fin[13];
-    let joints = fk(fin, ctl.x, ctl.y + ctl.stOff, ctl.face);
+    if (hero.act !== 'sdive') ctl.diveH = 0;
+    let joints = fk(fin, ctl.x, ctl.y + ctl.stOff - (ctl.diveH || 0), ctl.face);
     const rolling = hero.act === 'dash' && ctl.dashK === 'roll';
     if (Math.abs(wrapA(spin)) > 1e-3 || (rolling && !ctl.air)) {   // rotate the whole body around the belly for the flip (a roll keeps its ground contact at the 2pi seam too)
       const a = spin * ctl.face, ca = Math.cos(a), sa = Math.sin(a);
@@ -3845,6 +4107,7 @@ import * as P9 from './levels/pier9.js';
       if (gunArms && gunArmW > 0.01) { const nk = joints[1], e = smooth(gunArmW); for (let k = 0; k < 4; k++) joints[3 + k] = [lerp(joints[3 + k][0], nk[0] + gunArms[k][0] * ctl.face, e), lerp(joints[3 + k][1], nk[1] + gunArms[k][1], e)]; }
     }
     if (hero.act === 'climb' && ctl.climb) climbArms(joints);
+    grabStep(dt);
     setJoints(joints);
     tossRelease();
 
@@ -3854,7 +4117,10 @@ import * as P9 from './levels/pier9.js';
       const p = wg ? { x: wg.tx, y: wg.ty } : P[m.limb];
       const mid = wg ? { x: wg.x + wg.dx * wg.len * 0.45, y: wg.y + wg.dy * wg.len * 0.45 } : null;
       if (hero.act === 'tw' && !hitDone && hero.actT >= 0.2) { hitDone = true; releaseThrow(); }
-      if (hero.actT >= m.win[0] && hero.actT <= m.win[1]) {
+      if (m.clinch) {   // the clinch's knee and throw: no strike box, they act on the goon he holds
+        if (hero.act === 'knee' && !hitDone && hero.actT >= m.win[0] && ctl.grab) { hitDone = true; atkHit = true; kneeHit(); }
+        if (hero.act === 'gtoss' && ctl.grab && hero.actT >= 0.2) throwHeld();
+      } else if (hero.actT >= m.win[0] && hero.actT <= m.win[1]) {
         hitCtx = hero.act;
         if (!hitDone && (bagTouch(p.x, p.y) || (mid && bagTouch(mid.x, mid.y)))) { hitDone = true; atkHit = true; bagHit(p.x, p.y, ctl.face, m.power); if (wg) wear(); }
         for (const o of objs.slice()) {
@@ -4115,10 +4381,23 @@ import * as P9 from './levels/pier9.js';
     });
   }
 
+  function heroMove(dt) {   // the hero's part of a step (his ragdoll, or his moves), and his i-frames
+    if (hero.mode === 'rag') { input.jump = false; input.attack = null; input.block = false; input.focus = false; ragStep(dt); }
+    else animStep(dt);
+    if (hero.invT > 0) hero.invT -= dt;
+  }
+  function heroBounds() {   // the street ends at the wall; the club's left wall is its shut door
+    if (!flags.club) { if (ctl.x > STREET_END) { ctl.x = STREET_END; ctl.spd = Math.min(ctl.spd, 0); } for (const p of P) if (p.x > STREET_END + 6) p.x = STREET_END + 6; }
+    else { if (ctl.x < DOOR_X + 6) { ctl.x = DOOR_X + 6; ctl.spd = Math.max(ctl.spd, 0); } for (const p of P) if (p.x < DOOR_X + 2) p.x = DOOR_X + 2; }
+  }
+  // Sandman time: a step of the hero's own (frame() runs these between the world's steps, so he moves at full speed in a slow world)
+  function heroStep(dt) {
+    heroMove(dt); carryStep(dt); hairStep(dt); secondaryStep(dt); heroBounds();
+    pickupStep(); regenStep(dt); laneTick(); finE = finFoe();
+  }
   function step(dt) {
     bagStep(dt);
-    if (hero.mode === 'rag') { input.jump = false; input.attack = null; input.block = false; ragStep(dt); }
-    else animStep(dt);
+    heroMove(dt);
     objStep(dt);
     enemyStep(dt);
     if (isP9()) p9Step(dt);
@@ -4141,17 +4420,19 @@ import * as P9 from './levels/pier9.js';
     houseWinStep(dt);
     dripStep(dt); goreFade(dt);
     crowdStep(dt);
-    // the street ends at the wall; the club's left wall is its shut door
-    if (!flags.club) { if (ctl.x > STREET_END) { ctl.x = STREET_END; ctl.spd = Math.min(ctl.spd, 0); } for (const p of P) if (p.x > STREET_END + 6) p.x = STREET_END + 6; }
-    else { if (ctl.x < DOOR_X + 6) { ctl.x = DOOR_X + 6; ctl.spd = Math.max(ctl.spd, 0); } for (const p of P) if (p.x < DOOR_X + 2) p.x = DOOR_X + 2; }
+    heroBounds();
     pickupStep();
     quakeStep(dt);
     regenStep(dt);
     laneTick();   // last: every body takes the lane of the surface it ended the step on
+    finE = finFoe();   // (the finisher prompt over his head, both views)
   }
 
   function toRag() {
     if (hero.mode === 'rag') return;
+    if (ctl.grab) grabFree(0);
+    if (ctl.fin) { if (ctl.fin.e.fin) ctl.fin.e.fin = null; ctl.fin = null; }
+    ctl.dive = null; ctl.diveH = 0;
     hero.mode = 'rag'; ragFace = ctl.face; settleT = 0; ragT = 0; ragKD = false; hero.act = null; queued = null; gun.want = false; gun.aimT = 0; ctl.ragDir = input.dir; input.dash = false; ctl.stepV = 0;
     ctl.air = false; ctl.spd = 0; ctl.jumps = 0; ctl.flipT = -1; ctl.spin = 0;
   }
@@ -4215,6 +4496,7 @@ import * as P9 from './levels/pier9.js';
     if (isP9()) p9Reset();
     setCkpt('start', 0, true); ckBoss = false; slowT = 0; blk.parryT = blk.lockT = 0; hstr.n = 0; hstr.t = -9; ctl.stepV = 0;
     styleM.reset(); director.reset();
+    endFocus(); foc.m = 0; accW = 0; ctl.grab = null; ctl.fin = null; ctl.dive = null; ctl.diveH = 0; ctl.aimDnT = 0; finE = null; finCam.t = 0; ibuf.foc = 0; input.focus = false;
   }
 
   // ---------- tutorial: zones, lessons, weapon pickups ----------
@@ -4228,11 +4510,14 @@ import * as P9 from './levels/pier9.js';
       ['slp', 'Low jab: hold [↓], tap [Q]'], ['slk', 'Low kick: hold [↓], tap [W]'], ['sweep', 'Leg sweep: hold [↓], hold [W]'], ['airkick', 'Flying kick: jump [↑], then tap [W]'],
       ['block', 'Block: hold [E]. A "!" heavy breaks it'], ['parry', 'Parry: tap [E] just before a hit lands'], ['pdodge', 'Perfect dodge: [Space] just before a hit lands'],
       ['counter', 'Counter: hit a goon as he winds up'],
+      ['ender', 'String ender: land 3 jabs, then [Q] again. Hold [→] to wall-splat'], ['grab', 'Grab: walk into a reeling goon, hands empty'],
+      ['gthrow', 'Knee and throw: in a grab, [Q] knees, [W] throws'],
       ['smash', 'Smash a crate: hit it until it breaks'], ['split', 'Break the crate stack: hold [Q] or [W] next to it'],
       ['lift', 'Lift the dustbin: hands empty, hold [↓] next to it'], ['bash', 'Hit a goon with it: tap [Q]'], ['toss', 'Throw a dustbin: lift one, hold [Q] with no goon near'],
       ['pocket', 'Pocket a can or a bottle: hold [↓] next to it'], ['pockethit', 'Throw it at a goon: hold [Q] with no goon near'], ['kill1', 'Beat the 2 goons: they hit back']] },
     { x0: 900, title: '3 · Katana', tasks: [['pick1', 'Take the katana: walk over it'], ['ks', 'Slash: tap [Q]'], ['kw', 'Heavy slash: hold [Q] near a goon'], ['kh', 'Overhead finisher: tap [Q], then hold [Q]'],
-      ['sslash', 'Low cut: hold [↓], tap [Q]'], ['kair', 'Jump slash: jump [↑], then tap [Q]'], ['tw', 'Throw the blade: hold [Q] with no goon near'], ['catch', 'Get the blade back: walk over it'], ['kill2', 'Cut down the 3 goons']] },
+      ['sslash', 'Low cut: hold [↓], tap [Q]'], ['kair', 'Jump slash: jump [↑], then tap [Q]'], ['tw', 'Throw the blade: hold [Q] with no goon near'], ['catch', 'Get the blade back: walk over it'],
+      ['focus', 'Sandman time: fill the focus bar, then press [F]'], ['finisher', 'Finisher: press [F] by a reeling goon low on health'], ['kill2', 'Cut down the 3 goons']] },
     { x0: 1250, title: '4 · Axe', tasks: [['pick2', 'Take the axe: walk over it'], ['al', 'Chop combo: tap [Q] again and again'], ['aw', 'Heavy chop: hold [Q] near a goon'],
       ['ah', 'Slam finisher: tap [Q], then hold [Q] near a goon'], ['aair', 'Plunge: jump off the van, then tap [Q]'], ['throwhit', 'Throw it at a goon: hold [Q] from a distance'],
       ['swap', 'Swap weapons: hold [↓] on a weapon on the ground'], ['kill3', 'Chop down the 3 goons']] },
@@ -4289,8 +4574,8 @@ import * as P9 from './levels/pier9.js';
   // A lesson that cannot be done any more is made possible again: a sparring goon when the stage's goons are down,
   // a fresh crate, stack, bin, can or bottle when the stage has none left.
   const AMMO_TASKS = new Set(['fire3', 'runfire', 'ammo', 'burst', 'airfire']);   // these need rounds
-  const GOON_TASKS = new Set(['bash', 'pockethit', 'kw', 'kh', 'aw', 'ah', 'throwhit', 'block', 'parry', 'pdodge', 'counter']);   // these need a goon in reach
-  const FIGHT_TASKS = new Set(['block', 'parry', 'pdodge', 'counter']);   // learned on the stage's goons: they do not hold the goons back
+  const GOON_TASKS = new Set(['bash', 'pockethit', 'kw', 'kh', 'aw', 'ah', 'throwhit', 'block', 'parry', 'pdodge', 'counter', 'ender', 'grab', 'gthrow', 'focus', 'finisher']);   // these need a goon in reach
+  const FIGHT_TASKS = new Set(['block', 'parry', 'pdodge', 'counter', 'ender', 'grab', 'gthrow', 'focus', 'finisher']);   // learned on the stage's goons: they do not hold the goons back
   const PROP_TASKS = { smash: ['crate', 'bigcrate'], split: ['stack'], lift: [...LIFTABLE], toss: [...LIFTABLE], pocket: ['can', 'bottle'], pockethit: ['can', 'bottle'] };
   let gateT = 0;
   const stageDone = i => ZONES[i].tasks.every(([k]) => done.has(k));
@@ -4795,8 +5080,10 @@ import * as P9 from './levels/pier9.js';
   }
   // the street demo fights hard: runs in (now and then with a jump attack), strings combos (low ones too), and gets out of the way
   // of a wind-up or a shot with a roll through or away, or a jump over the top
-  let demoCombo = null, demoCi = 0, demoStepT = 0, demoEvT = 0;
-  const DCOMBO = { fists: [['lp', 'lp', 'hp'], ['lp', 'lk', 'hk'], ['lk', 'lk', 'hk'], ['lp', 'lp', 'd:hk'], ['d:lp', 'd:lk', 'hp'], ['lp', 'hp'], ['lk', 'lp', 'lp', 'hk']],
+  let demoCombo = null, demoCi = 0, demoStepT = 0, demoEvT = 0, demoFwdT = 0;
+  // (w: = with → held: the fist string's wall-splat ender)
+  const DCOMBO = { fists: [['lp', 'lp', 'hp'], ['lp', 'lk', 'hk'], ['lk', 'lk', 'hk'], ['lp', 'lp', 'd:hk'], ['d:lp', 'd:lk', 'hp'], ['lp', 'hp'], ['lk', 'lp', 'lp', 'hk'],
+    ['lp', 'lp', 'lp', 'lp', 'lk', 'lk'], ['lp', 'lp', 'lp', 'w:lp']],
     blade: [['lp', 'lp', 'lp'], ['lp', 'hp'], ['lp', 'lp', 'hp'], ['d:lp', 'lp', 'lp'], ['lp', 'd:lp', 'hp']] };
   function demoBrawl(sdt, foe, Wp) {
     const dx = foe.x - ctl.x, adx = Math.abs(dx), dir = Math.sign(dx) || 1;
@@ -4821,6 +5108,7 @@ import * as P9 from './levels/pier9.js';
       if (r < 0.85) { input.dash = true; return; }   // a perfect dodge (a hop back)
       input.jump = true; input.jumpHeld = false; return;   // over it
     }
+    if (finE && demoEvT <= 0) { demoEvT = 0.4; demoCombo = null; input.downHeld = false; input.dir = 0; input.focus = true; return; }   // a finisher on offer: take it
     if (shot && demoEvT <= 0 && !MOVES[hero.act]) { demoEvT = 0.7 + simRand() * 0.4; demoCombo = null; input.downHeld = false; input.dir = 0; input.jump = true; input.jumpHeld = false; return; }
     if (demoShoots(Wp)) {   // a gun: shoot from range, roll away when one gets close
       input.downHeld = false;
@@ -4836,13 +5124,15 @@ import * as P9 from './levels/pier9.js';
       return;
     }
     input.dir = 0; input.run = false;
+    if (demoFwdT > 0) { demoFwdT -= sdt; input.dir = ctl.face; }   // → held through the ender
     if (!demoCombo) { const pool = Wp.melee ? DCOMBO.blade : DCOMBO.fists; demoCombo = pool[Math.floor(simRand() * pool.length)]; demoCi = 0; demoStepT = 0; }
     const prev = demoCombo[demoCi - 1];
     if ((demoStepT -= sdt) > 0) { input.downHeld = !!(prev && prev.startsWith('d:')); return; }
     if (demoCi >= demoCombo.length) { demoCombo = null; demoStepT = 0.22 + simRand() * 0.25; input.downHeld = false; return; }   // a breath between strings
-    const a = demoCombo[demoCi], low = a.startsWith('d:');
+    const a = demoCombo[demoCi], low = a.startsWith('d:'), fwd = a.startsWith('w:');
     if (low && hero.act !== 'squat' && !MOVES[hero.act]) { input.downHeld = true; demoStepT = 0.05; return; }   // drop into the squat first
-    demoCi++; input.downHeld = low; input.attack = low ? a.slice(2) : a; demoStepT = 0.17;   // the next hit goes in on the chain
+    if (fwd) demoFwdT = 0.3;
+    demoCi++; input.downHeld = low; input.attack = low || fwd ? a.slice(2) : a; demoStepT = 0.17;   // the next hit goes in on the chain
   }
   // boss arena: read the wind-ups, jump the ground slam, keep a gun at range, and clear the goons that come close first
   let demoKite = false, demoJ2 = -1;
@@ -4907,6 +5197,8 @@ import * as P9 from './levels/pier9.js';
   }
   function demoFight(sdt) {
     const Wh = WEAPONS[hero.weapon], bossOn = enc.boss && !enc.boss.dead && enc.arena;
+    if (ctl.grab) { input.dir = 0; input.downHeld = false; if ((demoAtkT -= sdt) <= 0) { input.attack = ctl.grab.n >= 2 ? 'lk' : 'lp'; demoAtkT = 0.32; } return true; }   // the clinch: two knees, then the throw
+    if (foc.t <= 0 && foc.m >= FOCUS.max && hero.mode === 'anim' && enemies.filter(e => !e.dead && !e.down && Math.abs(e.x - ctl.x) < 90 && Math.abs(e.y - ctl.y) < 14).length >= 2) input.focus = true;   // a full meter and a crowd: Sandman time
     if (demoLost && hero.weapon === demoLost) demoLost = 0;
     if (!ctl.air && hero.mode === 'anim' && !MOVES[hero.act]) {
       const safe = x => !bossOn || Math.abs(x - enc.boss.x) > 40 * enc.boss.s / 1.75;
@@ -5871,10 +6163,10 @@ import * as P9 from './levels/pier9.js';
     return 0.4 - 0.15 * run;
   }
   function updateCamera(rdt) {
-    const want = zoomMode === 'auto' ? autoZoom() : zoomMode;
+    const punch = finCam.t > 0, want = punch ? 1 : zoomMode === 'auto' ? autoZoom() : zoomMode;   // a finisher: the camera punches in close
     // the zoom glides: out over about a second, back in a little slower so it never pumps (it eases on the scale, so 100 -> 25 % feels even)
     const cx0 = cam.xf + cam.vw / 2, cy0 = cam.yf + cam.vh / 2;   // zoom about the view centre
-    const lz = smoothDamp(Math.log(cam.zoom), Math.log(want), cam.v, 'z', want < cam.zoom ? 0.9 : zoomMode === 'auto' && cinematic() ? 0.35 : 1.3, rdt);   // (a cinematic is short: it closes in fast)
+    const lz = smoothDamp(Math.log(cam.zoom), Math.log(want), cam.v, 'z', punch ? 0.09 : want < cam.zoom ? 0.9 : zoomMode === 'auto' && cinematic() ? 0.35 : 1.3, rdt);   // (a cinematic is short: it closes in fast)
     cam.zoom = clamp(Math.exp(lz), 0.25, 1);
     // [feel] even view sizes: the centre stays on the same pixel as the view grows, so a zoom never jitters by 1 px
     cam.vw = Math.min(CW, 2 * Math.round(80 / cam.zoom)); cam.vh = Math.min(CHMAX, 2 * Math.round(cam.vw * CH / CW / 2));   // (taller than the world when far out: the sky fills the top)
@@ -5891,7 +6183,8 @@ import * as P9 from './levels/pier9.js';
     } else tx = bx.x1 - bx.x0 <= cam.vw - 16 ? clamp(tx, bx.x1 - cam.vw / 2 + 8, bx.x0 + cam.vw / 2 - 8) : (bx.x0 + bx.x1) / 2;
     if (isP9() && enc.boss && enc.boss.intro) tx = enc.boss.x - 24;   // Pier 9: the entrance frames him as he walks out of the cold store
     ty = bx.y1 - bx.y0 <= cam.vh - 10 ? clamp(ty, bx.y1 - cam.vh / 2 + 5, bx.y0 + cam.vh / 2 - 5) : (bx.y0 + bx.y1) / 2;
-    let cx = smoothDamp(cx0, tx, cam.v, 'x', 0.32, rdt), cy = smoothDamp(cy0, ty, cam.v, 'y', 0.4, rdt);
+    if (punch) { tx = finCam.x; ty = finCam.y; }
+    let cx = smoothDamp(cx0, tx, cam.v, 'x', punch ? 0.08 : 0.32, rdt), cy = smoothDamp(cy0, ty, cam.v, 'y', punch ? 0.08 : 0.4, rdt);
     cam.xf = cx - cam.vw / 2; cam.yf = cy - cam.vh / 2;
     const lo = flags.club ? CLUB_X : 0, hi = flags.club ? W - cam.vw : Math.min(W, CLUB_X) - cam.vw;
     if (cam.xf < lo || cam.xf > hi) { cam.xf = clamp(cam.xf, lo, hi); cam.v.x *= 0.5; }
@@ -8068,13 +8361,14 @@ import * as P9 from './levels/pier9.js';
     else if (c === 'KeyE') { takeOver(); input.blockHeld = true; if (!e.repeat) input.block = true; }
     else if (c === 'Space') { takeOver(); input.dashHeld = true; if (!e.repeat) input.dash = true; }
     else if (c === 'KeyL') { if (!e.repeat) toggleTaskList(); }   // the stage's whole lesson list, on or off
+    else if (c === 'KeyF') { takeOver(); if (!e.repeat) input.focus = true; }   // Sandman time; by a reeling goon low on health: the finisher
     else if (!DEV) return;   // the sandbox keys below need ?dev
     else if (c === 'KeyM') { if (!e.repeat) toggleDemo(); }   // the autopilot
     else if (c === 'KeyX') knockOver();
     else if (c === 'KeyB') drop();
     else if (c === 'KeyG') { if (!e.repeat) { takeOver(); skipToBoss(); } }
     else if (c === 'KeyT') toggleSlow();
-    else if (c === 'KeyF') toggleLofi();
+    else if (c === 'KeyO') toggleLofi();
     else if (c === 'KeyV') toggleSkel();
     else return;
     if (c.startsWith('Arrow') || c === 'Space') e.preventDefault();
@@ -8121,6 +8415,7 @@ import * as P9 from './levels/pier9.js';
     const off = () => { input.blockHeld = false; b.classList.remove('held'); };
     b.addEventListener('pointerdown', e => { e.preventDefault(); takeOver(); input.blockHeld = true; input.block = true; b.classList.add('held'); b.setPointerCapture?.(e.pointerId); });
     b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('lostpointercapture', off); }
+  document.getElementById('c-focus')?.addEventListener('pointerdown', e => { e.preventDefault(); takeOver(); input.focus = true; });   // focus: like F
   for (const [id, k] of [['c-lp', 'p'], ['c-lk', 'k']]) {   // punch and kick buttons: tap or hold, like J and K
     const b = document.getElementById(id);
     const off = () => { releaseBtn(k); b.classList.remove('held'); };
@@ -8822,14 +9117,16 @@ import * as P9 from './levels/pier9.js';
   const wNameEl = document.getElementById('w-name'), bossNameEl = document.getElementById('boss-name'), feedEl = document.getElementById('feed');
   const regenEl = document.getElementById('regen');
   const windEl = document.createElement('span'); windEl.className = 'wind'; windEl.setAttribute('aria-label', 'Second winds'); document.querySelector('.hud-hp')?.appendChild(windEl);   // the second-wind pips by the HP bar
+  const focEl = document.getElementById('focus'), focFill = document.getElementById('focus-fill');
   const ammoEl = document.getElementById('ammo'), hpFill = document.getElementById('hp-fill'), bossBar = document.getElementById('bossbar'), bossFill = document.getElementById('boss-fill');
   function show(key, el, v) { if (shown[key] !== v) { shown[key] = v; el.textContent = v; } }
   function frame(now) {
     if (FIXED) now = (fixedT += 1000 / 60);   // (test harness: the same clock every run)
     if (sceneOn) { last = now; if (!AUTOTEST && !MANUAL) requestAnimationFrame(frame); return; }   // a cutscene plays over the stage: the game waits
     const rdt = clamp((now - last) / 1000, 0, 0.05); last = now;   // (never negative: a clock that steps back would poison the easing)
-    if (slowT > 0 && timeScale > 0 && (slowT -= rdt) <= 0) { slowT = 0; emit('slowmo:end', { scale: 1, reason: 'pdodge' }); }   // a perfect dodge's slow motion runs on the real clock
-    const sdt = rdt * timeScale * (slowT > 0 ? DEF.pd.slow : 1); simTime += sdt;
+    if (slowT > 0 && timeScale > 0 && (slowT -= rdt) <= 0) { slowT = 0; if (foc.t <= 0) emit('slowmo:end', { scale: 1, reason: slowWhy }); }   // a perfect dodge's (a last kill's) slow motion runs on the real clock
+    if (foc.t > 0 && timeScale > 0) { foc.t -= rdt; foc.m = Math.max(0, foc.t / FOCUS.dur * FOCUS.max); if (foc.t <= 0) endFocus(); }   // Sandman time drains the meter (real clock)
+    const sdt = rdt * timeScale * (slowT > 0 ? DEF.pd.slow : 1), wdt = sdt * wk; simTime += sdt;   // (wdt: the world's clock, slow in Sandman time)
     if (!flags.demo) { input.dir = (keys.right || touch.right ? 1 : 0) - (keys.left || touch.left ? 1 : 0); input.run = (runAlways ? !keys.shift : keys.shift) || runToggle; }   // (the menu can make running the default: Shift walks)
     if (autoWalk) { if (flags.club || input.dir) autoWalk = false; else input.dir = 1; }   // skip-to-boss: walk the carpet in
     demoTick(sdt);
@@ -8837,21 +9134,23 @@ import * as P9 from './levels/pier9.js';
     if (endPh && endPh !== 'done') endTick(rdt);
     if (jumpEnd && enc.boss && !enc.boss.dead && enc.introT < 0 && enc.boss.hp > 0) { enc.boss.hp = 1; enc.eHitKind = 1; damageEnemy(enc.boss, 60, 1, 300, 0.5, enc.boss.x, enc.boss.y - 20, false); enc.eHitKind = 0; }   // ?ending: the boss drops as the fight starts
     if (enc.introT >= 0 && !enc.boss) enc.introT = -1;   // (an entrance with no boss: never a lock)
-    if (enc.introT >= 0 || hookPull || gaffHold) { input.dir = 0; input.run = false; input.jump = false; input.jumpHeld = false; input.attack = null; input.fireHeld = false; input.dash = false; input.dashHeld = false; input.downHeld = false; input.block = false; input.blockHeld = false; }   // the boss entrance: no input
-    for (let i = spawnFx.length - 1; i >= 0; i--) if ((spawnFx[i].t += sdt) > 0.45) spawnFx.splice(i, 1);
+    if (enc.introT >= 0 || hookPull || gaffHold) { input.dir = 0; input.run = false; input.jump = false; input.jumpHeld = false; input.attack = null; input.fireHeld = false; input.dash = false; input.dashHeld = false; input.downHeld = false; input.block = false; input.blockHeld = false; input.focus = false; }   // the boss entrance: no input
+    for (let i = spawnFx.length - 1; i >= 0; i--) if ((spawnFx[i].t += wdt) > 0.45) spawnFx.splice(i, 1);
     if (grabIdx >= 0 && now - lastMove > 40) { pv.x *= 0.7; pv.y *= 0.7; }
     if (hitStop > 0) hitStop -= rdt; else acc += sdt;
     if (bagFlash > 0) bagFlash -= rdt;
-    let n = 0; while (acc >= DT && n < 24) { step(DT); acc -= DT; n++; }
+    // fixed steps on the hero's clock; the world takes its share (wk) of them: in Sandman time the rest are the hero's alone (heroStep)
+    let n = 0; while (acc >= DT && n < 24) { acc -= DT; n++; accW += wk * DT; if (accW >= DT - 1e-9) { accW -= DT; step(DT); } else heroStep(DT); }
     if (n === 24) acc = 0;
+    if (finCam.t > 0) finCam.t -= rdt;
     const h = P[0];
     headSpeed = headSpeed * 0.8 + Math.hypot(h.x - h.px, h.y - h.py) / DT * 0.2;
     for (let i = particles.length - 1; i >= 0; i--) {
-      const q = particles[i]; q.life -= sdt;
+      const q = particles[i]; q.life -= wdt;
       if (q.life <= 0 && !q.blood) { particles.splice(i, 1); continue; }
       if (q.life < -3) { particles.splice(i, 1); continue; }
       const fs = floorBelow(q.x, q.y, 0), fy = fs.y;
-      q.vy += G * sdt; q.x += q.vx * sdt; q.y += q.vy * sdt;
+      q.vy += G * wdt; q.x += q.vx * wdt; q.y += q.vy * wdt;
       if (q.blood) {
         const px = Math.floor(q.x), py = Math.floor(q.y);
         if (px >= 0 && py >= 0 && px < W && py < GROUND && PROPS[py * W + px]) {   // splashes onto a car, a lamp post, the scaffold
@@ -8866,9 +9165,9 @@ import * as P9 from './levels/pier9.js';
         q.y = fy - 1; q.vx *= 0.5; q.vy = 0;
       }
     }
-    for (let i = waves.length - 1; i >= 0; i--) { waves[i].t += sdt; if (waves[i].t > 0.25) waves.splice(i, 1); }
-    for (let i = sparks.length - 1; i >= 0; i--) { sparks[i].t += sdt; if (sparks[i].t > 0.22) sparks.splice(i, 1); }
-    for (let i = flashes.length - 1; i >= 0; i--) { flashes[i].t += sdt; if (flashes[i].t > 0.05) flashes.splice(i, 1); }
+    for (let i = waves.length - 1; i >= 0; i--) { waves[i].t += wdt; if (waves[i].t > 0.25) waves.splice(i, 1); }
+    for (let i = sparks.length - 1; i >= 0; i--) { sparks[i].t += wdt; if (sparks[i].t > 0.22) sparks.splice(i, 1); }
+    for (let i = flashes.length - 1; i >= 0; i--) { flashes[i].t += wdt; if (flashes[i].t > 0.05) flashes.splice(i, 1); }
 
     clubTick(rdt);
     updateCamera(rdt);
@@ -8901,7 +9200,7 @@ import * as P9 from './levels/pier9.js';
       : hero.mode === 'getup' || hero.act === 'rise' ? 'getup'
       : ctl.air || hero.act === 'crouch' || hero.act === 'land' ? 'jump'
       : hero.act === 'squat' ? 'squat'
-      : MOVES[hero.act] || hero.act === 'guard' || hero.act === 'block' || hero.act === 'parry' || hero.act === 'gbreak' ? 'fight'
+      : MOVES[hero.act] || hero.act === 'guard' || hero.act === 'block' || hero.act === 'parry' || hero.act === 'gbreak' || hero.act === 'clinch' || hero.act === 'fin' || hero.act === 'sdive' ? 'fight'
       : ctl.spd > WALK + 8 ? 'run' : ctl.spd > 2 ? 'walk' : 'idle';
     if (shown.state !== state) { shown.state = state; statusEl.dataset.state = state; statusEl.textContent = LABELS[state]; }
     show('speed', speedEl, ((hero.mode === 'anim' ? ctl.spd : headSpeed) / PX_PER_M).toFixed(1));
@@ -8916,6 +9215,9 @@ import * as P9 from './levels/pier9.js';
       show('ammo', ammoEl, !full ? '' : Wp.ammo ? `${c} / ${full}` : `${'▮'.repeat(Math.min(6, Math.ceil(c / full * 6)))}${'▯'.repeat(Math.max(0, 6 - Math.ceil(c / full * 6)))}`);
       ammoEl.className = 'ammo' + (ammoFlash > 0 ? ' gain' : full && c / full < 0.25 ? ' low' : ''); }
     { const on = hero.bandT > 0; if (regenEl.hidden === on) regenEl.hidden = !on; if (on) regenEl.style.setProperty('--p', (hero.bandT / BAND_T).toFixed(3)); }   // the bandage ring
+    { const w = foc.m.toFixed(0) + '%', on = foc.t > 0, cls = on ? 'on' : foc.m >= FOCUS.min ? 'ready' : '';   // the focus meter; Sandman time tints both views (CSS on the canvases)
+      if (shown.focW !== w) { shown.focW = w; focFill.style.width = w; }
+      if (shown.focC !== cls) { shown.focC = cls; focEl.className = 'hud hud-focus ' + cls; stage.classList.toggle('sandman', on); } }
     hpFill.style.width = hero.hp.toFixed(0) + '%'; hpFill.style.background = hero.hp < 30 ? 'var(--ko)' : hero.hp < 60 ? 'var(--accent)' : 'var(--ok)';
     { const D = DIF(), key = D.perma ? 'perma' : `${hero.wind}/${D.wind}`;   // second winds: a lit pip each, a dark one each spent (Wicked: one life)
       if (shown.wind !== key) { shown.wind = key; windEl.innerHTML = D.perma ? '<b>1 LIFE</b>' : Array.from({ length: D.wind }, (_, i) => `<i class="${i < hero.wind ? 'on' : ''}"></i>`).join(''); windEl.title = D.perma ? 'Wicked: no second wind' : `Second winds: ${hero.wind} of ${D.wind}`; } }
@@ -8978,7 +9280,8 @@ import * as P9 from './levels/pier9.js';
       pickups: pickups.map(k => k.taken ? 1 : 0).join(''), demo: flags.demo, attract: flags.attract });
     window.__skipToBoss = () => { leaveTitle(); setDemo(false); skipToBoss(); };
     window.__sim = { enc, enemies, objs, ctl, hero, quakes, ammoBoxes, thrown, charge, loot, setWeapon, done, bus, makeObj, spawnEnemy, P, get hookPull() { return hookPull; }, get diffSel() { return diffSel; },
-      blk, hstr, DEF, input, btn, get slowT() { return slowT; }, get ckpt() { return ckpt; }, get ragT() { return ragT; }, get flags() { return flags; }, setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; }, retry: () => retry() };   // (tests: the live sim state, read and poke)
+      blk, hstr, DEF, input, btn, get slowT() { return slowT; }, get ckpt() { return ckpt; }, get ragT() { return ragT; }, get flags() { return flags; }, setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; }, retry: () => retry(),
+      foc, get finE() { return finE; }, get wk() { return wk; }, equip: w => equip(w, fullCharge(w)), finCam, JUG, GRAB, FOCUS, FIN, OTG, DIVE, SPLAT, get hitStop() { return hitStop; } };   // (tests: the live sim state, read and poke)
     // Pier 9 (tests): start the chapter (with its cutscenes) or the level at once; read its state; skip to the hall
     window.__pier9 = { chapter: () => startChapter1(), start: () => { leaveTitle(); setDemo(false); hideMenu(); loadLevel('pier9'); reset(); }, toBoss: () => { leaveTitle(); setDemo(false); hideMenu(); loadLevel('pier9'); p9SkipToBoss(); },
       peek: () => ({ level: LV.id, scene: sceneOn, x: Math.round(ctl.x), y: Math.round(ctl.y), mode: hero.mode, hp: Math.round(hero.hp), club: flags.club, open: p9.open, shutter: +p9.shutter.toFixed(2), waves: Object.fromEntries(Object.entries(p9.w).map(([k, v]) => [k, [v.out, zoneAlive[k] || 0]])), queue: p9.queue.length,
