@@ -105,12 +105,25 @@
   .ammo.gain { color: var(--ok); }
   .bar { width: min(170px, 30vw); height: 12px; background: #2a1a26; border: 1px solid var(--line); }
   /* the bandage's regen: a ring that empties as its 30 s run out, the bandage in the middle */
-  .regen { --p: 1; position: absolute; top: 28px; left: 10px; width: 26px; height: 26px; border-radius: 50%; pointer-events: none;
+  .regen { --p: 1; position: absolute; top: 44px; left: 10px; width: 26px; height: 26px; border-radius: 50%; pointer-events: none;
     background: conic-gradient(var(--ok) calc(var(--p) * 1turn), #2a1a26 0); box-shadow: 0 0 0 1px #000, 0 2px 0 #000; display: grid; place-items: center; }
   .regen::before { content: ""; position: absolute; inset: 3px; border-radius: 50%; background: rgba(15, 13, 24, .9); }
   .regen svg { position: relative; width: 16px; height: 16px; }
   .regen[hidden] { display: none; }
   .bar i { display: block; height: 100%; width: 100%; background: var(--ok); transition: width .12s; }
+  /* the focus meter, under the HP bar: a thin gold bar; ready (enough for Sandman time) it glows, running it pulses */
+  .hud-focus { top: 28px; gap: 6px; }
+  .hud-focus .hud-label { font: 500 11px/1 var(--mono); letter-spacing: .1em; color: var(--muted); }
+  .hud-focus .bar { height: 6px; width: min(150px, 26vw); }
+  .hud-focus .bar i { width: 0; background: #b8893c; }
+  .hud-focus kbd { font: 500 11px/1 var(--mono); color: var(--muted); border: 1px solid var(--line); padding: 1px 3px; opacity: .4; }
+  .hud-focus.ready .bar i { background: var(--accent); box-shadow: 0 0 6px var(--accent); }
+  .hud-focus.ready kbd { opacity: 1; color: var(--accent); border-color: var(--accent); }
+  .hud-focus.on .bar i { background: #e8d2a0; animation: pulse .5s infinite; }
+  .hud-focus.on .hud-label { color: #e8d2a0; }
+  /* Sandman time: both views go sepia and lose their colour */
+  #stage-canvas, #three-canvas { transition: filter .25s; }
+  .stage.sandman #stage-canvas, .stage.sandman #three-canvas { filter: sepia(.65) saturate(.5) contrast(1.08) brightness(.93); }
   .bossbar { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); width: min(40%, 320px); display: flex; flex-direction: column; gap: 4px; align-items: center; font: 500 16px/1 var(--display); color: #ffd0e4; pointer-events: none; }
   .bossbar .bar { width: 100%; }
   .bossbar[hidden] { display: none; }   /* display: flex above would otherwise beat the hidden attribute */
