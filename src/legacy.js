@@ -3051,7 +3051,7 @@ import * as P9 from './levels/pier9.js';
 
     // presses wait in a short buffer until the fighter can act on them
     if (input.jump) { input.jump = false; if (hero.act !== 'crouch') ibuf.jump = BUF; }   // a press during the take-off squat is the same jump
-    if (!flags.demo) btnTick(dt);
+    if (!flags.demo && enc.introT < 0 && !hookPull) btnTick(dt);   // (the boss entrance and the hook pull lock the controls: a held Q or W does not go off there)
     if (input.attack) { ibuf.atk = input.attack; ibuf.atkT = BUF; input.attack = null; }
     if (input.dash) { input.dash = false; ibuf.dash = BUF; }
     if (ibuf.dash > 0 && input.downHeld && !ctl.air && ctl.surf !== GROUND_S && !ctl.surf.box && (!locked || cancelOK())) {   // squat + Space up on a ledge: drop through it
@@ -4548,10 +4548,10 @@ import * as P9 from './levels/pier9.js';
         dust(DOOR_X + 4, GROUND - 1, 8); sparks.push({ x: DOOR_X + 8, y: GROUND - 20, t: 0.05 });
       }
       if (enc.introT >= 0) {   // the entrance, 1.7 s: spot and walk, the name card at 0.5 s, the boss bar fills from 0.7 s, then the fight
-        enc.introT += rdt;
+        if (!menuShown) enc.introT += rdt;   // (the pause menu stops the entrance's clock too)
         if (enc.introT > 0.5 && cardT <= 0 && cardEl.hidden && !(isP9() && p9.bossDlg)) { cardEl.innerHTML = isP9() ? `<b>${P9.MARCHETTI.name}</b><small>${P9.MARCHETTI.title}</small>` : `<b>${BOSS_NAME}</b><small>Owner of Club Noir</small>`; cardEl.hidden = false; cardT = 3.2; toastEl.hidden = true; toastT = 0; }
         // Pier 9: he walks out to his mark (at most 4.5 s), the portrait dialog plays, and the fight starts when it closes
-        if (isP9() && !p9.bossDlg && enc.boss && (Math.abs(enc.boss.x - enc.boss.introX) <= 3 || enc.introT > 4.5)) {
+        if (isP9() && !p9.bossDlg && !menuShown && enc.boss && (Math.abs(enc.boss.x - enc.boss.introX) <= 3 || enc.introT > 4.5)) {
           p9.bossDlg = true; cardEl.hidden = true; cardT = 0;
           playScene('dialog', 'marchetti_intro').then(() => { if (p9.bossDlg) p9.dlgDone = true; });
         }
