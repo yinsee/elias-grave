@@ -1,0 +1,75 @@
+[
+ {
+  "out": "assets/art-src/panels/docks/docks_intro_01.png",
+  "seed": 401,
+  "post": {
+   "out": "assets/art/panels/docks/docks_intro_01.png"
+  },
+  "prompt": "Very wide establishing shot of an industrial harbour at grey-blue dawn, heavy sleet falling at a slant, tall dock cranes and stacks of rusty shipping containers on the right, dark sea water on the left, fog over the water. A tiny lone man in a black suit walks along the concrete quay edge in the middle distance"
+ },
+ {
+  "out": "assets/art-src/panels/docks/docks_intro_02.png",
+  "seed": 602,
+  "post": {
+   "out": "assets/art/panels/docks/docks_intro_02.png"
+  },
+  "prompt": "Medium shot on a fish dock at dawn in sleet, grey-blue light. On the left, two {saltmen} drag a wooden fish crate across the wet concrete. In the middle stands an open-top rusty oil drum with tall orange flames burning out of its top. On the right a third man in a yellow oilskin coat and sou'wester looks up toward the viewer in shock, a lit cigarette falling from his open mouth. Cranes in the fog behind"
+ },
+ {
+  "out": "assets/art-src/panels/docks/docks_intro_03.png",
+  "seed": 603,
+  "post": {
+   "out": "assets/art/panels/docks/docks_intro_03.png"
+  },
+  "prompt": "Extreme close-up: a man's hand in a black suit sleeve and white shirt cuff lets go of a small sooty silver tuning fork, a U-shaped metal fork with two long thin prongs and a short handle, which falls onto a wooden crate full of crushed ice and silver fish. Sleet drops, red glow from the side, dark background"
+ },
+ {
+  "out": "assets/art-src/panels/docks/docks_intro_04.png",
+  "seed": 504,
+  "face": "elias",
+  "post": {
+   "out": "assets/art/panels/docks/docks_intro_04.png"
+  },
+  "prompt": "Low angle shot from ground level on a dock at dawn in sleet. In the left foreground, seen from behind, {elias} slips his long black overcoat off his shoulders. In the background six {saltmen} spread out in a loose uneven arc, crouching ready to fight, holding hooks, iron pipes and fish knives, their faces lit red by a burning oil drum between them. Cranes and containers in fog"
+ },
+ {
+  "out": "assets/art-src/panels/docks/docks_outro_01.png",
+  "seed": 611,
+  "face": "marchetti",
+  "post": {
+   "out": "assets/art/panels/docks/docks_outro_01.png"
+  },
+  "prompt": "Full-bleed scene inside a walk-in freezer, cold blue light, frost on the walls, breath steam, frozen fish hanging from hooks. On the right {marchetti} lies slumped on the floor against stacked wooden crates, bruised and exhausted, eyes half closed, a meat cleaver stuck upright in the icy floor beside him. On the left a man in a black suit kneels beside him, seen from behind, one hand grabbing the gold necklace",
+  "crop": [
+   100,
+   46,
+   942,
+   520
+  ],
+  "note": "manual step: the model draws a box frame around the freezer; crop the original to this box (x0,y0,x1,y1), resize to 1024x576, then re-run post (comfy.py ignores this key)"
+ },
+ {
+  "out": "assets/art-src/panels/docks/docks_outro_02.png",
+  "seed": 412,
+  "post": {
+   "out": "assets/art/panels/docks/docks_outro_02.png"
+  },
+  "prompt": "Close-up looking down into an open wooden crate packed with stacks of banknotes, each bundle wrapped with a paper band that holds a round old brass metro token coin, frost on the crate edges, cold blue light with amber glints on the brass"
+ },
+ {
+  "out": "assets/art-src/panels/docks/docks_outro_03.png",
+  "seed": 613,
+  "post": {
+   "out": "assets/art/panels/docks/docks_outro_03.png"
+  },
+  "prompt": "Wide shot of a grey city street at rainy dawn. {elias} is seen from behind, his back to the viewer, walking away into the distance down the wet street. In the left foreground a street grate in the pavement with white steam rising from it. On the right, stone stairs lead down below the pavement into a dark closed underground metro entrance with an iron railing, and {nero} sits beside the top of the stairs, waiting"
+ },
+ {
+  "out": "assets/art-src/panels/docks/docks_outro_04.png",
+  "seed": 414,
+  "post": {
+   "out": "assets/art/panels/docks/docks_outro_04.png"
+  },
+  "prompt": "Split view at dawn in the rain: on the left an old payphone mounted on a chain-link market gate, its receiver shaking as it rings; on the right {hale} talks into a phone inside a glass phone booth with rain streaming down the glass, face hidden by his hat brim"
+ }
+]

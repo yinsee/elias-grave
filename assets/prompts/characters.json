@@ -16,5 +16,8 @@
   "marchetti": {
     "desc": "Salvatore Marchetti, a huge heavy-set fishmonger mob boss around fifty with a thick neck, slicked-back black hair, a broken nose and a gold fish-scale necklace, in a blood-stained rubber apron over a dirty undershirt and rubber boots",
     "ref": "assets/art/characters/marchetti/ref.png"
+  },
+  "saltmen": {
+    "desc": "rough dock workers in yellow oilskin coats, yellow sou'wester rain hats, grey wool sweaters and black rubber boots"
   }
 }
