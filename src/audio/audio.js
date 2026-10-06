@@ -10,6 +10,9 @@
 import { createSfx } from './sfx.js';
 import { MUSIC, MUSIC_CUES, musicUrl, voiceUrl } from './manifest.js';
 
+// the hero's kicks (src/sim/hero/moves.js ids; ks*, kw, kh, kair are katana moves, not kicks)
+const KICK = /^(lk|hk|airkick|sweep|slk)/, HEAVY_KICK = /^(hk|sweep)/;
+
 export function createAudio({ base = '', ctx = new (window.AudioContext || window.webkitAudioContext)() } = {}) {
   const master = ctx.createGain();
   master.connect(ctx.destination);
@@ -96,11 +99,33 @@ export function createAudio({ base = '', ctx = new (window.AudioContext || windo
   // ---- event bus binding. Payload fields follow docs/architecture.md 2.5; unknown fields are ignored.
   function bind(events, { panOf = () => 0, sectionMusic = {} } = {}) {
     const pan = (p) => (p && typeof p.x === 'number' ? Math.max(-1, Math.min(1, panOf(p.x))) : 0);
+    // A shotgun blast hits a body with several pellets in one step: one bullet sound per target. The sim sends every pellet
+    // in the same task, so the set clears in a microtask after it.
+    const shotNow = new Set();
+    const shotOnce = (k) => {
+      if (shotNow.has(k)) return false;
+      if (!shotNow.size) queueMicrotask(() => shotNow.clear());
+      shotNow.add(k); return true;
+    };
+    // hit: the sound tells the result. outcome (clean | blocked | caught) and move (the hero's move id) are optional:
+    // without them every hit plays as a clean blow.
+    const hitSound = (p) => {
+      const o = { pan: pan(p) }, heavy = p.power > 1, mv = typeof p.move === 'string' ? p.move : '';
+      if (p.by === 'shot') return shotOnce(p.target ?? p.x) && sfx.play('bullet_flesh', o);
+      if (p.outcome === 'blocked') return sfx.play('block', { ...o, pitch: heavy ? 0.8 : 1 });
+      if (p.outcome === 'caught') return sfx.play('guard_catch', o);
+      if (p.blade) return sfx.play('blade_hit', { ...o, pitch: heavy ? 0.85 : 1 });
+      if (KICK.test(mv)) return sfx.play(heavy || HEAVY_KICK.test(mv) ? 'kick_heavy' : 'kick_light', o);
+      return sfx.play(heavy ? 'punch_heavy' : 'punch_light', o);
+    };
     const offs = [
-      events.on('hit', (p = {}) => sfx.play(p.blade ? 'blade_hit' : p.power > 1 ? 'punch_heavy' : 'punch_light', { pan: pan(p) })),
+      events.on('hit', (p = {}) => hitSound(p)),
       events.on('hurt', (p = {}) => sfx.play(p.heavy ? 'punch_heavy' : 'punch_light', { pan: pan(p), vol: 0.9 })),
       events.on('ko', () => sfx.play('ko_thud')),
-      events.on('kill', (p = {}) => sfx.play('body_fall', { pan: pan(p.enemy), when: 0.25 })),
+      events.on('kill', (p = {}) => {   // the kill confirm under the last blow, then the body hits the floor
+        sfx.play('kill_confirm', { pan: pan(p), vol: p.isBoss ? 1 : 0.7, pitch: p.isBoss ? 0.75 : 1 });
+        sfx.play('body_fall', { pan: pan(p.enemy), when: 0.25 });
+      }),
       events.on('pickup', (p = {}) => sfx.play(p.kind === 'bandage' ? 'bandage' : 'pickup')),
       events.on('glass:break', (p = {}) => sfx.play((p.pane && p.pane.w * p.pane.h > 2400) ? 'glass_large' : 'glass_small', { pan: pan(p) })),
       events.on('object:break', (p = {}) => sfx.play('crate_break', { pan: pan(p) })),
