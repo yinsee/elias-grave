@@ -12,15 +12,14 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
 
 (() => {
   'use strict';
-  // ---- test harness (migration step 0): ?seed=N makes Math.random repeat; ?fixed steps the clock by exactly 1/60 s a frame;
+  // ---- test harness (migration step 0): ?seed=N makes the sim's random numbers (simRand) repeat; ?fixed steps the clock by exactly 1/60 s a frame;
   // ?autotest=demo|boss&frames=N runs N frames headless (fixed clock, seed 1 unless given) and puts hashes of the game state
   // and of the 2D frame in the page title and in window.__autotest. A refactor that keeps both hashes changed nothing.
-  const QS = new URLSearchParams(location.search), AUTOTEST = QS.get('autotest'), FIXED = QS.has('fixed') || !!AUTOTEST;
+  const QS = new URLSearchParams(location.search), AUTOTEST = QS.get('autotest'), MANUAL = QS.has('manual'), FIXED = QS.has('fixed') || !!AUTOTEST || MANUAL;
+  // ?manual: no requestAnimationFrame; a test drives the clock with window.__step(n) (1/60 s per frame) and reads window.__peek() (background tabs get no rAF)
   const SEED = QS.has('seed') ? +QS.get('seed') >>> 0 : AUTOTEST ? 1 : null;
-  if (SEED != null) {   // mulberry32
-    let a = SEED;
-    Math.random = () => { a = (a + 0x6D2B79F5) >>> 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-  }
+  // the simulation's own random numbers (never Math.random: three.js and the audio use that, and must not shift the sim's sequence)
+  const simRand = SEED != null ? rng(SEED) : Math.random;   // (mulberry32: the same seed gives the same run)
   const W = 2800, H = 320, GROUND = 280;      // world size and ground line, in world pixels
   // canvas: 640 px wide (25% zoom shows world pixels 1:1, 100% shows 160 px at 4x); its height follows the stage's shape; world scale 22 px = 1 m
   const CW = 640, CHMAX = 480;
@@ -996,8 +995,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     o.hp -= dmg;
     if (o.hp > 0) {   // still whole: chips of what it is made of fly off the struck side
       const cols = objCols(o);
-      for (let i = 0; i < 3 + Math.round(3 * (1 - o.hp / o.maxHp)); i++) particles.push({ x: o.x - dirx * (o.hw || o.r) * 0.6, y: o.y - o.r * 0.4 + (Math.random() - 0.5) * o.r,
-        vx: -dirx * (20 + Math.random() * 50) + (Math.random() - 0.5) * 40, vy: -40 - Math.random() * 70, life: 0.35 + Math.random() * 0.3, c: cols[i % 2] });
+      for (let i = 0; i < 3 + Math.round(3 * (1 - o.hp / o.maxHp)); i++) particles.push({ x: o.x - dirx * (o.hw || o.r) * 0.6, y: o.y - o.r * 0.4 + (simRand() - 0.5) * o.r,
+        vx: -dirx * (20 + simRand() * 50) + (simRand() - 0.5) * 40, vy: -40 - simRand() * 70, life: 0.35 + simRand() * 0.3, c: cols[i % 2] });
       return false;
     }
     if (o.kind === 'stack') { splitStack(o, dirx, 250); return true; }
@@ -1015,8 +1014,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     removeObj(o); tut('smash');
     hitStop = Math.max(hitStop, 0.06); sparks.push({ x: o.x, y: o.y, t: 0.04 });
     const cols = objCols(o);
-    for (let i = 0; i < 16; i++) particles.push({ x: o.x + (Math.random() - 0.5) * o.r * 2, y: o.y + (Math.random() - 0.5) * o.r * 2,
-      vx: dirx * Math.random() * 130 + (Math.random() - 0.5) * 90, vy: -30 - Math.random() * 120, life: 0.45 + Math.random() * 0.5, c: cols[i % 3] });
+    for (let i = 0; i < 16; i++) particles.push({ x: o.x + (simRand() - 0.5) * o.r * 2, y: o.y + (simRand() - 0.5) * o.r * 2,
+      vx: dirx * simRand() * 130 + (simRand() - 0.5) * 90, vy: -30 - simRand() * 120, life: 0.45 + simRand() * 0.5, c: cols[i % 3] });
     dust(o.x, o.y + o.r - 1, 6);
     if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.08);
   }
@@ -1024,17 +1023,17 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     removeObj(o); tut('smash');
     hitStop = Math.max(hitStop, 0.07); sparks.push({ x: o.x, y: o.y, t: 0.04 });
     const n = o.kind === 'bigcrate' ? 7 : 5;
-    for (let i = 0; i < n; i++) boards.push({ x: o.x + (Math.random() - 0.5) * o.r, y: o.y + (Math.random() - 0.5) * o.r,
-      vx: o.vx * 0.5 + dirx * (40 + Math.random() * 90) + (Math.random() - 0.5) * 70, vy: -60 - Math.random() * 120,
-      a: Math.random() * Math.PI, av: (Math.random() - 0.5) * 30, len: 3 + Math.random() * (o.r - 2), life: 2.5 + Math.random() });
-    for (let i = 0; i < 14; i++) particles.push({ x: o.x + (Math.random() - 0.5) * o.r * 2, y: o.y + (Math.random() - 0.5) * o.r * 2,
-      vx: dirx * Math.random() * 120 + (Math.random() - 0.5) * 80, vy: -30 - Math.random() * 110, life: 0.4 + Math.random() * 0.4,
+    for (let i = 0; i < n; i++) boards.push({ x: o.x + (simRand() - 0.5) * o.r, y: o.y + (simRand() - 0.5) * o.r,
+      vx: o.vx * 0.5 + dirx * (40 + simRand() * 90) + (simRand() - 0.5) * 70, vy: -60 - simRand() * 120,
+      a: simRand() * Math.PI, av: (simRand() - 0.5) * 30, len: 3 + simRand() * (o.r - 2), life: 2.5 + simRand() });
+    for (let i = 0; i < 14; i++) particles.push({ x: o.x + (simRand() - 0.5) * o.r * 2, y: o.y + (simRand() - 0.5) * o.r * 2,
+      vx: dirx * simRand() * 120 + (simRand() - 0.5) * 80, vy: -30 - simRand() * 110, life: 0.4 + simRand() * 0.4,
       c: [PAL.crate, PAL.crateD, PAL.plankL][i % 3] });
     dust(o.x, o.y + o.r - 1, 8);
     if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.1);
-    if ((o.kind === 'crate' || o.kind === 'bigcrate') && Math.random() < 0.5) {   // something was packed inside: a can, a bottle or a knife pops out
-      const k = Math.random() < 0.3 ? 'knife' : Math.random() < 0.5 ? 'bottle' : 'can', q = makeObj(k, o.x, o.y - 2);
-      q.vx = dirx * 30 + (Math.random() - 0.5) * 50; q.vy = -110; q.av = (Math.random() - 0.5) * 20; q.safeT = 0.35;
+    if ((o.kind === 'crate' || o.kind === 'bigcrate') && simRand() < 0.5) {   // something was packed inside: a can, a bottle or a knife pops out
+      const k = simRand() < 0.3 ? 'knife' : simRand() < 0.5 ? 'bottle' : 'can', q = makeObj(k, o.x, o.y - 2);
+      q.vx = dirx * 30 + (simRand() - 0.5) * 50; q.vy = -110; q.av = (simRand() - 0.5) * 20; q.safeT = 0.35;
     }
   }
   function boardStep(dt) {
@@ -1062,7 +1061,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   // fighting: the first goon it hits, it breaks on (shatterObj)
   function carryStep(dt) {
     let c = ctl.carry;
-    if (c && (!objs.includes(c) || hero.mode !== 'anim')) { if (objs.includes(c)) { c.carried = false; c.vx = (Math.random() - 0.5) * 40; c.vy = -40; } ctl.carry = c = null; }   // knocked down: he drops it
+    if (c && (!objs.includes(c) || hero.mode !== 'anim')) { if (objs.includes(c)) { c.carried = false; c.vx = (simRand() - 0.5) * 40; c.vy = -40; } ctl.carry = c = null; }   // knocked down: he drops it
     if (!c && hero.mode === 'anim' && hero.act === 'squat' && !hero.weapon && !ctl.air && !demoSmash) {
       let best = null;
       for (const o of objs) if (LIFTABLE.has(o.kind) && !o.carried && Math.abs(o.x - ctl.x) < o.r + 9 && Math.abs(o.y + o.r - (ctl.y + 2)) < 6 && Math.hypot(o.vx, o.vy) < 40 && (!best || Math.abs(o.x - ctl.x) < Math.abs(best.x - ctl.x))) best = o;
@@ -1120,13 +1119,13 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   function crowdToss(dt) {
     if (!flags.club || !enc.boss || enc.boss.dead || !slamDone) return;
     if ((crowdTossT -= dt) > 0) return;
-    crowdTossT = 6 + Math.random() * 5;
+    crowdTossT = 6 + simRand() * 5;
     if (objs.filter(o => o.pocket).length >= 3) return;
-    const d = dancers[Math.floor(Math.random() * dancers.length)];
-    const kind = Math.random() < 0.35 ? 'knife' : Math.random() < 0.5 ? 'bottle' : 'can';
-    const tx = clamp(ctl.x + (Math.random() - 0.5) * 90, CLUB_X + 20, W - 20);
+    const d = dancers[Math.floor(simRand() * dancers.length)];
+    const kind = simRand() < 0.35 ? 'knife' : simRand() < 0.5 ? 'bottle' : 'can';
+    const tx = clamp(ctl.x + (simRand() - 0.5) * 90, CLUB_X + 20, W - 20);
     const o = makeObj(kind, d.x, GROUND - 30);
-    const T = 0.9; o.vx = (tx - d.x) / T; o.vy = -G * T / 2 - 10; o.av = (Math.random() - 0.5) * 20; o.safeT = 0.5;
+    const T = 0.9; o.vx = (tx - d.x) / T; o.vy = -G * T / 2 - 10; o.av = (simRand() - 0.5) * 20; o.safeT = 0.5;
     d.mood = 'cheer'; d.t = 1.2;
   }
   function pocketStep(dt) {
@@ -1145,7 +1144,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
           killBy = q.k === 'knife' ? 1 : 5;
           damageEnemy(e, T.dmg, Math.sign(q.vx) || 1, T.power, 0.2, q.x, q.y, q.k === 'knife'); killBy = null;
           hitFx(T.power); tut('pockethit');
-          if (q.k === 'bottle') for (let k = 0; k < 8; k++) particles.push({ x: q.x, y: q.y, vx: (Math.random() - 0.5) * 120, vy: -30 - Math.random() * 80, life: 0.4, c: k % 2 ? C('#2f7a3e') : C('#b8e0c0') });
+          if (q.k === 'bottle') for (let k = 0; k < 8; k++) particles.push({ x: q.x, y: q.y, vx: (simRand() - 0.5) * 120, vy: -30 - simRand() * 80, life: 0.4, c: k % 2 ? C('#2f7a3e') : C('#b8e0c0') });
           gone = true; break;
         }
       }
@@ -1276,7 +1275,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
           if (vn < 0) {
             o.vx -= nx * vn * 1.1; o.vy -= ny * vn * 1.1;
             if (o.m < 1 && !ctl.air && hero.mode === 'anim' && Math.abs(fvx) > 15 && o.y > P[2].y) {   // a can, a bottle, a cone at his feet: kicked skittering along
-              o.vx = fvx * (1.3 + Math.random() * 0.5) + nx * 15; o.vy = -25 - Math.random() * 45 * Math.min(1, Math.abs(fvx) / 120); o.av += (Math.random() - 0.5) * 20; o.safeT = 0.15;
+              o.vx = fvx * (1.3 + simRand() * 0.5) + nx * 15; o.vy = -25 - simRand() * 45 * Math.min(1, Math.abs(fvx) / 120); o.av += (simRand() - 0.5) * 20; o.safeT = 0.15;
             }
           }
         }
@@ -1366,7 +1365,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     j[3] = eB; j[4] = hB; j[5] = eF; j[6] = hF;
   }
   function puff(x, y) {
-    for (let k = 0; k < 3; k++) particles.push({ x, y, vx: (Math.random() - 0.5) * 80, vy: -Math.random() * 60, life: 0.12 + Math.random() * 0.1, c: k ? PAL.accent : PAL.white });
+    for (let k = 0; k < 3; k++) particles.push({ x, y, vx: (simRand() - 0.5) * 80, vy: -simRand() * 60, life: 0.12 + simRand() * 0.1, c: k ? PAL.accent : PAL.white });
   }
   // with a gun up, recoil rocks the upper body: hips shove back, the torso leans back, the head jolts
   function gunBody(q, dt) {
@@ -1391,18 +1390,18 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     // the machine gun sprays around a level line ahead, so kick never walks the stream upward
     const base = Wp.auto && !ctl.spin ? (ctl.face > 0 ? 0 : Math.PI) : Math.atan2(g.dy, g.dx);
     for (let i = 0; i < Wp.pellets; i++) {
-      const a = base + (Math.random() * 2 - 1) * Wp.spread, sp = Wp.speed * (0.9 + Math.random() * 0.2);
-      const b = { x: g.x, y: g.y, px: g.x, py: g.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: Wp.life * (0.8 + Math.random() * 0.4), power: Wp.power };
+      const a = base + (simRand() * 2 - 1) * Wp.spread, sp = Wp.speed * (0.9 + simRand() * 0.2);
+      const b = { x: g.x, y: g.y, px: g.x, py: g.y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: Wp.life * (0.8 + simRand() * 0.4), power: Wp.power };
       let hit = false;   // point blank: a foe between the hand and the muzzle takes the shot
       for (let k = 1, n = Math.ceil(g.len / 3); k <= n && !hit; k++) { b.px = b.x; b.py = b.y; b.x = g.x + (g.tx - g.x) * k / n; b.y = g.y + (g.ty - g.y) * k / n; hit = bulletHitsEnemy(b); }
       if (!hit) { b.px = b.x = g.tx; b.py = b.y = g.ty; bullets.push(b); }
     }
     flashes.push({ x: g.tx, y: g.ty, dx: g.dx, dy: g.dy, t: 0, big: Wp.pellets > 1 }); noise(g.tx);   // a shot: every window near goes dark
-    particles.push({ x: g.x, y: g.y - 1, vx: -ctl.face * (25 + Math.random() * 30), vy: -50 - Math.random() * 40, life: 0.7, c: PAL.gold });   // spent shell
+    particles.push({ x: g.x, y: g.y - 1, vx: -ctl.face * (25 + simRand() * 30), vy: -50 - simRand() * 40, life: 0.7, c: PAL.gold });   // spent shell
     // recoil: the gun kicks, the muzzle climbs (the machine gun keeps climbing while you hold), the body is pushed back
     if (Wp.auto) { if ((gun.burst = (gun.burst || 0) + 1) >= 6) tut('burst'); if (ctl.air) tut('airfire'); }
     else { tut('fire3'); if (!ctl.air && ctl.spd > WALK + 10) tut('runfire'); }
-    gun.cd = Wp.cd; gun.recoil = Wp.auto ? 0.7 + Math.random() * 0.3 : 1;
+    gun.cd = Wp.cd; gun.recoil = Wp.auto ? 0.7 + simRand() * 0.3 : 1;
     gun.climb = Math.min(0.2, gun.climb + Wp.climb);
     if (ctl.air && !Wp.auto) ctl.push = Math.min(ctl.push + Wp.push, 90);   // feet stay planted on the ground; only a shotgun blast shoves you in the air
     if (ctl.air && Wp.pellets > 1) ctl.vu += 25;
@@ -1463,7 +1462,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       for (let k = -2; k <= 2; k++) if (PUD_COL[x + k]) { PUD_BLOOD[x + k] = Math.min(0.85, PUD_BLOOD[x + k] + 0.06); wet = true; }
       if (wet) return;
       // the drop lands somewhere across the street's depth (mostly mid-street, where the fighting is) and runs into a pool nearby
-      const d = clamp(Math.round(STREET / 2 + (Math.random() + Math.random() + Math.random() - 1.5) * STREET * 0.55), 1, STREET), row = d * W;
+      const d = clamp(Math.round(STREET / 2 + (simRand() + simRand() + simRand() - 1.5) * STREET * 0.55), 1, STREET), row = d * W;
       let best = x;
       for (let k = 1; k <= 8; k++) { if (BPOOL[row + x - k] > 0.04) { best = x - k + 1; break; } if (BPOOL[row + x + k] > 0.04) { best = x + k - 1; break; } }
       BPOOL[row + best] = Math.min(1.2, BPOOL[row + best] + 0.06);
@@ -1475,8 +1474,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       if (v >= 0) { if (VCAP[v] >= 12) return; VCAP[v]++; gore(i, BLOOD_D); return; }   // a vehicle: single pixels of the darkest blood, no runs, 12 at most
       if (flags.club && !PROPS[i]) { const ci = (y >> 4) * BCW + (x >> 4); if (BCAP[ci] >= 14) return; BCAP[ci]++; gore(i, BLOOD_D); return; }   // the club: a few dark spots
       // walls, lamp posts and the scaffold: dark splashes, never bright paint; many run down to the street, leaving a light stain
-      gore(i, Math.random() < 0.5 ? BLOOD[1] : BLOOD_D);
-      if (Math.random() < 0.45 && drips.length < 900) drips.push({ x, y, a: 0, vol: 0.5 + Math.random() * 0.9, wall: !PROPS[i] });
+      gore(i, simRand() < 0.5 ? BLOOD[1] : BLOOD_D);
+      if (simRand() < 0.45 && drips.length < 900) drips.push({ x, y, a: 0, vol: 0.5 + simRand() * 0.9, wall: !PROPS[i] });
     }
   }
   // stains on the walls, the vehicles, the lamp posts fade: fresh for a while, then they blend into what is under them and are gone
@@ -1562,10 +1561,10 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   const flags = { noBleed: false, wasted: false, demo: false, club: false, attract: false };
   function bleed(x, y, dirx, n, force = 1) {
     if (flags.noBleed) return;
-    for (let i = 0; i < n; i++) particles.push({ x, y, vx: dirx * (30 + Math.random() * 110) * force + (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 100 * force,
-      life: 1.6, c: BLOOD[Math.floor(Math.random() * 3)], blood: true });
+    for (let i = 0; i < n; i++) particles.push({ x, y, vx: dirx * (30 + simRand() * 110) * force + (simRand() - 0.5) * 60, vy: -20 - simRand() * 100 * force,
+      life: 1.6, c: BLOOD[Math.floor(simRand() * 3)], blood: true });
     for (let i = 0; i < n * 0.5 * force; i++) {   // the spray that reaches the wall behind: a splash of dark drops, flung outward
-      const sx = x + dirx * (3 + Math.random() * 20) + (Math.random() - 0.5) * 6, sy = y - 4 + (Math.random() - 0.4) * 18;
+      const sx = x + dirx * (3 + simRand() * 20) + (simRand() - 0.5) * 6, sy = y - 4 + (simRand() - 0.4) * 18;
       if (sy < GROUND - 3) stain(sx, sy);
     }
   }
@@ -1576,13 +1575,13 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     const J = e.dead ? e.pts : e.J; if (!J || flags.noBleed) return;
     e.bs ??= [];
     for (let k = 0; k < n; k++) {
-      const px = x + (Math.random() - 0.5) * 6 * e.s, py = y + (Math.random() - 0.3) * 8 * e.s;
+      const px = x + (simRand() - 0.5) * 6 * e.s, py = y + (simRand() - 0.3) * 8 * e.s;
       let best = null, bd = 1e9;
       for (const sg of BSEG) {
         const A = J[sg[0]], B = J[sg[1]], dx = B.x - A.x, dy = B.y - A.y, l2 = dx * dx + dy * dy || 1, t = clamp(((px - A.x) * dx + (py - A.y) * dy) / l2, 0, 1);
         const d = Math.hypot(A.x + dx * t - px, A.y + dy * t - py); if (d < bd) { bd = d; best = { a: sg[0], b: sg[1], t, w: sg[2] }; }
       }
-      best.o = (Math.random() - 0.5) * 1.6; best.c = BLOOD[Math.floor(Math.random() * 3)]; best.t0 = simTime; best.k = Math.random();
+      best.o = (simRand() - 0.5) * 1.6; best.c = BLOOD[Math.floor(simRand() * 3)]; best.t0 = simTime; best.k = simRand();
       if (e.bs.length >= BS_MAX) e.bs.shift();
       e.bs.push(best);
     }
@@ -1600,7 +1599,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     return [A.x + (B.x - A.x) * b.t - uy * hw, A.y + (B.y - A.y) * b.t + ux * hw];
   }
   // enemy looks: mid-tone colors that still read under the night lighting; every head is a box with a flat top and a square jaw
-  const pick = a => a[Math.floor(Math.random() * a.length)];
+  const pick = a => a[Math.floor(simRand() * a.length)];
   // lunge = a dash from mid range that ends in the heavy punch; w = the strike lands with the held weapon's tip
   const THR = { a1s: 3.5, a1e: 1.2, lean: -0.15, rx: -1, a0s: 1.2, a0e: 0.4 }, THR_OUT = { a1s: 1.5, a1e: 0.1, lean: 0.3, rx: 1.6, a0s: -0.4, a0e: 0.5 };
   const AIMP = { a1s: 1.57, a1e: 0, a0s: 1.3, a0e: 0.4, rx: -0.3, head: 0.05, lean: 0.02 };
@@ -1658,21 +1657,21 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   const NM_FIRST = ['Vinnie', 'Sal', 'Tony', 'Paulie', 'Carmine', 'Frankie', 'Nicky', 'Joey', 'Lou', 'Rocco', 'Mickey', 'Benny', 'Dino', 'Gino', 'Sonny', 'Luca', 'Enzo', 'Bruno', 'Sergei', 'Viktor', 'Dmitri', 'Klaus', 'Jacques', 'Fritz', 'Seamus', 'Eddie', 'Marcel', 'Otto'];
   const NM_NICK = ['Knuckles', 'Two-Teeth', 'The Rat', 'Slick', 'Fat Sal', 'Scarface', 'Hammer', 'Mad Dog', 'Lucky', 'Weasel', 'Ironjaw', 'Tommy', 'Snake', 'Red', 'Spider', 'The Bull', 'Ice', 'Smokes', 'Pipes', 'Priest', 'Brass'];
   const NM_LAST = ['Russo', 'Moretti', 'Romano', 'Bianchi', 'Esposito', 'Costa', 'Volkov', 'Kowalski', 'Dubois', 'Brenner', 'Kelly', 'Novak', 'Petrov', 'Marino', 'Greco', 'De Luca', 'Rossi', 'Sorrento', 'Lemaire', 'Haas'];
-  const pickN = a => a[Math.floor(Math.random() * a.length)];
+  const pickN = a => a[Math.floor(simRand() * a.length)];
   const BOSS_NAME = 'Don Lucien Malaspina';   // 20 characters, the same every time
   const gangName = () => {   // at most 10 characters: a first and last name when they fit, else a nickname
     const full = `${pickN(NM_FIRST)} ${pickN(NM_LAST)}`;
-    return full.length <= 10 && Math.random() < 0.6 ? full : pickN(NM_NICK);
+    return full.length <= 10 && simRand() < 0.6 ? full : pickN(NM_NICK);
   };
   let hudTarget = null, hudTargetT = 0;
   const BODY_MAX = 99;
   function spawnEnemy(type, x, zone) {
     const T = ETYPE[type];
     const e = { type, ...T, x, y: GROUND - 2, vx: 0, vy: 0, air: false, face: x > P[2].x ? -1 : 1, hp: T.hp, maxHp: T.hp, zone,
-      q: GUARD.slice(), phase: Math.random(), act: null, actT: 0, cdT: (0.6 + Math.random()) / DIF().A, hurtT: 0, flash: 0, hitBy: -1, struck: false, slammed: false,
+      q: GUARD.slice(), phase: simRand(), act: null, actT: 0, cdT: (0.6 + simRand()) / DIF().A, hurtT: 0, flash: 0, hitBy: -1, struck: false, slammed: false,
       fight: false, dead: false, deadT: 0, pts: null, J: null, pal: null };
     // brain: agg 0 = cautious (keeps far, blocks a lot), 1 = aggressive (pushes in, long strings, lunges)
-    Object.assign(e, { agg: type === 'boss' ? 1 : 1 - (1 - Math.random()) * 0.65 ** dLv(), seed: Math.random(), tok: false, tokT: 0, side: e.face > 0 ? -1 : 1, slot: 0, flankT: 0,
+    Object.assign(e, { agg: type === 'boss' ? 1 : 1 - (1 - simRand()) * 0.65 ** dLv(), seed: simRand(), tok: false, tokT: 0, side: e.face > 0 ? -1 : 1, slot: 0, flankT: 0,
       tx: null, run: 1, guardT: 0, react: null, reactT: 0, seenAtk: -1, punId: -1, punish: 0, aimT: 0, dodgeCd: 0, jumpCd: 0, crouchT: 0, jvx: 0, jvy: 0,
       combo: null, ci: 0, feint: false, fled: false, retreatT: 0, sp: null, spT: 0, recT: 0, stunT: 0, leapt: false, jx: 0, hitP: false, ph: 1, bigCd: 2.5, mark: 0, ay: 0, muz: 0, blockN: 0,
       fkX: 0, fkV: 0, slide: 0, down: false, downT: 0, gu: null, pendH: null, pendAtk: -1 });
@@ -1681,7 +1680,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     const role = type === 'boss' ? 'brawler' : zone === 'arena' ? (n < AROLES.length ? AROLES[n] : pick(AMIX)) : ZROLES[zone] ? ZROLES[zone][n % ZROLES[zone].length] : 'brawler';
     const R = ROLE[role], lk = type === 'boss' ? LOOK.boss : LOOK[pick(R.looks)], B = BUILD[lk.build];
     e.role = role; e.R = R; e.look = lk; e.bw = B.bw; e.hk = B.hk;
-    e.hair = pick(lk.hair); e.beard = pick(lk.beards); e.scar = type === 'boss' || Math.random() < 0.3; e.gloves = type === 'boss' || lk.top === 'coat' || Math.random() < 0.25;
+    e.hair = pick(lk.hair); e.beard = pick(lk.beards); e.scar = type === 'boss' || simRand() < 0.3; e.gloves = type === 'boss' || lk.top === 'coat' || simRand() < 0.25;
     const sk = type === 'boss' ? ['#a68a72', '#7a6250'] : pick(EPAL.skins), tc = pick(lk.cols), pc = pick(lk.pants), hc = type === 'boss' ? '#4a3020' : pick(EPAL.hair);
     e.pal = { skin: C(sk[0]), skinB: C(sk[1]), top: C(tc[0]), topB: C(tc[1]), pants: C(pc), pantsB: eShade(C(pc), 0.72),
       hair: C(hc), loud: C(pick(EPAL.loud)), shoe: C(EPAL.shoe), glove: C(EPAL.glove), belt: type === 'boss' ? C('#e8b43a') : C('#2a2228') };
@@ -1708,7 +1707,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     }
     else if (e.hurtT > 0) {   // stagger: the back foot reaches back to catch the shove, the front one drags
       const sl = clamp(Math.abs(e.vx) / 80, 0, 1); t = lerpA(GUARD, EHURT, e.hurtK || 1);   // a jab only rocks the head back t[4] -= 3 * sl; t[7] += 1.2 * sl;
-      if (!e.air && sl > 0.4 && Math.random() < 0.3) dust(e.x - e.face * 2, e.y + 1, 1);
+      if (!e.air && sl > 0.4 && simRand() < 0.3) dust(e.x - e.face * 2, e.y + 1, 1);
     }
     else if (e.sp === 'roar') t = EP.roar;
     else if (e.sp === 'charge' && e.spT < 0) t = EP.chargeW;
@@ -1835,7 +1834,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       e.vx += dirx * power / e.m * 0.25; e.guardT = Math.max(e.guardT, 0.35);
       if (e.hp <= 0) { killEnemy(e, dirx, power, up, x, y); return; }
       if (++e.blockN >= 3) { e.blockN = 0; e.guardT = 0; e.hurtT = 0.55; eRelease(e); e.face = -dirx; sparks.push({ x, y: y - 3, t: 0.05 }); return; }   // third block in a row: the guard cracks
-      if (Math.random() < 0.3 + 0.35 * e.agg) e.punish = 0.6;
+      if (simRand() < 0.3 + 0.35 * e.agg) e.punish = 0.6;
       return;
     }
     // jab spam: a goon reads a string of light hits; the 4th quick one in a row he catches on his guard, shoves off and often counters.
@@ -1847,7 +1846,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
         e.lightN = 0; e.face = -dirx; e.act = null; e.hurtT = 0; e.guardT = 0.9; e.fkV += 20;
         e.hp -= 1; e.flash = 0.04; sparks.push({ x, y, t: 0 }); hitStop = Math.max(hitStop, 0.06);
         e.vx += dirx * 30; ctl.push = Math.max(ctl.push, 70); ctl.pushK = 10;   // both are shoved apart
-        if (Math.random() < 0.5 + 0.4 * e.agg) e.punish = 0.45;
+        if (simRand() < 0.5 + 0.4 * e.agg) e.punish = 0.45;
         return;
       }
     }
@@ -1895,11 +1894,11 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     bleed(e.J[1].x, e.J[1].y, dirx, e.type === 'boss' ? 60 : !hero.weapon && killBy == null && enc.eHitKind === 1 ? 7 : 24, 1.4);   // beaten down with fists: less blood
     bodyStain(e, hx ?? e.J[1].x, hy ?? e.J[1].y + 3, !hero.weapon && killBy == null && enc.eHitKind === 1 ? 4 : 10);
     // sometimes an enemy drops an ammo box; you have to walk over it to load it
-    const nBox = e === enc.boss ? 3 : Math.random() < (WEAPONS[hero.weapon].ammo ? 0.55 : 0.35) ? 1 : 0;
-    for (let i = 0; i < nBox; i++) ammoBoxes.push({ x: e.x, y: e.y - 12 * e.s, vx: dirx * 30 + (Math.random() - 0.5) * 70, vy: -110 - Math.random() * 50, life: 30 });
-    if ((e === enc.boss || Math.random() < BAND_P) && ammoBoxes.filter(b => b.band).length < BAND_MAX)   // and a bandage now and then: walk over it for 30 s of regen
-      ammoBoxes.push({ band: true, x: e.x, y: e.y - 12 * e.s, vx: -dirx * 20 + (Math.random() - 0.5) * 60, vy: -120 - Math.random() * 40, life: 30 });
-    if (e !== enc.boss && Math.random() < DROP_P) dropWeapon(e);   // and often a weapon, lying by the body
+    const nBox = e === enc.boss ? 3 : simRand() < (WEAPONS[hero.weapon].ammo ? 0.55 : 0.35) ? 1 : 0;
+    for (let i = 0; i < nBox; i++) ammoBoxes.push({ x: e.x, y: e.y - 12 * e.s, vx: dirx * 30 + (simRand() - 0.5) * 70, vy: -110 - simRand() * 50, life: 30 });
+    if ((e === enc.boss || simRand() < BAND_P) && ammoBoxes.filter(b => b.band).length < BAND_MAX)   // and a bandage now and then: walk over it for 30 s of regen
+      ammoBoxes.push({ band: true, x: e.x, y: e.y - 12 * e.s, vx: -dirx * 20 + (simRand() - 0.5) * 60, vy: -120 - simRand() * 40, life: 30 });
+    if (e !== enc.boss && simRand() < DROP_P) dropWeapon(e);   // and often a weapon, lying by the body
     if (e.zone != null && --zoneAlive[e.zone] === 0 && typeof e.zone === 'number') tut('kill' + e.zone);
     if (e === enc.boss) {
       enc.bossBeaten = true; enc.arena = null; tut('boss'); crowdReact(e.x, 0, 'big');
@@ -1960,8 +1959,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       e.restT = mv < 0.04 ? (e.restT || 0) + dt : 0;
       if (e.deadT > 3.5 && e.restT > 0.6) e.still = true;   // (after its blood pool has spread)
     }
-    if (e.deadT > 0.6 && e.deadT < 3.5 && Math.random() < 0.6) {   // a pool of blood spreads under the body
-      const c = Q[2], w = (e.deadT - 0.6) * 3 * e.s, x = c.x + (Math.random() * 2 - 1) * w, fs = floorBelow(x, c.y, 0);
+    if (e.deadT > 0.6 && e.deadT < 3.5 && simRand() < 0.6) {   // a pool of blood spreads under the body
+      const c = Q[2], w = (e.deadT - 0.6) * 3 * e.s, x = c.x + (simRand() * 2 - 1) * w, fs = floorBelow(x, c.y, 0);
       if (!fs.box && fs.y - c.y < 14) stain(x, fs.y);   // only on the floor right under the body
     }
   }
@@ -1988,7 +1987,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       const crowd = nL > nR ? -1 : 1; let best = null, bs = -1;
       for (const e of enemies) {
         if (e.dead || e.type !== 'goon' || e.side !== crowd || e.tok || e.retreatT > 0 || e.flankT > 0 || Math.abs(e.x - px) > 150 || Math.abs(py - e.y) > 14) continue;
-        const sc = e.agg + Math.random() * 0.5;
+        const sc = e.agg + simRand() * 0.5;
         if (sc > bs) { bs = sc; best = e; }
       }
       if (best) { best.side = -crowd; best.flankT = 3; }
@@ -2020,14 +2019,14 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (pm && hero.atkId !== e.seenAtk && level && adx < 48 && Math.sign(e.x - ctl.x) === ctl.face && !e.react) {
       e.seenAtk = hero.atkId;
       const fear = 1 - e.agg + (e.retreatT > 0 ? 0.5 : 0);
-      if (pm.power >= 250) { if (e.dodgeCd <= 0 && Math.random() < 0.25 + 0.4 * fear) { e.react = 'dodge'; e.reactT = 0.06 + Math.random() * 0.1; } }
-      else if (Math.random() < 0.1 + 0.35 * fear) { e.react = 'guard'; e.reactT = 0.02 + Math.random() * 0.08; }
+      if (pm.power >= 250) { if (e.dodgeCd <= 0 && simRand() < 0.25 + 0.4 * fear) { e.react = 'dodge'; e.reactT = 0.06 + simRand() * 0.1; } }
+      else if (simRand() < 0.1 + 0.35 * fear) { e.react = 'guard'; e.reactT = 0.02 + simRand() * 0.08; }
     }
     // a gun pointed at it: after a beat, jump over the stream and land close
     if (WEAPONS[hero.weapon].gun && hero.mode === 'anim' && gun.aimW > 0.6 && level && adx > 22 && adx < 170 && Math.sign(e.x - ctl.x) === ctl.face && e.dodgeCd <= 0) {
       if ((e.aimT += dt) > 0.25 + 0.35 * (1 - e.agg)) {
-        e.aimT = 0; e.dodgeCd = 2 + Math.random() * 1.5;
-        if (Math.random() < 0.35 + 0.4 * e.agg) { e.crouchT = 0.1; e.jvx = dir * (60 + 50 * e.agg); e.jvy = -135; e.face = dir; return; }
+        e.aimT = 0; e.dodgeCd = 2 + simRand() * 1.5;
+        if (simRand() < 0.35 + 0.4 * e.agg) { e.crouchT = 0.1; e.jvx = dir * (60 + 50 * e.agg); e.jvy = -135; e.face = dir; return; }
       }
     } else e.aimT = Math.max(0, e.aimT - dt);
     // the player is up on a ledge: walk to its nearer edge, crouch, jump up
@@ -2050,7 +2049,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     }
     if (e.R.ranged) { if (e.tok) eRelease(e); rangedThink(e, dt, px, dx, adx, level); return; }
     // badly hurt: a cautious goon backs off with the guard ready, catches a breath, then comes back meaner (once)
-    if (!e.fled && e.hp < e.maxHp * 0.3) { e.fled = true; if (Math.random() < 0.9 - e.agg - 0.3 * dLv()) { e.retreatT = 1.0 + Math.random() * 0.8; eRelease(e); } }
+    if (!e.fled && e.hp < e.maxHp * 0.3) { e.fled = true; if (simRand() < 0.9 - e.agg - 0.3 * dLv()) { e.retreatT = 1.0 + simRand() * 0.8; eRelease(e); } }
     if (e.retreatT > 0) {
       if ((e.retreatT -= dt) > 0) { if (e.tok) eRelease(e); e.tx = px - dir * (e.reach + 70); e.run = 0.8; return; }
       e.agg = Math.min(1, e.agg + 0.35); e.mark = 0.4; e.cdT = 0;
@@ -2058,7 +2057,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     // the player is stuck in a long recovery: step in and punish
     if (pm && pm.dur >= 0.7 && hero.actT > pm.win[1] && e.punId !== hero.atkId && level && adx < e.reach + 40) {
       e.punId = hero.atkId;
-      if (Math.random() < 0.45 + 0.45 * e.agg) e.punish = 0.5;
+      if (simRand() < 0.45 + 0.45 * e.agg) e.punish = 0.5;
     }
     let free = enc.eTokN < enc.eTokMax;   // a few attackers per side (by difficulty): pressure from both ways, never a pile-up
     if (free && enc.eTokN) { let n = 0; for (const f of enemies) if (f.tok && !f.dead && f !== e && Math.sign(f.x - px) === Math.sign(e.x - px)) n++; if (n >= DIF().side) free = false; }
@@ -2066,14 +2065,14 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (e.tok && e.tokT > 3 / Math.sqrt(DIF().A) && e.punish <= 0) eRelease(e, 0.6 / DIF().A);   // could not land it: let another goon try
     if (e.tok) {
       const canHit = level && !ctl.air && hero.mode === 'anim';
-      if (canHit && e.role === 'brawler' && e.punish <= 0 && adx > e.reach + 10 && adx < e.reach + 55 && Math.random() < dt * (0.1 + 0.9 * e.agg) * Math.sqrt(DIF().A)) { eStart(e, 'lunge', 0.36); return; }
+      if (canHit && e.role === 'brawler' && e.punish <= 0 && adx > e.reach + 10 && adx < e.reach + 55 && simRand() < dt * (0.1 + 0.9 * e.agg) * Math.sqrt(DIF().A)) { eStart(e, 'lunge', 0.36); return; }
       if (adx > e.reach + 1) { e.tx = px - dir * e.reach * 0.6; e.run = e.punish > 0 ? 2.2 : 1 + 0.15 * dLv(); return; }
       e.face = dir;
       if (canHit) {
-        const r = Math.random(), A = e.agg, pun = e.punish > 0, L = e.R.cmb;
+        const r = simRand(), A = e.agg, pun = e.punish > 0, L = e.R.cmb;
         if (e.role === 'brawler') e.combo = pun ? CMB[r < 0.5 ? 1 : 3] : CMB[r < 0.15 + 0.3 * A ? 4 : r < 0.35 + 0.3 * A ? 3 : r < 0.55 + 0.2 * A ? 2 : r < 0.85 ? 0 : 1];
         else e.combo = L[pun ? 0 : Math.min(L.length - 1, Math.floor((r * 0.7 + A * 0.3) * L.length))];   // bolder goons pick the longer strings
-        e.ci = 0; e.feint = !pun && Math.random() < 0.1 + 0.2 * (1 - A);
+        e.ci = 0; e.feint = !pun && simRand() < 0.1 + 0.2 * (1 - A);
         const a = e.combo[0];
         eStart(e, a, pun ? e.windup * 0.45 : EMOVES[a].heavy ? e.windup * 1.3 : e.windup);
         if (pun) e.ctrArmor = 0.6;   // a counter rides through light hits: jab spam gets punished
@@ -2124,7 +2123,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       // a bullet coming at him: half the time he reads it and ducks under it
       // [feel] the duck starts by time to impact (fast shots too), early enough to be down when the bullet arrives
       if (b.k === 'b' && b.duck === undefined && hero.mode === 'anim' && Math.sign(P[2].x - b.x) === Math.sign(b.vx) && Math.abs(P[2].x - b.x) / Math.max(1, Math.abs(b.vx)) < 0.24 && Math.abs(P[2].y - b.y) < 30) {
-        b.duck = flags.demo && !ctl.air && !MOVES[hero.act] && hero.act !== 'dash' && Math.random() < 0.5;   // only the demo ducks by itself; a player ducks with S
+        b.duck = flags.demo && !ctl.air && !MOVES[hero.act] && hero.act !== 'dash' && simRand() < 0.5;   // only the demo ducks by itself; a player ducks with S
         if (b.duck) ctl.duckT = 0.5;
       }
       if (!dead && !b.duck && (hitsPlayer(b.x, b.y, 1) || hitsPlayer((b.x + b.px) / 2, (b.y + b.py) / 2, 1))) { hurtPlayer(b.dmg, b.x, b.y, Math.sign(b.vx) || 1, false); dead = true; }
@@ -2135,8 +2134,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     const dir = Math.sign(dx) || 1;
     e.tx = null; e.run = 1;
     if (e.stunT > 0) e.stunT -= dt;
-    if (e.recT > 0) { e.recT -= dt; if (Math.random() < dt * 5) particles.push({ x: e.J[0].x + e.face * 4, y: e.J[0].y, vx: e.face * 15, vy: -40, life: 0.5, c: EFX.sweat }); return; }
-    if (e.ph === 2 && Math.random() < dt * 5) particles.push({ x: e.J[0].x + (Math.random() - 0.5) * 6, y: e.J[0].y - 7, vx: (Math.random() - 0.5) * 12, vy: -55, life: 0.3, c: EFX.steam });
+    if (e.recT > 0) { e.recT -= dt; if (simRand() < dt * 5) particles.push({ x: e.J[0].x + e.face * 4, y: e.J[0].y, vx: e.face * 15, vy: -40, life: 0.5, c: EFX.sweat }); return; }
+    if (e.ph === 2 && simRand() < dt * 5) particles.push({ x: e.J[0].x + (simRand() - 0.5) * 6, y: e.J[0].y - 7, vx: (simRand() - 0.5) * 12, vy: -55, life: 0.3, c: EFX.steam });
     if (!aggro || e.sp || e.act || e.hurtT > 0 || e.air) return;
     if (e.ph === 1 && e.hp < e.maxHp * 0.5) {   // phase 2: a roar, then faster, with a charge and a jump slam
       e.ph = 2; e.sp = 'roar'; e.spT = 0; e.speed = 31; e.cd = [0.5, 1.0]; e.windup = 0.3; e.bigCd = 1.8; e.mark = 1;
@@ -2144,15 +2143,15 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       return;
     }
     if (e.ph === 2 && (e.bigCd -= dt) <= 0 && level && hero.mode === 'anim' && adx > 60 && adx < 200) {
-      e.bigCd = 4.5 + Math.random() * 2.5;
-      e.sp = Math.random() < 0.5 ? 'charge' : 'jslam'; e.spT = e.sp === 'charge' ? -0.7 : -0.55;
+      e.bigCd = 4.5 + simRand() * 2.5;
+      e.sp = simRand() < 0.5 ? 'charge' : 'jslam'; e.spT = e.sp === 'charge' ? -0.7 : -0.55;
       e.leapt = false; e.hitP = false; e.face = dir; e.jx = px; e.mark = -e.spT;
       return;
     }
     if (adx > e.reach + 1) { e.tx = px - dir * e.reach * 0.65; return; }
     e.face = dir;
     if (level && !ctl.air && hero.mode === 'anim' && (e.cdT -= dt) <= 0) {
-      const r = Math.random();
+      const r = simRand();
       e.combo = e.ph === 2 ? BCMB[r < 0.3 ? 2 : r < 0.5 ? 3 : r < 0.75 ? 0 : 1] : BCMB[r < 0.35 ? 1 : 0];
       e.ci = 0; eStart(e, e.combo[0], e.windup);
     }
@@ -2166,11 +2165,11 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     } else if (e.sp === 'charge') {
       if (e.spT < 0) {   // tracks the player, then locks on and paws the ground
         if (e.spT < -0.3) e.face = Math.sign(px - e.x) || e.face;
-        if (Math.random() < dt * 14) dust(e.x - e.face * 7 * e.s, e.y + 1, 1);
+        if (simRand() < dt * 14) dust(e.x - e.face * 7 * e.s, e.y + 1, 1);
         return;
       }
       e.vx = e.face * 215;
-      if (Math.random() < dt * 30) dust(e.x - e.face * 5, e.y + 1, 1);
+      if (simRand() < dt * 30) dust(e.x - e.face * 5, e.y + 1, 1);
       if (!e.hitP && hero.mode === 'anim' && !ctl.air && Math.abs(P[2].x - e.x) < 9 * e.s && Math.abs(ctl.y - e.y) < 12) {   // any jump clears it
         e.hitP = true; hurtPlayer(e.heavyDmg, P[2].x, P[2].y, e.face, true);
       }
@@ -2238,7 +2237,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       }
       if (e.sp) bossSpecial(e, dt, px);
       if (e.act === 'lunge' && e.actT >= 0 && e.actT < 0.24 && !e.air && adx > e.reach * 0.6) {   // the dash
-        e.vx = e.face * 165; if (Math.random() < dt * 30) dust(e.x - e.face * 3, e.y + 1, 1);
+        e.vx = e.face * 165; if (simRand() < dt * 30) dust(e.x - e.face * 3, e.y + 1, 1);
       }
       const pf = e.y + 2;
       if (e.air && e.hurtT > 0) e.vx *= Math.exp(-3 * dt);   // air drag on a knocked-back body
@@ -2286,8 +2285,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
           const dl = Math.abs(P[2].x - e.x);
           if (e.combo && ++e.ci < e.combo.length && hero.mode === 'anim' && dl < e.reach + 10 && Math.abs(py - e.y) < 14) eStart(e, e.combo[e.ci], e.type === 'boss' ? 0.2 : 0.08);   // the string goes on
           else {
-            if (e.type === 'boss') { e.combo = null; if (was === 'slam') e.recT = 0.6; e.cdT = (e.cd[0] + Math.random() * (e.cd[1] - e.cd[0])) / Math.sqrt(DIF().A); }   // (the boss: half the steps, his moves are big)
-            else eRelease(e, (e.R.ranged ? 1.4 + Math.random() * 1.2 : (e.cd[0] + Math.random() * (e.cd[1] - e.cd[0])) * (1.3 - 0.6 * e.agg)) / DIF().A);
+            if (e.type === 'boss') { e.combo = null; if (was === 'slam') e.recT = 0.6; e.cdT = (e.cd[0] + simRand() * (e.cd[1] - e.cd[0])) / Math.sqrt(DIF().A); }   // (the boss: half the steps, his moves are big)
+            else eRelease(e, (e.R.ranged ? 1.4 + simRand() * 1.2 : (e.cd[0] + simRand() * (e.cd[1] - e.cd[0])) * (1.3 - 0.6 * e.agg)) / DIF().A);
           }
         }
       }
@@ -2482,7 +2481,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       if (b.band) {   // a bandage: walk over it, 30 s of regen (a new one starts the clock again)
         if (hero.mode === 'anim' && Math.abs(ctl.x - b.x) < 9 && Math.abs(ctl.y - b.y) < 16) {
           hero.bandT = BAND_T; ammoBoxes.splice(i, 1);
-          for (let k = 0; k < 5; k++) particles.push({ x: b.x, y: b.y - 2, vx: (Math.random() - 0.5) * 50, vy: -50 - Math.random() * 40, life: 0.45, c: PAL.white });
+          for (let k = 0; k < 5; k++) particles.push({ x: b.x, y: b.y - 2, vx: (simRand() - 0.5) * 50, vy: -50 - simRand() * 40, life: 0.45, c: PAL.white });
           if (!pickToasted.has('band')) { pickToasted.add('band'); toast('Bandage', `Regen for ${BAND_T} s`, true); }
         }
         continue;
@@ -2490,7 +2489,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       // walk over it: only a gun that is not full takes it, and it fills the gun
       if (hero.mode === 'anim' && Wp.ammo && charge[hero.weapon] < Wp.ammo && Math.abs(ctl.x - b.x) < 9 && Math.abs(ctl.y - b.y) < 16) {
         charge[hero.weapon] = Wp.ammo; ammoFlash = 0.6; ammoBoxes.splice(i, 1); tut('ammo');
-        for (let k = 0; k < 5; k++) particles.push({ x: b.x, y: b.y - 2, vx: (Math.random() - 0.5) * 50, vy: -50 - Math.random() * 40, life: 0.45, c: PAL.gold });
+        for (let k = 0; k < 5; k++) particles.push({ x: b.x, y: b.y - 2, vx: (simRand() - 0.5) * 50, vy: -50 - simRand() * 40, life: 0.45, c: PAL.gold });
       }
     }
   }
@@ -2525,8 +2524,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     wornId = hero.atkId;
     if (--charge[hero.weapon] > 0) return;
     const g = weaponGeom(), w = hero.weapon;
-    if (g) for (let i = 0; i < 12; i++) particles.push({ x: g.x + g.dx * g.len * Math.random(), y: g.y + g.dy * g.len * Math.random(),
-      vx: (Math.random() - 0.5) * 140, vy: -40 - Math.random() * 90, life: 0.5 + Math.random() * 0.4, c: i % 2 ? PAL.blade : PAL.bladeD });
+    if (g) for (let i = 0; i < 12; i++) particles.push({ x: g.x + g.dx * g.len * simRand(), y: g.y + g.dy * g.len * simRand(),
+      vx: (simRand() - 0.5) * 140, vy: -40 - simRand() * 90, life: 0.5 + simRand() * 0.4, c: i % 2 ? PAL.blade : PAL.bladeD });
     if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.12);
     for (const k of pickups) if (k.w === w) k.taken = false;   // a fresh one waits on its pedestal
     toast(`${Wp.name} broke`, 'Fight on bare-handed, or fetch a new one: it lies on a bench', true);
@@ -2556,21 +2555,21 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   // At most DROP_MAX of them lie about: the oldest goes
   const DROP_P = 0.5, DROP_MAX = 5;
   function dropWeapon(e) {
-    const w = 1 + Math.floor(Math.random() * 4), Wp = WEAPONS[w], x = clamp(e.x + (Math.random() - 0.5) * 16, 20, W - 20), fl = floorBelow(x, e.y - 4, 0);
-    const ch = Wp.ammo ? Math.max(1, Math.round(Wp.ammo * (0.3 + Math.random() * 0.4))) : fullCharge(w);
-    thrown.push({ w, ch, x, y: fl.y, vx: 0, vy: 0, a: Math.random() < 0.5 ? 0 : Math.PI, av: 0, g: 0.6, len: Wp.len, face: 1, stuck: true, flat: true, armed: true, hit: false, ids: new Set(), t: 1, drop: true });
+    const w = 1 + Math.floor(simRand() * 4), Wp = WEAPONS[w], x = clamp(e.x + (simRand() - 0.5) * 16, 20, W - 20), fl = floorBelow(x, e.y - 4, 0);
+    const ch = Wp.ammo ? Math.max(1, Math.round(Wp.ammo * (0.3 + simRand() * 0.4))) : fullCharge(w);
+    thrown.push({ w, ch, x, y: fl.y, vx: 0, vy: 0, a: simRand() < 0.5 ? 0 : Math.PI, av: 0, g: 0.6, len: Wp.len, face: 1, stuck: true, flat: true, armed: true, hit: false, ids: new Set(), t: 1, drop: true });
     const drops = thrown.filter(t => t.drop);
     if (drops.length > DROP_MAX) thrown.splice(thrown.indexOf(drops[0]), 1);
   }
   // a hurled (empty) gun is spent: it breaks apart where it lands
   function gunBreak(t, i) {
     thrown.splice(i, 1);
-    for (let k = 0; k < 12; k++) particles.push({ x: t.x, y: t.y - 1, vx: (Math.random() - 0.5) * 120, vy: -40 - Math.random() * 80, life: 0.45 + Math.random() * 0.35, c: k % 3 ? PAL.gunD : PAL.gunM });
+    for (let k = 0; k < 12; k++) particles.push({ x: t.x, y: t.y - 1, vx: (simRand() - 0.5) * 120, vy: -40 - simRand() * 80, life: 0.45 + simRand() * 0.35, c: k % 3 ? PAL.gunD : PAL.gunM });
     dust(t.x, t.y - 1, 3);
   }
   function thrownBreak(t, i) {
     thrown.splice(i, 1);
-    for (let k = 0; k < 12; k++) particles.push({ x: t.x, y: t.y, vx: (Math.random() - 0.5) * 140, vy: -40 - Math.random() * 90, life: 0.5 + Math.random() * 0.4, c: k % 2 ? PAL.blade : PAL.bladeD });
+    for (let k = 0; k < 12; k++) particles.push({ x: t.x, y: t.y, vx: (simRand() - 0.5) * 140, vy: -40 - simRand() * 90, life: 0.5 + simRand() * 0.4, c: k % 2 ? PAL.blade : PAL.bladeD });
     for (const k of pickups) if (k.w === t.w) k.taken = false;
     toast(`${WEAPONS[t.w].name} broke`, 'A new one lies on a bench', true);
   }
@@ -2647,7 +2646,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   let gunPose = null;
 
   function dust(x, y, n) {
-    for (let k = 0; k < n; k++) particles.push({ x, y, vx: (Math.random() - 0.5) * 60, vy: -20 - Math.random() * 40, life: 0.35 + Math.random() * 0.25, c: Math.random() < 0.5 ? PAL.dust1 : PAL.dust2 });
+    for (let k = 0; k < n; k++) particles.push({ x, y, vx: (simRand() - 0.5) * 60, vy: -20 - simRand() * 40, life: 0.35 + simRand() * 0.25, c: simRand() < 0.5 ? PAL.dust1 : PAL.dust2 });
   }
   function setJoints(j) { P.forEach((p, i) => { p.px = p.x; p.py = p.y; p.x = j[i][0]; p.y = j[i][1]; }); }
 
@@ -2723,8 +2722,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   function hitSpark(x, y, dir, power, blade) {   // crisp single pixels thrown along the hit, plus the star
     const n = 3 + Math.round(power / 60);
     for (let k = 0; k < n; k++) {
-      const a = (Math.random() - 0.5) * (blade ? 0.5 : 1.1) - (blade ? 0.35 : 0.15), sp = 90 + Math.random() * 120 + power * 0.3;
-      particles.push({ x, y, vx: dir * Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.08 + Math.random() * 0.12, c: k % 3 ? PAL.white : PAL.accent });
+      const a = (simRand() - 0.5) * (blade ? 0.5 : 1.1) - (blade ? 0.35 : 0.15), sp = 90 + simRand() * 120 + power * 0.3;
+      particles.push({ x, y, vx: dir * Math.cos(a) * sp, vy: Math.sin(a) * sp, life: 0.08 + simRand() * 0.12, c: k % 3 ? PAL.white : PAL.accent });
     }
     sparks.push({ x, y, t: power >= 250 ? 0 : 0.05 });
   }
@@ -2879,8 +2878,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       ctl.spd += clamp(tgt - ctl.spd, -rate * dt, rate * dt);
     }
     ctl.accS += ((ctl.spd - prevSpd) / dt - ctl.accS) * (1 - Math.exp(-10 * dt));
-    if (!ctl.air && ctl.accS < -100 && ctl.spd > 25 && Math.random() < 0.25) dust(P[10].x, ctl.y + 1, 1);   // skid
-    if (hero.act === 'skid' && ctl.spd > 6 && Math.random() < 0.45) dust(P[Math.random() < 0.6 ? 10 : 8].x, ctl.y + 1, 1);
+    if (!ctl.air && ctl.accS < -100 && ctl.spd > 25 && simRand() < 0.25) dust(P[10].x, ctl.y + 1, 1);   // skid
+    if (hero.act === 'skid' && ctl.spd > 6 && simRand() < 0.45) dust(P[simRand() < 0.6 ? 10 : 8].x, ctl.y + 1, 1);
     const xPrev = ctl.x;
     ctl.x += ctl.face * ctl.spd * dt;
     if (ctl.push > 0.5) { ctl.x -= ctl.face * ctl.push * dt; ctl.push *= Math.exp(-(ctl.pushK || 9) * dt); } else { ctl.push = 0; ctl.pushK = 0; }
@@ -3088,7 +3087,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
         const chain = ctl.chainRoll && input.dashHeld && ctl.rollN < ROLL_MAX;
         const out = chain ? DASH.v : input.dir === ctl.face ? (input.run ? RUN : WALK) : 0;
         ctl.spd = lerp(DASH.v, out, smooth(u));
-        if (Math.random() < 0.3) dust(ctl.x - ctl.face * 2, ctl.y + 1, 1);
+        if (simRand() < 0.3) dust(ctl.x - ctl.face * 2, ctl.y + 1, 1);
       } else if (k === 'back') {   // step back: a low hop away, eyes and guard kept on the front
         const s = Math.sin(Math.PI * u);
         ap = mod(TRN.BACK, { ry: TRN.BACK[1] + 2.5 * s, f0y: 2.5 * s, f1y: 2.5 * s + 0.8 * s });
@@ -3421,6 +3420,10 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     // the street ends at the wall; the club's left wall is its shut door
     if (!flags.club) { if (ctl.x > STREET_END) { ctl.x = STREET_END; ctl.spd = Math.min(ctl.spd, 0); } for (const p of P) if (p.x > STREET_END + 6) p.x = STREET_END + 6; }
     else { if (ctl.x < DOOR_X + 6) { ctl.x = DOOR_X + 6; ctl.spd = Math.max(ctl.spd, 0); } for (const p of P) if (p.x < DOOR_X + 2) p.x = DOOR_X + 2; }
+    pickupStep();
+    quakeStep(dt);
+    regenStep(dt);
+    laneTick();   // last: every body takes the lane of the surface it ended the step on
   }
 
   function toRag() {
@@ -3457,12 +3460,12 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   }
   function drop() {
     releaseGrab();
-    hero.mode = 'rag'; hero.ko = false; settleT = 0; ragT = 0; hero.act = null; ragFace = Math.random() < 0.5 ? -1 : 1;
-    const pose = fk(IDLE, cam.x + cam.vw * (0.3 + Math.random() * 0.4), GROUND - 2, ragFace);
-    const cx = pose[2][0], cy = pose[2][1], a = (Math.random() * 2 - 1) * Math.PI, ca = Math.cos(a), sa = Math.sin(a);
+    hero.mode = 'rag'; hero.ko = false; settleT = 0; ragT = 0; hero.act = null; ragFace = simRand() < 0.5 ? -1 : 1;
+    const pose = fk(IDLE, cam.x + cam.vw * (0.3 + simRand() * 0.4), GROUND - 2, ragFace);
+    const cx = pose[2][0], cy = pose[2][1], a = (simRand() * 2 - 1) * Math.PI, ca = Math.cos(a), sa = Math.sin(a);
     const rot = pose.map(([x, y]) => [cx + (x - cx) * ca - (y - cy) * sa, cy + (x - cx) * sa + (y - cy) * ca]);
     const dy = cam.y + 30 - Math.max(...rot.map(q => q[1]));
-    const wv = (Math.random() * 2 - 1) * 5;
+    const wv = (simRand() * 2 - 1) * 5;
     P.forEach((p, i) => {
       p.x = rot[i][0]; p.y = rot[i][1] + dy;
       p.px = p.x + wv * (p.y - (cy + dy)) * DT; p.py = p.y - wv * (p.x - cx) * DT;
@@ -3632,12 +3635,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (hero.mode === 'anim') {
       if (ctl.spd > 5 && ctl.spd < WALK + 6) tut('walk');
       if (ctl.spd > WALK + 20 && !ctl.air) tut('run');
-      for (const k of pickups) if (!endPh && !k.taken && !ctl.carry && (!hero.weapon || k.w >= hero.weapon || input.downHeld) && Math.abs(ctl.x - k.x) < 9 && ctl.y > GROUND - 12) {   // walk into a pickup (walking back past a lesser weapon keeps yours; squat to swap)
-        k.taken = true; equip(k.w, fullCharge(k.w)); tut('pick' + k.w);
-        sparks.push({ x: k.x, y: k.y, t: 0 }); waves.push({ x: k.x, y: GROUND - 1, t: 0 });
-        if (!pickToasted.has(k.w)) { pickToasted.add(k.w); toast(`${WEAPONS[k.w].name} acquired`, WEAPONS[k.w].gun ? 'Q fire · empty: Q throws it' : `tap Q ${WEAPONS[k.w].labels[0].toLowerCase()} · hold Q ${WEAPONS[k.w].labels[1].toLowerCase()}`, true); }
       }
-    }
     // the stage panel switches with hysteresis: 24 px past a stage line going right, 24 px back over it going left, and never while the old stage's goons stand
     let zc = 0; while (zc + 1 < ZONES.length && P[2].x >= ZONES[zc + 1].x0) zc++;
     const onRoof = ctl.surf === GOAL && stageDone(ZONES.length - 2);   // up on the club roof with stage 7 done: the red carpet is stage 8
@@ -3696,6 +3694,32 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     const shut = left && z + 1 < ZONES.length ? `<div class="gate">Finish every lesson to open stage ${z + 2}</div>` : '';
     tutEl.innerHTML = `<span class="count">${done.size}/${TOTAL}</span><span class="stage-n">Stage ${z + 1} of ${ZONES.length} · ${Z.tasks.length - left}/${Z.tasks.length} done</span><h2>${Z.title}</h2>`
       + `<ul>${Z.tasks.map(([k, t]) => `<li${done.has(k) ? ' class="done"' : ''}>${t}</li>`).join('')}</ul>${shut}${next ? `<div class="next">${next}</div>` : ''}`;
+  }
+  // the bench weapons: walk into one to take it (walking back past a lesser weapon keeps yours; squat to swap). Runs in the fixed step.
+  function pickupStep() {
+    if (hero.mode !== 'anim') return;
+    for (const k of pickups) if (!endPh && !k.taken && !ctl.carry && (!hero.weapon || k.w >= hero.weapon || input.downHeld) && Math.abs(ctl.x - k.x) < 9 && ctl.y > GROUND - 12) {
+      k.taken = true; equip(k.w, fullCharge(k.w)); tut('pick' + k.w);
+      sparks.push({ x: k.x, y: k.y, t: 0 }); waves.push({ x: k.x, y: GROUND - 1, t: 0 });
+      if (!pickToasted.has(k.w)) { pickToasted.add(k.w); toast(`${WEAPONS[k.w].name} acquired`, WEAPONS[k.w].gun ? 'Q fire · empty: Q throws it' : `tap Q ${WEAPONS[k.w].labels[0].toLowerCase()} · hold Q ${WEAPONS[k.w].labels[1].toLowerCase()}`, true); }
+    }
+  }
+  // the boss's slam shockwaves roll along the ground; one that passes under him while he stands knocks him down. Runs in the fixed step.
+  function quakeStep(dt) {
+    for (let i = quakes.length - 1; i >= 0; i--) {
+      const q = quakes[i]; q.t += dt; q.x += q.dir * QUAKE.v * dt;
+      if (q.t > QUAKE.life || q.x < (enc.arena ? enc.arena.x0 - 4 : 0) || q.x > (enc.arena ? enc.arena.x1 + 4 : W)) { quakes.splice(i, 1); continue; }
+      particles.push({ x: q.x + (simRand() - 0.5) * 4, y: q.y - 1, vx: q.dir * (20 + simRand() * 40), vy: -60 - simRand() * 70, life: 0.25 + simRand() * 0.2, c: simRand() < 0.5 ? PAL.dust1 : PAL.out });   // (one per step: two per 60 Hz frame, as before)
+      const k = 1 - q.t / QUAKE.life;   // it fades as it runs out
+      if (!q.hit && hero.mode === 'anim' && !ctl.air && Math.abs(ctl.y + 2 - q.y) < 6 && Math.abs(ctl.x - q.x) < QUAKE.w) {
+        q.hit = true; hurtPlayer(Math.round(QUAKE.dmg * (0.6 + 0.4 * k)), ctl.x, ctl.y - 2, q.dir, true, 1.2);
+      }
+    }
+  }
+  // health: back up to full after a K.O.; the regen by difficulty, more with a bandage on. Runs in the fixed step.
+  function regenStep(dt) {
+    if (hero.bandT > 0) hero.bandT = Math.max(0, hero.bandT - dt);
+    if (hero.mode === 'anim') hero.hp = hero.hp <= 0 ? 100 : Math.min(100, hero.hp + (DIF().regen + (hero.bandT > 0 ? BAND_REGEN : 0)) * dt);
   }
   // a soft gold ring round every pickable: a bright 1-px edge and a faint second ring, pulsing (added on top of the light pass)
   const PICK_GLOW = [255, 205, 110], PICK_Z = 9;   // PICK_Z: in 3D, pickables lying in the street stand this far in front of the front lane (past its crates)
@@ -3767,7 +3791,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (shoot) { input.downHeld = true; input.fireHeld = !!Wp.auto; if ((demoAtkT -= sdt) <= 0) { input.attack = 'lp'; demoAtkT = 0.2; } return false; }
     if (Wp.gun) { input.attack = 'tw'; return false; }   // an empty gun: hurl it at the box
     if (low) { input.downHeld = true; if (hero.act === 'squat' && (demoAtkT -= sdt) <= 0) { input.attack = 'hk'; demoAtkT = 0.35; } return false; }   // squat (held), then a leg sweep
-    if ((demoAtkT -= sdt) <= 0) { input.attack = Wp.melee ? (Math.random() < 0.5 ? 'hp' : 'lp') : 'hp'; demoAtkT = 0.45; }
+    if ((demoAtkT -= sdt) <= 0) { input.attack = Wp.melee ? (simRand() < 0.5 ? 'hp' : 'lp') : 'hp'; demoAtkT = 0.45; }
     return false;
   };
   // climb the fire escape: follow each flight's direction, turn at every landing, stop on the roof
@@ -3889,7 +3913,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (Wp.auto) { input.fireHeld = true; if (!gun.want) input.attack = 'lp'; return; }
     if ((demoAtkT -= sdt) > 0) return;
     const pool = Wp.gun ? ['lp'] : Wp.melee ? ['lp', 'lp', 'hp'] : ['lp', 'lp', 'hp', 'lk', 'hk'];
-    input.attack = pool[Math.floor(Math.random() * pool.length)]; demoAtkT = 0.3 + Math.random() * 0.25; input.fireHeld = false;
+    input.attack = pool[Math.floor(simRand() * pool.length)]; demoAtkT = 0.3 + simRand() * 0.25; input.fireHeld = false;
   }
   const demoShoots = Wp => Wp.gun && charge[hero.weapon] > 0;   // an empty gun is a club: bash with it
   // shoot or hit one foe: face it, then attack; guns from range
@@ -3918,8 +3942,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     const threat = enemies.find(e => !e.dead && !e.down && Math.abs(e.x - ctl.x) < (e.reach || 17) + 18 && Math.abs(e.y - ctl.y) < 16 && ((e.act && e.actT < 0 && e.actT > -0.3) || e.mark > 0));
     const shot = eshots.find(b => Math.abs(b.x - ctl.x) < 60 && Math.sign(b.vx) === Math.sign(ctl.x - b.x));
     if ((threat || shot) && demoEvT <= 0 && !MOVES[hero.act]) {
-      demoEvT = 0.7 + Math.random() * 0.4; demoCombo = null; input.downHeld = false;
-      const r = Math.random();
+      demoEvT = 0.7 + simRand() * 0.4; demoCombo = null; input.downHeld = false;
+      const r = simRand();
       if (shot || r < 0.33) { input.dir = shot ? 0 : dir; input.jump = true; input.jumpHeld = false; return; }   // over it
       input.dir = r < 0.66 ? dir : -dir; input.dash = true; return;   // roll past him, or back out of reach
     }
@@ -3933,14 +3957,14 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (ctl.face !== dir || adx > reach) {   // close in at a run; between 30 and 60 px out, sometimes a jump attack
       demoCombo = null; input.downHeld = false;
       input.dir = dir; input.run = adx > 36;
-      if (adx > 30 && adx < 60 && !MOVES[hero.act] && Math.random() < sdt * 1.2) input.jump = true;
+      if (adx > 30 && adx < 60 && !MOVES[hero.act] && simRand() < sdt * 1.2) input.jump = true;
       return;
     }
     input.dir = 0; input.run = false;
-    if (!demoCombo) { const pool = Wp.melee ? DCOMBO.blade : DCOMBO.fists; demoCombo = pool[Math.floor(Math.random() * pool.length)]; demoCi = 0; demoStepT = 0; }
+    if (!demoCombo) { const pool = Wp.melee ? DCOMBO.blade : DCOMBO.fists; demoCombo = pool[Math.floor(simRand() * pool.length)]; demoCi = 0; demoStepT = 0; }
     const prev = demoCombo[demoCi - 1];
     if ((demoStepT -= sdt) > 0) { input.downHeld = !!(prev && prev.startsWith('d:')); return; }
-    if (demoCi >= demoCombo.length) { demoCombo = null; demoStepT = 0.22 + Math.random() * 0.25; input.downHeld = false; return; }   // a breath between strings
+    if (demoCi >= demoCombo.length) { demoCombo = null; demoStepT = 0.22 + simRand() * 0.25; input.downHeld = false; return; }   // a breath between strings
     const a = demoCombo[demoCi], low = a.startsWith('d:');
     if (low && hero.act !== 'squat' && !MOVES[hero.act]) { input.downHeld = true; demoStepT = 0.05; return; }   // drop into the squat first
     demoCi++; input.downHeld = low; input.attack = low ? a.slice(2) : a; demoStepT = 0.17;   // the next hit goes in on the chain
@@ -4059,10 +4083,10 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (!flags.demo) return;
     if (hero.mode !== 'anim') { input.dir = 0; input.fireHeld = false; return; }   // knocked down: wait until the fighter is up again
     if ((demoSpawnT -= sdt) <= 0) {   // a goon or two now and then, from off screen on either side
-      demoSpawnT = 3 + Math.random() * 5;
-      if (!flags.club && enemies.filter(e => !e.dead).length < 3) for (let k = 0, n = Math.random() < 0.4 ? 2 : 1; k < n; k++) {
-        const side = Math.random() < 0.5 ? -1 : 1, x = clamp(ctl.x + side * (cam.vw / 2 + 20 + k * 18), 40, STREET_END - 60);
-        const g = spawnEnemy('goon', x, 1 + Math.floor(Math.random() * 5)); g.cdT = Math.max(g.cdT, 0.8);
+      demoSpawnT = 3 + simRand() * 5;
+      if (!flags.club && enemies.filter(e => !e.dead).length < 3) for (let k = 0, n = simRand() < 0.4 ? 2 : 1; k < n; k++) {
+        const side = simRand() < 0.5 ? -1 : 1, x = clamp(ctl.x + side * (cam.vw / 2 + 20 + k * 18), 40, STREET_END - 60);
+        const g = spawnEnemy('goon', x, 1 + Math.floor(simRand() * 5)); g.cdT = Math.max(g.cdT, 0.8);
       }
     }
     if (ctl.carry && !MOVES[hero.act] && hero.act !== 'rise') { input.dir = 0; input.attack = 'hp'; return; }   // something in hand: throw it
@@ -4071,7 +4095,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     const dx = demoGoalX - ctl.x;
     if (Math.abs(dx) < 8 || (demoPauseT > 0)) {   // there: look about for a moment, then pick the next spot along the street
       input.dir = 0;
-      if ((demoPauseT += sdt) > 0.8) { demoPauseT = 0; demoGoalX = 140 + Math.random() * (2100 - 140); demoRunning = Math.random() < 0.5; }
+      if ((demoPauseT += sdt) > 0.8) { demoPauseT = 0; demoGoalX = 140 + simRand() * (2100 - 140); demoRunning = simRand() < 0.5; }
       return;
     }
     input.dir = Math.sign(dx); input.run = demoRunning && Math.abs(dx) > 40;
@@ -4522,10 +4546,10 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (!flags.club) return;
     for (const d of dancers) {
       const dist = Math.abs(d.x - x);
-      if (all) { d.mood = 'cheer'; d.t = (all === 'big' ? 4 : 1.6) + Math.random(); continue; }   // a death or a big knock: the whole room cheers
-      if (power >= 220) { if (Math.random() < 0.85) { d.mood = 'cheer'; d.t = 1.2 + Math.random() * 0.8; } continue; }   // a hard hit: most of them cheer
-      if (dist > 150 || Math.random() < 0.5) continue;
-      d.mood = Math.random() < 0.5 ? 'cheer' : 'shock'; d.t = 0.6 + Math.random() * 0.8;
+      if (all) { d.mood = 'cheer'; d.t = (all === 'big' ? 4 : 1.6) + simRand(); continue; }   // a death or a big knock: the whole room cheers
+      if (power >= 220) { if (simRand() < 0.85) { d.mood = 'cheer'; d.t = 1.2 + simRand() * 0.8; } continue; }   // a hard hit: most of them cheer
+      if (dist > 150 || simRand() < 0.5) continue;
+      d.mood = simRand() < 0.5 ? 'cheer' : 'shock'; d.t = 0.6 + simRand() * 0.8;
     }
   }
   function crowdStep(dt) {
@@ -4591,12 +4615,12 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   // ---------- night lighting, wet street reflections and rain ----------
   const rain = { k: 0, goal: 0, t: 14, drops: [], splash: [], rip: [], flash: 0 };
   function weatherStep(dt) {
-    if ((rain.t -= dt) <= 0) { rain.goal = rain.goal ? 0 : 0.6 + Math.random() * 0.4; rain.t = rain.goal ? 25 + Math.random() * 25 : 30 + Math.random() * 40; }
+    if ((rain.t -= dt) <= 0) { rain.goal = rain.goal ? 0 : 0.6 + simRand() * 0.4; rain.t = rain.goal ? 25 + simRand() * 25 : 30 + simRand() * 40; }
     rain.k += (rain.goal - rain.k) * (1 - Math.exp(-0.4 * dt));
     if (rain.flash > 0) rain.flash -= dt;
-    else if (rain.k > 0.55 && Math.random() < dt * 0.05) rain.flash = 0.3;   // lightning over the roofs
+    else if (rain.k > 0.55 && simRand() < dt * 0.05) rain.flash = 0.3;   // lightning over the roofs
     const want = flags.club ? 0 : Math.round(rain.k * 170);
-    while (rain.drops.length < want) rain.drops.push({ x: cam.x + Math.random() * (cam.vw + 60), y: cam.y - Math.random() * cam.vh, v: 250 + Math.random() * 90 });
+    while (rain.drops.length < want) rain.drops.push({ x: cam.x + simRand() * (cam.vw + 60), y: cam.y - simRand() * cam.vh, v: 250 + simRand() * 90 });
     if (rain.drops.length > want) rain.drops.length = want;
     for (const d of rain.drops) {
       d.x -= 45 * dt; d.y += d.v * dt;
@@ -4604,9 +4628,9 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       if (d.y >= fl || d.y > cam.y + cam.vh + 10 || d.x < cam.x - 30) {
         if (d.y >= fl && d.y < cam.y + cam.vh) {
           rain.splash.push({ x: d.x, y: fl - 1, t: 0 });
-          if (fl === GROUND && Math.random() < 0.5) rain.rip.push({ x: d.x, d: 1 + Math.floor(Math.random() * (STREET - 2)), t: 0 });
+          if (fl === GROUND && simRand() < 0.5) rain.rip.push({ x: d.x, d: 1 + Math.floor(simRand() * (STREET - 2)), t: 0 });
         }
-        d.x = cam.x + Math.random() * (cam.vw + 60); d.y = cam.y - Math.random() * 30; d.v = 250 + Math.random() * 90;
+        d.x = cam.x + simRand() * (cam.vw + 60); d.y = cam.y - simRand() * 30; d.v = 250 + simRand() * 90;
       }
     }
     for (let i = rain.splash.length - 1; i >= 0; i--) if ((rain.splash[i].t += dt) > 0.12) rain.splash.splice(i, 1);
@@ -4730,10 +4754,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     }
     for (const s of rain.splash) { const k = s.t / 0.12, a = 0.4 * (1 - k); blendPlot(Math.floor(s.x - 1 - k * 2), Math.floor(s.y - 1 - k * 2), 180, 195, 225, a); blendPlot(Math.floor(s.x + 1 + k * 2), Math.floor(s.y - 1 - k * 2), 180, 195, 225, a); }
   }
-  function render(look, face) {
-    [look, face] = poseTick(look, face);
-    laneTick();
-    if (mode3D) return;   // the 3D view draws its own picture; the 2D one under it is not shown
+  function render(look, face) {   // the 2D view: draws only (the lanes are set in step(), the drawn pose in poseTick())
     drawBackdrop();   // (the club crowd is drawn inside it, behind the bar and speakers)
     drawSpawnFx();
     if (!flags.club) bgSnap.set(buf);   // the scene without people, to find them again for the glass reflections
@@ -7273,36 +7294,27 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       if (q.blood) {
         const px = Math.floor(q.x), py = Math.floor(q.y);
         if (px >= 0 && py >= 0 && px < W && py < GROUND && PROPS[py * W + px]) {   // splashes onto a car, a lamp post, the scaffold
-          stain(px, py); if (Math.random() < 0.4) stain(px, py + 1); particles.splice(i, 1); continue;
+          stain(px, py); if (simRand() < 0.4) stain(px, py + 1); particles.splice(i, 1); continue;
         }
       }
       if (q.y >= fy) {
         if (q.blood) {
-          if (!fs.box) { stain(q.x, fy); const nx = q.x + (Math.random() < 0.5 ? -1 : 1); if (Math.random() < 0.5 && nx >= fs.x0 && nx <= fs.x1) stain(nx, fy); }   // a loose crate's top moves away: no stain left in the air
+          if (!fs.box) { stain(q.x, fy); const nx = q.x + (simRand() < 0.5 ? -1 : 1); if (simRand() < 0.5 && nx >= fs.x0 && nx <= fs.x1) stain(nx, fy); }   // a loose crate's top moves away: no stain left in the air
           particles.splice(i, 1); continue;
         }
         q.y = fy - 1; q.vx *= 0.5; q.vy = 0;
       }
     }
     for (let i = waves.length - 1; i >= 0; i--) { waves[i].t += sdt; if (waves[i].t > 0.25) waves.splice(i, 1); }
-    for (let i = quakes.length - 1; i >= 0; i--) {
-      const q = quakes[i]; q.t += sdt; q.x += q.dir * QUAKE.v * sdt;
-      if (q.t > QUAKE.life || q.x < (enc.arena ? enc.arena.x0 - 4 : 0) || q.x > (enc.arena ? enc.arena.x1 + 4 : W)) { quakes.splice(i, 1); continue; }
-      for (let n = 0; n < 2; n++) particles.push({ x: q.x + (Math.random() - 0.5) * 4, y: q.y - 1, vx: q.dir * (20 + Math.random() * 40), vy: -60 - Math.random() * 70, life: 0.25 + Math.random() * 0.2, c: Math.random() < 0.5 ? PAL.dust1 : PAL.out });
-      const k = 1 - q.t / QUAKE.life;   // it fades as it runs out
-      if (!q.hit && hero.mode === 'anim' && !ctl.air && Math.abs(ctl.y + 2 - q.y) < 6 && Math.abs(ctl.x - q.x) < QUAKE.w) {   // on the ground when it passes: it knocks him off his feet
-        q.hit = true; hurtPlayer(Math.round(QUAKE.dmg * (0.6 + 0.4 * k)), ctl.x, ctl.y - 2, q.dir, true, 1.2);
-      }
-    }
     for (let i = sparks.length - 1; i >= 0; i--) { sparks[i].t += sdt; if (sparks[i].t > 0.22) sparks.splice(i, 1); }
     for (let i = flashes.length - 1; i >= 0; i--) { flashes[i].t += sdt; if (flashes[i].t > 0.05) flashes.splice(i, 1); }
 
     clubTick(rdt);
     updateCamera(rdt);
     tutTick(rdt);
-    const look = hero.mode === 'anim' ? 'ok' : hero.ko ? 'ko' : headSpeed > 120 ? 'shock' : 'ok';
-    render(look, hero.mode === 'rag' ? ragFace : ctl.face);
-    if (mode3D) Three3D.frame(rdt);
+    // present: the drawn pose (shared by both views), then one view draws it
+    const [look, face] = poseTick(hero.mode === 'anim' ? 'ok' : hero.ko ? 'ko' : headSpeed > 120 ? 'shock' : 'ok', hero.mode === 'rag' ? ragFace : ctl.face);
+    if (mode3D) Three3D.frame(rdt); else render(look, face);
 
     {   // [feel] screen shake: a random jitter plus a directional kick that springs back, both in whole world pixels
       if (cam.shake > shakePrev + 1e-4 && !shakeSet) {   // set without an amplitude: take one from its length
@@ -7316,8 +7328,8 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
       const kx = Math.round(cam.kick.x), ky = Math.round(cam.kick.y), j = cam.shake > 0 && shakeDur > 0 ? shakeAmp * Math.min(1, cam.shake / shakeDur) : 0;
       if (cam.shake <= 0) shakeAmp = shakeDur = 0;
       cam.kick.x *= Math.exp(-18 * rdt); cam.kick.y *= Math.exp(-18 * rdt);
-      const r0 = Math.random() * 2 - 1, kd = Math.hypot(kickDir.x, kickDir.y) || 1, bx = kickDir.x / kd, by = kickDir.y / kd;
-      const jx = j * (0.5 * (Math.random() * 2 - 1) + 0.6 * r0 * bx), jy = j * (0.5 * (Math.random() * 2 - 1) + 0.6 * r0 * by);
+      const r0 = simRand() * 2 - 1, kd = Math.hypot(kickDir.x, kickDir.y) || 1, bx = kickDir.x / kd, by = kickDir.y / kd;
+      const jx = j * (0.5 * (simRand() * 2 - 1) + 0.6 * r0 * bx), jy = j * (0.5 * (simRand() * 2 - 1) + 0.6 * r0 * by);
       const sx = (Math.round(jx) + kx) * scale, sy = (Math.round(jy) + ky) * scale;
       const tr = sx || sy ? `translate(${sx}px, ${sy}px)` : '';
       if (cv.style.transform !== tr) { cv.style.transform = tr; threeCanvas.style.transform = tr; }
@@ -7335,8 +7347,6 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     show('hits', hitsEl, hits);
     show('bag', bagEl, landed);
     show('zoom', zoomEl, Math.round(cam.zoom * 100));
-    if (hero.bandT > 0) hero.bandT = Math.max(0, hero.bandT - sdt);
-    if (hero.mode === 'anim') hero.hp = hero.hp <= 0 ? 100 : Math.min(100, hero.hp + (DIF().regen + (hero.bandT > 0 ? BAND_REGEN : 0)) * sdt);   // back up with full health after a K.O.; the regen by difficulty, more with a bandage on
     if (ammoFlash > 0) ammoFlash -= rdt;
     { const Wp = WEAPONS[hero.weapon], full = fullCharge(hero.weapon), c = charge[hero.weapon];
       show('wname', wNameEl, Wp.name.toUpperCase());
@@ -7359,7 +7369,7 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
     if (enc.boss) { bossFill.style.width = (Math.max(0, enc.boss.hp / enc.boss.maxHp * 100) * bossBarK).toFixed(1) + '%'; show('bname', bossNameEl, enc.boss.name.toUpperCase()); }
     const tgt = null;
     if (tgt && false) { show('tname', tNameEl, tgt.dead ? tgt.name + ' — down' : tgt.name); tFill.style.width = Math.max(0, tgt.hp / tgt.maxHp * 100).toFixed(0) + '%'; }
-    if (!AUTOTEST) requestAnimationFrame(frame);
+    if (!AUTOTEST && !MANUAL) requestAnimationFrame(frame);
   }
   // the autotest: run the frames in chunks (the page stays responsive), then hash what the simulation and the 2D view hold
   function runAutotest(kind, frames) {
@@ -7395,5 +7405,11 @@ import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './
   if (DEV) { setDemo(true); skipToBoss(); }   // ?dev: open on the boss level, to test it
   else if (jumpEnd) playEnding();
   else startAttract();   // the page opens on the demo from the street start, under the title card and the menu
-  requestAnimationFrame(frame);
+  if (MANUAL) {
+    window.__step = (n = 1) => { for (let i = 0; i < n; i++) frame(0); };
+    window.__peek = () => ({ x: Math.round(ctl.x), y: Math.round(ctl.y), lane: ctl.lane, surf: ctl.surf === GROUND_S ? 'ground' : ctl.surf === GOAL ? 'roof' : 'plat', air: ctl.air, mode: hero.mode, act: hero.act, hp: Math.round(hero.hp), bandT: +hero.bandT.toFixed(2), weapon: hero.weapon,
+      club: flags.club, boss: enc.boss ? Math.round(enc.boss.hp) : null, quakes: quakes.length, enemies: enemies.filter(e => !e.dead).map(e => [Math.round(e.x), e.lane, Math.round(e.hp)]), kills: kills.length, lessons: done.size,
+      pickups: pickups.map(k => k.taken ? 1 : 0).join(''), demo: flags.demo, attract: flags.attract });
+    window.__skipToBoss = () => { leaveTitle(); setDemo(false); skipToBoss(); };
+  } else requestAnimationFrame(frame);
 })();
