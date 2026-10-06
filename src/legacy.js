@@ -4350,7 +4350,7 @@ import * as P9 from './levels/pier9.js';
   // checkpoints: each tutorial stage, the boss door (street); the quay start, the shutter, the boss door (Pier 9). Reaching one refills the
   // second winds (a boss fight has its own count). Wasted with none left: retry from the last one; the lessons done stay done.
   let ckpt = null, ckBoss = false;   // ckBoss: a retry at the boss door (the entrance and the dialog are skipped)
-  const ckptName = () => !ckpt ? 'the start' : ckpt.kind === 'boss' ? 'the boss door' : ckpt.kind === 'shutter' ? 'the shutter' : ckpt.kind === 'stage' ? `stage ${ckpt.i + 1}` : 'the start';
+  const ckptName = () => !ckpt ? 'the start' : ckpt.kind === 'boss' ? 'the boss door' : ckpt.kind === 'shutter' ? 'the shutter' : ckpt.kind === 'wave' ? P9.WAVES[ckpt.i].ckpt : ckpt.kind === 'stage' ? `stage ${ckpt.i + 1}` : 'the start';
   function setCkpt(kind, i = 0, quiet) {
     ckpt = { lv: LV.id, kind, i, w: hero.weapon, ch: charge.slice(), taken: pickups.map(k => k.taken) };
     hero.wind = DIF().wind;
@@ -4373,13 +4373,14 @@ import * as P9 from './levels/pier9.js';
     ZONES.forEach((Z, i) => { if (stageDone(i)) cleared.add(i); });   // (no 'stage clear' toasts again)
     Object.assign(runS, rs, { down: false, koUp: false, endT: -1, hp: 100 }); kos = k0;
     if (C.kind !== 'start') {
-      if (isP9()) { for (const w of P9.WAVES) p9.w[w.id] = { out: true, n: 0 }; p9.open = true; p9.shutter = 1; }
+      if (isP9() && C.kind === 'wave') P9.WAVES.forEach((w, j) => { if (j < C.i) p9.w[w.id] = { out: true, n: 0 }; });   // a wave checkpoint: the waves before it stay beaten
+      else if (isP9()) { for (const w of P9.WAVES) p9.w[w.id] = { out: true, n: 0 }; p9.open = true; p9.shutter = 1; }
       else for (const k in WAVES) if (boss || +k < C.i) { spawned.add(+k); cleared.add(+k); }   // the stages behind him stay cleared
       pickups.forEach((k, j) => { k.taken = C.taken[j]; });
       if (C.w) equip(C.w, C.ch[C.w]);
       for (let w = 0; w < charge.length; w++) charge[w] = C.ch[w];
       if (boss) { enterClub(); slamDone = true; clubT = 1; fade = 0; fadeDir = 0; ckBoss = true; if (isP9()) p9.bossDlg = p9.dlgDone = true; }
-      else heroTo(isP9() ? P9.MARKET.shutter[0] - 40 : ZONES[C.i].x0 + 20);
+      else heroTo(!isP9() ? ZONES[C.i].x0 + 20 : C.kind === 'wave' ? P9.WAVES[C.i].at - 60 : P9.MARKET.shutter[0] - 40);
     }
     ckpt = C; hero.wind = DIF().wind; hero.hp = 100;
     toast('Retry', `From ${ckptName()} · second winds: ${hero.wind}`);
@@ -8423,6 +8424,7 @@ import * as P9 from './levels/pier9.js';
   function p9Wave(W_) {   // a wave: each Saltman steps out of a door, a container or the fog, one after another
     const st = p9.w[W_.id]; if (st.out) return;
     const roster = W_.roster[diffSel]; st.out = true; st.n = roster.length;
+    if (W_.ckpt && !flags.demo && !flags.attract) setCkpt('wave', P9.WAVES.indexOf(W_));   // a long level: a checkpoint as a big fight starts
     roster.forEach((v, i) => p9.queue.push({ v, wave: W_.id, src: W_.from[i % W_.from.length], t: 0.15 + i * 0.5 }));
     if (roster.includes('bosun')) toast(P9.BOSUN.name, 'His guard stops a lone heavy: end a combo on it, or parry him', true);
     else toast('Saltmen', `${roster.length} of them`, true);
