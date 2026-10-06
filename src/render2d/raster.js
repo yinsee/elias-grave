@@ -9,15 +9,19 @@ let buf = null, CW = 0, view = null;
 // pickables (weapons, ammo, bandages, cans and bottles) are drawn with pickArt.on set: plot marks their pixels in mask (and grows the
 // box x0..x1, y0..y1 around them), and the pick glow rings them
 export const pickArt = { on: false, x0: 1e9, y0: 1e9, x1: -1, y1: -1, mask: null };
+// fighters (the hero, goons, bosses) are drawn with figArt.on set: plot marks their pixels the same way, for the 2D rim light
+export const figArt = { on: false, x0: 1e9, y0: 1e9, x1: -1, y1: -1, mask: null };
 
 export function initRaster(buffer, stride, rows, v) {
   buf = buffer; CW = stride; view = v;
   pickArt.mask = new Uint8Array(stride * rows);
+  figArt.mask = new Uint8Array(stride * rows);
 }
 
 export const plot = (x, y, c) => {
   x -= view.x; y -= view.y; if (x < 0 || y < 0 || x >= view.vw || y >= view.vh) return; buf[y * CW + x] = c;
   if (pickArt.on) { pickArt.mask[y * CW + x] = 1; if (x < pickArt.x0) pickArt.x0 = x; if (x > pickArt.x1) pickArt.x1 = x; if (y < pickArt.y0) pickArt.y0 = y; if (y > pickArt.y1) pickArt.y1 = y; }
+  if (figArt.on) { figArt.mask[y * CW + x] = 1; if (x < figArt.x0) figArt.x0 = x; if (x > figArt.x1) figArt.x1 = x; if (y < figArt.y0) figArt.y0 = y; if (y > figArt.y1) figArt.y1 = y; }
 };
 export const plotV = (x, y, c) => { if (x < 0 || y < 0 || x >= view.vw || y >= view.vh) return; buf[y * CW + x] = c; };   // view coordinates
 export function disc(cx, cy, r, c) {
