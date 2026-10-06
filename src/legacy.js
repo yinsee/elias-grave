@@ -2230,6 +2230,7 @@ import * as P9 from './levels/pier9.js';
   }
   function hookStep(e, dt, px) {   // the hook in flight, the pull, the reel-in after a miss (a 1.2 s punish window)
     const M = P9.MARCHETTI.hook;
+    e.spT += dt;
     if (e.spT < 0) { if (e.spT < -0.2) { e.face = Math.sign(px - e.x) || e.face; e.hookTx = px; } return; }
     if (!e.hook) { e.hook = { x: e.x + e.face * 8 * e.s, y: GROUND - 24, st: 'fly', d: 0 }; emit('sfx', { name: 'dodge_whoosh', x: e.x, vol: 0.8, pitch: 0.6 }); }
     const k = e.hook;
@@ -2519,7 +2520,7 @@ import * as P9 from './levels/pier9.js';
     leg(pl, kF, fF, pal.pants); if (top === 'coat') tail(kF, pal.top);
     if (pal.apron) {   // a rubber apron from the chest to the knees, with old stains
       const ax = (kB.x + kF.x) / 2, ay = (kB.y + kF.y) / 2, sx0 = nk.x + (pl.x - nk.x) * 0.3, sy0 = nk.y + (pl.y - nk.y) * 0.3, bx = pl.x + (ax - pl.x) * 0.8, by = pl.y + (ay - pl.y) * 0.8;
-      seg(sx0, sy0, bx, by, tw * 0.95 + 0.6, O); seg(sx0, sy0, bx, by, tw * 0.95 - 0.4, pal.apron);
+      seg(sx0, sy0, bx, by, tw * 0.75 + 0.6, O); seg(sx0, sy0, bx, by, tw * 0.75 - 0.4, pal.apron);
       plot(Math.floor(pl.x + nx), Math.floor(pl.y - 1), BLOOD[1]); plot(Math.floor((sx0 + pl.x) / 2), Math.floor((sy0 + pl.y) / 2), BLOOD_D);
     }
     if (e.look.neck) for (let i = -1; i <= 1; i++) plot(Math.floor(nk.x + nx * 1.2 * s + i), Math.floor(nk.y + 2 * s - Math.abs(i) * 0.5), Math.floor(simTime * 2 + i) % 5 === 0 ? PAL.white : PAL.gold);   // the gold fish-scale chain glints
@@ -7483,7 +7484,7 @@ import * as P9 from './levels/pier9.js';
     }
     const cut = enc.introT >= 0 ? 1 - 0.5 * clamp(enc.introT / 0.25, 0, 1) : 1;
     for (const lx of P9.HALL_LAMPS) ls.push([lx - cam.x, GROUND - 116 - cam.y, 90 * 90, 1.15 * cut, 1.05 * cut, 0.85 * cut, 40]);
-    ls.push([2790 - cam.x, GROUND - 36 - cam.y, 70 * 70, 0.45, 0.85, 1.2, 0]);
+    ls.push([2790 - cam.x, GROUND - 36 - cam.y, 60 * 60, 0.2, 0.45, 0.7, 0]);   // the freezer's cold glow
     if (p9.tuna.st === 'warn' && Math.floor(simTime * 8) % 2 === 0) ls.push([2452 - cam.x, GROUND - 177 - cam.y, 130 * 130, 1.6, 0.15, 0.15, 40]);
     if (enc.introT >= 0 && enc.boss) ls.push([enc.boss.x - cam.x, GROUND - 30 - cam.y, 50 * 50, 1.2, 1.2, 1.2, 0]);
     ls.push([P[2].x - cam.x, P[2].y - 12 - cam.y, 46 * 46, 0.4, 0.4, 0.45, 0]);
@@ -7853,7 +7854,8 @@ import * as P9 from './levels/pier9.js';
     window.__pier9 = { chapter: () => startChapter1(), start: () => { leaveTitle(); setDemo(false); hideMenu(); loadLevel('pier9'); reset(); }, toBoss: () => { leaveTitle(); setDemo(false); hideMenu(); loadLevel('pier9'); p9SkipToBoss(); },
       peek: () => ({ level: LV.id, scene: sceneOn, x: Math.round(ctl.x), y: Math.round(ctl.y), mode: hero.mode, hp: Math.round(hero.hp), club: flags.club, open: p9.open, shutter: +p9.shutter.toFixed(2), waves: Object.fromEntries(Object.entries(p9.w).map(([k, v]) => [k, [v.out, zoneAlive[k] || 0]])), queue: p9.queue.length,
         boss: enc.boss ? { hp: Math.round(enc.boss.hp), max: enc.boss.maxHp, ph: enc.boss.ph, sp: enc.boss.sp, act: enc.boss.act, x: Math.round(enc.boss.x), dead: enc.boss.dead, intro: !!enc.boss.intro } : null, tuna: p9.tuna.st, hookPull, endPh, kills: runS.kills, kos, wasted: flags.wasted,
-        enemies: enemies.filter(e => !e.dead).map(e => [e.role, Math.round(e.x), Math.round(e.y), Math.round(e.hp), e.zone]) }),
+        enemies: enemies.filter(e => !e.dead).map(e => [e.role, Math.round(e.x), Math.round(e.y), Math.round(e.hp), e.zone, e.down ? 'down' : '']) }),
+      tp: x => { const dx = x - ctl.x; ctl.x += dx; for (const p of P) { p.x += dx; p.px += dx; } for (const st of hair) for (const p of st) { p.x += dx; p.px += dx; } if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; } cam.xf += dx; },
       hurtBoss: n => { if (enc.boss) { enc.boss.hp = Math.max(1, enc.boss.hp - n); } }, hurtHero: n => { hero.hp = Math.max(1, hero.hp - n); }, setDiff: i => { diffSel = i; }, kill: () => { for (const e of enemies) if (!e.dead && e !== enc.boss) killEnemy(e, 1, 200, 0.3); } };
   } else requestAnimationFrame(frame);
 })();
