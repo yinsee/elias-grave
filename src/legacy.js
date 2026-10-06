@@ -5468,6 +5468,7 @@ import * as P9 from './levels/pier9.js';
     const X = [], hair = e.hair, bd = e.beard, HW = o.HW, HU = o.HU, HD = o.HD, W = o.W;
     if (hair === 'mohawk') X.push(t3box(-2.6 * k, HU - 0.4, -0.6 * k, k, HU + 2.4 * k, 0.6 * k, p.loud, 0.3));
     if (hair === 'cap') X.push(t3box(HW - 0.3, 1.4 * k, -W * 0.9, HW + 2.2 * k, 2.2 * k, W * 0.9, p.topB, 0.3));   // the brim
+    if (hair === 'souwester') X.push(t3box(-HW - 1.2 * k, 1.5 * k, -W - 1.6 * k, HW + 1.8 * k, 2.3 * k, W + 1.6 * k, p.hatB, 0.3), t3box(-HW - 1.4 * k, -2 * k, -W * 0.95, -HW + 0.4, 2.4 * k, W * 0.95, p.hat, 0.3));   // the sou'wester's brim all round, the flap down the back
     if (hair === 'hood') X.push(t3box(-HW - k, -k, -W - 0.7 * k, -HW + 1.2 * k, HU - 0.3 * k, W + 0.7 * k, p.top, 0.3), t3box(-HW, HU - 0.6 * k, -W - 0.7 * k, 0.8 * k, HU + 0.4 * k, W + 0.7 * k, p.top, 0.3));
     if (bd === 'huge') X.push(t3box(-1.6 * k, -HD - 3.4 * k, -W * 0.75, HW + 0.4, -HD + 0.6 * k, W * 0.75, p.hair, 0.3));
     if (bd === 'full') X.push(t3box(-0.6 * k, -HD - 1.2 * k, -W * 0.8, HW - 0.4 * k, -HD + 0.6 * k, W * 0.8, p.hair, 0.3));
@@ -5543,6 +5544,8 @@ import * as P9 from './levels/pier9.js';
     }
     if (id === 'pistol') return t3all([t3box(0, -0.6, -0.5, L, 0.7, 0.5, ECOL.gun, 0.3), t3box(-0.3, -3, -0.45, 1.4, -0.6, 0.45, ECOL.gun, 0.3)]);   // slide and grip
     if (id === 'pipe') return t3rod(0, L, 0.9, ECOL.iron, 8);
+    if (id === 'cleaver') return t3all([t3rod(0, 2.5, 0.6, ECOL.grip, 6), t3box(2.5, -3.0, -0.22, L, 0.2, 0.22, ECOL.steelD, 0.3), t3box(2.5, -3.4, -0.12, L, -3.0, 0.12, ECOL.steel, 0.2)]);   // a square cleaver: a deep blade under the grip line
+    if (id === 'gaff') return t3all([t3rod(-3, L, 0.5, PAL.wood, 6), t3rod(L, L + 2, 0.4, ECOL.steel, 6), t3box(L + 1.6, -2.5, -0.3, L + 2.2, 0, 0.3, ECOL.steel, 0.2), t3box(L + 0.6, -2.9, -0.3, L + 2.2, -2.3, 0.3, ECOL.steel, 0.2)]);   // a pole with a steel hook
     if (id === 'machete') return t3all([t3rod(0, 2.5, 0.6, ECOL.grip, 6), t3box(2.5, -1.1, -0.18, L, 0.9, 0.18, ECOL.steelD, 0.3), t3box(2.5, -1.5, -0.12, L - 0.5, -1.1, 0.12, ECOL.steel, 0.25)]);
     return t3all([t3rod(0, 1.8, 0.5, ECOL.grip, 6), t3box(1.8, -0.5, -0.12, L, 0.4, 0.12, ECOL.steel, 0.25)]);   // a knife
   }
@@ -6641,7 +6644,7 @@ import * as P9 from './levels/pier9.js';
       this.bz = this.ease(e, this.bodyZ(e.lane, null));
       const leg = (h, k, ft, c, z) => {
         const [dx, dy] = norm(ft.x - k.x, ft.y - k.y);
-        this.seg(h.x, h.y, k.x, k.y, z, 1.5 * s * lw, s * lw, c); this.seg(k.x, k.y, ft.x, ft.y, z, 1.5 * s * lw, s * lw, c);
+        this.seg(h.x, h.y, k.x, k.y, z, 1.5 * s * lw, s * lw, c); this.seg(k.x, k.y, ft.x, ft.y, z, 1.5 * s * lw, s * lw, e.look.boots ? pal.shoe : c);   // (rubber boots to the knee)
         this.ball(ft.x, ft.y, z, 1.4 * s, s, pal.shoe);
         this.shoe(ft.x - dy * 0.6 * s * f, ft.y + dx * 0.6 * s * f, ft.x + dy * 2.8 * s * f + dx * 0.6, ft.y - dx * 2.8 * s * f + dy * 0.6, z, 1.15 * s, 1.45 * s, s, pal.shoe);
       };
@@ -6665,6 +6668,16 @@ import * as P9 from './levels/pier9.js';
         if (e.role === 'thrower') for (let i = 1; i <= 3; i++) this.ball(nk.x + (mx.x - nk.x) * i / 4 + nx * (1.5 - i) * s, nk.y + (mx.y - nk.y) * i / 4, fz, 0.5, 0, ECOL.steel);   // knives on the chest strap
       }
       leg(pl, kF, fF, pal.pants, ZL); if (top === 'coat') tail(kF, pal.top, ZL);
+      if (pal.apron) {   // the rubber apron from the chest to the knees (drawEnemy), wrapped over the body and both legs
+        const ax = (kB.x + kF.x) / 2, ay = (kB.y + kF.y) / 2, sx0 = nk.x + (pl.x - nk.x) * 0.3, sy0 = nk.y + (pl.y - nk.y) * 0.3;
+        this.seg(sx0, sy0, pl.x + (ax - pl.x) * 0.8, pl.y + (ay - pl.y) * 0.8, 0, tw * 0.8, 0.6 * s, pal.apron, Math.max(TZ, (ZL + 1.5 * s * lw) / (tw * 0.8)) * 1.08);
+      }
+      if (e.look.neck) { const [tx, ty] = norm(pl.x - nk.x, pl.y - nk.y), nx = ty * f; for (let i = -1; i <= 1; i++) this.ball(nk.x + nx * 1.2 * s + i, nk.y + 2 * s - Math.abs(i) * 0.5, tw * TZ * 0.85, 0.45, 0, Math.floor(simTime * 2 + i) % 5 === 0 ? PAL.white : PAL.gold); }   // the gold chain
+      if (e.kind === 'marchetti' && e.hook) {   // the meat hook on its chain, from his back hand (drawHookMarks)
+        const q = e.hook, h = J[4], d = e.face * (q.st === 'back' ? -1 : 1), st = ECOL.steel;
+        this.seg(h.x, h.y, q.x, q.y, -ZA * 0.5, 0.35, 0.25, T3P9.CHAIN);
+        this.seg(q.x, q.y, q.x + d * 1.6, q.y, -ZA * 0.5, 0.45, 0.25, st); this.seg(q.x + d * 1.6, q.y, q.x + d * 2.4, q.y + 1.6, -ZA * 0.5, 0.45, 0.25, st); this.seg(q.x + d * 2.4, q.y + 1.6, q.x + d, q.y + 3.2, -ZA * 0.5, 0.45, 0.25, st);
+      }
       const k = e.hk * s;
       { const glow = !e.dead && !!((e.act && e.actT < 0) || e.sp || e.ph === 2); this.head(e, hd, nk, f, (e.dead ? 'd' : glow ? 'g' : 'n') + k, () => t3goonHead(e, glow, e.dead)); }
       arm(nk, eF, hF, bare ? pal.skin : pal.top, bare ? pal.skin : pal.top, e.gloves ? pal.glove : pal.skin, ZA);
@@ -6996,6 +7009,9 @@ import * as P9 from './levels/pier9.js';
       const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(this.rainMax * 6), 3));
       this.rain = new THREE.LineSegments(rg, new THREE.LineBasicMaterial({ color: new THREE.Color(170 / 255, 185 / 255, 220 / 255), transparent: true, opacity: 0.35, depthWrite: false }));
       this.rain.frustumCulled = false; this.rain.renderOrder = 15; this.scene.add(this.rain);
+      const fg = new THREE.BufferGeometry(); fg.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(this.rainMax * 3), 3));   // Pier 9: the sleet's wet flakes
+      this.flakes = new THREE.Points(fg, new THREE.PointsMaterial({ color: new THREE.Color(240 / 255, 244 / 255, 250 / 255), size: 1.5, sizeAttenuation: false, transparent: true, opacity: 0.7, depthWrite: false }));
+      this.flakes.frustumCulled = false; this.flakes.renderOrder = 15; this.scene.add(this.flakes);
       const cone = new THREE.CylinderGeometry(1 / 13, 1, 1, 18, 1, true);   // narrow end (+y) at the source, 13x wider at the far end
       this.beams = Array.from({ length: 5 }, () => {
         const m = new THREE.Mesh(cone, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.12, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
@@ -7009,13 +7025,17 @@ import * as P9 from './levels/pier9.js';
       m.scale.set(r1, len, r1); m.material.color.setRGB(...rgb); m.material.opacity = op; m.visible = true;
     },
     updateFx() {
-      const p = this.rain.geometry.attributes.position, n = flags.club ? 0 : Math.min(rain.drops.length, this.rainMax);
+      const p = this.rain.geometry.attributes.position, n = flags.club ? 0 : Math.min(rain.drops.length, this.rainMax), sleet = isP9();
+      if (this.rainSleet !== sleet) { this.rainSleet = sleet; const m = this.rain.material; if (sleet) { m.color.setRGB(226 / 255, 232 / 255, 240 / 255); m.opacity = 0.5; } else { m.color.setRGB(170 / 255, 185 / 255, 220 / 255); m.opacity = 0.35; } }   // Pier 9: sleet, whiter and steeper
       for (let i = 0; i < n; i++) {
-        const d = rain.drops[i], far = d.v < 290, l = far ? 3 : 5, onProp = floorBelow(d.x, d.y, 0) !== GROUND_S;
+        const d = rain.drops[i], far = d.v < (sleet ? 150 : 290), l = far ? 3 : 5, onProp = floorBelow(d.x, d.y, 0) !== GROUND_S;
         const z = onProp ? T3.ZF + 2 + (i * 7 % 15) : far ? -10 - (i * 7 % 9) : (i * 37 % 41) - 12;   // over a car or a scaffold: the drops fall onto it, not in front of it
-        p.setXYZ(i * 2, d.x, -d.y, z); p.setXYZ(i * 2 + 1, d.x + l / 3, -(d.y - l), z);
+        p.setXYZ(i * 2, d.x, -d.y, z); p.setXYZ(i * 2 + 1, d.x + (sleet ? l / 2 : l / 3), -(d.y - l), z);
       }
       p.needsUpdate = true; this.rain.geometry.setDrawRange(0, n * 2);
+      let nf = 0;
+      if (sleet) { const fp = this.flakes.geometry.attributes.position; for (let i = 0; i < n; i++) { const d = rain.drops[i]; if (d.flake) fp.setXYZ(nf++, d.x + 1, -(d.y + 1), d.v < 150 ? -10 - (i * 7 % 9) : (i * 37 % 41) - 12); } fp.needsUpdate = true; }
+      this.flakes.geometry.setDrawRange(0, nf);
       for (const b of this.beams) b.visible = false;
       if (flags.club && !isP9()) clubSpots().forEach((sp, i) => this.beam(i, sp.fx, GROUND - 144, sp.x, GROUND - 2, 13, -3, sp.c.map(v => Math.min(1, v / 1.4)), 0.13));
       else if (cam.x < GOAL.x1 + 60 && cam.x + cam.vw > GOAL.x0 - 60) [[GOAL.x0 + 8, 0, GOAL.y - 2], [GOAL.x1 - 8, 2.2, GOAL.y - 70]].forEach(([bx, ph, by], i) => {
