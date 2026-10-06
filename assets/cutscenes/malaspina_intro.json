@@ -1,0 +1,13 @@
+{
+  "id": "malaspina_intro",
+  "title": "Malaspina",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_cold" },
+  "right": { "id": "malaspina", "name": "DON LUCIEN MALASPINA", "role": "Tenor · Club Noir" },
+  "lines": [
+    { "speaker": "malaspina", "text": "The Sandman. Retired, they told me. Gone soft." },
+    { "speaker": "elias", "mood": "cold", "text": "Where is my dog?" },
+    { "speaker": "malaspina", "text": "Safe. Fed. Leverage. It is business, Grave. Nothing personal." },
+    { "speaker": "elias", "mood": "angry", "text": "It is personal." },
+    { "speaker": "malaspina", "text": "Then I keep the coat on. This will not take long." }
+  ]
+}

@@ -619,9 +619,9 @@ import * as P9 from './levels/pier9.js';
         const srow = wy * W + cam.x, row = vy * CW;
         for (let vx = 0; vx < cam.vw; vx++) { const c = GORE[srow + vx] || (wy < GROUND ? stat[srow + vx] : 0); if (c) buf[row + vx] = c; }
       }
-      if (isP9()) P9.drawHallFloor(R9); else drawClubFloor();
+      if (isP9()) P9.drawHallFloor(R9, p9.ice); else drawClubFloor();
       for (let vy = 0; vy < cam.vh; vy++) { const wy = vy + cam.y; if (wy < GROUND || wy >= H) continue; const srow = wy * W + cam.x, row = vy * CW; for (let vx = 0; vx < cam.vw; vx++) if (GORE[srow + vx]) buf[row + vx] = GORE[srow + vx]; }
-      if (isP9()) P9.drawHallProps(R9, { ph: enc.boss && !enc.boss.dead ? enc.boss.ph : 0, hz: p9.tuna });
+      if (isP9()) P9.drawHallProps(R9, { ph: p9.speedOn && enc.boss && !enc.boss.dead ? 2 : 1, hz: p9.tuna, lev: p9.lev });
       return;
     }
     if (isP9()) P9.drawSky(R9); else drawSky();
@@ -1027,7 +1027,7 @@ import * as P9 from './levels/pier9.js';
   }
   const objCols = o => o.kind === 'bin' ? [PAL.bin, PAL.binL, PAL.out] : o.kind === 'cone' ? [PAL.cone, PAL.coneL, PAL.cone] : o.kind === 'bag' ? [PAL.bag, PAL.bagS, C('#6a6a50')]
     : o.kind === 'can' ? [C('#c0302a'), C('#c8ccd8'), C('#e04a3a')] : o.kind === 'bottle' ? [C('#2f7a3e'), C('#b8e0c0'), C('#2f7a3e')] : o.kind === 'knife' ? [C('#d8dee8'), C('#3a2230'), C('#d8dee8')]
-    : o.kind === 'ball' ? [PAL.ball, PAL.white, PAL.ball] : o.kind === 'barrel' ? [PAL.barrel, PAL.hoop, PAL.barrelL] : [PAL.crate, PAL.crateD, PAL.plankL];
+    : o.kind === 'ball' ? [PAL.ball, PAL.white, PAL.ball] : o.kind === 'tuna' ? [C('#a8988a'), C('#f8f4ee'), C('#8a6a4a')] : o.kind === 'barrel' ? [PAL.barrel, PAL.hoop, PAL.barrelL] : [PAL.crate, PAL.crateD, PAL.plankL];
   // a carried object used as a weapon breaks on its first hit, into pieces of what it is made of
   function shatterObj(o, dirx) {
     if (!objs.includes(o)) return;
@@ -1126,6 +1126,7 @@ import * as P9 from './levels/pier9.js';
         if (segDist(ax, ay, bx, by, o.x, o.y) < o.r + 4 * e.s) {
           o.hitIds.add(e); const d = Math.sign(o.vx) || 1;
           killBy = 5; damageEnemy(e, Math.round(8 + o.m * 6), d, 140 + o.m * 40, 0.3, o.x, o.y, false); killBy = null;
+          if (o.kind === 'tuna' && e === enc.boss && !e.dead) { e.recT = Math.max(e.recT, 0.7); e.hurtT = Math.max(e.hurtT, 0.4); if (e.sp === 'tuna' || e.sp === 'ice') e.sp = null; }   // a thrown tuna rocks Marchetti
           hitFx(160 + o.m * 30); emit('feat', 'tosshit');
           o.vx *= -0.3; o.vy = -60;
           shatterObj(o, d);   // it breaks on him
@@ -1642,7 +1643,7 @@ import * as P9 from './levels/pier9.js';
     lungeW: mod(GUARD, { ry: 13.2, lean: 0.5, head: -0.3, rx: -1.5, f0x: -8, f1x: 5, a0s: 0.1, a0e: 2.4, a1s: 1.3, a1e: 1.6 }),   // coil low
     raise: mod(GUARD, { a1s: 2.9, a1e: 0.5, lean: -0.12, rx: -0.8, ry: 15.2, a0s: 0.6 }),                       // weapon up over the head
     raise2: mod(GUARD, { a1s: 3.1, a1e: 0.35, a0s: 2.9, a0e: 0.5, lean: -0.2, rx: -1, ry: 15 }),                // two-hand overhead
-    throwW: mod(GUARD, THR), aim: mod(GUARD, AIMP),
+    throwW: mod(GUARD, THR), throwO: mod(GUARD, THR_OUT), aim: mod(GUARD, AIMP),
     guard: mod(GUARD, { ry: 15.1, lean: 0.04, head: 0.12, a0s: 1.2, a0e: 2.55, a1s: 1.45, a1e: 2.3 }),        // fists up at the face
     hop: mod(GUARD, { ry: 12.4, lean: 0.4, head: -0.2, f0x: -5, f1x: 4, a0s: -0.6, a0e: 0.5, a1s: -0.3, a1e: 0.6 }),   // squat before a jump
     tired: mod(IDLE, { ry: 14.2, lean: 0.6, head: -0.15, f0x: -5, f1x: 5, a0s: 0.25, a0e: 0.2, a1s: 0.35, a1e: 0.3 }), // gasping: punish now
@@ -1650,7 +1651,32 @@ import * as P9 from './levels/pier9.js';
     chargeW: mod(GUARD, { ry: 12.6, lean: 0.75, head: -0.45, rx: -2, f0x: -10, f1x: 4, a0s: -0.5, a0e: 0.8, a1s: 0.9, a1e: 1.8 }),
     jumpW: mod(IDLE, { ry: 10.5, lean: 0.35, head: -0.25, f0x: -6, f1x: 5, a0s: 2.7, a0e: 0.35, a1s: 2.8, a1e: 0.3 }),   // arms overhead, deep squat
     jumpA: mod(AIR, { a0s: 2.9, a0e: 0.2, a1s: 3.0, a1e: 0.2, f0y: 8, f1y: 8 }),
+    // the bosses' specials: each tell is a held pose, each strike a second one
+    grabW: mod(GUARD, { ry: 13.8, lean: 0.35, head: -0.2, rx: -1.2, f0x: -7, f1x: 5, a0s: 1.3, a0e: 0.7, a1s: 1.35, a1e: 0.6 }),       // hunched, both hands open in front
+    grabA: mod(GUARD, { ry: 13.6, lean: 0.65, head: -0.1, rx: 1.5, f0x: -9, f1x: 7, a0s: 1.65, a0e: 0.1, a1s: 1.7, a1e: 0.1 }),        // the lunge: both arms out
+    butt: mod(GUARD, { ry: 14.6, lean: 0.55, head: 0.6, rx: 1, f0x: -6, f1x: 5, a0s: 1.45, a0e: 1.1, a1s: 1.45, a1e: 1.1 }),          // holding him, the head drives in
+    sweepW: mod(GUARD, { ry: 11.8, lean: 0.3, head: -0.1, rx: -2, f0x: -9, f1x: 7, a0s: 0.6, a0e: 0.8, a1s: -0.7, a1e: 0.3 }),         // a deep crouch, the cane back along the floor
+    sweepA: mod(GUARD, { ry: 11.8, lean: 0.5, head: 0, rx: 1.5, f0x: -9, f1x: 8, a0s: -0.4, a0e: 0.6, a1s: 1.05, a1e: 0.05 }),         // the cane flat across the floor
+    shoveW: mod(GUARD, { ry: 15, lean: -0.15, rx: -1.5, a0s: 1.0, a0e: 2.2, a1s: 1.0, a1e: 2.2 }),                                    // palms back at the chest
+    shoveA: mod(GUARD, { ry: 15, lean: 0.45, rx: 2, f0x: -7, f1x: 6, a0s: 1.6, a0e: 0.05, a1s: 1.6, a1e: 0.05 }),                     // both arms straight out
+    reachUp: mod(IDLE, { ry: 16.8, lean: -0.2, head: -0.45, a0s: 3.0, a0e: 0.25, a1s: 2.9, a1e: 0.35 }),                              // both hands up at the rail
+    tunaSw: mod(GUARD, { ry: 14.6, lean: 0.55, rx: 2, f0x: -8, f1x: 6, a0s: 1.25, a0e: 0.2, a1s: 1.15, a1e: 0.2 }),                   // the follow-through
+    smashA: mod(GUARD, { ry: 13.2, lean: 0.7, head: 0.2, rx: 1.5, f0x: -8, f1x: 7, a0s: 0.9, a0e: 0.3, a1s: 0.8, a1e: 0.2 }),          // the cleaver driven into the floor
+    lever: mod(IDLE, { ry: 16.6, lean: -0.1, head: -0.2, a0s: 0.3, a0e: 0.3, a1s: 2.6, a1e: 0.5 }),                                   // one hand up on the lever
+    leverP: mod(IDLE, { ry: 15.4, lean: 0.25, head: 0.1, a0s: 0.5, a0e: 0.4, a1s: 1.2, a1e: 0.9 }),                                   // and down it comes
   };
+  function spPose(e) {   // a boss special's pose (null: walk)
+    const t = e.spT;
+    switch (e.sp) {
+      case 'grab': return t < 0 ? EP.grabW : e.held ? EP.butt : EP.grabA;
+      case 'sweep': return t < 0 ? EP.sweepW : EP.sweepA;
+      case 'shove': return t < 0 ? EP.shoveW : EP.shoveA;
+      case 'tuna': return t < 0 ? EP.reachUp : e.tunaM === 'swing' ? EP.tunaSw : EP.throwO;
+      case 'ice': return t < 0 ? EP.raise2 : EP.smashA;
+      case 'lever': return e.levPull < 0 ? null : e.levPull < e.levT * 0.6 ? EP.lever : EP.leverP;
+    }
+    return null;
+  }
   const EWIND = { lunge: EP.lungeW, chop: EP.raise, hchop: EP.raise2, throw: EP.throwW, shoot: EP.aim,
     punch: mod(MOVES.hp.keys[1][1], { lean: -0.28, rx: -2.2, ry: 14.8, a0s: -0.3, a0e: 2.4 }),   // rear fist cocked way back
     slam: MOVES.ah.keys[1][1], slash: MOVES.ks0.keys[1][1] };
@@ -1666,6 +1692,8 @@ import * as P9 from './levels/pier9.js';
   for (const n of ['jab', 'stab', 'punch', 'slam', 'slash', 'chop', 'hchop']) eTrim(n);
   // the lunge dashes in its coil, then strikes: the coil is held through the dash
   EMOVES.lunge = { ...EMOVES.lunge, t0: 0, pre: 0.14, keys: [[0, EP.lungeW.slice()], [0.14, EP.lungeW.slice()], ...MOVES.hp.keys.slice(2)] };
+  EMOVES.clunge = { ...EMOVES.lunge, w: true };   // Malaspina's cane lunge: the dash, then the cane's tip
+  EWIND.clunge = EP.lungeW;
   const CMB = ROLE.brawler.cmb;   // goon strings
   const EFX = { sweat: C('#9fd3ff'), steam: C('#c9c4d4') };
   // difficulty: the goons' aggression doubles at each step (A = 1, 2, 4, 8). They rest 1/A as long between attacks, more of them
@@ -1686,6 +1714,11 @@ import * as P9 from './levels/pier9.js';
   const NM_LAST = ['Russo', 'Moretti', 'Romano', 'Bianchi', 'Esposito', 'Costa', 'Volkov', 'Kowalski', 'Dubois', 'Brenner', 'Kelly', 'Novak', 'Petrov', 'Marino', 'Greco', 'De Luca', 'Rossi', 'Sorrento', 'Lemaire', 'Haas'];
   const pickN = a => a[Math.floor(simRand() * a.length)];
   const BOSS_NAME = 'Don Lucien Malaspina';   // 20 characters, the same every time
+  // Malaspina's numbers (Medium base; hp by difficulty E/M/H/W). dmg: by move. Tells scale with bTell (t / A^0.25). fur: coat, its shade, the collar
+  const MAL = { hp: [640, 800, 1000, 1220], s: 1.4, reach: 27, speed: 27, speed2: 33, windup: 0.34, windup2: 0.28, cd: [0.7, 1.4], cd2: [0.6, 1.2], ph2: 0.5,
+    R: { w: 'cane', len: 13, off: -0.35, reach: 27 }, fur: ['#4a3a32', '#36291f', '#8a7462'],
+    dmg: { jab: 11, lunge: 14, over: 24, butt: 16, shove: 5, sweep: 18 }, grab: 0.5, butt: 0.45, sweep: 0.5, shove: 0.2, over: 0.5,
+    crew: { delay: 15, every: [9, 6], alive: [[1, 1, 1, 1], [1, 1, 2, 2]], max: 8 } };   // alive: [phase 1, phase 2] by difficulty
   const gangName = () => {   // at most 10 characters: a first and last name when they fit, else a nickname
     const full = `${pickN(NM_FIRST)} ${pickN(NM_LAST)}`;
     return full.length <= 10 && simRand() < 0.6 ? full : pickN(NM_NICK);
@@ -1722,11 +1755,15 @@ import * as P9 from './levels/pier9.js';
         poise: (R.poise ?? 6) + (lk.build === 'stocky' ? STOCKY_POISE : 0), armor: !!R.armor });   // poise by role (stocky +4); pipe and machete swings have super armor
       e.maxHp = e.hp; e.speed = T.speed * B.spd * (0.9 + 0.25 * e.agg); e.stance = e.reach + (16 + 16 * (1 - e.agg)) / (1 + 0.6 * dLv());
     } else e.s = B.s;
-    if (type === 'boss' && !(opts && opts.boss)) e.hp = e.maxHp = T.hpD[DIFFS.indexOf(DIF())];   // the street boss: hp by difficulty
+    if (type === 'boss' && !(opts && opts.boss)) {   // the street boss, Malaspina: hp by difficulty, his cane, his fur coat (off at phase 2)
+      e.hp = e.maxHp = MAL.hp[DIFFS.indexOf(DIF())];
+      Object.assign(e, { kind: 'malaspina', s: MAL.s, reach: MAL.reach, speed: MAL.speed, windup: MAL.windup, cd: MAL.cd.slice(), R: { ...ROLE.brawler, ...MAL.R }, coat: true, hitN: 0, hitT0: -9, grabN: 0 });
+      e.palC = { ...e.pal, top: C(MAL.fur[0]), topB: C(MAL.fur[1]), fur: C(MAL.fur[2]) };
+    }
     if (opts && opts.boss) {   // a level boss: its own stats (hp by difficulty), size and name
       const Bd = opts.boss;
       Object.assign(e, { hp: Bd.hp[diffSel], maxHp: Bd.hp[diffSel], s: Bd.s, m: Bd.m, speed: Bd.speed, reach: Bd.reach, dmg: Bd.dmg, heavyDmg: Bd.heavyDmg, poise: Bd.poise,
-        windup: Bd.windup, cd: Bd.cd.slice(), kind: 'marchetti', hookCd: 3.5, hook: null });
+        windup: Bd.windup, cd: Bd.cd.slice(), kind: 'marchetti', hookCd: 3.5, hook: null, chgCd: 6, tunaCd: 3, iceCd: 7, stalkT: 0, hidden: false });
     }
     e.cons = CONSTRAINTS.map(([a, b, lo, hi]) => [a, b, lo * e.s, hi * e.s]);
     poseEnemy(e, 0);
@@ -1751,6 +1788,7 @@ import * as P9 from './levels/pier9.js';
     }
     else if (e.exposed > 0) { t = lerpA(GUARD, EHURT, 0.75); t[1] -= 0.8; }   // off balance after a parry or a perfect dodge
     else if (e.sp === 'roar') t = EP.roar;
+    else if (e.sp && (t = spPose(e))) { /* a boss special */ }
     else if (e.sp === 'charge' && e.spT < 0) t = EP.chargeW;
     else if (e.sp === 'jslam') { t = e.leapt ? EP.jumpA : EP.jumpW; air = false; }
     else if (e.recT > 0) { t = EP.tired.slice(); t[1] += 0.5 * Math.sin(simTime * 9); }
@@ -1831,14 +1869,15 @@ import * as P9 from './levels/pier9.js';
   // a light one makes him stutter back, a solid one knocks him off his feet, a big one (or a K.O.) sends him flying
   // src: what hit him ({ e, kind: 'melee' | 'knife' | 'shot', heavy }); none = a shockwave, a charge, a swinging tuna (no block, no parry).
   // Facing the blow: a parry tap (blk.parryT) turns any melee blow aside; a held block (act 'block') takes a light melee blow or a knife
-  // for chip damage, while a heavy ('!') one smashes it open: he takes the blow and reels (act 'gbreak')
+  // for chip damage, while a heavy ('!') one smashes it open: he takes the blow and reels (act 'gbreak'). src.u: a boss's unblockable move
+  // (the '!' in a red ring): no parry, and a block is smashed open
   function hurtPlayer(dmg, x, y, dirx, heavy, impK = 1, src = null) {   // impK scales how hard the blow moves him (not the damage)
     if (hero.mode !== 'anim' || hero.invT > 0) return;
     let gbreak = false;
     if (src && ctl.face === -dirx && !ctl.air) {
-      if (src.kind === 'melee' && src.e && blk.parryT > 0) { parry(src.e, x, y, dirx); return; }
-      if (hero.act === 'block' && (src.kind === 'melee' || src.kind === 'knife')) {
-        if (!src.heavy) {   // blocked: chip damage, a shove, a spark
+      if (src.kind === 'melee' && src.e && blk.parryT > 0 && !src.u) { parry(src.e, x, y, dirx); return; }
+      if (hero.act === 'block' && (src.kind === 'melee' || src.kind === 'knife' || src.u)) {
+        if (!src.heavy && !src.u) {   // blocked: chip damage, a shove, a spark
           const d = Math.max(1, Math.round(dmg * DEF.block.chip)); hero.hp = Math.max(1, hero.hp - d); hero.invT = DEF.block.inv;
           ctl.push = Math.max(ctl.push, DEF.block.push); ctl.pushK = 12; hitStop = Math.max(hitStop, 0.04);
           sparks.push({ x, y, t: 0 }); hitSpark(x, y, -dirx, 90, false); flinch(x, y, 0.4, x, y);
@@ -1908,7 +1947,8 @@ import * as P9 from './levels/pier9.js';
     }
     for (const b of eshots) { const d = (P[2].x - b.x) * Math.sign(b.vx); if (d > -2 && d / Math.max(1, Math.abs(b.vx)) < DEF.pd.win && Math.abs(P[2].y - b.y) < 26) return b; }
     const B = enc.boss;
-    if (B && !B.dead && B.sp === 'charge' && B.spT > 0 && (ctl.x - B.x) * B.face > 0 && (ctl.x - B.x) * B.face / 215 < DEF.pd.win) return B;
+    if (B && !B.dead && B.sp === 'charge' && B.spT > 0 && (ctl.x - B.x) * B.face > 0 && (ctl.x - B.x) * B.face / (B.chgV || 215) < DEF.pd.win) return B;
+    if (B && !B.dead && B.sp && B.pdAt != null && Math.abs(ctl.x - B.x) < B.pdR && B.pdAt - simTime <= DEF.pd.win && B.pdAt - simTime > -0.04) return B;   // a boss special's strike (grab, sweep, shove, tuna swing)
     for (const q of quakes) if (!q.hit && (ctl.x - q.x) * q.dir > -2 && (ctl.x - q.x) * q.dir / QUAKE.v < DEF.pd.win) return q;
     return null;
   }
@@ -1971,8 +2011,9 @@ import * as P9 from './levels/pier9.js';
         return;
       }
     }
+    if (e === enc.boss) bossHitBy(e, power);   // (the boss counts hits: 4 inside 1 s and Malaspina shoves free; a heavy blow stops a lever pull)
     const broke = e.guardT > 0 && enc.eHitKind === 1 && power >= 250;   // a heavy smashes the guard open
-    const reel = e.sp === 'hook' && e.hook && e.hook.st === 'back';   // Marchetti reeling his hook in: open to a punish
+    const reel = (e.sp === 'hook' && e.hook && e.hook.st === 'back') || e.sp === 'lever';   // Marchetti reeling his hook in, or his back turned at a lever: open to a punish
     if (e.recT > 0 || reel) dmg = Math.round(dmg * 1.3);   // gassed after a big move: hits land harder
     // where it landed: the head snaps back and hurts more, the body doubles over, the legs buckle and slow him
     const zone = !e.J ? 'body' : y < e.J[1].y + 1 ? 'head' : y > e.J[2].y + 2 ? 'legs' : 'body';
@@ -2024,9 +2065,9 @@ import * as P9 from './levels/pier9.js';
     bleed(e.J[1].x, e.J[1].y, dirx, e.type === 'boss' ? 60 : !hero.weapon && killBy == null && enc.eHitKind === 1 ? 7 : 24, 1.4);   // beaten down with fists: less blood
     bodyStain(e, hx ?? e.J[1].x, hy ?? e.J[1].y + 3, !hero.weapon && killBy == null && enc.eHitKind === 1 ? 4 : 10);
     // sometimes an enemy drops an ammo box; you have to walk over it to load it
-    const nBox = e === enc.boss ? 3 : simRand() < (WEAPONS[hero.weapon].ammo ? 0.55 : 0.35) ? 1 : 0;
+    const nBox = e === enc.boss ? 0 : simRand() < (WEAPONS[hero.weapon].ammo ? 0.55 : 0.35) ? 1 : 0;   // (a boss drops no loot)
     for (let i = 0; i < nBox; i++) ammoBoxes.push({ x: e.x, y: e.y - 12 * e.s, vx: dirx * 30 + (simRand() - 0.5) * 70, vy: -110 - simRand() * 50, life: 30 });
-    if ((e === enc.boss || simRand() < BAND_P) && ammoBoxes.filter(b => b.band).length < BAND_MAX)   // and a bandage now and then: walk over it for 30 s of regen
+    if (e !== enc.boss && simRand() < BAND_P && ammoBoxes.filter(b => b.band).length < BAND_MAX)   // and a bandage now and then: walk over it for 30 s of regen
       ammoBoxes.push({ band: true, x: e.x, y: e.y - 12 * e.s, vx: -dirx * 20 + (simRand() - 0.5) * 60, vy: -120 - simRand() * 40, life: 30 });
     if (e !== enc.boss && simRand() < DROP_P) dropWeapon(e);   // and often a weapon, lying by the body
     if (e.zone != null && --zoneAlive[e.zone] === 0 && typeof e.zone === 'number') emit('feat', 'kill' + e.zone);
@@ -2096,12 +2137,11 @@ import * as P9 from './levels/pier9.js';
     }
   }
   // ---------- enemy brains: spacing, attack tokens, flanking, reactions; the boss has two phases ----------
-  const BCMB = [['punch'], ['slam'], ['punch', 'slam'], ['punch', 'punch']];
   function eStart(e, a, windup) {
     if (e.zone !== 'arena') noise(e.x);   // a goon swings or fires out in the street
     if (e.type === 'goon') windup /= DIF().A ** 0.2;   // harder: a quicker wind-up (Medium 0.87, Hard 0.76, Wicked 0.66 of it)
     else if (!e.kind) windup = Math.max(0.18, windup / DIF().A ** 0.25);   // the street boss: t / A^0.25, never under 0.18 s
-    e.act = a; e.actT = -windup; e.struck = false; e.slammed = false; e.guardT = 0; e.pendH = null;
+    e.act = a; e.actT = -windup; e.struck = false; e.slammed = false; e.guardT = 0; e.pendH = null; e.actU = false; e.actDmg = null; e.markU = false;
     e.face = Math.sign(P[2].x - e.x) || e.face;
     if (EMOVES[a].heavy) e.mark = windup;   // heavy moves flash a '!' over the head
   }
@@ -2277,8 +2317,9 @@ import * as P9 from './levels/pier9.js';
   function eShotStep(dt) {
     for (let i = eshots.length - 1; i >= 0; i--) {
       const b = eshots[i]; b.px = b.x; b.py = b.y; b.t += dt;
-      if (b.k === 'k') b.vy += 260 * dt;
+      if (b.k === 'k' || b.k === 't') b.vy += 260 * dt;
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
+      if (b.k === 't') { if (tunaShotStep(b)) eshots.splice(i, 1); continue; }   // Marchetti's lobbed tuna
       let dead = b.life <= 0 || b.x < 0 || b.x > W || b.y > GROUND + 2;
       if (!dead) for (const s of SURF) if (b.x >= s.x0 && b.x <= s.x1 && b.py < s.y && b.y >= s.y) { dead = true; puff(b.x, s.y - 1); break; }
       // a bullet coming at him: half the time he reads it and ducks under it
@@ -2291,64 +2332,189 @@ import * as P9 from './levels/pier9.js';
       if (dead) eshots.splice(i, 1);
     }
   }
-  function bossThink(e, dt, px, dx, adx, level, aggro) {
+  // a lobbed tuna: it hits the hero (heavy: a block is smashed), or he hits it back at Marchetti (any blow that meets it in its swing),
+  // or it lands and lies on the floor to be thrown. Returns true when it is gone
+  function tunaShotStep(b) {
+    const B = enc.boss;
+    if (!b.back) {
+      const pm = MOVES[hero.act], hx = ctl.x + ctl.face * 10;
+      if (pm && hero.mode === 'anim' && hero.actT >= pm.win[0] - 0.04 && hero.actT <= pm.win[1] + 0.02 && (b.x - ctl.x) * ctl.face > -4 && Math.abs(b.x - hx) < 16 && Math.abs(b.y - (P[1].y + 4)) < 18) {
+        b.back = true; b.vx = (Math.sign((B ? B.x : b.x + ctl.face) - b.x) || ctl.face) * 270; b.vy = -70; b.life = 1.5;   // hit back: it flies at him
+        hitStop = Math.max(hitStop, 0.08); sparks.push({ x: b.x, y: b.y, t: 0 }); hitSpark(b.x, b.y, ctl.face, 220, true); kickCam(ctl.face, 0, 1.2);
+        emit('feat', 'tunaback'); emit('boss:tell', { boss: B, move: 'tunaBack', t: 0, x: b.x });
+        return false;
+      }
+      if (hitsPlayer(b.x, b.y, 3) || hitsPlayer(b.x - Math.sign(b.vx) * 6, b.y, 3)) { hurtPlayer(b.dmg, b.x, b.y, Math.sign(b.vx) || 1, true, 1, { kind: 'knife', heavy: true }); floorTuna(b.x, -b.vx * 0.15); return true; }
+    } else for (const e of enemies) {   // hit back: it hits the first body in its way, the boss hardest
+      if (e.dead || e.down || !e.J) continue;
+      const [ax, ay, bx, by] = capsule(e.J);
+      if (segDist(ax, ay, bx, by, b.x, b.y) > 6 * e.s) continue;
+      const d = Math.sign(b.vx) || 1;
+      killBy = 5; damageEnemy(e, e === B ? P9.MARCHETTI.tunaBat.back : 20, d, 300, 0.3, b.x, b.y, false); killBy = null;
+      if (e === B && !e.dead) { if (!e.sp || e.sp === 'tuna' || e.sp === 'ice') { e.sp = null; e.act = null; e.combo = null; } e.recT = Math.max(e.recT, 0.7); e.hurtT = Math.max(e.hurtT, 0.5); e.vx = d * 50; }
+      else if (!e.dead && !e.down) knockDown(e, d, 300, 'hp');
+      hitFx(260); shakeIt(0.15, 2); floorTuna(b.x, -d * 30);
+      return true;
+    }
+    if (b.y >= GROUND - 4 || b.life <= 0 || b.x < 2440 || b.x > W - 10) { floorTuna(b.x, b.vx * 0.15); dust(b.x, GROUND - 1, 4); shakeIt(0.05, 1); return true; }
+    return false;
+  }
+  // ---------- the bosses: set pieces. Every move has a tell (a pose, a flash on the body, the '!' over the head and 'boss:tell' {move} for
+  // the audio) and a punish window after it. Unblockable moves (u) wear the '!' in a red ring: dodge them (a block or a parry does not hold).
+  // Tells scale with the difficulty as before: t / A^0.25, never under 0.18 s. A phase change is a beat: a roar, a camera punch, a voice line.
+  const bTell = t => Math.max(0.18, t / DIF().A ** 0.25);
+  const OLD_TELL = new Set(['roar', 'charge', 'jslam', 'hook', 'tuna']);   // (the moves the audio maps from 'boss:telegraph' since before 'boss:tell')
+  const bRand = r => r[0] + simRand() * (r[1] - r[0]);
+  const bCd = e => bRand(e.cd) / Math.sqrt(DIF().A);   // his rest between moves
+  function bossTell(e, move, t, u, mark) {
+    e.mark = Math.max(e.mark, t); e.markU = !!u; e.tellF = 0.07;
+    emit('boss:tell', { boss: e, move, t, x: e.x, unblockable: !!u, mark: mark ?? null });
+    if (OLD_TELL.has(move)) emit('boss:telegraph', { boss: e, move, t, x: e.x, mark: mark ?? null });
+  }
+  function bStart(e, a, t, move, u, dmg) { eStart(e, a, t); e.actU = !!u; e.actDmg = dmg ?? null; bossTell(e, move, t, u); }   // a strike from EMOVES
+  function bSpecial(e, sp, t, move, u, mark) {   // a committed big move (bossSpecial runs it): t s of tell, then the strike
+    e.sp = sp; e.spT = -t; e.act = null; e.combo = null; e.held = false; e.hitP = false; e.pdAt = null; e.face = Math.sign(P[2].x - e.x) || e.face;
+    bossTell(e, move, t, u, mark);
+  }
+  let bossBeat = 0, bossMash = 0;   // bossBeat: (real s) the camera's punch-in at a phase change; bossMash: presses while the hook pulls him
+  function bossPhase(e, ph, line) {   // the roar pushes him back (no damage, i-frames); the camera punches in on the boss
+    e.ph = ph; e.act = null; e.combo = null; e.recT = 0; e.stunT = 0; e.hurtT = 0; e.exposed = 0; e.held = false; e.hook = null; hookPull = false;
+    e.sp = 'roar'; e.spT = 0; e.pdAt = null;
+    bossBeat = 1.2; hitStop = Math.max(hitStop, 0.1); shakeIt(0.45, 3);
+    hero.invT = Math.max(hero.invT, 1.1);
+    if (hero.mode === 'anim' && Math.abs(ctl.x - e.x) < 70) { ctl.face = Math.sign(e.x - ctl.x) || ctl.face; ctl.push = Math.max(ctl.push, 110); ctl.pushK = 8; }
+    emit('boss:phase', { boss: e, phase: ph, line });
+    bossTell(e, 'roar', 0.25);
+    if (line) bark(e, line);
+  }
+  function bossHitBy(e, power) {   // every hit on a boss: Malaspina shoves free after 4 inside 1 s; a heavy blow knocks Marchetti's hand off a lever (Easy, Medium)
+    if (simTime - (e.hitT0 ?? -9) > 1) { e.hitT0 = simTime; e.hitN = 0; }
+    e.hitN = (e.hitN || 0) + 1;
+    if (e.kind === 'malaspina' && e.hitN >= 4 && !e.sp) { e.shoveReq = true; e.hitN = 0; }
+    if (e.sp === 'lever' && e.levPull >= 0 && power >= 250 && diffSel <= 1) e.levCut = true;
+  }
+  function bossRecovery(e, move) {   // the punish window after a boss's strike ends (s)
+    if (move === 'slam') return 0.6;
+    if (move === 'hchop') return e.kind === 'malaspina' ? 0.9 : 0.6;
+    if (move === 'clunge') return 0.3;
+    return 0;
+  }
+  function bossLink(e) {   // the next blow of a boss's string (a short tell); Malaspina's string ends in the unblockable cane overhead
+    const a = e.combo[e.ci];
+    if (e.kind === 'malaspina') { if (a === 'hchop') bStart(e, a, bTell(MAL.over), 'overhead', true, MAL.dmg.over); else bStart(e, a, 0.2, 'jab', false, MAL.dmg.jab); }
+    else bStart(e, a, 0.2, EMOVES[a].heavy ? 'cleaverHeavy' : 'cleaver', false);
+  }
+  // Don Lucien Malaspina (the street boss, the club): a cane and a fur coat, 1.4x. He picks moves by distance. Close: a cane jab, a 3-hit
+  // string that ends in the unblockable overhead, the grab-headbutt for a hero who turtles (holds block, or blocked him twice), the slam.
+  // Mid: the cane lunge or the slam (its wave rolls out to you). 4 hits on him inside 1 s: he shoves free. Half health: he throws off the
+  // coat (phase 2): faster, the charge and the jump slam from range, and the low cane sweep (jump it).
+  function malaspinaThink(e, dt, px, dx, adx, level, aggro) {
     const dir = Math.sign(dx) || 1;
     e.tx = null; e.run = 1;
     if (e.stunT > 0) e.stunT -= dt;
+    e.cdT -= dt; e.bigCd -= dt;
     if (e.recT > 0) { e.recT -= dt; if (simRand() < dt * 5) particles.push({ x: e.J[0].x + e.face * 4, y: e.J[0].y, vx: e.face * 15, vy: -40, life: 0.5, c: EFX.sweat }); return; }
-    if (e.ph === 2 && simRand() < dt * 5) particles.push({ x: e.J[0].x + (simRand() - 0.5) * 6, y: e.J[0].y - 7, vx: (simRand() - 0.5) * 12, vy: -55, life: 0.3, c: EFX.steam });
+    if (e.ph >= 2 && simRand() < dt * 5) particles.push({ x: e.J[0].x + (simRand() - 0.5) * 6, y: e.J[0].y - 7, vx: (simRand() - 0.5) * 12, vy: -55, life: 0.3, c: EFX.steam });
     if (!aggro || e.sp || e.act || e.hurtT > 0 || e.air || e.exposed > 0) return;
-    if (e.ph === 1 && e.hp < e.maxHp * 0.5) {   // phase 2: a roar, then faster, with a charge and a jump slam
-      e.ph = 2; e.sp = 'roar'; e.spT = 0; e.speed = 31; e.cd = [0.5, 1.0]; e.windup = 0.3; e.bigCd = 1.8; e.mark = 1;
-      emit('boss:phase', { boss: e, phase: 2 }); emit('boss:telegraph', { boss: e, move: 'roar', t: 0.25, x: e.x });
+    if (e.ph === 1 && e.hp < e.maxHp * MAL.ph2) {   // phase 2: the roar, the coat comes off, his crew comes in
+      bossPhase(e, 2, 'Enough. The coat comes off.');
+      e.coat = false; e.speed = MAL.speed2; e.windup = MAL.windup2; e.cd = MAL.cd2.slice(); e.bigCd = 1.8;
+      enc.coat = { x: e.J[1].x, y: e.J[1].y, vx: -e.face * 70, vy: -130, a: 0, av: -e.face * 8, rest: false };
+      enc.crewBurst = MAL.crew.alive[1][diffSel]; enc.spawnT = Math.min(enc.spawnT, 1);
       return;
     }
-    if (e.ph === 2 && (e.bigCd -= dt) <= 0 && level && hero.mode === 'anim' && adx > 60 && adx < 200) {
-      e.bigCd = 4.5 + simRand() * 2.5;
-      e.sp = simRand() < 0.5 ? 'charge' : 'jslam'; e.spT = -Math.max(0.4, (e.sp === 'charge' ? 0.7 : 0.55) / DIF().A ** 0.25);   // (the tell: t / A^0.25, at least 0.4 s)
-      e.leapt = false; e.hitP = false; e.face = dir; e.jx = px; e.mark = -e.spT;
-      emit('boss:telegraph', { boss: e, move: e.sp, t: -e.spT, x: e.x, mark: px });   // the wind-up: t s to the strike
-      return;
+    if (e.shoveReq) {   // he has taken 4 in a second: a quick two-hand shove (a dodge goes through it)
+      e.shoveReq = false;
+      if (adx < e.reach + 16 && level && hero.mode === 'anim') { const t = bTell(MAL.shove); bSpecial(e, 'shove', t, 'shove', true); e.pdAt = simTime + t; e.pdR = e.reach + 16; return; }
     }
-    if (adx > e.reach + 1) { e.tx = px - dir * e.reach * 0.65; return; }
+    if (hero.mode !== 'anim' || !level) { e.tx = px - dir * (e.reach + 18); e.run = 0.7; return; }   // he waits at a stance for the hero to land or come down
+    if (e.cdT > 0) { e.tx = px - dir * (e.reach + 14 + 8 * Math.sin(simTime * 1.9 + e.seed * 7)); e.run = 0.7; return; }   // between moves: footsies, in and out of his reach
     e.face = dir;
-    if (level && !ctl.air && hero.mode === 'anim' && (e.cdT -= dt) <= 0) {
-      const r = simRand();
-      e.combo = e.ph === 2 ? BCMB[r < 0.3 ? 2 : r < 0.5 ? 3 : r < 0.75 ? 0 : 1] : BCMB[r < 0.35 ? 1 : 0];
-      e.ci = 0; eStart(e, e.combo[0], e.windup);
+    const P2 = e.ph >= 2, r = simRand();
+    if (adx > 95) {   // far: walk in; without the coat, the charge or the jump slam
+      if (P2 && e.bigCd <= 0 && adx < 200 && !ctl.air) malBig(e, px); else e.tx = px - dir * e.reach * 0.65;
+      return;
     }
+    if (adx > e.reach + 6) {   // mid: the cane lunge, or the ground slam (its wave rolls out to him)
+      if (P2 && e.bigCd <= 0 && adx > 60 && r < 0.3) malBig(e, px);
+      else if (r < 0.65 || adx > 75) { e.combo = null; bStart(e, 'clunge', bTell(e.windup * 1.25), 'lunge', false, MAL.dmg.lunge); }
+      else { e.combo = null; bStart(e, 'slam', bTell(0.42), 'slam', true); }
+      return;
+    }
+    // close: by weight. A turtle (block held, or two of his blows blocked) gets the grab
+    const turtle = hero.act === 'block' || e.grabN >= 2, W8 = [['jab', 3], ['str', 3], ['grab', turtle ? 7 : 0.6], ['slam', P2 ? 0.8 : 1.2], ['sweep', P2 ? 2.6 : 0]];
+    let k = r * W8.reduce((n, w) => n + w[1], 0), mv = 'jab';
+    for (const [m, w] of W8) { if ((k -= w) <= 0) { mv = m; break; } }
+    e.ci = 0; e.combo = null;
+    if (mv === 'jab') bStart(e, 'stab', bTell(e.windup), 'jab', false, MAL.dmg.jab);
+    else if (mv === 'str') { e.combo = ['stab', 'stab', 'hchop']; bStart(e, 'stab', bTell(e.windup), 'jab', false, MAL.dmg.jab); }
+    else if (mv === 'slam') bStart(e, 'slam', bTell(0.42), 'slam', true);
+    else if (mv === 'grab') { const t = bTell(MAL.grab); bSpecial(e, 'grab', t, 'grab', true); e.pdAt = simTime + t + 0.04; e.pdR = e.reach + 10; }
+    else { const t = bTell(MAL.sweep); bSpecial(e, 'sweep', t, 'sweep', true); e.pdAt = simTime + t; e.pdR = e.reach + 18; }
   }
-  // Sal Marchetti (Pier 9): cleaver strings and a meat hook on a chain that pulls the hero in for a free chop; at half health he roars,
-  // speeds up, and the hall's conveyor starts swinging frozen tuna across the arena (p9Step), while his crew comes in.
-  // Telegraphs scale with the difficulty: t / A^0.25.
-  let hookPull = false;   // the hook has the hero: no input until the pull lands
+  function malBig(e, px) {   // phase 2 from range: the charge or the jump slam
+    e.bigCd = 4.5 + simRand() * 2.5;
+    const ch = simRand() < 0.5;
+    e.leapt = false; e.jx = px; e.chgV = 215; e.chgMax = 1.1; e.chgDmg = e.heavyDmg; e.chgStun = 1.5; e.chgIce = false;
+    bSpecial(e, ch ? 'charge' : 'jslam', bTell(ch ? 0.7 : 0.55), ch ? 'charge' : 'jslam', true, px);
+  }
+  // Sal "the Scale" Marchetti (Pier 9, docs/levels/01-pier9.md 5). Phase 1, "The Scale": cleaver strings, the meat hook (it pulls the hero
+  // in for a free chop: mash to break free; a miss is a 1.2 s reel-in, and a blow on the chain yanks him off balance) and the shoulder
+  // charge (on the ice he cannot stop: lure him into a barrel or a wall). No crew. Phase 2 at 65 %, "Market Close": a roar, then his back to
+  // the hero at the speed lever; the conveyor swings its tuna; he rips tuna off to swing or lob (hit a lob back at him; a tuna on the floor
+  // can be thrown) and smashes new ice. Two of his crew at most. Phase 3 at 35 %, "Cold Storage": the freezer lever, the fog; he hunts from
+  // it (his breath and his gold chain give him away). Hit the freezer lever to clear the fog: he walks back to pull it again, back turned.
+  let hookPull = false;   // a boss has the hero (the hook's pull, Malaspina's grab): no input until it lets go
   function marchettiThink(e, dt, px, dx, adx, level, aggro) {
-    const M = P9.MARCHETTI, dir = Math.sign(dx) || 1, A = DIF().A;
+    const M = P9.MARCHETTI, dir = Math.sign(dx) || 1, F = p9.fog;
     e.tx = null; e.run = 1;
     if (e.stunT > 0) e.stunT -= dt;
+    e.hookCd -= dt; e.chgCd -= dt; e.tunaCd -= dt; e.iceCd -= dt; e.cdT -= dt;
     if (e.recT > 0) { e.recT -= dt; if (simRand() < dt * 5) particles.push({ x: e.J[0].x + e.face * 4, y: e.J[0].y, vx: e.face * 15, vy: -40, life: 0.5, c: EFX.sweat }); return; }
-    if (simRand() < dt * (e.ph === 2 ? 5 : 1.5)) particles.push({ x: e.J[0].x + e.face * 5, y: e.J[0].y + 1, vx: e.face * 14, vy: -18, life: 0.45, c: EFX.steam });   // breath in the cold
+    if (!e.hidden && simRand() < dt * (e.ph >= 2 ? 5 : 1.5)) particles.push({ x: e.J[0].x + e.face * 5, y: e.J[0].y + 1, vx: e.face * 14, vy: -18, life: 0.45, c: EFX.steam });   // breath in the cold
     if (!aggro || e.sp || e.act || e.hurtT > 0 || e.air || e.exposed > 0) return;
-    if (e.ph === 1 && e.hp < e.maxHp * M.ph2.below) {   // phase 2: a roar, then faster, and the conveyor swings
-      e.ph = 2; e.sp = 'roar'; e.spT = 0; e.speed = M.ph2.speed; e.cd = M.ph2.cd.slice(); e.windup = M.ph2.windup; e.mark = 1; e.hookCd = Math.min(e.hookCd, 3);
-      emit('boss:phase', { boss: e, phase: 2 }); emit('boss:telegraph', { boss: e, move: 'roar', t: 0.25, x: e.x });
-      bark(e, "Market's closing, Sandman! Everything must go!");
+    if (e.ph === 1 && e.hp < e.maxHp * M.ph2.below) { bossPhase(e, 2, M.ph2.line); Object.assign(e, { speed: M.ph2.speed, cd: M.ph2.cd.slice(), windup: M.ph2.windup, levTo: 'speed', tunaCd: 2.5, iceCd: 6 }); return; }
+    if (e.ph === 2 && e.hp < e.maxHp * M.ph3.below) { bossPhase(e, 3, M.ph3.line); Object.assign(e, { speed: M.ph3.speed, cd: M.ph3.cd.slice(), levTo: 'freezer' }); return; }
+    if (e.levTo) { startLever(e, e.levTo); e.levTo = null; return; }   // after the roar: the walk to the lever, his back to the hero
+    if (e.ph >= 3 && !F.on && F.offT > M.fog.back) { startLever(e, 'freezer'); return; }   // the hero cleared the fog: he goes back to pull it again
+    const fog = e.ph >= 3 && F.on && F.k > 0.5, free = level && hero.mode === 'anim' && !ctl.air;
+    if (e.hookCd <= 0 && free && adx > 45 && adx < M.hook.range[diffSel]) {   // the meat hook: the chain spins, a red line on the floor, then it flies
+      e.hookCd = bRand(M.hook.cd) * (e.ph >= 2 ? 0.75 : 1) * (fog ? 0.7 : 1);
+      bSpecial(e, 'hook', bTell(fog ? M.hook.fogWindup : M.hook.windup), 'hook', false, px); e.hook = null; e.hookTx = px; e.hookFog = fog; e.mark = fog ? 0.4 : e.mark;
       return;
     }
-    e.hookCd -= dt;
-    if (e.hookCd <= 0 && level && hero.mode === 'anim' && !ctl.air && adx > 45 && adx < M.hook.range[diffSel]) {   // the meat hook: the chain spins, a red line on the floor, then it flies
-      e.hookCd = (M.hook.cd[0] + simRand() * (M.hook.cd[1] - M.hook.cd[0])) * (e.ph === 2 ? 0.75 : 1);
-      e.sp = 'hook'; e.spT = -M.hook.windup / A ** 0.25; e.face = dir; e.hook = null; e.hookTx = px; e.mark = -e.spT;
-      emit('boss:telegraph', { boss: e, move: 'hook', t: -e.spT, x: e.x, mark: px });
+    if (e.chgCd <= 0 && free && adx > 60 && adx < 210) {   // the shoulder charge: head down, the gold chain glints, then he runs
+      const S = M.shoulder; e.chgCd = bRand(S.cd) * (fog ? 0.75 : 1);
+      Object.assign(e, { chgV: S.v, chgMax: S.maxT, chgDmg: S.dmg, chgStun: S.stun, chgIce: false });
+      bSpecial(e, 'charge', bTell(S.windup), 'shoulder', true, px);
+      return;
+    }
+    if (e.ph >= 2 && e.tunaCd <= 0 && free && adx < 150 && !fog) {   // a tuna torn off the rail: swung up close, lobbed from range
+      const T = M.tunaBat, t = bTell(T.windup); e.tunaCd = bRand(T.cd);
+      bSpecial(e, 'tuna', t, 'tunaBat', false); e.tunaM = adx < 46 ? 'swing' : 'throw'; e.pdAt = e.tunaM === 'swing' ? simTime + t + 0.06 : null; e.pdR = 44;
+      return;
+    }
+    if (e.ph === 2 && e.iceCd <= 0 && free && adx < 110 && p9.ice.length < M.ice.max[diffSel]) {   // the cleaver into the floor: a short quake (jump it) and new ice
+      e.iceCd = bRand(M.ice.cd); bSpecial(e, 'ice', bTell(M.ice.windup), 'iceSmash', true);
+      return;
+    }
+    if (fog && adx > e.reach + 30) {   // in the fog he stalks: he circles out of reach, hidden, and comes out of it with the hook or the charge
+      const side = Math.sign(e.x - px) || 1;
+      e.tx = clamp(px + side * (115 + 25 * Math.sin(simTime * 0.9 + e.seed * 5)), enc.arena.x0 + 8, enc.arena.x1 - 8); e.run = 0.75;
+      if ((e.stalkT -= dt) <= 0) { e.stalkT = 8 + simRand() * 4; if (e.hidden) bark(e, M.fog.barks[Math.floor(simRand() * M.fog.barks.length)]); }
       return;
     }
     if (adx > e.reach + 1) { e.tx = px - dir * e.reach * 0.65; return; }
     e.face = dir;
-    if (level && !ctl.air && hero.mode === 'anim' && (e.cdT -= dt) <= 0) {
+    if (free && e.cdT <= 0) {
       const r = simRand(), Cb = M.combos;
-      e.combo = e.ph === 2 ? Cb[r < 0.3 ? 3 : r < 0.55 ? 1 : r < 0.8 ? 2 : 0] : Cb[r < 0.4 ? 0 : r < 0.7 ? 2 : r < 0.88 ? 1 : 3];
-      e.ci = 0; eStart(e, e.combo[0], e.windup);
+      e.combo = e.ph >= 2 ? Cb[r < 0.3 ? 3 : r < 0.55 ? 1 : r < 0.8 ? 2 : 0] : Cb[r < 0.4 ? 0 : r < 0.7 ? 2 : r < 0.88 ? 1 : 3];
+      e.ci = 0; bStart(e, e.combo[0], bTell(e.windup), EMOVES[e.combo[0]].heavy ? 'cleaverHeavy' : 'cleaver', false);
     }
+  }
+  function startLever(e, which) {   // the walk to a lever (its back to the hero), then the pull
+    e.sp = 'lever'; e.spT = 0; e.lev = which; e.levX = P9.LEVERS[which] - 8; e.levPull = -1; e.levCut = false; e.act = null; e.combo = null; e.pdAt = null;
+    if (diffSel >= 2) p9.crewNow = 1;   // Hard, Wicked: a crewman rushes in to cover his back
   }
   function hookStep(e, dt, px) {   // the hook in flight, the pull, the reel-in after a miss (a 1.2 s punish window)
     const M = P9.MARCHETTI.hook;
@@ -2366,20 +2532,34 @@ import * as P9 from './levels/pier9.js';
         if (cov.kind) { cov.vx += e.face * 50; cov.flash = 0.1; }
         emit('hook:clank', { boss: e, x: k.x, y: k.y, prop: cov.kind || 'stall' });
       } else if (hitsPlayer(k.x, k.y, 2) || hitsPlayer(k.x, k.y - 8, 2)) {
-        k.st = 'pull'; hookPull = true; hero.act = null; queued = null; ctl.spd = 0;
-        sparks.push({ x: k.x, y: k.y, t: 0 }); shakeIt(0.15, 2); bark(e, 'On the scale!');
+        k.st = 'pull'; hookPull = true; bossMash = 0; hero.act = null; queued = null; ctl.spd = 0;
+        sparks.push({ x: k.x, y: k.y, t: 0 }); shakeIt(0.15, 2); bark({ J: P, dead: false }, 'MASH Q OR SPACE!');
         emit('hit', { by: 'enemy', target: 'hero', x: k.x, y: k.y, dir: -e.face, power: 0.6, force: 120, dmg: 0, blade: false, weapon: 0, isBoss: true });
+        emit('boss:tell', { boss: e, move: 'hookPull', t: 0, x: e.x, unblockable: true, mash: M.mash[diffSel] });   // (the mash prompt shows over the hero)
       } else if (k.d > M.range[diffSel] || k.x < 2442 || k.x > W - 10) k.st = 'back';
     } else if (k.st === 'pull') {
       const tx = e.x + e.face * 24, d = tx - ctl.x;
       if (hero.mode !== 'anim') { k.st = 'back'; hookPull = false; }
-      else if (Math.abs(d) < 3) {   // landed at his feet: a free heavy chop, unless he rolls away in time
+      else if (bossMash >= M.mash[diffSel]) {   // he mashed free: the hook tears loose, Marchetti reels back off balance
+        hookPull = false; k.st = 'back'; k.clank = false; e.stunT = 0.4; bossMash = 0;
+        ctl.face = -e.face; ctl.push = Math.max(ctl.push, 60); ctl.pushK = 10; hero.invT = Math.max(hero.invT, 0.3);
+        sparks.push({ x: k.x, y: k.y, t: 0 }); shakeIt(0.1, 1); emit('feat', 'hookfree');
+      }
+      else if (Math.abs(d) < 3) {   // landed at his feet: a free heavy chop, unless he dodges away in time
         hookPull = false; e.sp = null; e.hook = null; e.face = Math.sign(ctl.x - e.x) || e.face;
-        e.combo = ['hchop']; e.ci = 0; eStart(e, 'hchop', 0.3 / DIF().A ** 0.25);
+        e.combo = ['hchop']; e.ci = 0; bStart(e, 'hchop', bTell(0.3), 'cleaverHeavy', false); bark(e, 'On the scale!');
       } else { ctl.x += Math.sign(d) * Math.min(Math.abs(d), M.pull * dt); ctl.spd = 0; ctl.face = -e.face; k.x = ctl.x - e.face * 3; }
     } else {
       const d = e.x - k.x;
-      if (Math.abs(d) < 8) { e.sp = null; e.hook = null; e.recT = k.clank ? 1.6 : 1.2; }   // (a clank jars his arm: a longer window)
+      // the chain lies on the floor between him and the hook: a blow on it yanks him a step forward, off balance (the chain counter)
+      const pm = MOVES[hero.act], hx = ctl.x + ctl.face * 12;
+      if (pm && hero.mode === 'anim' && !ctl.air && hero.actT >= pm.win[0] && hero.actT <= pm.win[1] && k.yank !== hero.atkId && (hx - k.x) * (hx - e.x) <= 0 && Math.abs(ctl.x - e.x) > 14) {
+        k.yank = hero.atkId; e.sp = null; e.hook = null; e.slide += Math.sign(ctl.x - e.x) * 12; e.stunT = 0.5; e.recT = 1.0; e.exposed = 1.0; e.cdT = bCd(e);
+        sparks.push({ x: hx, y: GROUND - 2, t: 0 }); shakeIt(0.12, 2); hitStop = Math.max(hitStop, 0.06); emit('feat', 'counter');
+        emit('hook:yank', { boss: e, x: hx, y: GROUND - 2 });
+        return;
+      }
+      if (Math.abs(d) < 8) { e.sp = null; e.hook = null; e.recT = k.clank ? 1.6 : 1.2; e.cdT = bCd(e); }   // (a clank jars his arm: a longer window)
       else k.x += Math.sign(d) * (k.clank ? 170 : 260) * dt;   // the reel-in: a punish window (no armor, hits land harder; see damageEnemy)
     }
   }
@@ -2387,8 +2567,8 @@ import * as P9 from './levels/pier9.js';
     const h = J[4], chain = C('#5a5a66'), steel = ECOL.steel;
     if (e.sp === 'hook' && e.spT < 0) {
       const a = simTime * 18, hx = h.x + Math.cos(a) * 5 * e.s, hyy = h.y - 4 + Math.sin(a) * 5 * e.s;
-      line1(h.x, h.y, hx, hyy, chain); plot(Math.floor(hx), Math.floor(hyy), steel); plot(Math.floor(hx) + 1, Math.floor(hyy), steel);
-      if (Math.floor(simTime * 12) % 2) for (let x = Math.min(e.x, e.hookTx); x <= Math.max(e.x, e.hookTx); x += 4) { plot(Math.floor(x), GROUND - 1, BLOOD[2]); plot(Math.floor(x) + 1, GROUND - 1, BLOOD[2]); }
+      if (!e.hidden) { line1(h.x, h.y, hx, hyy, chain); plot(Math.floor(hx), Math.floor(hyy), steel); plot(Math.floor(hx) + 1, Math.floor(hyy), steel); }
+      if (Math.floor(simTime * 12) % 2 && (!e.hookFog || e.spT > -0.4)) for (let x = Math.min(e.x, e.hookTx); x <= Math.max(e.x, e.hookTx); x += 4) { plot(Math.floor(x), GROUND - 1, BLOOD[2]); plot(Math.floor(x) + 1, GROUND - 1, BLOOD[2]); }   // (from the fog: only its last 0.4 s)
     }
     if (e.hook) {
       const k = e.hook; line1(h.x, h.y, k.x, k.y, chain);
@@ -2403,21 +2583,28 @@ import * as P9 from './levels/pier9.js';
     if (e.sp === 'roar') {
       if (t0 < 0.25 && e.spT >= 0.25) { if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.4); waves.push({ x: e.x, y: e.y + 1, t: 0 }); dust(e.x - 8, e.y + 1, 6); dust(e.x + 8, e.y + 1, 6); }
       if (e.spT >= 1.1) e.sp = null;
-    } else if (e.sp === 'charge') {
+    } else if (e.sp === 'charge') {   // (the street boss's charge, Marchetti's shoulder charge)
       if (e.spT < 0) {   // tracks the player, then locks on and paws the ground
         if (e.spT < -0.3) e.face = Math.sign(px - e.x) || e.face;
         if (simRand() < dt * 14) dust(e.x - e.face * 7 * e.s, e.y + 1, 1);
         return;
       }
-      e.vx = e.face * 215;
+      if (iceAt(e.x)) e.chgIce = true;   // on the ice his rubber boots cannot stop him: he slides on past (+0.4 s)
+      e.vx = e.face * (e.chgV || 215);
       if (simRand() < dt * 30) dust(e.x - e.face * 5, e.y + 1, 1);
       if (!e.hitP && hero.mode === 'anim' && !ctl.air && Math.abs(P[2].x - e.x) < 9 * e.s && Math.abs(ctl.y - e.y) < 12) {   // any jump clears it
-        e.hitP = true; hurtPlayer(e.heavyDmg, P[2].x, P[2].y, e.face, true);
+        e.hitP = true; hurtPlayer(e.chgDmg || e.heavyDmg, P[2].x, P[2].y, e.face, true, 1, { e, kind: 'charge', u: true });
       }
       const wall = (e.face < 0 && e.x <= 2441) || (e.face > 0 && e.x >= W - 11);
-      if (wall || e.spT > 1.1 || (e.spT > 0.25 && (px - e.x) * e.face < -40)) {
-        e.sp = null; e.vx *= wall ? -0.3 : 0.3; e.recT = wall ? 1.5 : 0.9;
-        if (wall) { e.stunT = 1.5; if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.3); dust(e.x + e.face * 8, e.y - 12, 8); hitStop = Math.max(hitStop, 0.08); }
+      const ob = e.kind === 'marchetti' && objs.find(o => !o.carried && !o.pocket && CHG_STOP.has(o.kind) && (o.x - e.x) * e.face > 0 && (o.x - e.x) * e.face < 9 * e.s + (o.hw || o.r) && o.y > e.y - 30);   // a barrel or a crate in his way
+      if (wall || ob || e.spT > (e.chgMax || 1.1) + (e.chgIce ? 0.4 : 0) || (!e.chgIce && e.spT > 0.25 && (px - e.x) * e.face < -40)) {
+        const hard = wall || !!ob;
+        e.sp = null; e.vx *= hard ? -0.3 : 0.3; e.recT = hard ? e.chgStun || 1.5 : 0.9; e.cdT = bCd(e); e.chgIce = false;
+        if (hard) {
+          e.stunT = e.recT; if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.3); dust(e.x + e.face * 8, e.y - 12, 8); hitStop = Math.max(hitStop, 0.08);
+          if (ob) { ob.vx += e.face * 150; ob.vy = -90; ob.av = e.face * 8; damageObj(ob, 140, e.face); }
+          emit('boss:stun', { boss: e, x: e.x, t: e.recT, by: ob ? ob.kind : 'wall' });
+        }
       }
     } else if (e.sp === 'jslam') {
       if (e.spT < 0) { if (e.spT < -0.2) e.jx = clamp(px, 2450, W - 20); return; }   // the landing spot is marked, then locked
@@ -2425,18 +2612,102 @@ import * as P9 from './levels/pier9.js';
         e.leapt = true; const T = 2 * 190 / (G * 1.3);
         eHop(e, clamp((e.jx - e.x) / T, -150, 150), -190);
       }
+    } else if (e.sp === 'grab') {   // Malaspina's grab: he lunges with both hands; caught, a headbutt that floors you. A miss leaves him wide open
+      if (e.spT < 0) { if (e.spT < -0.15) e.face = Math.sign(px - e.x) || e.face; return; }
+      if (!e.held) {
+        if (e.spT < 0.2) {
+          e.vx = e.face * 110;
+          const d = (ctl.x - e.x) * e.face;
+          if (hero.mode === 'anim' && hero.invT <= 0 && !ctl.air && d > -4 && d < 18 * e.s / 1.4 + 6 && Math.abs(ctl.y - e.y) < 12) {
+            e.held = true; e.holdT = 0; e.pdAt = null; hookPull = true; hero.act = null; queued = null; ctl.spd = 0; e.vx = 0; blk.parryT = 0;
+            sparks.push({ x: ctl.x, y: P[1].y, t: 0 }); shakeIt(0.1, 1); bark(e, 'Got you, Sandman.');
+          }
+        } else { e.sp = null; e.recT = 1.0; e.vx = 0; e.grabN = 0; e.cdT = bCd(e); }   // a miss: he stumbles, wide open
+        return;
+      }
+      e.holdT += dt; ctl.x = e.x + e.face * 15; ctl.spd = 0; ctl.face = -e.face;
+      if (e.holdT >= MAL.butt) {   // the headbutt
+        hookPull = false; e.sp = null; e.held = false; e.grabN = 0;
+        hurtPlayer(MAL.dmg.butt, ctl.x, P[0].y, e.face, false, 1.5, { e, kind: 'grab', u: true });
+        shakeIt(0.15, 2); hitStop = Math.max(hitStop, 0.08); e.recT = 0.45; e.cdT = bCd(e);
+      }
+    } else if (e.sp === 'sweep' || e.sp === 'shove') {   // Malaspina: the low cane sweep (jump it), the two-hand shove
+      if (e.spT < 0) { if (e.spT < -0.12) e.face = Math.sign(px - e.x) || e.face; return; }
+      const sw = e.sp === 'sweep';
+      if (!e.hitP) {
+        e.hitP = true; e.pdAt = null;
+        const d = (ctl.x - e.x) * e.face;
+        if (sw) { dust(e.x + e.face * 14, e.y + 1, 4); dust(e.x + e.face * 26, e.y + 1, 3); }
+        if (hero.mode === 'anim' && !(sw && ctl.air) && d > -6 && d < e.reach + (sw ? 18 : 16) && Math.abs(ctl.y - e.y) < 14) {
+          if (sw) hurtPlayer(MAL.dmg.sweep, ctl.x, ctl.y, e.face, true, 1, { e, kind: 'sweep', u: true });
+          else {
+            const iv = hero.invT;
+            hurtPlayer(MAL.dmg.shove, ctl.x, P[1].y, e.face, false, 0.5, { e, kind: 'shove', u: true });
+            if (iv <= 0 && hero.mode === 'anim') { ctl.face = -e.face; ctl.push = Math.max(ctl.push, 160); ctl.pushK = 7; shakeIt(0.08, 1); }
+          }
+        }
+      }
+      if (e.spT > (sw ? 0.2 : 0.25)) { e.sp = null; if (sw) { e.recT = 0.8; e.cdT = bCd(e); } else e.cdT = Math.min(e.cdT, 0.12); }   // (after the shove he comes right back: the lunge reaches the gap he made)
+    } else if (e.sp === 'tuna') {   // Marchetti tears a frozen tuna off the rail: a wide swing up close, or a lob from range
+      if (e.spT < 0) { if (e.spT < -0.2) { e.face = Math.sign(px - e.x) || e.face; e.tunaM = Math.abs(px - e.x) < 46 ? 'swing' : 'throw'; } return; }
+      const T = P9.MARCHETTI.tunaBat;
+      if (!e.hitP && e.spT >= 0.06) {
+        e.hitP = true; e.pdAt = null;
+        if (e.tunaM === 'swing') {
+          const d = (ctl.x - e.x) * e.face;
+          if (hero.mode === 'anim' && d > -8 && d < 40 && Math.abs(ctl.y - e.y) < 16) hurtPlayer(T.swing, ctl.x, P[1].y, e.face, true, 1, { e, kind: 'melee', heavy: true });   // a parry turns it aside, a block is smashed
+          for (const g of enemies) if (g !== e && !g.dead && !g.down && Math.abs(g.y - e.y) < 14 && (g.x - e.x) * e.face > -8 && (g.x - e.x) * e.face < 40) { damageEnemy(g, 14, e.face, 280, 0.3, g.x, g.J[1].y, false); if (!g.dead && !g.down) knockDown(g, e.face, 280, 'hp'); }   // his own crew too
+          shakeIt(0.12, 2);
+        } else {
+          const h = e.J[6], tx = clamp(px, 2448, W - 14), Tt = clamp(Math.abs(tx - h.x) / 150, 0.45, 0.9);
+          eshots.push({ k: 't', x: h.x, y: h.y - 4, px: h.x, py: h.y, vx: (tx - h.x) / Tt, vy: (GROUND - 14 - (h.y - 4) - 0.5 * 260 * Tt * Tt) / Tt, life: 2.5, dmg: T.throw, t: 0 });
+        }
+      }
+      if (e.spT > 0.3) { e.sp = null; e.recT = e.tunaM === 'swing' ? T.swingRec : T.throwRec; e.cdT = bCd(e); if (e.tunaM === 'swing') floorTuna(e.x + e.face * 16, e.face * 40); }   // the swung tuna drops at his feet: the hero can throw it
+    } else if (e.sp === 'ice') {   // Marchetti's ice smash: the cleaver into the floor, a short quake both ways and a new ice patch
+      if (e.spT < 0) return;
+      const I = P9.MARCHETTI.ice;
+      if (!e.hitP) {
+        e.hitP = true; const sx = clamp(e.x + e.face * 18, 2452, W - 20);
+        waves.push({ x: sx, y: GROUND - 1, t: 0 }); dust(sx - 6, GROUND - 1, 8); dust(sx + 6, GROUND - 1, 8); shakeIt(0.25, 2); hitStop = Math.max(hitStop, 0.05);
+        for (const dir of [-1, 1]) quakes.push({ x: sx + dir * 12, y: e.y + 2, dir, t: 0, hit: false, dmg: I.dmg });
+        if (hero.mode === 'anim' && !ctl.air && Math.abs(ctl.x - sx) < 12) hurtPlayer(I.hitDmg, ctl.x, ctl.y, Math.sign(ctl.x - sx) || 1, true, 1, { e, kind: 'smash', u: true });
+        p9.ice.push({ x0: sx - I.w / 2, x1: sx + I.w / 2, t: I.life });
+        for (let i = 0; i < 10; i++) particles.push({ x: sx + (simRand() - 0.5) * 20, y: GROUND - 2, vx: (simRand() - 0.5) * 90, vy: -50 - simRand() * 80, life: 0.5, c: P9C.frost });
+      }
+      if (e.spT > 0.25) { e.sp = null; e.recT = I.rec; e.cdT = bCd(e); }
+    } else if (e.sp === 'lever') {   // the walk to a lever and the pull: his back to the hero all the way (the biggest window in the fight)
+      if (e.hurtT > 0) return;
+      if (e.levPull < 0) {
+        const d = e.levX - e.x;
+        if (Math.abs(d) > 2) { e.vx = Math.sign(d) * Math.min(P9.MARCHETTI.lever.walk, Math.abs(d) / dt); e.face = Math.sign(d); return; }
+        e.vx = 0; e.face = 1; e.levPull = 0; e.levT = bTell(P9.MARCHETTI.lever.pull);
+        bossTell(e, 'lever', e.levT);
+        return;
+      }
+      if (e.levCut) { e.levCut = false; e.levPull = -1; e.hurtT = 0.6; e.vx = -30; sparks.push({ x: e.J[6].x, y: e.J[6].y, t: 0 }); return; }   // knocked off it: he tries again
+      e.face = 1; e.levPull += dt;
+      if (e.levPull >= e.levT) { e.sp = null; e.cdT = 0.5; p9Lever(e.lev); }
     }
   }
+  const CHG_STOP = new Set(['barrel', 'crate', 'bigcrate', 'bin', 'stack', 'tuna']);   // a loose prop that stops a shoulder charge dead
   function enemyStep(dt) {
     if (hero.invT > 0) hero.invT -= dt;
-    if (!isP9() && enc.boss && !enc.boss.dead && enc.arena && enc.arenaSpawned < 10 && (enc.spawnT -= dt) <= 0) {   // the boss calls in his crew: one every 3 s (4.5 s once enraged), 10 in all
-      enc.spawnT = enc.boss.ph > 1 ? 4.5 : 3;
-      if (enemies.filter(g => !g.dead && g.zone === 'arena').length < 4) {
+    if (!isP9() && enc.boss && !enc.boss.dead && enc.arena && enc.introT < 0 && enc.arenaSpawned < MAL.crew.max) {   // his crew, tied to the fight's beats:
+      // phase 1, one at a time after MAL.crew.delay s; at the coat (phase 2) two come in at once, then at most two
+      const B = enc.boss, p2 = B.ph >= 2, Cw = MAL.crew, alive = enemies.filter(g => !g.dead && g.zone === 'arena').length;
+      enc.fightT = (enc.fightT || 0) + dt;
+      if ((enc.spawnT -= dt) <= 0 && (p2 || enc.fightT > Cw.delay) && (alive < Cw.alive[p2 ? 1 : 0][diffSel] || enc.crewBurst > 0)) {
+        enc.spawnT = enc.crewBurst > 1 ? 0.6 : Cw.every[p2 ? 1 : 0]; if (enc.crewBurst > 0) enc.crewBurst--;
         enc.arenaSpawned++;
         const dx = CLUB_DOORS[enc.arenaSpawned % 2];   // out of a staff doorway in the back wall: by the entrance speaker stack, or behind the far one
         const g = spawnEnemy('goon', clamp(dx, enc.arena.x0 + 6, enc.arena.x1 - 4), 'arena');
         g.cdT = Math.max(g.cdT, 0.8); spawnFx.push({ kind: 'club', x: dx, t: 0 });
       }
+    }
+    if (enc.coat && !enc.coat.rest) {   // Malaspina's fur coat, thrown off at phase 2: it flies, lands and lies there
+      const c = enc.coat; c.vy += G * dt; c.x += c.vx * dt; c.y += c.vy * dt; c.a += c.av * dt;
+      if (c.y >= GROUND - 2) { c.y = GROUND - 2; c.rest = true; c.a = 0; dust(c.x, GROUND - 1, 4); }
     }
     const px = P[2].x, py = hero.mode === 'anim' ? ctl.y : P[2].y + 15, pm = hero.mode === 'anim' ? MOVES[hero.act] : null;
     enc.eTokN = 0; enc.eShotN = 0; for (const e of enemies) if (!e.dead) { if (e.tok) enc.eTokN++; if (e.act === 'shoot' || e.act === 'throw') enc.eShotN++; }
@@ -2455,6 +2726,7 @@ import * as P9 from './levels/pier9.js';
       if (e.exposed > 0) e.exposed -= dt;   // off balance after a parry or a perfect dodge: every hit is a counter-hit
       if (e.hurtT > 0) e.hurtT = e.air ? Math.max(0.06, e.hurtT - dt) : e.hurtT - dt;   // a stagger lasts until the feet are down
       if (e.mark > 0) e.mark -= dt;
+      if (e.tellF > 0) e.tellF -= dt;
       if (e.muz > 0) e.muz -= dt;
       if (e.down) { eDownStep(e, dt); continue; }
       const dx = px - e.x, adx = Math.abs(dx);   // (no height leash: a ledge does not shake them off)
@@ -2462,7 +2734,9 @@ import * as P9 from './levels/pier9.js';
       e.fight = aggro && adx < 60 * e.s && !e.intro;
       if (e.intro) { e.act = null; e.sp = null; e.tx = e.introX; e.run = e.kind === 'marchetti' ? 1 : 0.5; e.cdT = Math.max(e.cdT, 0.8); if (Math.abs(e.introX - e.x) <= 3) e.face = -1; }   // the entrance: a slow walk to his mark under the spot, nothing else
       else if (e.kind === 'marchetti') marchettiThink(e, dt, px, dx, adx, level, aggro);
-      else if (e.type === 'boss') bossThink(e, dt, px, dx, adx, level, aggro); else goonThink(e, dt, px, dx, adx, level, aggro, pm);
+      else if (e.kind === 'malaspina') malaspinaThink(e, dt, px, dx, adx, level, aggro);
+      else if (hookPull && e.zone === 'arena') { e.tx = null; if (e.act && e.actT < 0) e.act = null; if (e.tok) eRelease(e); }   // the boss has the hero: his crew holds off (no stun-lock)
+      else goonThink(e, dt, px, dx, adx, level, aggro, pm);
       if (!e.air) {
         if (e.crouchT > 0) { e.vx *= 0.7; if ((e.crouchT -= dt) <= 0) eHop(e, e.jvx, e.jvy); }
         else if (e.hurtT > 0 || e.act || e.sp || e.recT > 0 || e.tx == null) e.vx *= 0.8;
@@ -2479,7 +2753,7 @@ import * as P9 from './levels/pier9.js';
         e.phase = (e.phase + Math.abs(e.vx) / 24 * dt) % 1;
       }
       if (e.sp) bossSpecial(e, dt, px);
-      if (e.act === 'lunge' && e.actT >= 0 && e.actT < 0.24 && !e.air && adx > e.reach * 0.6) {   // the dash
+      if ((e.act === 'lunge' || e.act === 'clunge') && e.actT >= 0 && e.actT < 0.24 && !e.air && adx > e.reach * 0.6) {   // the dash
         e.vx = e.face * 165; if (simRand() < dt * 30) dust(e.x - e.face * 3, e.y + 1, 1);
       }
       const pf = e.y + 2;
@@ -2509,10 +2783,10 @@ import * as P9 from './levels/pier9.js';
           let h = e.J[M.limb], hit = false;
           if (M.w && e.R.len) {   // weapons hit along the blade: the tip and the middle
             const g = eWeapon(e, e.J); h = { x: g.tx, y: g.ty };
-            hit = hitsPlayer(g.tx, g.ty, 1.5 * e.s) || hitsPlayer((g.x + g.tx) / 2, (g.y + g.ty) / 2, 1.5 * e.s);
+            hit = hitsPlayer(g.tx, g.ty, 1.5 * e.s) || hitsPlayer((g.x + g.tx) / 2, (g.y + g.ty) / 2, 1.5 * e.s) || (e.type === 'boss' && hitsPlayer(g.x, g.y, 1.5 * e.s));   // (a boss: the hand too, so a blade does not pass a hero hugging him)
           } else hit = hitsPlayer(h.x, h.y, 2 * e.s);
           if (hit && e.actT < M.win[0]) e.pendH = { x: h.x, y: h.y };   // reached early: the blow lands on the contact key
-          else if (hit || (e.pendH && e.actT >= M.win[0])) { if (!hit) h = e.pendH; e.struck = true; hurtPlayer(M.heavy ? e.heavyDmg : e.dmg, h.x, h.y, e.face, e.type === 'boss' && M.heavy, e.type === 'boss' && !M.heavy ? 0.7 : 1, { e, kind: 'melee', heavy: !!M.heavy }); }   // a boss jab staggers, it does not floor you
+          else if (hit || (e.pendH && e.actT >= M.win[0])) { if (!hit) h = e.pendH; e.struck = true; hurtPlayer(e.actDmg ?? (M.heavy ? e.heavyDmg : e.dmg), h.x, h.y, e.face, e.type === 'boss' && M.heavy, e.type === 'boss' && !M.heavy ? 0.7 : 1, { e, kind: 'melee', heavy: !!M.heavy, u: e.actU }); }   // a boss jab staggers, it does not floor you
         }
         if ((e.act === 'shoot' || e.act === 'throw') && !e.struck && e.actT >= (e.act === 'shoot' ? 0 : 0.06)) { e.struck = true; eFire(e); }
         else if (e.act === 'shoot' && e.actT < -0.15) e.ay = P[1].y + 1;   // tracks the target, then holds still for the last beat
@@ -2527,9 +2801,10 @@ import * as P9 from './levels/pier9.js';
         if (e.actT >= M.dur) {
           const was = e.act; e.act = null;
           const dl = Math.abs(P[2].x - e.x);
-          if (e.combo && !(e.exposed > 0) && ++e.ci < e.combo.length && hero.mode === 'anim' && dl < e.reach + 10 && Math.abs(py - e.y) < 14) eStart(e, e.combo[e.ci], e.type === 'boss' ? 0.2 : 0.08);   // the string goes on
+          if (e.combo && !(e.exposed > 0) && ++e.ci < e.combo.length && hero.mode === 'anim' && dl < e.reach + 10 && Math.abs(py - e.y) < 14) { if (e.type === 'boss') bossLink(e); else eStart(e, e.combo[e.ci], 0.08); }   // the string goes on
           else {
-            if (e.type === 'boss') { e.combo = null; if (was === 'slam' || (was === 'hchop' && e.kind === 'marchetti')) e.recT = 0.6; e.cdT = (e.cd[0] + simRand() * (e.cd[1] - e.cd[0])) / Math.sqrt(DIF().A); }   // (the boss: half the steps, his moves are big)
+            // (the boss: half the steps, his moves are big; after the big ones he is open: the slam, the cleaver stuck in the floor, the cane cracked on it)
+            if (e.type === 'boss') { e.combo = null; e.recT = bossRecovery(e, was); e.cdT = bCd(e); }
             else eRelease(e, (e.R.ranged ? 1.4 + simRand() * 1.2 : (e.cd[0] + simRand() * (e.cd[1] - e.cd[0])) * (1.3 - 0.6 * e.agg)) / DIF().A);
           }
         }
@@ -2537,7 +2812,7 @@ import * as P9 from './levels/pier9.js';
       poseEnemy(e, dt);
     }
   }
-  const ECOL = { steel: C(EPAL.steel), steelD: C(EPAL.steelD), grip: C(EPAL.grip), iron: C(EPAL.iron), gun: C(EPAL.gun), scar: C(EPAL.scar) };
+  const ECOL = { steel: C(EPAL.steel), steelD: C(EPAL.steelD), grip: C(EPAL.grip), iron: C(EPAL.iron), gun: C(EPAL.gun), scar: C(EPAL.scar), cane: C('#3a2c3c') };
   const EW = { x: 0, y: 0, tx: 0, ty: 0, dx: 0, dy: 0 };   // reused: the held weapon from the front hand
   function eWeapon(e, J) {
     const el = J[5], h = J[6], a = Math.atan2(h.y - el.y, h.x - el.x) + e.R.off * e.face;
@@ -2613,10 +2888,21 @@ import * as P9 from './levels/pier9.js';
       seg(g.x, g.y, hx, hy, 1.2 * s, O); seg(g.x, g.y, hx, hy, 0.6 * s, c(ECOL.grip));
       seg(hx + ox, hy + oy, g.tx + ox, g.ty + oy, 2.4 * s, O); seg(hx + ox, hy + oy, g.tx + ox, g.ty + oy, 1.6 * s, c(ECOL.steelD));
       line1(hx + ox * 2, hy + oy * 2, g.tx + ox * 2, g.ty + oy * 2, c(ECOL.steel));
+    } else if (w === 'cane') {   // Malaspina's cane: black lacquer, a silver knob above the hand, a silver ferrule
+      const kx = g.x - g.dx * 1.6 * s, ky = g.y - g.dy * 1.6 * s;
+      seg(kx, ky, g.tx, g.ty, 1.0 * s, O); line1(kx, ky, g.tx, g.ty, c(ECOL.cane));
+      disc(snap(kx), snap(ky), 1.0 * s, c(ECOL.steel)); plot(Math.floor(g.tx), Math.floor(g.ty), c(ECOL.steel));
     } else { seg(g.x, g.y, g.tx, g.ty, 1.2 * s, O); line1(g.x, g.y, g.tx, g.ty, c(ECOL.steel)); }   // knife
   }
+  function heldTuna(e) {   // Marchetti's tuna in his hands (the tunaBat move): its centre and angle, or null
+    if (e.dead || e.sp !== 'tuna' || !(e.spT < 0.05 || (e.tunaM === 'swing' && e.spT < 0.3))) return null;
+    const J = e.J, h = J[6], b = J[4], up = e.spT < 0;
+    return up ? { x: (h.x + b.x) / 2, y: Math.min(h.y, b.y) - 8, a: -Math.PI / 2 + e.face * 0.25 } : { x: h.x + e.face * 9, y: h.y, a: e.face > 0 ? 0 : Math.PI };
+  }
   function drawEnemy(e) {
-    const J = e.dead ? e.pts : e.J, s = e.s, f = e.face, pal = e.pal, fl = false, O = PAL.out, top = e.look.top;   // no white hit flash: blood, sparks and the knock carry the hit
+    if (e.hidden && !e.dead) { drawEnemyMarks(e); return; }   // hidden in the freezer fog: only his tells show (breath, the chain's glint)
+    // (no white hit flash: blood, sparks and the knock carry the hit; a boss's tell flashes him white for a few frames)
+    const J = e.dead ? e.pts : e.J, s = e.s, f = e.face, pal = e.coat ? e.palC : e.pal, fl = e.tellF > 0 && !e.dead, O = PAL.out, top = e.coat ? 'coat' : e.look.top;
     const bw = e.bw, lw = 0.75 + 0.25 * bw, col = c => fl ? PAL.white : c;
     const [hd, nk, pl, eB, hB, eF, hF, kB, fB, kF, fF] = J;
     const bare = top === 'vest' || top === 'tank';   // sleeveless: arms show skin
@@ -2645,7 +2931,8 @@ import * as P9 from './levels/pier9.js';
       if (top === 'tank') disc(snap(nk.x + nx * 0.6 * s), snap(nk.y + 1.2 * s), 1.1 * s * bw, pal.skin);
       if (top === 'jacket' || top === 'coat') seg(nk.x - nx * 0.8 * s, nk.y, nk.x + nx * 1.2 * s, nk.y + 1.4 * s, 0.9 * s, pal.topB);   // collar
       if (top === 'hood') { plot(Math.floor(nk.x + nx * tw * 0.6), Math.floor(nk.y + 2 * s), PAL.white); plot(Math.floor(nk.x + nx * tw * 0.6), Math.floor(nk.y + 3 * s), PAL.white); }   // drawstrings
-      if (bare || e.type === 'boss') seg(mx - nx * tw * 0.8, my - ny * tw * 0.8, mx + nx * tw * 0.8, my + ny * tw * 0.8, 0.7 * s, pal.belt);
+      if ((bare || e.type === 'boss') && !e.coat) seg(mx - nx * tw * 0.8, my - ny * tw * 0.8, mx + nx * tw * 0.8, my + ny * tw * 0.8, 0.7 * s, pal.belt);
+      if (e.coat) { seg(nk.x - nx * 1.4 * s, nk.y + 0.6 * s, nk.x + nx * 1.6 * s, nk.y + 1.4 * s, 1.7 * s, pal.fur); seg(nk.x + nx * 0.4 * s, nk.y + 2 * s, mx + nx * tw * 0.5, my, 0.5 * s, pal.fur); }   // the fur collar and the coat's front edge
       if (e.role === 'thrower') for (let i = 1; i <= 3; i++) plot(Math.floor(nk.x + (mx - nk.x) * i / 4 + nx * (1.5 - i) * s), Math.floor(nk.y + (my - nk.y) * i / 4), ECOL.steel);   // knives on the chest strap
     }
     leg(pl, kF, fF, pal.pants); if (top === 'coat') tail(kF, pal.top);
@@ -2658,13 +2945,23 @@ import * as P9 from './levels/pier9.js';
     const [ex, ey] = eHead(e, hd, nk, f, fl);
     if (e.dead) { plot(ex, ey, O); plot(ex - 1, ey - 1, O); plot(ex + 1, ey + 1, O); plot(ex + 1, ey - 1, O); plot(ex - 1, ey + 1, O); }
     else {
-      const glow = (e.act && e.actT < 0) || e.sp || e.ph === 2;   // eyes flash on every wind-up; the enraged boss keeps them lit
+      const glow = (e.act && e.actT < 0) || e.sp || e.ph >= 2;   // eyes flash on every wind-up; the enraged boss keeps them lit
       plot(ex, ey, glow ? BLOOD[2] : O); if (e.type === 'boss' && glow) plot(ex - f, ey, BLOOD[2]);
     }
     eDrawWeapon(e, J, fl);
+    const tu = heldTuna(e); if (tu) P9.drawTunaAt(R9, tu.x, tu.y, tu.a, 22);
     arm(nk, eF, hF, bare ? pal.skin : pal.top, bare ? pal.skin : pal.top, e.gloves ? pal.glove : pal.skin);
     if (e.bs) for (const b of e.bs) { const [x, y] = bodyStainAt(e, J, b); plot(Math.floor(x), Math.floor(y), b.c); }   // blood on him
     drawEnemyMarks(e);
+  }
+  const COAT = [C(MAL.fur[0]), C(MAL.fur[1]), C(MAL.fur[2])];
+  function drawCoat(c) {   // the thrown-off fur coat: a tumbling bundle in the air, a heap with its collar on the floor
+    const ca = Math.cos(c.a), sa = Math.sin(c.a), hw = c.rest ? 10 : 8, hh = c.rest ? 2.5 : 4.5, cy = c.rest ? c.y - 2 : c.y;
+    for (let y = Math.floor(cy - 11); y <= cy + 11; y++) for (let x = Math.floor(c.x - 11); x <= c.x + 11; x++) {
+      const dx = x + 0.5 - c.x, dy = y + 0.5 - cy, u = dx * ca + dy * sa, v = -dx * sa + dy * ca, rag = ((Math.floor(u) * 7) & 3) * 0.25;
+      const e = (u / hw) ** 2 + (v / (hh + rag)) ** 2; if (e > 1.15) continue;
+      plot(x, y, e > 0.8 ? PAL.out : Math.abs(u + hw * 0.6) < 2.2 && v < 0.5 ? COAT[2] : (Math.floor(u * 0.7 + v) & 1) ? COAT[0] : COAT[1]);
+    }
   }
   // over the head: a health bar on a hurt goon, the '!' tell, the slam target, dizzy stars, a sweat drop
   function drawEnemyMarks(e) {
@@ -2674,11 +2971,26 @@ import * as P9 from './levels/pier9.js';
       const x0 = Math.floor(e.x - 6), y0 = Math.floor(hd.y - r - 6);
       for (let i = 0; i < 12; i++) { plot(x0 + i, y0, O); plot(x0 + i, y0 + 1, i < 12 * e.hp / e.maxHp ? BLOOD[2] : C('#3a2230')); plot(x0 + i, y0 + 2, O); }
     }
+    if (e === enc.boss && enc.coat) drawCoat(enc.coat);   // Malaspina's fur coat, thrown off
     if (e.dead) return;
     const blink = Math.floor(simTime * 14) % 2;
-    if (e.mark > 0) {   // '!' tell over the head: a heavy, committed or ranged move is coming
+    if (e.hidden) {   // in the fog: a white breath puff every 1.2 s, the gold chain's glint every 1.5 s (twice before a charge)
+      const nk = J[1], bt = simTime % 1.2, gl = e.sp === 'charge' && e.spT < 0 ? (simTime * 4) % 1 < 0.3 : simTime % 1.5 < 0.15;
+      if (bt < 0.35) for (let k = 0; k < 3; k++) plot(Math.floor(hd.x + f * (4 + bt * 14 + k)), Math.floor(hd.y + 1 - bt * 6 - (k & 1)), PAL.white);
+      if (gl) { plot(Math.floor(nk.x + f * 1.5 * s), Math.floor(nk.y + 2 * s), PAL.gold); plot(Math.floor(nk.x + f * 1.5 * s) + 1, Math.floor(nk.y + 2 * s), PAL.white); }
+    }
+    if (e.mark > 0) {   // '!' tell over the head: a heavy, committed or ranged move is coming; a boss's unblockable one in a red ring (dodge it)
       const mx = Math.floor(hd.x), my = Math.floor(hd.y - r - (e.type === 'boss' ? 13 : 12)), mc = blink ? PAL.white : BLOOD[2], w = e.type === 'boss' ? 2 : 1;
       for (let k = 0; k < w; k++) { for (let y = 0; y < 4; y++) plot(mx + k, my + y, mc); plot(mx + k, my + 5, mc); }
+      if (e.markU) for (let a = 0; a < 20; a++) { const t = a / 20 * Math.PI * 2; plot(Math.round(mx + 0.5 + Math.cos(t) * 5.5), Math.round(my + 2.5 + Math.sin(t) * 5.5), blink ? BLOOD[2] : BLOOD[1]); }
+    }
+    if (e.sp === 'sweep' && e.spT < 0 && blink) for (let k = 4; k < e.reach + 18; k += 3) plot(Math.floor(e.x + f * k), GROUND - 1, BLOOD[2]);   // the sweep's reach on the floor: jump it
+    if (e.sp === 'charge' && e.spT < 0 && e.kind === 'marchetti' && Math.floor(simTime * 8) % 2) { const nk = J[1]; plot(Math.floor(nk.x + f * 1.5 * s), Math.floor(nk.y + 2 * s), PAL.white); plot(Math.floor(nk.x + f * 1.5 * s) + 1, Math.floor(nk.y + 2 * s) - 1, PAL.gold); }   // the gold chain glints
+    if (e.sp === 'ice' && e.spT < 0) { const sx = e.x + f * 18; for (let a = 0; a < 12; a++) if ((a + Math.floor(simTime * 10)) % 2) plot(Math.round(sx + Math.cos(a / 12 * Math.PI * 2) * 12), GROUND - 1 + Math.round(Math.sin(a / 12 * Math.PI * 2) * 2), P9C.frost); }   // the frost ring where it lands
+    if (e.kind === 'marchetti' && hookPull && e.hook && e.hook.st === 'pull') {   // the mash prompt over the hero: a key cap and a pip per press needed
+      const need = P9.MARCHETTI.hook.mash[diffSel], hx = Math.floor(P[0].x), hy = Math.floor(P[0].y - 14);
+      for (let x = -3; x <= 3; x++) for (let y = -3; y <= 3; y++) plot(hx + x, hy + y, Math.abs(x) === 3 || Math.abs(y) === 3 ? PAL.out : blink ? PAL.white : PAL.accent);
+      for (let i = 0; i < need; i++) { const px = hx - need * 2 + 1 + i * 4; plot(px, hy + 6, i < bossMash ? PAL.accent : PAL.out); plot(px + 1, hy + 6, i < bossMash ? PAL.accent : PAL.out); }
     }
     if (e.exposed > 0 && !(e.mark > 0)) {   // exposed (after a parry or a perfect dodge): a gold diamond over the head, hit him now
       const mx = Math.floor(hd.x), my = Math.floor(hd.y - r - 9), mc = blink ? PAL.white : PAL.accent;
@@ -2704,12 +3016,13 @@ import * as P9 from './levels/pier9.js';
   function drawEShots(knives = true) {
     for (const b of eshots) {   // enemy shots: red tracers, spinning knives
       if (b.k === 'b') { line1(b.x - b.vx * 0.025, b.y - b.vy * 0.025, b.x, b.y, BLOOD[2]); plot(Math.floor(b.x), Math.floor(b.y), PAL.white); }
+      else if (b.k === 't') { if (knives) P9.drawTunaAt(R9, b.x, b.y, Math.atan2(b.vy, b.vx), 20); }   // a lobbed tuna (3D: a model)
       else if (knives) { const a = b.t * 22, cx = Math.cos(a) * 2, sy = Math.sin(a) * 2; line1(b.x - cx, b.y - sy, b.x + cx, b.y + sy, ECOL.steel); plot(Math.floor(b.x - cx), Math.floor(b.y - sy), ECOL.grip); }
     }
   }
   function clearEnemies() {
     enemies.length = 0; eshots.length = 0; for (const k in zoneAlive) delete zoneAlive[k]; for (const k in zoneN) delete zoneN[k];
-    enc.boss = null; enc.bossBeaten = false; enc.arena = null; hero.hp = 100; hero.invT = 0;
+    enc.boss = null; enc.bossBeaten = false; enc.arena = null; enc.coat = null; enc.fightT = 0; enc.crewBurst = 0; hero.hp = 100; hero.invT = 0;
     GORE.fill(0); PUD_BLOOD.fill(0); BPOOL.fill(0); drips.length = 0; for (const i of gList) gIn[i] = 0; gList.length = 0; BCAP.fill(0); VCAP.fill(0); spawnFx.length = 0;
   }
 
@@ -3161,7 +3474,8 @@ import * as P9 from './levels/pier9.js';
     const prevSpd = ctl.spd;
     if (!ctl.air) {
       const rate = tgt > ctl.spd ? (tgt > WALK ? 230 : 180) : (hero.act === 'skid' ? (input.dir === -ctl.face ? TRN.skidDec * 1.7 : TRN.skidDec) : hero.act === 'squat' ? 520 : locked ? 260 : input.dir === -ctl.face ? 400 : 150);   // a squat at a run plants the feet: he stops in a stride or two, no slide
-      ctl.spd += clamp(tgt - ctl.spd, -rate * dt, rate * dt);
+      const ice = iceAt(ctl.x) ? (tgt > ctl.spd ? 0.35 : 0.15) : 1;   // Pier 9's ice: slow to get going, slow to stop (he slides)
+      ctl.spd += clamp(tgt - ctl.spd, -rate * ice * dt, rate * ice * dt);
     }
     ctl.accS += ((ctl.spd - prevSpd) / dt - ctl.accS) * (1 - Math.exp(-10 * dt));
     if (!ctl.air && ctl.accS < -100 && ctl.spd > 25 && simRand() < 0.25) dust(P[10].x, ctl.y + 1, 1);   // skid
@@ -3817,6 +4131,7 @@ import * as P9 from './levels/pier9.js';
     cam.xf = START_X - 80; cam.yf = GROUND - 60; cam.v.x = cam.v.y = cam.v.z = 0; cam.zoom = 1;   // [feel] a restart cuts to the start, it does not fly the camera back
     resetTutorial();
     enc.introT = -1; bossBarK = 1; hookPull = false; p9.bossDlg = p9.dlgDone = false; cardEl.hidden = true; cardT = 0;   // a restart mid-entrance: no input lock left behind
+    bossBeat = 0; bossMash = 0; malDlg = false; barkT = 0; sayEl.hidden = true;
     if (isP9()) p9Reset();
     setCkpt('start', 0, true); ckBoss = false; slowT = 0; blk.parryT = blk.lockT = 0; hstr.n = 0; hstr.t = -9; ctl.stepV = 0;
   }
@@ -3872,7 +4187,8 @@ import * as P9 from './levels/pier9.js';
   bus.on('boss:defeated', () => isP9() ? toast('Marchetti is down', 'The collector has been collected.') : toast('Boss defeated', 'Club Noir is yours. The street is yours.'));
   bus.on('boss:intro', () => isP9() ? gameAudio.playMusic('boss_marchetti', { volume: 0.85 }) : gameAudio.playMusic('docks_explore', { volume: 0.85 }));   // the street: the same track, up
   bus.on('run:over', p => { if (p.result === 'wasted') gameAudio.stopMusic(2); });
-  bus.on('boss:phase', p => { if (p.phase === 2 && isP9()) toast('Market close', 'The conveyor swings frozen tuna: watch the red lamp, then duck or roll under it.'); else if (p.phase === 2) toast('Boss enraged', 'Watch for the charge. Jump the shockwave of his slam. Punish the recovery.'); });
+  bus.on('boss:phase', p => { if (!isP9() && p.phase === 2) toast('The coat comes off', 'A red ring round his ! : dodge it, a block will not hold. Jump the low sweep and the shockwaves.'); });   // (Pier 9: its lever pulls tell the story)
+  bus.on('block', p => { if (p.enemy && p.enemy.kind === 'malaspina') p.enemy.grabN = (p.enemy.grabN || 0) + 1; });   // two of his blows blocked: he reaches for the grab
   // the gate: a stage's lessons must all be done before the street opens on to the next one (the demo walks free).
   // A lesson that cannot be done any more is made possible again: a sparring goon when the stage's goons are down,
   // a fresh crate, stack, bin, can or bottle when the stage has none left.
@@ -4030,6 +4346,7 @@ import * as P9 from './levels/pier9.js';
       if (toastQ.length) { const [a, b] = toastQ.shift(); toast(a, b); }
     }
     runTick(rdt);
+    barkTick(rdt);
     if (isP9()) { p9Tick(rdt); return; }
     if (hero.mode === 'anim') {
       if (ctl.spd > 5 && ctl.spd < WALK + 6) emit('feat', 'walk');
@@ -4077,7 +4394,7 @@ import * as P9 from './levels/pier9.js';
       enc.arena = { x0: 2440, x1: W - 12 }; enc.spawnT = 6; enc.arenaSpawned = 0;
       enc.boss = spawnEnemy('boss', CLUB_DOORS[0], 'boss'); enc.boss.intro = true; enc.boss.introX = CLUB_DOORS[0] + 56; enc.boss.face = 1;
       enc.introT = 0; bossBarK = 0; spawnFx.push({ kind: 'club', x: CLUB_DOORS[0], t: 0 });
-      if (ckBoss) { ckBoss = false; enc.boss.x = enc.boss.introX; enc.introT = 1.69; }   // a retry: no entrance walk
+      if (ckBoss) { ckBoss = false; enc.boss.x = enc.boss.introX; enc.introT = 1.69; malDlg = malDlgDone = true; }   // a retry: no entrance walk, no dialog
       if (!flags.demo) setCkpt('boss');   // the boss door: a checkpoint, and the fight's own second winds
       emit('boss:intro', { boss: enc.boss, name: BOSS_NAME });
       for (const d of dancers) { d.mood = 'shock'; d.t = 2.6; d.home0 = d.home; d.home = clamp(d.home + (d.home > enc.boss.introX ? 18 : -18), CLUB_X + 34, W - 24); }
@@ -4115,7 +4432,7 @@ import * as P9 from './levels/pier9.js';
       particles.push({ x: q.x + (simRand() - 0.5) * 4, y: q.y - 1, vx: q.dir * (20 + simRand() * 40), vy: -60 - simRand() * 70, life: 0.25 + simRand() * 0.2, c: simRand() < 0.5 ? PAL.dust1 : PAL.out });   // (one per step: two per 60 Hz frame, as before)
       const k = 1 - q.t / QUAKE.life;   // it fades as it runs out
       if (!q.hit && hero.mode === 'anim' && !ctl.air && Math.abs(ctl.y + 2 - q.y) < 6 && Math.abs(ctl.x - q.x) < QUAKE.w) {
-        q.hit = true; hurtPlayer(Math.round(QUAKE.dmg * (0.6 + 0.4 * k)), ctl.x, ctl.y - 2, q.dir, true, 1.2);
+        q.hit = true; hurtPlayer(Math.round((q.dmg ?? QUAKE.dmg) * (0.6 + 0.4 * k)), ctl.x, ctl.y - 2, q.dir, true, 1.2);
       }
     }
   }
@@ -4707,6 +5024,7 @@ import * as P9 from './levels/pier9.js';
     return false;
   }
   function drawObj(o) {
+    if (o.kind === 'tuna') { P9.drawTunaAt({ plot: o.flash > 0 ? (x, y, c) => plot(x, y, c === PAL.out ? c : PAL.white) : plot }, o.x, o.y, o.a, 22); return; }   // a frozen tuna on its side
     const ca = Math.cos(o.a), sa = Math.sin(o.a), R = Math.ceil(o.r + 2), cx = Math.floor(o.x), cy = Math.floor(o.y);
     for (let y = cy - R; y <= cy + R; y++) for (let x = cx - R; x <= cx + R; x++) {
       const dx = x + 0.5 - o.x, dy = y + 0.5 - o.y;
@@ -4791,6 +5109,7 @@ import * as P9 from './levels/pier9.js';
     rain.drops.length = 0; rain.splash.length = 0;
     emit('section:enter', isP9() ? { from: 'bay', to: 'hall' } : { from: 'street', to: 'club' });
   }
+  let malDlg = false, malDlgDone = false;   // the street boss's entrance dialog: started, closed
   function clubTick(rdt) {
     if (isP9() && !flags.club && fadeDir === 0 && hero.mode === 'anim' && p9.shutter >= 1 && !ctl.air && ctl.x >= P9.MARKET.shutter[0] + 26) fadeDir = 1;   // through the open shutter into the hall
     if (!flags.club && fadeDir === 0 && hero.mode === 'anim' && ctl.surf === GOAL && !ctl.air && ctl.x >= KIOSK_X - 4 && (flags.demo || stageDone(ZONES.length - 2))) { fadeDir = 1; emit('feat', 'enter'); }   // walk through the side door (once stage 7 is done)
@@ -4804,14 +5123,19 @@ import * as P9 from './levels/pier9.js';
       }
       if (enc.introT >= 0) {   // the entrance, 1.7 s: spot and walk, the name card at 0.5 s, the boss bar fills from 0.7 s, then the fight
         if (!menuShown) enc.introT += rdt;   // (the pause menu stops the entrance's clock too)
-        if (enc.introT > 0.5 && cardT <= 0 && cardEl.hidden && !(isP9() && p9.bossDlg)) { cardEl.innerHTML = isP9() ? `<b>${P9.MARCHETTI.name}</b><small>${P9.MARCHETTI.title}</small>` : `<b>${BOSS_NAME}</b><small>Owner of Club Noir</small>`; cardEl.hidden = false; cardT = 3.2; toastEl.hidden = true; toastT = 0; }
+        if (enc.introT > 0.5 && cardT <= 0 && cardEl.hidden && !(isP9() ? p9.bossDlg : malDlg)) { cardEl.innerHTML = isP9() ? `<b>${P9.MARCHETTI.name}</b><small>${P9.MARCHETTI.title}</small>` : `<b>${BOSS_NAME}</b><small>Owner of Club Noir</small>`; cardEl.hidden = false; cardT = 3.2; toastEl.hidden = true; toastT = 0; }
         // Pier 9: he walks out to his mark (at most 4.5 s), the portrait dialog plays, and the fight starts when it closes
         if (isP9() && !p9.bossDlg && !menuShown && enc.boss && (Math.abs(enc.boss.x - enc.boss.introX) <= 3 || enc.introT > 4.5)) {
           p9.bossDlg = true; cardEl.hidden = true; cardT = 0;
           playScene('dialog', 'marchetti_intro').then(() => { if (p9.bossDlg) p9.dlgDone = true; });
         }
+        // the street: at his mark Malaspina says his piece (a text-only portrait dialog; not in the demo, not on a retry)
+        if (!isP9() && !malDlg && !flags.demo && !flags.attract && !menuShown && enc.boss && enc.introT > 1.2) {
+          malDlg = true; malDlgDone = false; cardEl.hidden = true; cardT = 0;
+          playScene('dialog', 'malaspina_intro').then(() => { if (malDlg) malDlgDone = true; });
+        }
         bossBarK = clamp((enc.introT - 0.7) / 1, 0, 1);
-        if ((isP9() ? p9.dlgDone : enc.introT >= 1.7) || !enc.boss || enc.boss.dead) {
+        if ((isP9() ? p9.dlgDone : enc.introT >= 1.7 && (!malDlg || malDlgDone)) || !enc.boss || enc.boss.dead) {
           enc.introT = -1; bossBarK = 1; enc.spawnT = 3;
           if (enc.boss) { enc.boss.intro = false; enc.boss.cdT = 0.6; }
           for (const d of dancers) if (d.home0 != null) { d.home = d.home0; d.home0 = null; }
@@ -5230,6 +5554,7 @@ import * as P9 from './levels/pier9.js';
     drawBeams();
     drawSearchlights();
     if (isP9() && !flags.club) P9.drawFxTop(R9, p9.open);
+    drawP9Fog();
     drawFx();
     drawRain();
     drawOffscreen();   // markers sit on top, unlit
@@ -5355,6 +5680,7 @@ import * as P9 from './levels/pier9.js';
   const cinematic = () => openT >= 0 || !!endPh || !!(enc.boss && enc.boss.intro);   // the opening, the ending, the boss's entrance
   function autoZoom() {
     if (cinematic()) return 1;
+    if (bossBeat > 0 && enc.boss && !enc.boss.dead) return 0.85;   // a boss's phase change: the camera punches in on him
     const px = P[2].x, fight = flags.club || enemies.some(e => !e.dead && Math.abs(e.x - px) < 190 && e.zone !== 'arena' || (!e.dead && e === enc.boss && Math.abs(e.x - px) < 260));
     if (fight) {
       const bx = sceneBox();
@@ -5367,7 +5693,8 @@ import * as P9 from './levels/pier9.js';
     const want = zoomMode === 'auto' ? autoZoom() : zoomMode;
     // the zoom glides: out over about a second, back in a little slower so it never pumps (it eases on the scale, so 100 -> 25 % feels even)
     const cx0 = cam.xf + cam.vw / 2, cy0 = cam.yf + cam.vh / 2;   // zoom about the view centre
-    const lz = smoothDamp(Math.log(cam.zoom), Math.log(want), cam.v, 'z', want < cam.zoom ? 0.9 : zoomMode === 'auto' && cinematic() ? 0.35 : 1.3, rdt);   // (a cinematic is short: it closes in fast)
+    if (bossBeat > 0) bossBeat -= rdt;
+    const lz = smoothDamp(Math.log(cam.zoom), Math.log(want), cam.v, 'z', want < cam.zoom ? 0.9 : zoomMode === 'auto' && (cinematic() || bossBeat > 0) ? 0.35 : 1.3, rdt);   // (a cinematic is short: it closes in fast)
     cam.zoom = clamp(Math.exp(lz), 0.25, 1);
     // [feel] even view sizes: the centre stays on the same pixel as the view grows, so a zoom never jitters by 1 px
     cam.vw = Math.min(CW, 2 * Math.round(80 / cam.zoom)); cam.vh = Math.min(CHMAX, 2 * Math.round(cam.vw * CH / CW / 2));   // (taller than the world when far out: the sky fills the top)
@@ -5379,6 +5706,7 @@ import * as P9 from './levels/pier9.js';
     const bx = sceneBox();
     tx = bx.x1 - bx.x0 <= cam.vw - 16 ? clamp(tx, bx.x1 - cam.vw / 2 + 8, bx.x0 + cam.vw / 2 - 8) : (bx.x0 + bx.x1) / 2;
     if (isP9() && enc.boss && enc.boss.intro) tx = enc.boss.x - 24;   // Pier 9: the entrance frames him as he walks out of the cold store
+    if (bossBeat > 0 && enc.boss && !enc.boss.dead) tx = enc.boss.x * 0.7 + P[2].x * 0.3;   // the phase change: on the boss
     ty = bx.y1 - bx.y0 <= cam.vh - 10 ? clamp(ty, bx.y1 - cam.vh / 2 + 5, bx.y0 + cam.vh / 2 - 5) : (bx.y0 + bx.y1) / 2;
     let cx = smoothDamp(cx0, tx, cam.v, 'x', 0.32, rdt), cy = smoothDamp(cy0, ty, cam.v, 'y', 0.4, rdt);
     cam.xf = cx - cam.vw / 2; cam.yf = cy - cam.vh / 2;
@@ -5804,6 +6132,7 @@ import * as P9 from './levels/pier9.js';
     }
     if (id === 'pistol') return t3all([t3box(0, -0.6, -0.5, L, 0.7, 0.5, ECOL.gun, 0.3), t3box(-0.3, -3, -0.45, 1.4, -0.6, 0.45, ECOL.gun, 0.3)]);   // slide and grip
     if (id === 'pipe') return t3rod(0, L, 0.9, ECOL.iron, 8);
+    if (id === 'cane') return t3all([t3rod(-1.6, L, 0.42, ECOL.cane, 8), t3rod(-2.6, -1.2, 0.85, ECOL.steel, 8), t3rod(L - 0.6, L, 0.5, ECOL.steel, 6)]);   // Malaspina's cane: black lacquer, a silver knob and ferrule
     if (id === 'cleaver') return t3all([t3rod(0, 2.5, 0.6, ECOL.grip, 6), t3box(2.5, -3.0, -0.22, L, 0.2, 0.22, ECOL.steelD, 0.3), t3box(2.5, -3.4, -0.12, L, -3.0, 0.12, ECOL.steel, 0.2)]);   // a square cleaver: a deep blade under the grip line
     if (id === 'gaff') return t3all([t3rod(-3, L, 0.5, PAL.wood, 6), t3rod(L, L + 2, 0.4, ECOL.steel, 6), t3box(L + 1.6, -2.5, -0.3, L + 2.2, 0, 0.3, ECOL.steel, 0.2), t3box(L + 0.6, -2.9, -0.3, L + 2.2, -2.3, 0.3, ECOL.steel, 0.2)]);   // a pole with a steel hook
     if (id === 'machete') return t3all([t3rod(0, 2.5, 0.6, ECOL.grip, 6), t3box(2.5, -1.1, -0.18, L, 0.9, 0.18, ECOL.steelD, 0.3), t3box(2.5, -1.5, -0.12, L - 0.5, -1.1, 0.12, ECOL.steel, 0.25)]);
@@ -6011,6 +6340,7 @@ import * as P9 from './levels/pier9.js';
   }
   const t3hash = a => { let h = 2166136261; for (let i = 0; i < a.length; i++) h = Math.imul(h ^ a[i], 16777619); return h >>> 0; };
   const T3_ROUND = new Set(['barrel', 'bin', 'cone', 'can', 'bottle', 'bag', 'ball']);
+  const T3_FLASHP = new WeakMap(), T3_FLASH = p => { let w = T3_FLASHP.get(p); if (!w) { w = {}; for (const k in p) w[k] = PAL.white; T3_FLASHP.set(p, w); } return w; };   // a palette all white: a boss's tell flash
 
   Three3D = {
     renderer: null,
@@ -6406,7 +6736,7 @@ import * as P9 from './levels/pier9.js';
     },
     // the conveyor's tuna, where drawHallProps and drawTunaHazard put them: { x, top (the tail), len, a (the swing), z, chain from (cx, cy) }
     p9TunaList() {
-      const out = [], t = simTime, B = enc.boss, ph = B && !B.dead ? B.ph : 0, hz = p9.tuna, sp = ph >= 2 ? 30 : 16, low = ph >= 2;
+      const out = [], t = simTime, B = enc.boss, fast = !!(B && !B.dead && p9.speedOn), hz = p9.tuna, sp = fast ? 30 : 16, low = fast;
       for (let i = 0; i < 4; i++) {
         const x = P9.HALL_X + ((i * 95 + t * sp) % 380) - 10, chain = low ? 52 : 26;
         if (x < P9.HALL_X + 4 || x > 2796 || (hz.st === 'swing' && Math.abs(x - hz.x) < 30)) continue;
@@ -6422,10 +6752,17 @@ import * as P9 from './levels/pier9.js';
         this.seg(q.cx, q.cy, q.x, q.top, q.cz, 0.35, 0.25, T3P9.CHAIN);
         if (q.hz) this.shadow(q.x, P9.TUNA.bottom, 8);
       }
+      for (const w of ['speed', 'freezer']) {   // the two levers on the wall by the freezer door (drawLever): a steel box, a red handle
+        const x = P9.LEVERS[w], y0 = GROUND - 36, k = p9.lev[w], a = -1.1 + 2.2 * k, hx = x + Math.sin(a) * 9, hy = y0 + 4 - Math.cos(a) * 9, z = T3.ZF + 1.5;
+        this.seg(x, y0 + 1, x, y0 + 8, z, 3.2, 0.3, C('#6a7078'), 0.6);
+        this.seg(x, y0 + 4, hx, hy, z + 1.5, 0.5, 0.25, C('#9aa0a8'));
+        this.ball(hx, hy, z + 1.5, 1.4, 0.3, p9.lev.hot === w ? C('#ff4040') : C('#b02020'));
+      }
     },
-    p9Models() {   // (in updateModels) the tuna themselves
+    p9Models() {   // (in updateModels) the tuna themselves; one in Marchetti's hands
       if (!isP9() || !flags.club) return;
       for (const q of this.p9TunaList()) { const m = this.model(this.geo('tuna' + q.len, () => this.p9TunaGeo(q.len))); m.position.set(q.x, -q.top, q.z); m.rotation.set(0, 0, q.a); }
+      const B = enc.boss, tu = B && !B.hidden && heldTuna(B); if (tu) this.tunaModel(tu.x, tu.y, tu.a, (this.zw.get(B) ?? 0) + 5.2 * B.s, 22);
     },
     // a frozen tuna hanging nose down from its tail (tunaAt's shape, turned round): blue-grey back, silver side, pale belly, frost
     p9TunaGeo(len) {
@@ -6905,8 +7242,9 @@ import * as P9 from './levels/pier9.js';
       this.shadow(D[2].x, D[2].y, (hi - lo) / 2);
     },
     enemyRig(e) {
-      const J = e.dead ? e.pts : e.J; if (!J) return;
-      const s = e.s, f = e.face, pal = e.pal, top = e.look.top, bw = e.bw, lw = 0.75 + 0.25 * bw, bare = top === 'vest' || top === 'tank';
+      const J = e.dead ? e.pts : e.J; if (!J || (e.hidden && !e.dead)) return;   // (hidden in the fog: his tells are marks, on the front layer)
+      const fl = e.tellF > 0 && !e.dead, P0 = e.coat ? e.palC : e.pal, pal = fl ? T3_FLASH(P0) : P0;   // a boss's tell flashes him white (drawEnemy)
+      const s = e.s, f = e.face, top = e.coat ? 'coat' : e.look.top, bw = e.bw, lw = 0.75 + 0.25 * bw, bare = top === 'vest' || top === 'tank';
       const [hd, nk, pl, eB, hB, eF, hF, kB, fB, kF, fF] = J, ZL = 2.2 * s, ZA = 5.2 * s, TZ = 1.45;
       this.bz = this.ease(e, this.bodyZ(e.lane, null));
       const leg = (h, k, ft, c, z) => {
@@ -6926,7 +7264,8 @@ import * as P9 from './levels/pier9.js';
       const tw = 2.6 * s * bw, cut = top === 'coat' ? 1 : 0.7, mx = { x: nk.x + (pl.x - nk.x) * cut, y: nk.y + (pl.y - nk.y) * cut };
       this.seg(nk.x, nk.y, mx.x, mx.y, 0, tw, s, pal.top, TZ);
       if (cut < 1) this.seg(mx.x, mx.y, pl.x, pl.y, 0, tw, s, pal.pants, TZ);
-      if ((bare || e.type === 'boss') && !pal.apron) { const [ux, uy] = norm(pl.x - nk.x, pl.y - nk.y); this.seg(mx.x - ux * 0.35 * s, mx.y - uy * 0.35 * s, mx.x + ux * 0.35 * s, mx.y + uy * 0.35 * s, 0, tw + 0.15, 0, pal.belt, TZ); }   // the belt: a thin line, as drawEnemy draws it
+      if (e.coat) { const [tx, ty] = norm(pl.x - nk.x, pl.y - nk.y), nx = ty * f; this.seg(nk.x - nx * 1.4 * s, nk.y + 0.6 * s, nk.x + nx * 1.6 * s, nk.y + 1.4 * s, tw * TZ * 0.6, 1.7 * s, 0.5 * s, pal.fur, 1.2); }   // the fur collar (drawEnemy)
+      if ((bare || e.type === 'boss') && !pal.apron && !e.coat) { const [ux, uy] = norm(pl.x - nk.x, pl.y - nk.y); this.seg(mx.x - ux * 0.35 * s, mx.y - uy * 0.35 * s, mx.x + ux * 0.35 * s, mx.y + uy * 0.35 * s, 0, tw + 0.15, 0, pal.belt, TZ); }   // the belt: a thin line, as drawEnemy draws it
       {   // the chest: the vest's open front, the jacket's collar, the tank's neckline (as drawEnemy draws them)
         const [tx, ty] = norm(pl.x - nk.x, pl.y - nk.y), nx = ty * f, ny = -tx * f, fz = tw * TZ * 0.85;
         if (top === 'vest') this.seg(nk.x + nx * tw * 0.55, nk.y + ny * tw * 0.55, mx.x + nx * tw * 0.45, mx.y + ny * tw * 0.45, fz, 0.6 * s, 0, pal.skin, 0.4);
@@ -6946,7 +7285,7 @@ import * as P9 from './levels/pier9.js';
         this.seg(q.x, q.y, q.x + d * 1.6, q.y, -ZA * 0.5, 0.45, 0.25, st); this.seg(q.x + d * 1.6, q.y, q.x + d * 2.4, q.y + 1.6, -ZA * 0.5, 0.45, 0.25, st); this.seg(q.x + d * 2.4, q.y + 1.6, q.x + d, q.y + 3.2, -ZA * 0.5, 0.45, 0.25, st);
       }
       const k = e.hk * s;
-      { const glow = !e.dead && !!((e.act && e.actT < 0) || e.sp || e.ph === 2); this.head(e, hd, nk, f, (e.dead ? 'd' : glow ? 'g' : 'n') + k, () => t3goonHead(e, glow, e.dead)); }
+      { const glow = !e.dead && !!((e.act && e.actT < 0) || e.sp || e.ph >= 2); this.head(e, hd, nk, f, (e.dead ? 'd' : glow ? 'g' : 'n') + k, () => t3goonHead(e, glow, e.dead)); }
       arm(nk, eF, hF, bare ? pal.skin : pal.top, bare ? pal.skin : pal.top, e.gloves ? pal.glove : pal.skin, ZA);
       if (e.bs) for (const b of e.bs) {   // blood on him (as drawEnemy draws it): on the near face of the limb
         const [x, y] = bodyStainAt(e, J, b), torso = b.a === 1 && b.b === 2, z = torso ? tw * TZ * 0.9 : (b.b === 5 || b.b === 6 ? ZA : ZL) + 1.1 * s;
@@ -7099,7 +7438,13 @@ import * as P9 from './levels/pier9.js';
       }
       m.position.set(ox + size / 2, -(oy + size / 2), z);
     },
+    tunaModel(x, y, a, z, len = 22) {   // a frozen tuna (p9TunaGeo: hung from its tail) laid along a (its nose's way, 2D angle) and centred on (x, y)
+      const m = this.model(this.geo('tuna' + len, () => this.p9TunaGeo(len)));
+      m.position.set(x - Math.cos(a) * len / 2, -(y - Math.sin(a) * len / 2), z); m.rotation.set(0, 0, Math.PI / 2 - a);
+      return m;
+    },
     obj(o, x, y, a, z, scale) {   // a loose object drawn upright by drawObj, then made solid: round ones turned, the rest extruded
+      if (o.kind === 'tuna') return this.tunaModel(x, y, a, z);
       if (o.kind === 'bin' || o.kind === 'cone') {   // modelled by hand: the profile of the 2D sprite, turned in the round
         const fl = o.flash > 0, m = this.model(this.geo(o.kind + (fl ? 'F' : ''), () => o.kind === 'bin' ? t3binGeo(fl) : t3coneGeo(fl)));
         m.position.set(x, -y, z); m.rotation.set(0, 0.4, -a, 'ZYX'); m.scale.setScalar(scale);
@@ -7136,7 +7481,8 @@ import * as P9 from './levels/pier9.js';
         const n = Math.max(2, Math.round(b.len)), geo = this.geo('board' + n, () => { const px = new Uint32Array(n * 2); for (let i = 0; i < n; i++) { px[i] = PAL.crate; px[n + i] = PAL.crateD; } return t3voxels(px, n, 2, n / 2, 1, 3); });
         const m = this.model(geo); m.position.set(b.x, -(b.y + 0.5), this.ease(b, this.laneZ[b.lane ?? LANE.FRONT])); m.rotation.set(0, 0, -b.a);
       }
-      for (const b of eshots) if (b.k !== 'b') { const m = this.model(this.knifeGeo); m.position.set(b.x, -b.y, this.ease(b, this.laneZ[b.lane ?? LANE.FIGHT])); m.rotation.set(0, 0, -(b.t * 22)); }
+      for (const b of eshots) if (b.k === 't') this.tunaModel(b.x, b.y, Math.atan2(b.vy, b.vx), this.ease(b, this.laneZ[LANE.FIGHT]), 20);   // Marchetti's lobbed tuna
+      for (const b of eshots) if (b.k === 'k') { const m = this.model(this.knifeGeo); m.position.set(b.x, -b.y, this.ease(b, this.laneZ[b.lane ?? LANE.FIGHT])); m.rotation.set(0, 0, -(b.t * 22)); }
       this.p9Models();
       for (let i = this.nM; i < this.mpool.length; i++) this.mpool[i].visible = false;
       if (this.gpool) for (let i = this.nG; i < this.gpool.length; i++) this.gpool[i].visible = false;
@@ -7209,7 +7555,7 @@ import * as P9 from './levels/pier9.js';
       if (flags.club) {   // drawClubFloor in camera-sized strips across the sheet
         const F = this.lFloor, S = STREET + 1, step = 256;
         for (let ox = 0; ox < F.w; ox += step) {
-          withView({ x: F.x0 + ox, y: GROUND, vw: step, vh: S }, isP9() ? () => P9.drawHallFloor(R9) : drawClubFloor);
+          withView({ x: F.x0 + ox, y: GROUND, vw: step, vh: S }, isP9() ? () => P9.drawHallFloor(R9, p9.ice) : drawClubFloor);
           for (let y = 0; y < S; y++) for (let x = 0; x < step; x++) { const c = buf[y * CW + x]; F.data[y * F.w + ox + x] = t3glow(c); }
         }
         F.tex.needsUpdate = true;
@@ -7230,7 +7576,7 @@ import * as P9 from './levels/pier9.js';
         drawEShots(false);
       });
       this.layer(this.lFx, () => {
-        drawFx(); drawDogHeart(); drawOffscreen();
+        drawP9Fog(true); drawFx(); drawDogHeart(); drawOffscreen();
         for (const e of enemies) {   // a goon's muzzle flash
           const J = e.dead ? e.pts : e.J; if (!J || e.R.w !== 'pistol' || !(e.muz > 0)) continue;
           const g = eWeapon(e, J); for (let d = 1; d <= 4; d++) plot(Math.floor(g.tx + g.dx * d), Math.floor(g.ty + g.dy * d), d < 3 ? PAL.white : PAL.accent);
@@ -7896,12 +8242,41 @@ import * as P9 from './levels/pier9.js';
     for (const w of HOUSEWIN) { w.off = false; w.peek = false; w.t = 0; w.lv = 1; }
   }
   // the Pier 9 run: waves along the quay, the shutter, the boss in the hall, the conveyor's tuna, the ending
-  const p9 = { w: {}, queue: [], shutter: 0, open: false, bossDlg: false, dlgDone: false, crewT: 0, obj: '', tuna: { st: 'off', t: 0, x: 0, dir: 1, a: 0, hit: null } };
+  // the boss's arena: speedOn = the conveyor runs fast (the speed lever is down), fog = the freezer fog (on, t since on, k its strength 0..1,
+  // offT since the hero cleared it), ice = the smashed-in ice patches, lev = how far each lever is pulled (drawn), crewNow = crew to send in now
+  const p9 = { w: {}, queue: [], shutter: 0, open: false, bossDlg: false, dlgDone: false, crewT: 0, obj: '', tuna: { st: 'off', t: 0, x: 0, dir: 1, a: 0, hit: null },
+    speedOn: false, fog: { on: false, t: 0, k: 0, offT: 0 }, ice: [], lev: { speed: 0, freezer: 0, hot: null }, crewNow: 0 };
+  const P9C = { frost: C('#d8e8f0') };
+  function iceAt(x) {   // slick floor: the hall's two fixed patches and the ones Marchetti smashes in
+    if (!isP9() || !flags.club) return false;
+    for (const [a, b] of P9.ICE) if (x >= a && x <= b) return true;
+    for (const z of p9.ice) if (x >= z.x0 && x <= z.x1) return true;
+    return false;
+  }
+  function fogD(x) {   // the freezer fog's density over column x (0 .. dense)
+    const F = p9.fog, M = P9.MARCHETTI.fog; if (F.k <= 0) return 0;
+    const front = W - 60 * F.t, edge = clamp((x - front) / 30, 0, 1);   // it pours out of the freezer door, leftward at 60 px/s
+    return F.k * edge * M.dense[diffSel] * (x >= M.split ? 1 : M.warm);
+  }
+  function p9Lever(which) {   // Marchetti pulled a lever
+    p9.lev[which] = 1; p9.lev.hot = which; shakeIt(0.15, 1);
+    if (which === 'speed') { p9.speedOn = true; toast('Market close', 'The conveyor swings its tuna: watch the red lamp, then duck or roll under it. A tuna he drops can be thrown.'); }
+    else { Object.assign(p9.fog, { on: true, t: 0, offT: 0 }); toast('Cold storage', 'He hides in the fog: watch for his breath and his gold chain. Hit the freezer lever to clear it.'); }
+    emit('p9:lever', { which, by: 'boss' });
+  }
+  function drawP9Fog(dither) { if (isP9() && flags.club && p9.fog.k > 0) P9.drawFog(R9, fogD, ctl.x, P[1].y, P9.MARCHETTI.fog.bubble[diffSel], dither); }   // (both views: in 3D on the front fx layer)
+  function floorTuna(x, vx) {   // a frozen tuna on the floor: lift it and throw it at him (at most 3 lie about)
+    const old = objs.filter(o => o.kind === 'tuna' && !o.carried);
+    if (old.length >= 3) removeObj(old[0]);
+    const o = makeObj('tuna', clamp(x, 2450, W - 16), GROUND - 4); o.vx = vx; o.vy = -40; o.safeT = 0.3;
+    return o;
+  }
   const R9 = { buf, CW, cam, plot, plotV, line1, blendPlot: (x, y, r, g, b, a) => blendPlot(x, y, r, g, b, a), get t() { return simTime; } };
   function p9Reset() {
     p9.w = {}; for (const w of P9.WAVES) p9.w[w.id] = { out: false, n: 0 };
     p9.queue.length = 0; p9.shutter = 0; p9.open = false; p9.bossDlg = false; p9.dlgDone = false; p9.crewT = 0; p9.obj = '';
     Object.assign(p9.tuna, { st: 'off', t: 0, hit: null }); hookPull = false; barkT = 0; sayEl.hidden = true;
+    p9.speedOn = false; Object.assign(p9.fog, { on: false, t: 0, k: 0, offT: 0 }); p9.ice.length = 0; Object.assign(p9.lev, { speed: 0, freezer: 0, hot: null }); p9.crewNow = 0; p9.w3 = false;
     rain.k = rain.goal = 0.8; rain.drops.length = 0;
     setObjective('Pier 9', 'Find the collector');
   }
@@ -7928,14 +8303,15 @@ import * as P9 from './levels/pier9.js';
   }
   let barkT = 0, barkE = null;
   function bark(e, text) { barkE = e; barkT = 2.2; sayEl.textContent = text; sayEl.hidden = false; }
-  function p9Tick(rdt) {   // per frame (UI clock): waves, the shutter, the boss start, the objective line, barks
+  function barkTick(rdt) {   // per frame (UI clock): a speech bubble follows the head of whoever spoke
+    if (barkT <= 0) return;
+    barkT -= rdt;
+    const J = barkE && (barkE.dead ? barkE.pts : barkE.J);
+    if (barkT <= 0 || !J) { barkT = 0; sayEl.hidden = true; }
+    else { const k = cv.clientWidth / cam.vw; sayEl.style.left = `${(J[0].x - cam.x) * k}px`; sayEl.style.top = `${(J[0].y - cam.y - 8) * k}px`; }
+  }
+  function p9Tick(rdt) {   // per frame (UI clock): waves, the shutter, the boss start, the objective line
     const dt = rdt * timeScale;
-    if (barkT > 0) {
-      barkT -= rdt;
-      const J = barkE && (barkE.dead ? barkE.pts : barkE.J);
-      if (barkT <= 0 || !J) { barkT = 0; sayEl.hidden = true; }
-      else { const k = cv.clientWidth / cam.vw; sayEl.style.left = `${(J[0].x - cam.x) * k}px`; sayEl.style.top = `${(J[0].y - cam.y - 8) * k}px`; }
-    }
     if (endPh) return;
     if (hero.mode === 'anim' && !flags.club) for (const W_ of P9.WAVES) if (W_.at != null && P[2].x >= W_.at) p9Wave(W_);
     for (const W_ of P9.WAVES) if (W_.then && p9.w[W_.id].out && !p9.w[W_.then].out && !p9.queue.some(q => q.wave === W_.id) && (zoneAlive[W_.id] || 0) <= p9.w[W_.id].n / 2) p9Wave(P9.WAVES.find(w => w.id === W_.then));
@@ -7974,19 +8350,36 @@ import * as P9 from './levels/pier9.js';
       if (s !== GROUND_S) e.dropTo = P[2].x < (s.x0 + s.x1) / 2 ? s.x0 - 8 : s.x1 + 8;
     }
     for (const e of enemies) if (e.dropTo != null) { if (e.dead || (!e.air && e.y > GROUND - 6)) e.dropTo = null; else if (!e.down && !e.act) { e.x += Math.sign(e.dropTo - e.x) * 40 * dt; e.face = Math.sign(e.dropTo - e.x) || e.face; } }
-    if (B && !B.dead && enc.arena && enc.introT < 0 && flags.club) {   // the crew comes through the hall doors
-      const Cw = M.crew, ph2 = B.ph >= 2, cfg = ph2 ? Cw.ph2 : Cw.ph1, alive = enemies.filter(g => !g.dead && g.zone === 'arena').length;
-      p9.crewT += dt;
-      if ((ph2 || p9.crewT > Cw.ph1.delay) && enc.arenaSpawned < Cw.max[diffSel] && alive < cfg.alive[diffSel] && (enc.spawnT = Math.min(enc.spawnT, cfg.every) - dt) <= 0) {
-        enc.spawnT = cfg.every; enc.arenaSpawned++;
-        const roles = ph2 ? Cw.ph2Roles : Cw.ph1Roles, dx = CLUB_DOORS[enc.arenaSpawned % 2];
+    if (B && !B.dead && enc.arena && enc.introT < 0 && flags.club && B.ph >= 2) {   // the crew comes through the hall doors: none in phase 1, at most 2 later
+      const Cw = M.crew, ph3 = B.ph >= 3, alive = enemies.filter(g => !g.dead && g.zone === 'arena').length;
+      const cap = ph3 ? (diffSel >= 3 ? 2 : 0) : Cw.ph2.alive[diffSel];
+      if (ph3 && diffSel >= 3 && !p9.w3) { p9.w3 = true; p9.crewNow = 2; }   // Wicked: two filleters as the fog comes in
+      enc.spawnT -= dt;
+      if (alive < Math.max(cap, p9.crewNow > 0 ? 2 : 0) && enc.arenaSpawned < Cw.max[diffSel] && (p9.crewNow > 0 || (alive < cap && enc.spawnT <= 0))) {
+        enc.spawnT = Cw.ph2.every; enc.arenaSpawned++; if (p9.crewNow > 0) p9.crewNow--;
+        const roles = ph3 ? Cw.ph3Wicked : Cw.ph2Roles, dx = CLUB_DOORS[enc.arenaSpawned % 2];
         const g = spawnEnemy('goon', clamp(dx, enc.arena.x0 + 6, enc.arena.x1 - 4), 'arena', saltOpts(roles[enc.arenaSpawned % roles.length]));
-        g.cdT = Math.max(g.cdT, 0.8); spawnFx.push({ kind: 'club', x: dx, t: 0 });
+        g.cdT = Math.max(g.cdT, 0.8); g.alert = true; spawnFx.push({ kind: 'club', x: dx, t: 0 });
         if (simRand() < 0.5) bark(g, ['For Sal!', 'Is that really him?', "Don't look at his eyes."][Math.floor(simRand() * 3)]);
       }
     }
+    if (B && flags.club) {   // the arena: the fog, the melting ice, the levers, who hides in the fog
+      const F = p9.fog, FM = M.fog;
+      if (F.on) { F.t += dt; F.k = Math.min(1, F.k + dt / FM.fill * 2); } else { F.offT += dt; F.k = Math.max(0, F.k - dt / FM.clear); }
+      for (let i = p9.ice.length - 1; i >= 0; i--) if ((p9.ice[i].t -= dt) <= 0) p9.ice.splice(i, 1);
+      if (p9.lev.speed > 0 && p9.lev.speed < 1) p9.lev.speed = Math.min(1, p9.lev.speed + dt * 3);
+      p9.lev.freezer += ((F.on ? 1 : 0) - p9.lev.freezer) * Math.min(1, dt * 8);
+      if (B.sp === 'lever' && B.levPull >= 0) p9.lev[B.lev] = Math.max(p9.lev[B.lev], clamp(B.levPull / B.levT, 0, 1) * (B.lev === 'freezer' ? 1 : 0.9));
+      B.hidden = !B.dead && F.k > 0 && fogD(B.x) >= 0.6 && Math.abs(B.x - ctl.x) > FM.bubble[diffSel];
+      // the hero at the freezer lever: a blow on it throws it back up, and the fog clears (he comes back for it, back turned)
+      const pm = MOVES[hero.act], lx = P9.LEVERS.freezer;
+      if (F.on && hero.mode === 'anim' && pm && hero.actT >= pm.win[0] && hero.actT <= pm.win[1] && Math.abs(ctl.x + ctl.face * 6 - lx) < 12 && !(B.sp === 'lever')) {
+        F.on = false; F.offT = 0; p9.lev.hot = 'freezer'; sparks.push({ x: lx, y: GROUND - 32, t: 0 }); shakeIt(0.1, 1);
+        emit('p9:lever', { which: 'freezer', by: 'hero' }); emit('feat', 'fogclear');
+      }
+    }
     const T = p9.tuna, TM = M.tuna;
-    if (!(B && !B.dead && B.ph >= 2 && flags.club)) { T.st = 'off'; return; }
+    if (!(B && !B.dead && p9.speedOn && flags.club)) { T.st = 'off'; return; }
     if (T.st === 'off') { T.st = 'idle'; T.t = 2.5; }
     if (T.st === 'idle') { if ((T.t -= dt) <= 0) { T.st = 'warn'; T.t = Math.max(0.7, TM.warn / A ** 0.25); T.dir = simRand() < 0.5 ? 1 : -1; emit('boss:telegraph', { boss: B, move: 'tuna', t: T.t, x: T.dir > 0 ? 2440 : W - 10 }); } }
     else if (T.st === 'warn') { if ((T.t -= dt) <= 0) { T.st = 'swing'; T.x = T.dir > 0 ? 2428 : W + 6; T.hit = new Set(); emit('sfx', { name: 'dodge_whoosh', x: T.x, vol: 1, pitch: 0.45 }); } }
@@ -8283,6 +8676,7 @@ import * as P9 from './levels/pier9.js';
     if (endPh && endPh !== 'done') endTick(rdt);
     if (jumpEnd && enc.boss && !enc.boss.dead && enc.introT < 0 && enc.boss.hp > 0) { enc.boss.hp = 1; enc.eHitKind = 1; damageEnemy(enc.boss, 60, 1, 300, 0.5, enc.boss.x, enc.boss.y - 20, false); enc.eHitKind = 0; }   // ?ending: the boss drops as the fight starts
     if (enc.introT >= 0 && !enc.boss) enc.introT = -1;   // (an entrance with no boss: never a lock)
+    if (hookPull && (input.attack || input.dash || input.jump)) bossMash++;   // the hook's pull: each press of Q, W, Space or ↑ counts toward breaking free
     if (enc.introT >= 0 || hookPull) { input.dir = 0; input.run = false; input.jump = false; input.jumpHeld = false; input.attack = null; input.fireHeld = false; input.dash = false; input.dashHeld = false; input.downHeld = false; input.block = false; input.blockHeld = false; }   // the boss entrance: no input
     for (let i = spawnFx.length - 1; i >= 0; i--) if ((spawnFx[i].t += sdt) > 0.45) spawnFx.splice(i, 1);
     if (grabIdx >= 0 && now - lastMove > 40) { pv.x *= 0.7; pv.y *= 0.7; }
@@ -8421,7 +8815,8 @@ import * as P9 from './levels/pier9.js';
       pickups: pickups.map(k => k.taken ? 1 : 0).join(''), demo: flags.demo, attract: flags.attract });
     window.__skipToBoss = () => { leaveTitle(); setDemo(false); skipToBoss(); };
     window.__sim = { enc, enemies, objs, ctl, hero, quakes, ammoBoxes, done, bus, makeObj, spawnEnemy, P, get hookPull() { return hookPull; }, get diffSel() { return diffSel; },
-      blk, hstr, DEF, input, btn, get slowT() { return slowT; }, get ckpt() { return ckpt; }, get ragT() { return ragT; }, get flags() { return flags; }, setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; }, retry: () => retry() };   // (tests: the live sim state, read and poke)
+      blk, hstr, DEF, input, btn, get slowT() { return slowT; }, get ckpt() { return ckpt; }, get ragT() { return ragT; }, get flags() { return flags; }, setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; }, retry: () => retry(),
+      EMOVES, MOVES, MAL, p9, eshots, pickups, get bossMash() { return bossMash; }, get sceneOn() { return sceneOn; }, get simTime() { return simTime; }, get kos() { return kos; }, get runT() { return runS.t; } };   // (tests: the live sim state, read and poke)
     // Pier 9 (tests): start the chapter (with its cutscenes) or the level at once; read its state; skip to the hall
     window.__pier9 = { chapter: () => startChapter1(), start: () => { leaveTitle(); setDemo(false); hideMenu(); loadLevel('pier9'); reset(); }, toBoss: () => { leaveTitle(); setDemo(false); hideMenu(); loadLevel('pier9'); p9SkipToBoss(); },
       peek: () => ({ level: LV.id, scene: sceneOn, x: Math.round(ctl.x), y: Math.round(ctl.y), mode: hero.mode, hp: Math.round(hero.hp), club: flags.club, open: p9.open, shutter: +p9.shutter.toFixed(2), waves: Object.fromEntries(Object.entries(p9.w).map(([k, v]) => [k, [v.out, zoneAlive[k] || 0]])), queue: p9.queue.length,

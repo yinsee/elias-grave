@@ -71,17 +71,32 @@ export const WAVES = [
       ['filleter', 'gaffer', 'deckhand', 'hookthrower', 'pipeman', 'gaffer']] },
 ];
 // Sal "the Scale" Marchetti (docs/levels/01-pier9.md 5): stats per difficulty, his moves' numbers
+// (tells scale in the game by t / A^0.25; times in s, speeds in px/s; arrays are by difficulty E, M, H, W)
 export const MARCHETTI = {
   name: 'Sal "the Scale" Marchetti', title: 'Tenor of the Choir · Pier 9', look: 'marchetti',
-  hp: [700, 900, 1100, 1300], s: 1.3, m: 7, speed: 24, reach: 25, dmg: 16, heavyDmg: 28, poise: 34, windup: 0.4, cd: [0.8, 1.5],
+  hp: [800, 1050, 1250, 1450], s: 1.3, m: 7, speed: 24, reach: 25, dmg: 16, heavyDmg: 28, poise: 34, windup: 0.4, cd: [0.8, 1.5],
   R: { w: 'cleaver', len: 9, off: -1.1, reach: 25 },
   combos: [['chop'], ['chop', 'chop'], ['jab', 'chop'], ['chop', 'hchop']],
-  hook: { windup: 0.65, range: [120, 150, 160, 175], v: 330, pull: 280, cd: [5, 8] },
-  ph2: { below: 0.5, speed: 31, cd: [0.6, 1.2], windup: 0.32 },
+  // the hook: mash = presses to break free of the pull
+  hook: { windup: 0.65, fogWindup: 0.8, range: [120, 150, 160, 175], v: 330, pull: 280, cd: [5, 8], mash: [3, 4, 5, 6] },
+  // the shoulder charge: knock-down, unblockable; a wall or a loose prop stuns him (stun s); on the ice he slides on 0.4 s more
+  shoulder: { windup: 0.7, v: 190, maxT: 1.1, dmg: 22, stun: 1.6, cd: [6, 9] },
+  // phase 2: a tuna off the rail (swing up close, lob from range); the ice smash (a quake, a new patch w px wide for life s, max by difficulty)
+  tunaBat: { windup: 0.6, swing: 24, throw: 20, back: 35, swingRec: 0.8, throwRec: 0.5, cd: [5, 8] },
+  ice: { windup: 0.55, dmg: 10, hitDmg: 18, w: 40, life: 12, max: [1, 2, 2, 3], rec: 0.7, cd: [8, 12] },
+  ph2: { below: 0.65, speed: 26, cd: [0.6, 1.2], windup: 0.36, line: "Market's closing, Sandman! Everything must go!" },
+  ph3: { below: 0.35, speed: 28, cd: [0.7, 1.3], line: "Let's see how a story keeps on ice." },
+  lever: { walk: 70, pull: 0.8 },
+  // the freezer fog (phase 3): density in the cold half (x >= split) by difficulty, half of it in the warm half; the clear bubble round
+  // the hero; fill s; he goes back to the lever `back` s after the hero clears it
+  fog: { dense: [0.6, 0.85, 0.9, 0.95], warm: 0.6, split: 2640, bubble: [90, 60, 50, 40], fill: 6, clear: 2, back: 4,
+    barks: ['Cold, Grave?', 'I can hear you breathe.', 'Nobody sleeps in my freezer.'] },
   tuna: { warn: 1.0, v: 210, dmg: [8, 14, 18, 24], every: [6, 9], bossDmg: 40 },
-  crew: { ph1: { delay: 20, every: 8, alive: [1, 1, 2, 2] }, ph2: { every: 5, alive: [2, 2, 3, 4] }, max: [4, 6, 9, 12],
-    ph1Roles: ['deckhand', 'filleter'], ph2Roles: ['gaffer', 'filleter', 'deckhand', 'pipeman'] },
+  // his crew: none in phase 1; phase 2 at most `alive`, one per `every` s; phase 3 none (Wicked: two filleters at its start)
+  crew: { ph2: { every: 6, alive: [1, 2, 2, 2] }, max: [3, 5, 6, 8], ph3Wicked: ['filleter', 'filleter'],
+    ph2Roles: ['gaffer', 'filleter', 'deckhand', 'pipeman'] },
 };
+export const LEVERS = { speed: 2738, freezer: 2748 };   // on the wall left of the freezer door: the conveyor's speed, the freezer fog
 
 // ---- a 3 x 5 pixel font for painted signs ----
 const FONT = {
@@ -378,7 +393,7 @@ export function drawHall(R) {
     for (let k = 0; k < 5; k++) for (let x = lx - 2 - k; x <= lx + 2 + k; x++) plot(x, GROUND - 124 + k, k === 4 ? 0xff1b1226 : 0xff4a5a2a);
   }
 }
-export function drawHallFloor(R) {
+export function drawHallFloor(R, more = null) {   // more: Marchetti's smashed-in ice patches ({ x0, x1, t } each)
   const { buf, CW, cam } = R, t = R.t;
   for (let d = 0; d <= 14; d++) {
     const vy = GROUND + d - cam.y; if (vy < 0 || vy >= cam.vh) continue;
@@ -386,7 +401,7 @@ export function drawHallFloor(R) {
     for (let vx = 0; vx < cam.vw; vx++) {
       const wx = vx + cam.x;
       if (d === 0) { buf[row + vx] = 0xffa8a09a; continue; }
-      const iceZ = ICE.some(([a, b]) => wx >= a && wx <= b && d >= 2 && d <= 12);
+      const iceZ = d >= 2 && d <= 12 && (ICE.some(([a, b]) => wx >= a && wx <= b) || (more && more.some(z => wx >= z.x0 + (d & 1) && wx <= z.x1 - (d & 1) && (z.t > 1.5 || (wx + d) % 3))));   // (a patch thins out as it melts)
       if (iceZ) { const s = ((wx + d * 3 - Math.floor(t * 6)) % 23 + 23) % 23; buf[row + vx] = s < 2 ? 0xfffff8f0 : (wx * 5 + d) % 7 === 0 ? 0xffe8dcc4 : 0xfff0e6cf; continue; }
       buf[row + vx] = (wx - HALL_X) % 30 === 0 || d === 7 ? 0xff463e3a : (wx * 3 + d * 5) % 17 === 0 ? 0xff6a625c : 0xff68605a;
     }
@@ -405,9 +420,52 @@ function tunaAt(plot, x, top, len, a, hi) {   // a frozen tuna hanging nose down
   }
   if (hi) plot(Math.round(x + Math.sin(a) * len * 0.5) - 2, top + Math.round(len * 0.5), 0xffffffff);
 }
+// a frozen tuna seen from the side, in its own frame: u along the body (0 = the tail fork, len = the nose), v across (back < 0 < belly).
+// Its pixel colour, or 0 outside. (The held, lobbed and dropped tuna: the game rotates into this frame.)
+export function tunaPx(u, v, len) {
+  if (u < 0 || u > len) return 0;
+  const k = u / len, w = u < 4 ? 3.2 - u * 0.6 : 3.6 * Math.sin(Math.PI * Math.min(1, (k - 0.08) / 0.92)) + 0.6;
+  if (u < 4 && Math.abs(Math.abs(v) - (3.2 - u * 0.6)) < 0.9) return 0xff1b1226;   // the tail fork
+  if (Math.abs(v) > w + 0.6) return 0;
+  if (Math.abs(v) > w - 0.4) return 0xff1b1226;
+  if (u > len - 3 && Math.abs(v + 0.8) < 0.6) return 0xffffffff;   // the eye
+  return v < -w * 0.3 ? 0xff8a6a4a : v > w * 0.4 ? 0xffd8d0c8 : ((u * 7 + v * 3) | 0) % 13 === 0 ? 0xfff8f4ee : 0xffa8988a;
+}
+export function drawTunaAt(R, cx, cy, ang, len = 22) {   // a tuna centred at (cx, cy), its nose toward ang
+  const ca = Math.cos(ang), sa = Math.sin(ang), r = Math.ceil(len / 2 + 5);
+  for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) {
+    const dx = x + 0.5 - cx, dy = y + 0.5 - cy, c = tunaPx(dx * ca + dy * sa + len / 2, -dx * sa + dy * ca, len);
+    if (c) R.plot(x, y, c);
+  }
+}
+// the levers on the wall by the freezer door: a steel box, a red handle; k = how far it is pulled (0 up .. 1 down)
+export function drawLever(R, x, k, lit) {
+  const { plot, line1 } = R, y0 = GROUND - 36;
+  for (let y = y0; y < y0 + 10; y++) for (let xx = x - 3; xx <= x + 3; xx++) plot(xx, y, xx === x - 3 || xx === x + 3 || y === y0 || y === y0 + 9 ? 0xff1b1226 : 0xff6a7078);
+  const a = -1.1 + 2.2 * k, hx = x + Math.sin(a) * 9, hy = y0 + 4 - Math.cos(a) * 9;
+  line1(x, y0 + 4, hx, hy, 0xff9aa0a8);
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) plot(Math.round(hx) + dx, Math.round(hy) + dy, lit ? 0xff4040ff : 0xff2020b0);
+}
+// the freezer fog: d(x) = its density over world column x; a clear bubble round the hero (hx, hy, rad).
+// dither: opaque pixels in an ordered pattern instead of see-through ones (the 3D view's layers are cut-outs)
+export function drawFog(R, d, hx, hy, rad, dither = false) {
+  const { cam } = R, t = R.t, y0 = Math.max(cam.y, GROUND - 150), y1 = Math.min(cam.y + cam.vh - 1, GROUND + 14);
+  for (let vx = 0; vx < cam.vw; vx++) {
+    const wx = vx + cam.x, dd = d(wx); if (dd <= 0.02) continue;
+    for (let wy = y0; wy <= y1; wy++) {
+      const h = clamp01((GROUND + 14 - wy) / 164), low = 1 - 0.5 * h, wisp = 0.85 + 0.15 * Math.sin(wx * 0.07 + t * 0.6 + wy * 0.11) * Math.sin(wx * 0.023 - t * 0.4);
+      const b = Math.hypot(wx - hx, (wy - hy) * 1.4), clear = clamp01((b - rad * 0.6) / (rad * 0.5));
+      const a = dd * low * wisp * clear * 0.85;
+      if (a <= 0.03) continue;
+      if (!dither) R.blendPlot(wx, wy, 196, 212, 222, Math.min(0.92, a));
+      else if (a * 0.55 > (BAYER[(wy & 3) * 4 + (wx & 3)] + 0.5) / 16) R.plot(wx, wy, (wx + wy) & 1 ? 0xffded4c4 : 0xffe8e0d4);
+    }
+  }
+}
 export function drawHallProps(R, g) {
   const { plot, line1 } = R, t = R.t;
-  // the conveyor's loaded hooks run along the rail; raised high in phase 1, lowered for the swing in phase 2
+  if (g.lev) { drawLever(R, LEVERS.speed, g.lev.speed, g.lev.hot === 'speed'); drawLever(R, LEVERS.freezer, g.lev.freezer, g.lev.hot === 'freezer'); }
+  // the conveyor's loaded hooks run along the rail; raised high in phase 1, lowered for the swing once he pulls the speed lever
   const sp = g.ph >= 2 ? 30 : 16, low = g.ph >= 2;
   for (let i = 0; i < 4; i++) {
     const x = HALL_X + ((i * 95 + t * sp) % 380) - 10, chain = low ? 52 : 26;
