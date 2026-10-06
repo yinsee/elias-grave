@@ -268,10 +268,10 @@ export const DIVE = { v: 190, t: 0.55, h: 9, inv: 0.5, down: 0.3 };
 // SLAM: the ground slam. up = he is overhead (s), down = driven into the floor (the impact, s); lift = px over the hero's feet at the top,
 // fwd = px in front where he lands; dmg (no finisher); the shockwave floors the goons within r px (dy px up or down)
 export const SLAM = { up: [0.1, 0.3], down: [0.38, 0.46], lift: 38, fwd: 15, dmg: 22, r: 40, dy: 10 };
-// focus (#6), the Sandman's meter: 0..max; F starts Sandman time with at least min in it: dur s of world at slow x speed for a full meter (the hero
-// at full speed), drained as it runs. gain: per varied hit (rep: a repeat), ender, counter, juggle hit, wall-splat, knee, clinch throw, parry,
+// focus (#6), the Sandman's meter: 0..max; Sandman time starts by itself at a full meter with 2+ goons in the fight (or a perfect dodge at a full
+// meter): dur s of world at slow x speed (the hero at full speed), drained as it runs (min: unused since F went). gain: per varied hit (rep: a repeat), ender, counter, juggle hit, wall-splat, knee, clinch throw, parry,
 // perfect dodge, kill, a bullet that lands, a stomp; none while it runs. fin: a finisher on a goon at <= hp of his max; stop = hit-stop (4 frames);
 // cam = the punch-in time (s). last/boss: the auto slow-motion (real s) on the last kill of a wave and on the boss kill
 export const FOCUS = { max: 100, min: 25, dur: 3, slow: 0.3, last: 0.6, boss: 1.2,
   gain: { hit: 4, rep: 1, ender: 8, ctr: 6, jug: 5, splat: 10, knee: 3, gthrow: 8, parry: 15, pdodge: 12, kill: 4, shot: 0.6, otg: 3, slam: 10 } };
-export const FIN = { hp: 0.3, reach: 34, stop: 4 / 60, cam: 0.7 };
+export const FIN = { hp: 0.3, reach: 34, stop: 4 / 60, cam: 0.7, wall: 26 };   // wall: his back within this many px of a wall: the fists' finisher is the wall slam

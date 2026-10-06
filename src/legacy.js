@@ -1644,7 +1644,7 @@ import * as P9 from './levels/pier9.js';
     stab: { ...MOVES.lp1, limb: 6, w: true }, slash: { ...MOVES.ks0, limb: 6, w: true }, chop: { ...MOVES.al, limb: 6, w: true }, hchop: { ...MOVES.kh, limb: 6, w: true, heavy: true },
     throw: { dur: 0.36, win: [9, 9], keys: [K(0, THR), K(0.07, THR_OUT), K(0.16, THR_OUT), K(0.36, {})] },
     shoot: { dur: 0.4, win: [9, 9], keys: [K(0, AIMP), K(0.04, { ...AIMP, a1s: 1.95, a1e: 0.25, lean: -0.08 }), K(0.22, AIMP), K(0.4, {})] },
-    // the Saltmen's moves. low = it comes in under a standing guard (block it low: ↓ with E; or jump it)
+    // the Saltmen's moves. low = it comes in under a standing guard (block it low: ↓ and away; or jump it)
     lowstab: { ...MOVES.sslash, limb: 6, w: true, low: true }, lowkick: { ...MOVES.slk, limb: 10, low: true },
     bash: { ...MOVES.lp0, limb: 6, bash: true },   // the shield rammed forward from the front hand
     // these hit by their own rules (enemyStep): the gaff's hook flies out (gaffStep); the chain sweeps all round; the grab; a kick at a barrel
@@ -1947,7 +1947,7 @@ import * as P9 from './levels/pier9.js';
     if (hero.mode !== 'anim' || hero.invT > 0) return;
     let gbreak = false;
     if (src && ctl.face === -dirx && !ctl.air) {
-      const lowOK = src.low ? input.downHeld : !input.downHeld;   // a low blow (src.low) comes in under a standing guard (block it low: ↓ held with E; or jump it); a low guard leaves the head open
+      const lowOK = src.low ? input.downHeld : !input.downHeld;   // a low blow (src.low) comes in under a standing guard (block it low: ↓ and away held; or jump it); a low guard leaves the head open
       if (src.low && !lowOK && (hero.act === 'block' || blk.parryT > 0)) lowHint();
       if (src.kind === 'melee' && src.e && blk.parryT > 0 && lowOK) { parry(src.e, x, y, dirx); return; }
       if (hero.act === 'block' && lowOK && (src.kind === 'melee' || src.kind === 'knife' || src.kind === 'prop')) {
@@ -2013,8 +2013,18 @@ import * as P9 from './levels/pier9.js';
     emit('parry', { x, y, dir: dirx, enemy: e, isBoss: boss }); emit('feat', 'parry'); focGain(FOCUS.gain.parry);
   }
   let lowHintT = -99;   // a low blow went under his standing guard: say how to stop it (at most every 25 s)
-  function lowHint() { if (simTime - lowHintT < 25) return; lowHintT = simTime; toast('A low attack', 'A standing guard does not stop it: hold ↓ with E, or jump', true); }
+  function lowHint() { if (simTime - lowHintT < 25) return; lowHintT = simTime; toast('A low attack', 'A standing guard does not stop it: hold ↓ and away from him, or jump', true); }
   // perfect dodge: a dodge that starts within DEF.pd.win s of a blow's contact. The world drops to slow motion and the attacker is exposed
+  function blockFoe() {   // what a block on the arrows guards against: the nearest goon winding up or swinging in reach, or a knife or a shot on its way ({ away: the arrow that blocks })
+    let best = null, bd = 1e9;
+    for (const e of enemies) {
+      if (e.dead || e.down || !e.act || e.clinch || e.fin || Math.abs(e.y - ctl.y) > 16) continue;
+      const d = Math.abs(e.x - ctl.x); if (d < (e.reach || 17) + 40 && d < bd) { bd = d; best = e; }
+    }
+    if (best) return { away: -(Math.sign(best.x - ctl.x) || ctl.face) };
+    for (const b of eshots) if (Math.abs(b.x - ctl.x) < 80 && Math.sign(b.vx) === Math.sign(ctl.x - b.x) && Math.abs(b.y - P[2].y) < 26) return { away: Math.sign(b.vx) || 1 };
+    return null;
+  }
   function pdThreat() {
     for (const e of enemies) {
       if (e.dead || e.down || !e.act || e.struck || Math.abs(e.y - ctl.y) > 16 || Math.abs(e.x - ctl.x) > e.reach + 12 * e.s) continue;
@@ -2034,7 +2044,7 @@ import * as P9 from './levels/pier9.js';
     const t = pdThreat(); if (!t) return;
     hero.invT = Math.max(hero.invT, 0.3);   // the blow goes through where he was
     if (t.act !== undefined && t.J) { t.exposed = Math.max(t.exposed || 0, DEF.pd.expose); t.cdT = Math.max(t.cdT, 0.8); if (t.type === 'goon') eRelease(t); }
-    slowMo(DEF.pd.slowT, 'pdodge'); focGain(FOCUS.gain.pdodge); sparks.push({ x: P[1].x, y: P[1].y, t: 0.05 });
+    slowMo(DEF.pd.slowT, 'pdodge'); focGain(FOCUS.gain.pdodge); if (foc.t <= 0 && foc.m >= FOCUS.max) startFocus(); sparks.push({ x: P[1].x, y: P[1].y, t: 0.05 });
     for (let k = 0; k < 6; k++) particles.push({ x: P[2].x + (simRand() - 0.5) * 10, y: P[2].y - simRand() * 16, vx: -ctl.face * (30 + simRand() * 40), vy: -20 - simRand() * 30, life: 0.3, c: PAL.white });   // an afterimage of dust where he was
     emit('pdodge', { x: ctl.x, y: ctl.y, enemy: t.act !== undefined ? t : null }); emit('feat', 'pdodge');
   }
@@ -2414,7 +2424,7 @@ import * as P9 from './levels/pier9.js';
       if (adx < 30 && level && e.jumpCd <= 0 && !e.shield && !e.elite) { e.crouchT = 0.14; e.jvx = e.side * 78; e.jvy = -128; e.jumpCd = 2; e.face = e.side; }
     }
   }
-  // [Hard+] high-low mix-ups: a standing hit, then a low one (or the other way round); low = block it low (↓ with E) or jump
+  // [Hard+] high-low mix-ups: a standing hit, then a low one (or the other way round); low = block it low (↓ and away) or jump
   const MIXUP = { brawler: [['jab', 'lowkick'], ['lowkick', 'punch']], knife: [['stab', 'lowstab'], ['lowstab', 'slash']], arm: [['chop', 'lowkick'], ['lowkick', 'hchop']] };
   // walk toward surface s ledge by ledge (climbHop): to the next one's nearer edge, crouch, jump up. false: no way up
   function climbStep(e, s, px, dir) {
@@ -3120,9 +3130,9 @@ import * as P9 from './levels/pier9.js';
       const mx = Math.floor(hd.x), my = Math.floor(hd.y - r - (e.type === 'boss' ? 13 : 12)), mc = blink ? PAL.white : BLOOD[2], w = e.type === 'boss' ? 2 : 1;
       for (let k = 0; k < w; k++) { for (let y = 0; y < 4; y++) plot(mx + k, my + y, mc); plot(mx + k, my + 5, mc); }
     }
-    if (e === finE) {   // a finisher is on: an F key cap over his head (the ring blinks)
-      const x0 = Math.floor(hd.x) - 4, y0 = Math.floor(hd.y - r - 17), rc = blink ? PAL.white : PAL.accent, F = ['###', '#..', '##.', '#..', '#..'];
-      for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) plot(x0 + x, y0 + y, x === 0 || y === 0 || x === 8 || y === 8 ? O : x === 1 || y === 1 || x === 7 || y === 7 ? rc : F[y - 2]?.[x - 3] === '#' ? PAL.white : EFX.key);
+    if (e === finE) {   // a finisher is on: a W key cap over his head (hold W; the ring blinks)
+      const x0 = Math.floor(hd.x) - 4, y0 = Math.floor(hd.y - r - 17), rc = blink ? PAL.white : PAL.accent, F = ['#...#', '#...#', '#.#.#', '##.##', '#...#'];
+      for (let y = 0; y < 9; y++) for (let x = 0; x < 9; x++) plot(x0 + x, y0 + y, x === 0 || y === 0 || x === 8 || y === 8 ? O : x === 1 || y === 1 || x === 7 || y === 7 ? rc : F[y - 2]?.[x - 2] === '#' ? PAL.white : EFX.key);
       return;
     }
     if (e.exposed > 0 && !(e.mark > 0)) {   // exposed (after a parry or a perfect dodge): a gold diamond over the head, hit him now
@@ -3181,7 +3191,7 @@ import * as P9 from './levels/pier9.js';
   let queued = null, hitDone = false, wAct = 0, apSm = IDLE.slice(), lastHand = 0, kickLeg = 1;
   let hitStop = 0, bagFlash = 0, ragT = 0;
   let ragG = 0, ragGk = 1, ragKD = false;   // extra fall gravity: seconds left, factor; the fall is a knock-down (no K.O. from it)
-  const input = { dir: 0, run: false, jump: false, jumpHeld: false, downHeld: false, fireHeld: false, attack: null, dashHeld: false, block: false, blockHeld: false, focus: false };   // focus: a press of F   // block: a press of E (blockHeld: held)
+  const input = { dir: 0, run: false, jump: false, jumpHeld: false, downHeld: false, fireHeld: false, attack: null, dashHeld: false, block: false, blockHeld: false };   // block: a fresh press of the away arrow by a threat (blockHeld: held; set in animStep)   // block: a press of E (blockHeld: held)
   let grabIdx = -1, target = { x: 0, y: 0 }, pv = { x: 0, y: 0 }, lastMove = 0, lastPtr = null;
   let headSpeed = 0, simTime = 0;
   // shake amplitude in world px (1 light, 2 heavy, 3 slams); it decays over the shake time. Sites that only set shake get one from its length
@@ -3548,9 +3558,17 @@ import * as P9 from './levels/pier9.js';
     }
     return best;
   }
+  function wallNear(d, x, r) {   // the wall within r px of x, d-ward (wallX's walls), or null
+    const lo = enc.arena ? enc.arena.x0 : flags.club && !isP9() ? DOOR_X + 2 : 8, hi = enc.arena ? enc.arena.x1 : !flags.club && !isP9() ? STREET_END + 6 : W - 10;
+    return d < 0 && x - lo < r ? lo : d > 0 && hi - x < r ? hi : null;
+  }
+  function startFinisher(e) {   // picked by the situation: fists with ↓ held, the ground slam; fists with his back to a wall, the wall slam (startFin); else the weapon's
+    if (finKind() === 'f' && input.downHeld) { ctl.face = Math.sign(e.x - ctl.x) || ctl.face; startGrab(e); startSlam(true); return; }
+    startFin(e);
+  }
   function startFin(e) {
     const k = finKind(), F = FINS[k], d = Math.sign(e.x - ctl.x) || ctl.face;
-    ctl.face = d; ctl.fin = { e, k, x0: ctl.x, done: false }; finE = null;
+    ctl.face = d; ctl.fin = { e, k, x0: ctl.x, ex0: e.x, wall: k === 'f' ? wallNear(d, e.x, FIN.wall) : null, done: false }; finE = null;
     hero.act = 'fin'; hero.actT = 0; queued = null; ctl.spd = 0; ctl.stepV = 0; ctl.push = 0; ctl.spin = 0; hero.invT = Math.max(hero.invT, F.dur + 0.15);
     e.fin = F.kneel ? 'kneel' : 'reel'; eRelease(e);
     Object.assign(e, { act: null, combo: null, guardT: 0, react: null, feint: false, hurtT: 0, exposed: 0, mark: 0, vx: 0, slide: 0, face: -d });
@@ -3571,6 +3589,11 @@ import * as P9 from './levels/pier9.js';
     hitFx(F.power); hitCtx = null; hitStop = FIN.stop;
     bleed(hx, hy, d, 26, 1.6); hitSpark(hx, hy, d, 300, C.k === 'k' || C.k === 'a'); shakeIt(0.25, 3); kickCam(d, 0.3, 2.5);
     if (C.k === 'a') slam(hx + d * 4, ctl.y + 2, 26, 1);
+    if (C.wall != null) {   // the wall slam: driven into the wall, the blow pins him there
+      for (const p of e.pts || []) { if ((p.x - C.wall) * d > -1) p.x = C.wall - d; p.px = p.x - d * 20 * DT; }
+      bleed(C.wall - d * 2, hy - 2, -d, 16, 1.3); dust(C.wall - d * 2, hy, 4); sparks.push({ x: C.wall - d * 2, y: hy, t: 0 });
+      emit('feat', 'wallsplat'); emit('wallsplat', { enemy: e, x: C.wall, y: hy, dir: d, fin: true });
+    }
     emit('feat', 'finisher'); emit('finisher', { enemy: e, weapon: C.k, x: hx, y: hy });
   }
   const WSWING = /^(ks[0-2]|al1?)$/;   // the light blade swings that build a combo
@@ -3706,12 +3729,13 @@ import * as P9 from './levels/pier9.js';
     if (hero.act === 'climb' || hero.act === 'fin' || (hero.act === 'sdive' && !WEAPONS[hero.weapon].gun)) return false;
     if (ctl.grab) {   // the clinch: Q knees him (GRAB.knees, then Q throws too), W throws him (← or → aims)
       if (hero.act === 'gtoss' || hero.act === 'gslam') return true;
-      const m = MOVES[hero.act];
-      if ((a === 'lk' || a === 'hk') && input.downHeld) { if (m && hero.actT < m.dur * 0.6) return false; startSlam(false); return true; }   // ↓ + W: the ground slam
+      const m = MOVES[hero.act], fin = a === 'hk' && finHP(ctl.grab.e);
+      if ((a === 'lk' || a === 'hk') && (input.downHeld || fin)) { if (m && hero.actT < m.dur * 0.6) return false; startSlam(fin); return true; }   // ↓ + W: the ground slam; W held on a beaten goon: the slam finisher
       if (a === 'lk' || a === 'hk' || ctl.grab.n >= GRAB.knees) { if (m && hero.actT < m.dur * 0.6) return false; startGrabThrow(input.dir || ctl.face); return true; }
       if (hero.act === 'knee') { if (hero.actT < 0.12) return false; queued = 'knee'; return true; }
       startAttack('knee'); return true;
     }
+    if (a === 'hk') { const fe = finFoe(); if (fe) { startFinisher(fe); return true; } }   // W held by a beaten goon: the finisher
     if (ctl.carry) {   // a bin or a crate in one hand: a tap swings it, a hold throws it; kicks wait
       if (MOVES[hero.act] || hero.act === 'rise') return false;
       if (a === 'lp') { if (!(ctl.bashT > 0)) { ctl.bashT = CBASH; ctl.bashHit = false; } return true; }
@@ -3794,9 +3818,14 @@ import * as P9 from './levels/pier9.js';
     if (hero.atkId !== hitAtk) { hitAtk = hero.atkId; atkHit = false; }
     dashCd -= dt; coyT -= dt; rollCd -= dt; if (ctl.duckT > 0) ctl.duckT -= dt;
     if (blk.parryT > 0) blk.parryT -= dt; if (blk.lockT > 0) blk.lockT -= dt;
+    {   // block on the arrows: hold away from the nearest goon who winds up or swings (or a knife on its way); with no threat, away just walks back
+      const bf = blockFoe(), away = bf ? bf.away : 0, fresh = input.dir !== 0 && input.dir !== ctl.dirPrev; ctl.dirPrev = input.dir;
+      input.blockHeld = !!away && input.dir === away && !ctl.air && !ctl.carry && hero.mode === 'anim';
+      if (input.blockHeld && fresh) input.block = true;   // (the parry try; DEF.parry.lock stops mashing)
+      if (input.blockHeld && hero.act !== 'block' && (hero.act === null || hero.act === 'guard' || hero.act === 'land' || hero.act === 'settle' || hero.act === 'start' || hero.act === 'pivot' || hero.act === 'skid' || hero.act === 'squat')) { hero.act = 'block'; hero.actT = 0; ctl.face = -away; ctl.spd = 0; }   // (the guard faces him: a block never turns his back)
+    }
     const guardAct = hero.act === 'block' || hero.act === 'parry';   // (a jump, a dodge or an attack comes out of these at once)
     const atk = !!MOVES[hero.act], locked = atk || guardAct || hero.act === 'gbreak' || hero.act === 'rise' || hero.act === 'roll' || hero.act === 'hero' || hero.act === 'dash' || hero.act === 'climb' || hero.act === 'clinch' || hero.act === 'fin' || hero.act === 'sdive';
-    if (hero.act === 'block' && input.dir === -ctl.face && !ctl.air) ctl.face = input.dir;   // the guard turns on the spot
     if (hero.act === 'teeter' && (input.dir || ctl.air)) hero.act = null;
     const free = hero.act === null || hero.act === 'guard' || hero.act === 'land' || hero.act === 'settle' || hero.act === 'start' || hero.act === 'pivot' || hero.act === 'teeter';
     let tgt = 0;
@@ -3897,17 +3926,10 @@ import * as P9 from './levels/pier9.js';
       ibuf.jump = used ? 0 : ibuf.jump - dt;
     }
     if (ibuf.atk) { if (tryAttack(ibuf.atk) || (ibuf.atkT -= dt) <= 0) ibuf.atk = null; }
-    // F: by a reeling goon low on health, the finisher; else Sandman time (FOCUS.min in the meter), or, while it runs, its end
-    if (input.focus) { input.focus = false; ibuf.foc = BUF; }
-    if (ibuf.foc > 0) {
-      const fe = finFoe();
-      if (fe) { if (input.downHeld && finKind() === 'f') { const d = Math.sign(fe.x - ctl.x) || ctl.face; ctl.face = d; startGrab(fe); startSlam(true); } else startFin(fe); ibuf.foc = 0; }   // (fists and ↓ held: the slam finisher)
-      else if (foc.t > 0) { endFocus(); ibuf.foc = 0; }
-      else if (foc.m >= FOCUS.min && hero.mode === 'anim') { startFocus(); ibuf.foc = 0; }
-      else ibuf.foc -= dt;
-    }
+    // Sandman time starts by itself: a full meter and 2+ goons in the fight (a perfect dodge with a full meter starts it too: tryPerfect)
+    if (foc.t <= 0 && foc.m >= FOCUS.max && enemies.filter(e => !e.dead && !e.down && e.aggro && Math.abs(e.x - ctl.x) < 120 && Math.abs(e.y - ctl.y) < 16).length >= 2) startFocus();
     if (ctl.aimDnT > 0) ctl.aimDnT -= dt;
-    // block: hold E. A fresh press opens the parry window (DEF.parry.win s); a press within DEF.parry.lock s of the last one opens none (no mashing)
+    // block: hold away from him (above). A fresh press opens the parry window (DEF.parry.win s); a press within DEF.parry.lock s of the last one opens none (no mashing)
     if (input.block) { input.block = false; ibuf.blk = BUF; }
     if (ibuf.blk > 0) {
       const ok = !ctl.air && !ctl.carry && hero.act !== 'gbreak' && hero.act !== 'climb' && hero.act !== 'crouch' && hero.act !== 'roll'
@@ -3915,7 +3937,7 @@ import * as P9 from './levels/pier9.js';
       if (ok) { ibuf.blk = 0; if (blk.lockT <= 0) blk.parryT = DEF.parry.win; blk.lockT = DEF.parry.lock; if (hero.act !== 'block') { hero.act = 'block'; hero.actT = 0; queued = null; ctl.stepV = 0; ctl.spin = 0; } }
       else ibuf.blk -= dt;
     }
-    if (input.blockHeld && !ctl.air && !ctl.carry && (hero.act === null || hero.act === 'guard' || hero.act === 'land' || hero.act === 'settle' || hero.act === 'start' || hero.act === 'pivot' || hero.act === 'skid')) { hero.act = 'block'; hero.actT = 0; }   // still held after a move: the guard comes back up
+    if (input.blockHeld && !ctl.air && !ctl.carry && (hero.act === null || hero.act === 'guard' || hero.act === 'land' || hero.act === 'settle' || hero.act === 'start' || hero.act === 'pivot' || hero.act === 'skid' || hero.act === 'squat')) { hero.act = 'block'; hero.actT = 0; }   // still held after a move: the guard comes back up
     if (hero.act === 'block' && !input.blockHeld && blk.parryT <= 0 && hero.actT > 0.1) { hero.act = 'guard'; hero.actT = 0; }   // let go
     const Wg = WEAPONS[hero.weapon];
     if (Wg.gun) {   // guns fire on top of any movement: run, jump, squat
@@ -4027,6 +4049,7 @@ import * as P9 from './levels/pier9.js';
       const F = FINS[ctl.fin.k];
       ap = keyAt(F.keys, hero.actT);
       if (ctl.fin.k === 'g') { gun.aimT = Math.max(gun.aimT, 0.1); ctl.aimDn = F.aim; ctl.aimDnT = 0.05; }   // the muzzle at his head
+      if (ctl.fin.wall != null && !ctl.fin.done) ctl.fin.e.x = lerp(ctl.fin.ex0, ctl.fin.wall - ctl.face * 5 * ctl.fin.e.s, smooth(Math.min(1, hero.actT / F.hit)));   // the wall slam: he is driven back to the wall
       if (!ctl.fin.done && hero.actT >= F.hit) finHit();
       if (hero.actT >= F.dur) { if (ctl.fin.e.fin) ctl.fin.e.fin = null; ctl.fin = null; hero.act = 'guard'; hero.actT = 0; }
     } else if (hero.act === 'sdive') {   // the shoot-dodge: up and flat through the air, then on the floor a beat, the gun on them all the while
@@ -4426,7 +4449,7 @@ import * as P9 from './levels/pier9.js';
   }
 
   function heroMove(dt) {   // the hero's part of a step (his ragdoll, or his moves), and his i-frames
-    if (hero.mode === 'rag') { input.jump = false; input.attack = null; input.block = false; input.focus = false; ragStep(dt); }
+    if (hero.mode === 'rag') { input.jump = false; input.attack = null; input.block = false; ragStep(dt); }
     else animStep(dt);
     if (hero.invT > 0) hero.invT -= dt;
   }
@@ -4540,19 +4563,19 @@ import * as P9 from './levels/pier9.js';
     if (isP9()) p9Reset();
     setCkpt('start', 0, true); ckBoss = false; slowT = 0; blk.parryT = blk.lockT = 0; hstr.n = 0; hstr.t = -9; ctl.stepV = 0;
     styleM.reset(); director.reset();
-    endFocus(); foc.m = 0; accW = 0; ctl.grab = null; ctl.fin = null; ctl.dive = null; ctl.diveH = 0; ctl.aimDnT = 0; finE = null; finCam.t = 0; ibuf.foc = 0; input.focus = false;
+    endFocus(); foc.m = 0; accW = 0; ctl.grab = null; ctl.fin = null; ctl.dive = null; ctl.diveH = 0; ctl.aimDnT = 0; finE = null; finCam.t = 0;
   }
 
   // ---------- tutorial: zones, lessons, weapon pickups ----------
   // the tutorial: every mechanic of the game, stage by stage, left to right.
   // A task's text is 'Verb: how to do it'; [Q] in the text shows as a key cap (the objective panel shows the verb big, the how under it)
   const ZONES = [
-    { x0: -99, title: '1 · Move', tasks: [['walk', 'Walk: [←] [→]'], ['run', 'Run: hold [Shift] as you walk'],
+    { x0: -99, title: '1 · Move', tasks: [['run', 'Run: [←] [→]'], ['walk', 'Walk: hold [Shift] as you move'],
       ['jump', 'Climb onto the car: jump [↑] at its side and keep [↑] held'], ['charge', 'Climb higher: hold [↑] as you jump at a roof or a scaffold'],
       ['drop', 'Drop through a roof: hold [↓] and press [Space]'], ['dodge', 'Dodge: press [Space]. Hold [←] or [→] to pick the way'], ['squatroll', 'Long roll: press [↓] as you run']] },
     { x0: 520, title: '2 · Bare hands', tasks: [['lp', 'Jab: tap [Q]. Twice for both hands'], ['hp', 'Heavy punch: hold [Q]'], ['lk', 'Kick: tap [W]'], ['hk', 'Heavy kick: hold [W]'],
       ['slp', 'Low jab: hold [↓], tap [Q]'], ['slk', 'Low kick: hold [↓], tap [W]'], ['sweep', 'Leg sweep: hold [↓], hold [W]'], ['airkick', 'Flying kick: jump [↑], then tap [W]'],
-      ['block', 'Block: hold [E]. A "!" heavy breaks it'], ['parry', 'Parry: tap [E] just before a hit lands'], ['pdodge', 'Perfect dodge: [Space] just before a hit lands'],
+      ['block', 'Block: hold [←] or [→] away from the goon as he swings. A "!" heavy breaks it'], ['parry', 'Parry: tap away just before a hit lands'], ['pdodge', 'Perfect dodge: [Space] just before a hit lands'],
       ['counter', 'Counter: hit a goon as he winds up'],
       ['ender', 'String ender: land 3 jabs, then [Q] again. Hold [→] to wall-splat'], ['grab', 'Grab: walk into a reeling goon, hands empty'],
       ['gthrow', 'Knee and throw: in a grab, [Q] knees, [W] throws'], ['slam', 'Slam: grab a goon, hold [↓], press [W]'],
@@ -4561,11 +4584,11 @@ import * as P9 from './levels/pier9.js';
       ['pocket', 'Pocket a can or a bottle: hold [↓] next to it'], ['pockethit', 'Throw it at a goon: hold [Q] with no goon near'], ['kill1', 'Beat the 2 goons: they hit back']] },
     { x0: 900, title: '3 · Katana', tasks: [['pick1', 'Take the katana: walk over it'], ['ks', 'Slash: tap [Q]'], ['kw', 'Heavy slash: hold [Q] near a goon'], ['kh', 'Overhead finisher: tap [Q], then hold [Q]'],
       ['sslash', 'Low cut: hold [↓], tap [Q]'], ['kair', 'Jump slash: jump [↑], then tap [Q]'], ['tw', 'Throw the blade: hold [Q] with no goon near'], ['catch', 'Get the blade back: walk over it'],
-      ['focus', 'Sandman time: fill the focus bar, then press [F]'], ['finisher', 'Finisher: press [F] by a reeling goon low on health'], ['kill2', 'Cut down the 3 goons']] },
+      ['focus', 'Sandman time: fill the focus bar, it starts by itself'], ['finisher', 'Finisher: hold [W] by a reeling, beaten goon'], ['kill2', 'Cut down the 3 goons']] },
     { x0: 1250, title: '4 · Axe', tasks: [['pick2', 'Take the axe: walk over it'], ['al', 'Chop combo: tap [Q] again and again'], ['aw', 'Heavy chop: hold [Q] near a goon'],
       ['ah', 'Slam finisher: tap [Q], then hold [Q] near a goon'], ['aair', 'Plunge: jump off the van, then tap [Q]'], ['throwhit', 'Throw it at a goon: hold [Q] from a distance'],
       ['swap', 'Swap weapons: hold [↓] on a weapon on the ground'], ['kill3', 'Chop down the 3 goons']] },
-    { x0: 1600, title: '5 · Shotgun', tasks: [['pick3', 'Take the shotgun: walk over it'], ['fire3', 'Fire: press [Q]'], ['runfire', 'Fire on the run: hold [Shift], press [Q]'], ['ammo', 'Reload: walk over an ammo box'], ['kill4', 'Blast the 4 goons']] },
+    { x0: 1600, title: '5 · Shotgun', tasks: [['pick3', 'Take the shotgun: walk over it'], ['fire3', 'Fire: press [Q]'], ['runfire', 'Fire on the run: press [Q] as you run'], ['ammo', 'Reload: walk over an ammo box'], ['kill4', 'Blast the 4 goons']] },
     { x0: 1900, title: '6 · Machine gun', tasks: [['pick4', 'Take the machine gun: walk over it'], ['burst', 'Burst fire: hold [Q]'], ['airfire', 'Fire in the air: jump [↑], hold [Q]'],
       ['hurl', 'Out of ammo: press [Q] to throw the gun'], ['kill5', 'Mow down the 4 goons']] },
     { x0: 2150, title: '7 · The club roof', tasks: [['stairs', 'Fire escape: walk up the stairs'], ['top', 'Club roof: climb to the top']] },
@@ -4774,6 +4797,7 @@ import * as P9 from './levels/pier9.js';
     if (enc.bossBeaten && runS.endT < 0 && endPh === 'done' && !flags.wasted && !isP9()) runS.endT = 0.4;   // (Pier 9 shows its own card after the outro)
     if (runS.endT > 0 && (runS.endT -= rdt) <= 0) { runS.endT = 0; showResults(); }   // (once: a negative endT would arm it again)
   }
+  let walkT = 0;   // s of a steady walk (the walk lesson)
   function tutTick(rdt) {
     if (cardT > 0 && (cardT -= rdt) <= 0) cardEl.hidden = true;
     if (toastT > 0 && (toastT -= rdt) <= 0) {
@@ -4783,7 +4807,7 @@ import * as P9 from './levels/pier9.js';
     runTick(rdt);
     if (isP9()) { p9Tick(rdt); return; }
     if (hero.mode === 'anim') {
-      if (ctl.spd > 5 && ctl.spd < WALK + 6) emit('feat', 'walk');
+      walkT = ctl.spd > 5 && ctl.spd < WALK + 6 && !ctl.air ? walkT + rdt : 0; if (walkT > 0.5) emit('feat', 'walk');   // a steady walk (not the run's first strides)
       if (ctl.spd > WALK + 20 && !ctl.air) emit('feat', 'run');
       }
     // the stage panel switches with hysteresis: 24 px past a stage line going right, 24 px back over it going left, and never while the old stage's goons stand
@@ -5148,11 +5172,11 @@ import * as P9 from './levels/pier9.js';
     if (thr && tc < 0.09 && tc > 0.01 && demoEvT <= 0 && (!MOVES[hero.act] || cancelOK())) {
       demoEvT = 0.45 + simRand() * 0.3; demoCombo = null; input.downHeld = false; input.dir = 0;
       const r = simRand();
-      if (r < 0.45) { if (ctl.face !== dir) ctl.face = dir; input.block = true; input.blockHeld = false; return; }   // a parry tap
+      if (r < 0.45) { input.dir = -dir; return; }   // a parry tap: a fresh press away from him
       if (r < 0.85) { input.dash = true; return; }   // a perfect dodge (a hop back)
       input.jump = true; input.jumpHeld = false; return;   // over it
     }
-    if (finE && demoEvT <= 0) { demoEvT = 0.4; demoCombo = null; input.downHeld = !hero.weapon && simRand() < 0.3; input.dir = 0; input.focus = true; return; }   // a finisher on offer: take it (with fists, now and then the slam)
+    if (finE && demoEvT <= 0) { demoEvT = 0.4; demoCombo = null; input.downHeld = !hero.weapon && simRand() < 0.3; input.dir = 0; input.attack = 'hk'; return; }   // a finisher on offer: W held (with fists, now and then ↓ too: the slam)
     if (shot && demoEvT <= 0 && !MOVES[hero.act]) { demoEvT = 0.7 + simRand() * 0.4; demoCombo = null; input.downHeld = false; input.dir = 0; input.jump = true; input.jumpHeld = false; return; }
     if (demoShoots(Wp)) {   // a gun: shoot from range, roll away when one gets close
       input.downHeld = false;
@@ -5246,7 +5270,6 @@ import * as P9 from './levels/pier9.js';
       if ((demoAtkT -= sdt) <= 0) { if (G.n >= 2 && G.slam == null) input.downHeld = G.slam = simRand() < 0.35; input.attack = G.n >= 2 ? 'lk' : 'lp'; demoAtkT = 0.32; }
       return true;
     }
-    if (foc.t <= 0 && foc.m >= FOCUS.max && hero.mode === 'anim' && enemies.filter(e => !e.dead && !e.down && Math.abs(e.x - ctl.x) < 90 && Math.abs(e.y - ctl.y) < 14).length >= 2) input.focus = true;   // a full meter and a crowd: Sandman time
     if (demoLost && hero.weapon === demoLost) demoLost = 0;
     if (!ctl.air && hero.mode === 'anim' && !MOVES[hero.act]) {
       const safe = x => !bossOn || Math.abs(x - enc.boss.x) > 40 * enc.boss.s / 1.75;
@@ -8342,13 +8365,13 @@ import * as P9 from './levels/pier9.js';
       input.fireHeld = true; const Wp = WEAPONS[hero.weapon];
       if (Wp.gun && !ctl.carry) { b.done = true; doAttack(charge[hero.weapon] > 0 ? 'lp' : 'tw'); return; }
       if (ctl.carry || holdThrows('p')) { b.wait = true; return; }   // decided on the release or the hold
-    }
+    } else if (ctl.grab || finFoe()) { b.wait = true; return; }   // a goon in the clinch, or one ready for a finisher: a tap is the light move, a hold the heavy (the finisher)
     doAttack(k === 'p' ? 'lp' : 'lk');   // the light move, on the press
   }
   function releaseBtn(k) {
     const b = btn[k]; if (!b.down) return;
     b.down = false; if (k === 'p') input.fireHeld = false;
-    if (!b.done) { b.done = true; if (b.wait) doAttack('lp'); }   // a waiting tap: the light move (a bash)
+    if (!b.done) { b.done = true; if (b.wait) doAttack(k === 'k' ? 'lk' : 'lp'); }   // a waiting tap: the light move (a bash, a kick, the clinch throw)
   }
   // the hold: cut this press's light move into the heavy (or the blade throw), wherever it is: still in the buffer, queued, or playing
   const HOLD_OF = { lp: 'hp', lk: 'hk', slp: 'shp', slk: 'sweep' };
@@ -8367,6 +8390,7 @@ import * as P9 from './levels/pier9.js';
     for (const k of ['p', 'k']) {
       const b = btn[k]; if (!b.down || b.done) continue;
       b.t += dt;
+      if (b.wait && k === 'k') { if (b.t >= DEF.heavyT) { b.done = true; doAttack('hk'); } continue; }   // W held: the finisher (or the heavy kick, the clinch throw)
       const blade = k === 'p' && input.downHeld && WEAPONS[hero.weapon].melee && !ctl.carry;
       if (b.wait || blade) {   // a throw hold
         if (b.t < DEF.throwT) continue;
@@ -8379,7 +8403,7 @@ import * as P9 from './levels/pier9.js';
       b.done = true; holdCancel(k === 'p' ? 'hp' : 'hk', b);   // held: the light turns into the heavy
     }
   }
-  const toggleRun = () => { takeOver(); runToggle = !runToggle; runBtn.setAttribute('aria-pressed', String(runToggle)); };
+  const toggleRun = () => { takeOver(); runToggle = !runToggle; runBtn.setAttribute('aria-pressed', String(runToggle)); };   // the touch button: flips run and walk (Shift held)
   const toggleSlow = () => { timeScale = timeScale === 1 ? 0.25 : 1; slowBtn.setAttribute('aria-pressed', String(timeScale !== 1)); emit(timeScale !== 1 ? 'slowmo:start' : 'slowmo:end', { scale: timeScale }); };
   const toggleSkel = () => { showSkel = !showSkel; skelBtn.setAttribute('aria-pressed', String(showSkel)); };
   function setZoom(z) {
@@ -8398,7 +8422,7 @@ import * as P9 from './levels/pier9.js';
     if (flags.wasted) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) retry(); return; }   // the Wasted card: retry from the checkpoint (Wicked: a restart); Esc opens the menu above
     if (endPh === 'done' && !resultsEl.hidden) { if (!e.repeat && c === 'Enter') startChapter1(); else if (!e.repeat && c === 'KeyR') reset(); return; }   // Club cleared: Enter goes on with the story (prologue, then Pier 9), R plays the tutorial again
     if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) { if (isP9()) p9Outro(); else endFinish(); } return; }   // the ending: Esc or Enter jumps to the card
-    // the keys: arrows move (up jumps, down squats; down at a run rolls), Q punches, W kicks, E blocks (a tap just before a hit parries), Space dodges, Shift runs
+    // the keys: arrows move (up jumps, down squats; down at a run rolls; away from an attacking goon blocks, a fresh press just before a hit parries), Q punches, W kicks (held by a beaten goon: the finisher), Space dodges, Shift walks (runs, with run off)
     if (c === 'ArrowLeft') { keys.left = true; takeOver(); }
     else if (c === 'ArrowRight') { keys.right = true; takeOver(); }
     else if (c === 'ArrowDown') { takeOver(); input.downHeld = true; }
@@ -8406,10 +8430,8 @@ import * as P9 from './levels/pier9.js';
     else if (c === 'ArrowUp') { takeOver(); input.jumpHeld = true; if (!e.repeat) doJump(); }
     else if (c === 'KeyQ') { if (!e.repeat) pressBtn('p'); }
     else if (c === 'KeyW') { if (!e.repeat) pressBtn('k'); }
-    else if (c === 'KeyE') { takeOver(); input.blockHeld = true; if (!e.repeat) input.block = true; }
     else if (c === 'Space') { takeOver(); input.dashHeld = true; if (!e.repeat) input.dash = true; }
     else if (c === 'KeyL') { if (!e.repeat) toggleTaskList(); }   // the stage's whole lesson list, on or off
-    else if (c === 'KeyF') { takeOver(); if (!e.repeat) input.focus = true; }   // Sandman time; by a reeling goon low on health: the finisher
     else if (!DEV) return;   // the sandbox keys below need ?dev
     else if (c === 'KeyM') { if (!e.repeat) toggleDemo(); }   // the autopilot
     else if (c === 'KeyX') knockOver();
@@ -8430,7 +8452,6 @@ import * as P9 from './levels/pier9.js';
     else if (c === 'KeyQ') releaseBtn('p');
     else if (c === 'KeyW') releaseBtn('k');
     else if (c === 'Space') input.dashHeld = false;
-    else if (c === 'KeyE') input.blockHeld = false;
     else if (c === 'ArrowUp') { if (!flags.demo) input.jumpHeld = false; }
   });
   addEventListener('blur', () => { btn.p.down = btn.k.down = false; input.fireHeld = false; keys.left = keys.right = keys.shift = false; touch.left = touch.right = false; input.downHeld = false; input.blockHeld = false; });
@@ -8459,11 +8480,6 @@ import * as P9 from './levels/pier9.js';
   { const b = document.getElementById('c-dash');
     b.addEventListener('pointerdown', e => { e.preventDefault(); takeOver(); input.dash = true; input.dashHeld = true; b.setPointerCapture?.(e.pointerId); });
     for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) b.addEventListener(ev, () => { input.dashHeld = false; }); }
-  { const b = document.getElementById('c-block');   // block: hold it, like E; a fresh press is the parry try
-    const off = () => { input.blockHeld = false; b.classList.remove('held'); };
-    b.addEventListener('pointerdown', e => { e.preventDefault(); takeOver(); input.blockHeld = true; input.block = true; b.classList.add('held'); b.setPointerCapture?.(e.pointerId); });
-    b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('lostpointercapture', off); }
-  document.getElementById('c-focus')?.addEventListener('pointerdown', e => { e.preventDefault(); takeOver(); input.focus = true; });   // focus: like F
   for (const [id, k] of [['c-lp', 'p'], ['c-lk', 'k']]) {   // punch and kick buttons: tap or hold, like J and K
     const b = document.getElementById(id);
     const off = () => { releaseBtn(k); b.classList.remove('held'); };
@@ -9001,10 +9017,13 @@ import * as P9 from './levels/pier9.js';
   function quitToTitle() { hideMenu(); if (isP9()) loadLevel('street'); reset(); startAttract(); }
   // ---- the menu: a console-style list down the left. It stays up on the title screen while the demo plays; in a game, Esc opens
   // it and pauses. Settings (view, run, camera) are remembered in this browser.
-  let runAlways = false, menuShown = false, menuSel = 0, menuPauseTS = null;
+  let runAlways = true, menuShown = false, menuSel = 0, menuPauseTS = null;
   const menuEl = document.getElementById('menu'), menuList = document.getElementById('menu-list'), ccEl = document.getElementById('controls-card');
   const SETKEY = 'eliasgrave.settings', OLD_SETKEY = 'clubnoir.settings';   // (the old key: moved over once, then removed)
-  function saveSettings() { try { localStorage.setItem(SETKEY, JSON.stringify({ view3d: mode3D, runAlways, zoom: zoomMode, diff: diffSel, vol: gameAudio.getVolume() })); } catch (err) {} }
+  function saveSettings() { try { localStorage.setItem(SETKEY, JSON.stringify({ view3d: mode3D, run: runAlways, zoom: zoomMode, diff: diffSel, vol: gameAudio.getVolume() })); } catch (err) {} }
+  function syncRun() {   // the touch button and the controls card say what Shift does
+    runBtn.firstChild.textContent = runAlways ? 'Walk ' : 'Run '; document.getElementById('cc-run').textContent = runAlways ? 'walk (you run by default)' : 'run';
+  }
   function loadSettings() {
     let st = null;
     try {
@@ -9013,7 +9032,7 @@ import * as P9 from './levels/pier9.js';
       st = JSON.parse(localStorage.getItem(SETKEY) || 'null');
     } catch (err) {}
     if (!st) return;
-    runAlways = !!st.runAlways;
+    runAlways = st.run ?? true;   // (run is the default; an older save's runAlways is not read: everyone starts running)
     if (typeof st.vol === 'number') gameAudio.setVolume(st.vol);
     if (st.diff >= 0 && st.diff < DIFFS.length) diffSel = st.diff;
     if (st.zoom != null) setZoom(String(st.zoom));
@@ -9039,7 +9058,7 @@ import * as P9 from './levels/pier9.js';
         if (!flags.attract) { toast('Difficulty is locked during a run', 'Quit to title to change it'); return; }
         diffSel = (diffSel + d + DIFFS.length) % DIFFS.length; charge.forEach((c, w) => { charge[w] = Math.min(c, fullCharge(w)); }); saveSettings(); } },
       { label: 'View', value: () => mode3D ? '3D' : '2D', change: () => { setMode3D(!mode3D); saveSettings(); } },
-      { label: 'Shift', value: () => runAlways ? 'to walk' : 'to run', change: () => { runAlways = !runAlways; saveSettings(); } },
+      { label: 'Shift', value: () => runAlways ? 'to walk' : 'to run', change: () => { runAlways = !runAlways; saveSettings(); syncRun(); } },
       { label: 'Camera', value: () => zoomMode === 'auto' ? 'Auto' : `${Math.round(zoomMode * 100)}%`, change: d => cycleZoom(d) },
       { label: 'Volume', value: () => `${Math.round(gameAudio.getVolume() * 100)}%`, change: d => {   // master volume in 10 % steps (a click past 100 % goes to 0 %)
         const v = Math.round(gameAudio.getVolume() * 10) + (d < 0 ? -1 : 1);
@@ -9175,14 +9194,14 @@ import * as P9 from './levels/pier9.js';
     if (slowT > 0 && timeScale > 0 && (slowT -= rdt) <= 0) { slowT = 0; if (foc.t <= 0) emit('slowmo:end', { scale: 1, reason: slowWhy }); }   // a perfect dodge's (a last kill's) slow motion runs on the real clock
     if (foc.t > 0 && timeScale > 0) { foc.t -= rdt; foc.m = Math.max(0, foc.t / FOCUS.dur * FOCUS.max); if (foc.t <= 0) endFocus(); }   // Sandman time drains the meter (real clock)
     const sdt = rdt * timeScale * (slowT > 0 ? DEF.pd.slow : 1), wdt = sdt * wk; simTime += sdt;   // (wdt: the world's clock, slow in Sandman time)
-    if (!flags.demo) { input.dir = (keys.right || touch.right ? 1 : 0) - (keys.left || touch.left ? 1 : 0); input.run = (runAlways ? !keys.shift : keys.shift) || runToggle; }   // (the menu can make running the default: Shift walks)
+    if (!flags.demo) { input.dir = (keys.right || touch.right ? 1 : 0) - (keys.left || touch.left ? 1 : 0); input.run = (runAlways ? !keys.shift : keys.shift) !== runToggle; }   // (the menu can make running the default: Shift walks)
     if (autoWalk) { if (flags.club || input.dir) autoWalk = false; else input.dir = 1; }   // skip-to-boss: walk the carpet in
     demoTick(sdt);
     if (openT >= 0) openTick(rdt);
     if (endPh && endPh !== 'done') endTick(rdt);
     if (jumpEnd && enc.boss && !enc.boss.dead && enc.introT < 0 && enc.boss.hp > 0) { enc.boss.hp = 1; enc.eHitKind = 1; damageEnemy(enc.boss, 60, 1, 300, 0.5, enc.boss.x, enc.boss.y - 20, false); enc.eHitKind = 0; }   // ?ending: the boss drops as the fight starts
     if (enc.introT >= 0 && !enc.boss) enc.introT = -1;   // (an entrance with no boss: never a lock)
-    if (enc.introT >= 0 || hookPull || gaffHold) { input.dir = 0; input.run = false; input.jump = false; input.jumpHeld = false; input.attack = null; input.fireHeld = false; input.dash = false; input.dashHeld = false; input.downHeld = false; input.block = false; input.blockHeld = false; input.focus = false; }   // the boss entrance: no input
+    if (enc.introT >= 0 || hookPull || gaffHold) { input.dir = 0; input.run = false; input.jump = false; input.jumpHeld = false; input.attack = null; input.fireHeld = false; input.dash = false; input.dashHeld = false; input.downHeld = false; input.block = false; input.blockHeld = false; }   // the boss entrance: no input
     for (let i = spawnFx.length - 1; i >= 0; i--) if ((spawnFx[i].t += wdt) > 0.45) spawnFx.splice(i, 1);
     if (grabIdx >= 0 && now - lastMove > 40) { pv.x *= 0.7; pv.y *= 0.7; }
     if (hitStop > 0) hitStop -= rdt; else acc += sdt;
@@ -9263,7 +9282,7 @@ import * as P9 from './levels/pier9.js';
       show('ammo', ammoEl, !full ? '' : Wp.ammo ? `${c} / ${full}` : `${'▮'.repeat(Math.min(6, Math.ceil(c / full * 6)))}${'▯'.repeat(Math.max(0, 6 - Math.ceil(c / full * 6)))}`);
       ammoEl.className = 'ammo' + (ammoFlash > 0 ? ' gain' : full && c / full < 0.25 ? ' low' : ''); }
     { const on = hero.bandT > 0; if (regenEl.hidden === on) regenEl.hidden = !on; if (on) regenEl.style.setProperty('--p', (hero.bandT / BAND_T).toFixed(3)); }   // the bandage ring
-    { const w = foc.m.toFixed(0) + '%', on = foc.t > 0, cls = on ? 'on' : foc.m >= FOCUS.min ? 'ready' : '';   // the focus meter; Sandman time tints both views (CSS on the canvases)
+    { const w = foc.m.toFixed(0) + '%', on = foc.t > 0, cls = on ? 'on' : foc.m >= FOCUS.max ? 'ready' : '';   // the focus meter; Sandman time tints both views (CSS on the canvases)
       if (shown.focW !== w) { shown.focW = w; focFill.style.width = w; }
       if (shown.focC !== cls) { shown.focC = cls; focEl.className = 'hud hud-focus ' + cls; stage.classList.toggle('sandman', on); } }
     hpFill.style.width = hero.hp.toFixed(0) + '%'; hpFill.style.background = hero.hp < 30 ? 'var(--ko)' : hero.hp < 60 ? 'var(--accent)' : 'var(--ok)';
@@ -9317,7 +9336,7 @@ import * as P9 from './levels/pier9.js';
     runAutotest(AUTOTEST, +QS.get('frames') || 1800);
     return;
   }
-  loadSettings();   // the view, run and camera choices from last time
+  loadSettings(); syncRun();   // the view, run and camera choices from last time
   if (DEV) { setDemo(true); skipToBoss(); }   // ?dev: open on the boss level, to test it
   else if (jumpEnd) playEnding();
   else startAttract();   // the page opens on the demo from the street start, under the title card and the menu
