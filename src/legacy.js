@@ -3781,7 +3781,7 @@ import * as P9 from './levels/pier9.js';
     if (hero.mode === 'getup' && runS.prevMode !== 'getup' && runS.koUp) { runS.koUp = false; secondWind(); }
     runS.prevMode = hero.mode;
     if (enc.bossBeaten && endPh === null && !flags.wasted) { endPh = isP9() ? 'p9wait' : 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card (not after a Wicked K.O.)
-    if (enc.bossBeaten && runS.endT < 0 && endPh === 'done' && !flags.wasted) runS.endT = 0.4;
+    if (enc.bossBeaten && runS.endT < 0 && endPh === 'done' && !flags.wasted && !isP9()) runS.endT = 0.4;   // (Pier 9 shows its own card after the outro)
     if (runS.endT > 0 && (runS.endT -= rdt) <= 0) showResults();
   }
   function tutTick(rdt) {
