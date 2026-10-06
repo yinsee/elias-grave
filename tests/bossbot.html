@@ -1,0 +1,137 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>bossbot</title>
+<!--
+  Boss fight bots (docs/reviews/2026-10-06-playtest.md #7): the game runs in the frame with ?manual&fixed; a scripted bot presses keys
+  each frame and the page title shows the result. Run it headless:
+    Chrome --headless=new --virtual-time-budget=900000 --dump-dom "http://localhost:8779/tests/bossbot.html?boss=pier&diff=1&bot=varied"
+  boss: street (Malaspina) | pier (Marchetti). diff: 0 Easy .. 3 Wicked. bot: jab (taps Q at the boss, nothing else) | varied (reads
+  the tells: parries, perfect dodges, jumps the sweep and the quakes, mashes free of the hook, hits a lobbed tuna back, punishes the
+  recoveries with varied strings, clears the fog at the lever). seed: the game's seed. max: seconds of fight before it gives up.
+  Result: <title>BOSSBOT ... result=win|lost|timeout t=<fight s> bossHp=<left> heroHp kos phases=<s each phase began></title>
+-->
+<style>body { margin: 0; background: #111; color: #ccc; font: 12px monospace; } iframe { border: 0; display: block; }</style>
+<iframe id="g" width="960" height="540"></iframe>
+<pre id="log"></pre>
+<script>
+const Q = new URLSearchParams(location.search), BOSS = Q.get('boss') || 'pier', DIFF = +(Q.get('diff') ?? 1), BOT = Q.get('bot') || 'jab';
+const SEED = Q.get('seed') || '1', MAX = +(Q.get('max') || 360);
+const fr = document.getElementById('g'), logEl = document.getElementById('log');
+fr.src = `../index.html?manual&fixed&seed=${SEED}&v=${Date.now()}` + (Q.has('view3d') ? '&view3d' : '');
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const log = s => { logEl.textContent += s + '\n'; };
+
+fr.onload = async () => {
+  const W = fr.contentWindow;
+  for (let i = 0; i < 200 && !W.__sim; i++) await sleep(50);
+  const S = W.__sim;
+  let keep0 = new Map(); try { keep0 = new Map(Object.keys(W.localStorage).map(k => [k, W.localStorage.getItem(k)])); } catch (e) {}
+  // ---- keys ----
+  const held = new Set(), ups = [];
+  const kd = c => { if (held.has(c)) return; held.add(c); W.dispatchEvent(new W.KeyboardEvent('keydown', { code: c, key: c, bubbles: true })); };
+  const ku = c => { if (!held.has(c)) return; held.delete(c); W.dispatchEvent(new W.KeyboardEvent('keyup', { code: c, key: c, bubbles: true })); };
+  const tap = (c, n = 2) => { if (c === 'KeyE') ev.tapE = (ev.tapE || 0) + 1; if (c === 'Space') ev.tapDodge = (ev.tapDodge || 0) + 1; ku(c); kd(c); ups.push([c, n]); };
+  const releaseAll = () => { for (const c of [...held]) ku(c); ups.length = 0; };
+  const walk = d => { if (d > 0) { ku('ArrowLeft'); kd('ArrowRight'); } else if (d < 0) { ku('ArrowRight'); kd('ArrowLeft'); } else { ku('ArrowLeft'); ku('ArrowRight'); } };
+  // ---- start ----
+  S.setDiff(DIFF);
+  if (BOSS === 'pier') W.__pier9.toBoss(); else { W.__skipToBoss(); if (!Q.has('gun')) S.hero.weapon = 0; }   // (the street skip hands him the machine gun: the bots fight with fists unless &gun)
+  S.setDiff(DIFF);
+  let f = 0, f0 = -1, plan = [], lastAtk = -99, lastDef = -99;
+  const phases = [], ev = { parry: 0, pdodge: 0, hookfree: 0, tunaback: 0, counter: 0, fogclear: 0, block: 0, hurt: 0 };
+  S.bus.on('boss:phase', p => phases.push(((f - f0) / 60).toFixed(1)));
+  S.bus.on('feat', k => { if (k in ev) ev[k]++; });
+  const why = [];   // ?dbg: what hit the hero (the boss's act or special, the distance, the hero's act)
+  S.bus.on('block', () => ev.block++);
+  S.bus.on('hurt', p => { ev.hurt++; const B = S.enc.boss; if (B) why.push(`${((f - f0) / 60).toFixed(1)}:${B.act || B.sp || (S.quakes.length ? 'quake' : S.p9.tuna.st === 'swing' ? 'tuna' : 'goon?')}/${Math.round(Math.abs(B.x - S.ctl.x))}/${S.hero.act}/${p.dmg}`); });
+  const step = () => { for (let i = ups.length - 1; i >= 0; i--) if (--ups[i][1] <= 0) { ku(ups[i][0]); ups.splice(i, 1); } W.__step(1); f++; };
+
+  // ---- the bots ----
+  const E = S.EMOVES;
+  function tc(B) {   // time to contact of the boss's strike (s), or null
+    if (B.act && !B.struck) { const M = E[B.act]; if (M.win[0] < 9) return (M.win[0] - B.actT) / (B.ph === 1 ? 0.85 : 1); }
+    if (B.sp && B.spT < 0) return -B.spT + (B.sp === 'grab' ? 0.05 : B.sp === 'tuna' ? 0.06 : 0);
+    return null;
+  }
+  function jab(B) {
+    const c = S.ctl, dx = B.x - c.x, adx = Math.abs(dx), d = Math.sign(dx) || 1;
+    if (adx > 18 + 4 * B.s) { walk(d); return; }
+    walk(0);
+    if (c.face !== d) { tap(d > 0 ? 'ArrowRight' : 'ArrowLeft', 1); return; }
+    if (f % 9 === 0) tap('KeyQ', 2);
+  }
+  // a decent player: reads the tells, defends on time (with a little error), punishes the openings with varied strings
+  let rng = 12345; const rnd = () => (rng = (rng * 1103515245 + 12345) & 0x7fffffff) / 0x7fffffff;
+  function varied(B) {
+    const c = S.ctl, h = S.hero, dx = B.x - c.x, adx = Math.abs(dx), d = Math.sign(dx) || 1, away = d > 0 ? 'ArrowLeft' : 'ArrowRight', toward = d > 0 ? 'ArrowRight' : 'ArrowLeft';
+    const busy = plan.length > 0;
+    if (S.hookPull) { if (f % 3 === 0) tap(f % 6 ? 'KeyQ' : 'Space', 1); return; }   // mash free
+    if (h.mode !== 'anim') { plan = []; return; }
+    // the lobbed tuna: hit it back
+    for (const b of S.eshots) if (b.k === 't' && !b.back) { const bd = (b.x - c.x) * c.face; if (bd > -2 && bd < 26 && Math.abs(b.y - (c.y - 14)) < 22 && f - lastAtk > 10) { if (c.face !== Math.sign(b.x - c.x)) tap(b.x > c.x ? 'ArrowRight' : 'ArrowLeft', 1); else { tap('KeyQ', 2); lastAtk = f; } return; } }
+    // shockwaves and the conveyor's tuna
+    for (const q of S.quakes) if (!q.hit && (c.x - q.x) * q.dir > 0 && (c.x - q.x) * q.dir < 24 && !c.air) { plan = []; tap('ArrowUp', 6); return; }
+    const T = S.p9.tuna; if (T.st === 'swing' && Math.abs(T.x - c.x) < 60 && (c.x - T.x) * T.dir > -10) { plan = []; walk(0); kd('ArrowDown'); return; } else ku('ArrowDown');
+    // defence
+    const t = tc(B), near = adx < B.reach + 30;
+    if (t != null && f - lastDef > 12) {
+      const jit = (rnd() - 0.5) * 0.06, u = B.actU || B.markU || B.act === 'slam';
+      if (B.sp === 'sweep' && t < 0.13 + jit && near) { plan = []; tap('ArrowUp', 8); lastDef = f; return; }
+      if (B.sp === 'hook') { const arr = t + Math.max(0, adx - 20) / 330; if (arr < 0.09 + jit) { plan = []; walk(0); tap(away, 3); tap('Space', 2); lastDef = f; } return; }
+      if (B.sp === 'charge') { const arr = t + Math.max(0, adx - 12) / (B.chgV || 215); if (arr < 0.09 + jit) { plan = []; tap('ArrowUp', 8); lastDef = f; } else if (!busy) walk(0); return; }
+      if (B.sp === 'jslam') { walk(Math.sign(c.x - (B.jx ?? B.x)) || -d); return; }
+      if (B.sp === 'lever' || B.sp === 'roar') { /* his back is turned (or he roars): fall through to offence */ }
+      else if (near && (u || B.sp)) { if (t < 0.09 + jit) { plan = []; walk(0); tap(away, 3); tap('Space', 2); lastDef = f; } else if (!busy) walk(0); return; }
+      else if (near && B.act) {
+        if (c.face !== d) { plan = []; walk(0); tap(toward, 1); return; }   // face him first: a guard only holds from the front
+        if (t < 0.1 + jit) { plan = []; walk(0); if (rnd() < 0.75) tap('KeyE', 2); else { tap(away, 3); tap('Space', 2); } lastDef = f; } else if (!busy) walk(0);
+        return;
+      }
+    }
+    if (busy) { const [fn] = plan; if (fn.at <= f) { plan.shift(); fn.go(); } return; }
+    // the fog: go throw the freezer lever back up
+    if (B.hidden && S.p9.fog.on) { const lx = 2748 - 10; if (Math.abs(c.x - lx) > 3) { walk(Math.sign(lx - c.x)); return; } walk(0); if (c.face < 0) { tap('ArrowRight', 1); return; } tap('KeyQ', 2); lastAtk = f; return; }
+    // goons close by come first
+    const g = S.enemies.find(e => !e.dead && !e.down && e !== B && Math.abs(e.x - c.x) < 30 && Math.abs(e.y - c.y) < 14);
+    const open = B.recT > 0 || B.exposed > 0 || B.stunT > 0 || B.hurtT > 0 || B.sp === 'lever' || (B.sp === 'hook' && B.hook && B.hook.st === 'back');
+    const tgt = g && (!open || adx > 50) ? g : B, tdx = tgt.x - c.x, tad = Math.abs(tdx), td = Math.sign(tdx) || 1, reach = tgt === B ? 18 + 4 * B.s : 18;
+    if (tad > reach) { walk(td); return; }
+    walk(0);
+    if (c.face !== td) { tap(td > 0 ? 'ArrowRight' : 'ArrowLeft', 1); return; }
+    if (tgt === B && !open) {   // neutral: a quick poke when he is idle, else hold the spacing
+      if (!B.act && !B.sp && f - lastAtk > 36) strike(rnd() < 0.5 ? ['lp', 'lk'] : ['lk', 'lp']);
+      return;
+    }
+    if (f - lastAtk > 8) strike(rnd() < 0.5 ? ['lp', 'lk', 'hp'] : ['lk', 'lp', 'hk']);
+  }
+  function strike(seq) {   // a string: each blow 14 frames apart; a heavy is a held key
+    let at = f;
+    for (const a of seq) {
+      const k = a[1] === 'p' ? 'KeyQ' : 'KeyW', heavy = a[0] === 'h';
+      plan.push({ at, go: () => tap(k, heavy ? 16 : 2) });
+      at += heavy ? 26 : 14;
+    }
+    lastAtk = at;
+  }
+
+  // ---- run ----
+  let result = 'timeout';
+  for (;;) {
+    if (S.sceneOn) { W.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true })); await sleep(700); continue; }
+    const B = S.enc.boss;
+    if (f0 < 0) { if (B && !B.intro && S.enc.introT < 0) { f0 = f; if (BOSS === 'street' && !Q.has('gun')) { S.hero.weapon = 0; for (const k of S.pickups) k.taken = true; } log('start f=' + f + ' w=' + S.hero.weapon); } }
+    if (S.flags.wasted) { result = 'lost'; break; }
+    if (B && B.dead) { result = 'win'; break; }
+    if (f0 >= 0 && B) { if (BOT === 'jab') jab(B); else varied(B); }
+    step();
+    if (f0 >= 0 && (f - f0) / 60 > MAX) break;
+    if (f0 < 0 && f > 60 * 40) { result = 'nostart'; break; }
+    if (f % 600 === 0) await sleep(0);
+  }
+  releaseAll();
+  const B = S.enc.boss, t = ((f - f0) / 60).toFixed(1);
+  const out = `BOSSBOT boss=${BOSS} diff=${DIFF} bot=${BOT} seed=${SEED} result=${result} t=${t} bossHp=${B ? Math.max(0, Math.round(B.hp)) : '-'}/${B ? B.maxHp : '-'} heroHp=${Math.round(S.hero.hp)} kos=${S.kos} phases=${phases.join(',')} ` + Object.entries(ev).map(([k, v]) => `${k}=${v}`).join(' ') + (Q.has('dbg') ? ' why=' + why.join(' ') : '');
+  document.title = out; log(out);
+  try { for (const k of Object.keys(W.localStorage)) if (!keep0.has(k)) W.localStorage.removeItem(k); else W.localStorage.setItem(k, keep0.get(k)); } catch (e) {}   // (put the storage back as it was: a win unlocks a chapter)
+};
+</script>
