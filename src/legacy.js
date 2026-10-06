@@ -1159,7 +1159,7 @@ import * as P9 from './levels/pier9.js';
   function pocketStep(dt) {
     for (const o of objs.slice()) {
       if (!o.pocket || o.safeT > 0 || hero.mode !== 'anim' || pocket.length >= 3) continue;
-      if (!endPh && hero.act === 'squat' && Math.abs(o.x - ctl.x) < 9 && Math.abs(o.y - ctl.y) < 14) { pocket.push(o.kind); removeObj(o); emit('feat', 'pocket'); emit('pickup', { kind: o.kind, pocket: true, x: o.x, y: o.y }); sparks.push({ x: o.x, y: o.y - 3, t: 0.1 }); }   // squat by it to pocket it (walking into it kicks it along)
+      if (!endPh && Math.abs(o.x - ctl.x) < 9 && Math.abs(o.y - ctl.y) < 14) { pocket.push(o.kind); removeObj(o); emit('feat', 'pocket'); emit('pickup', { kind: o.kind, pocket: true, x: o.x, y: o.y }); sparks.push({ x: o.x, y: o.y - 3, t: 0.1 }); }   // walk into it to pocket it (with the pocket full, he kicks it along instead)
     }
     for (let i = tossed.length - 1; i >= 0; i--) {   // pocket throws fly until they hit someone or land
       const q = tossed[i], T = TOSS[q.k];
@@ -4583,7 +4583,7 @@ import * as P9 from './levels/pier9.js';
       ['gthrow', 'Knee and throw: in a grab, [Q] knees, [W] throws'], ['slam', 'Slam: grab a goon, hold [↓], press [W]'],
       ['smash', 'Smash a crate: hit it until it breaks'], ['split', 'Break the crate stack: hold [Q] or [W] next to it'],
       ['lift', 'Lift the dustbin: hands empty, hold [↓] next to it'], ['bash', 'Hit a goon with it: tap [Q]'], ['toss', 'Throw a dustbin: lift one, hold [Q] with no goon near'],
-      ['pocket', 'Pocket a can or a bottle: hold [↓] next to it'], ['pockethit', 'Throw it at a goon: hold [Q] with no goon near'], ['kill1', 'Beat the goons: they hit back']] },
+      ['pocket', 'Pocket a can or a bottle: walk into it'], ['pockethit', 'Throw it at a goon: hold [Q] with no goon near'], ['kill1', 'Beat the goons: they hit back']] },
     { x0: 900, title: '3 · Katana', tasks: [['pick1', 'Take the katana: walk over it'], ['ks', 'Slash: tap [Q]'], ['kw', 'Heavy slash: hold [Q] near a goon'], ['kh', 'Overhead finisher: tap [Q], then hold [Q]'],
       ['sslash', 'Low cut: hold [↓], tap [Q]'], ['kair', 'Jump slash: jump [↑], then tap [Q]'], ['tw', 'Throw the blade: hold [Q] with no goon near'], ['catch', 'Get the blade back: walk over it'],
       ['focus', 'Sandman time: fill the focus bar, it starts by itself'], ['finisher', 'Finisher: hold [W] by a reeling, beaten goon'], ['kill2', 'Cut down the goons']] },
