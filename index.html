@@ -30,7 +30,8 @@
       <dt>← →</dt><dd>move</dd><dt>Shift</dt><dd id="cc-run">run</dd><dt>↑</dt><dd>jump · hold it at a ledge to climb</dd>
       <dt>↓</dt><dd>squat · at a run: dodge roll · squat beside a crate or a bin to pick it up </dd><dt>Space</dt><dd>short dodge (with ← or → held: that way; in the air: dash) · with ↓ held up on a roof: drop through it</dd><dt>E</dt><dd>hold: block light hits · tap just before a hit lands: parry</dd>
       <dt>Q</dt><dd>punch or swing · tap = light, hold = heavy (near a goon) or throw what you hold (no goon in reach)</dd><dt>↓ + Q</dt><dd>throw what you hold</dd><dt>W</dt><dd>kick · tap = light, hold = heavy</dd>
-      <dt>F</dt><dd>Sandman time (the focus bar) · with a gun, dodge to dive · by a reeling goon low on health: finisher</dd>
+      <dt>F</dt><dd>Sandman time (the focus bar) · with a gun, dodge to dive · by a reeling goon low on health: finisher (fists with ↓ held: the slam finisher)</dd>
+      <dt>Grab</dt><dd>fists: walk into a reeling goon · Q knee · W throw (← → aim) · ↓ + W lift and slam him into the floor</dd>
       <dt>Esc</dt><dd>menu (pauses): view, camera, restart</dd></dl><small>Enter or Esc to close</small></div>
     <div class="hud hud-hp"><span class="hud-label">HP</span><div class="bar"><i id="hp-fill"></i></div></div>
     <div id="focus" class="hud hud-focus" title="Focus: fill it with varied hits, parries, perfect dodges and counters. F: Sandman time"><span class="hud-label">FOCUS</span><div class="bar"><i id="focus-fill"></i></div><kbd>F</kbd></div>
@@ -40,7 +41,7 @@
     <div class="hud-weapon"><span class="wicon"><img id="w-icon" alt=""></span><span class="wtext"><span id="w-name">FISTS</span><span id="ammo" class="ammo"></span><span id="pocket" class="pocket"></span></span></div>
   </div>
 
-  <p class="keys"><b>← →</b> move · <b>Shift</b> run · <b>↑</b> jump (hold at a ledge: climb) · <b>↓</b> squat · <b>Space</b> dodge · <b>↓</b> at a run: roll · <b>Q</b> punch · <b>W</b> kick (tap = light, hold = heavy; hold Q far from goons: throw) · <b>E</b> block (tap: parry) · <b>F</b> Sandman time / finisher · <b>↓</b>+<b>Q</b> throw · <b>Esc</b> menu</p>
+  <p class="keys"><b>← →</b> move · <b>Shift</b> run · <b>↑</b> jump (hold at a ledge: climb) · <b>↓</b> squat · <b>Space</b> dodge · <b>↓</b> at a run: roll · <b>Q</b> punch · <b>W</b> kick (tap = light, hold = heavy; hold Q far from goons: throw) · <b>E</b> block (tap: parry) · <b>F</b> Sandman time / finisher (<b>↓</b>+<b>F</b>: slam) · <b>↓</b>+<b>Q</b> throw · walk into a reeling goon: grab (<b>Q</b> knee · <b>W</b> throw · <b>↓</b>+<b>W</b> slam) · <b>Esc</b> menu</p>
   <details class="more">
   <summary>Controls and options</summary>
   <div class="readout" hidden>
@@ -69,7 +70,7 @@
         <button id="c-lp" class="primary" aria-label="Punch. Tap for a light hit, hold for a heavy hit. Hold it with no goon in reach to throw what you hold"><span>Punch</span> <kbd>Q</kbd></button>
         <button id="c-lk" class="primary" aria-label="Kick. Tap for a light kick, hold for a heavy kick. Squat and hold for a leg sweep">Kick <kbd>W</kbd></button>
         <button id="c-block" aria-label="Block. Hold to block light hits. Tap just before a hit lands to parry">Block <kbd>E</kbd></button>
-        <button id="c-focus" aria-label="Focus. Sandman time when the focus bar has enough in it. By a reeling goon low on health: a finisher">Focus <kbd>F</kbd></button>
+        <button id="c-focus" aria-label="Focus. Sandman time when the focus bar has enough in it. By a reeling goon low on health: a finisher; with fists and squat held, the slam finisher">Focus <kbd>F</kbd></button>
       </div>
     </div>
     <div class="group" hidden>

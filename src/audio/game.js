@@ -57,6 +57,7 @@ function bindGame(a) {
       if (s) play(s[0], p, s[1]); else play('ui_blip', p, { vol: 0.5, pitch: 0.7 });
     }),
     bus.on('hook:clank', (p) => play('hook_clank', p)),   // Marchetti's hook stops on a prop
+    bus.on('slam', (p) => play('ground_slam', p, { vol: p.fin ? 1 : 0.85 })),   // the clinch's ground slam
     bus.on('run:over', () => play('ui_confirm', null, { vol: 0.6 })),
   ];
 }

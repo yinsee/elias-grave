@@ -44,6 +44,7 @@ The simulation never calls audio. `audio.bind(bus, { panOf, sectionMusic })` sub
 | `hit` | `blade_hit` if `blade`, else `punch_heavy` when `power > 1`, else `punch_light`; pan from `x` |
 | `hurt` | `punch_heavy` if `heavy`, else `punch_light` |
 | `ko` | `ko_thud` |
+| `slam` | `ground_slam` (the clinch's ground slam) |
 | `kill` | `body_fall` 0.25 s later |
 | `pickup` | `bandage` when `kind === 'bandage'`, else `pickup` |
 | `glass:break` | `glass_large` when the pane area > 2400 px², else `glass_small` |
@@ -100,7 +101,7 @@ Estimated tempo (librosa): title 118 / 136-144 bpm, docks explore 161 / 99 bpm, 
 
 20 procedural sounds, built from distorted low sine thumps, filtered white and brown noise, inharmonic metal partials and a shared room reverb, through a compressor. Each play has a small random detune (±3 %) and level change, so repeats do not sound identical. `pitch` scales every frequency and divides every duration (use 0.6-0.7 for slow motion).
 
-`punch_light punch_heavy kick_light kick_heavy blade_slash blade_hit shotgun (with pump) mg_burst ricochet glass_small glass_large crate_break body_fall footstep_wet dodge_whoosh pickup bandage ko_thud ui_blip ui_confirm`
+`punch_light punch_heavy kick_light kick_heavy blade_slash blade_hit shotgun (with pump) mg_burst ricochet glass_small glass_large crate_break body_fall footstep_wet dodge_whoosh pickup bandage ko_thud ground_slam ui_blip ui_confirm`
 
 The test bench "Analyse all" button renders each sound in an OfflineAudioContext and lists length, peak and RMS: no sound is silent or clips (peaks between -1 and -17 dBFS; footsteps are the quietest by design).
 

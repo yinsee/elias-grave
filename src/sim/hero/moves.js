@@ -192,7 +192,7 @@ export const DEF = {
 };
 // hit-stop per move (seconds the world freezes when it connects); moves not listed use their power
 export const STOP = { lp0: 0.05, lp1: 0.05, hp: 0.12, lk0: 0.06, lk1: 0.06, hk0: 0.12, hk1: 0.12, airkick: 0.08, ks0: 0.06, ks1: 0.06, kh: 0.12, kair: 0.07, al: 0.08, al1: 0.08, aw: 0.13, ks2: 0.05, kw: 0.1, ah: 0.15, aair: 0.1, gb: 0.08,
-  slp: 0.04, sweep: 0.09, sslash: 0.06, tw: 0.08, lpl: 0.1, lpw: 0.12, stomp: 0.08, knee: 0.07 };
+  slp: 0.04, sweep: 0.09, sslash: 0.06, tw: 0.08, lpl: 0.1, lpw: 0.12, stomp: 0.08, knee: 0.07, gslam: 0.1 };
 // combo depth (#5): the fist string's 4th press is the ender (lpl: a rising uppercut that launches him; lpw, → held: a lunging cross that
 // sends him flying into a wall); a stomp on a goon on the floor; the clinch: knees (Q) and a throw (W)
 // clinch: both hands on the back of his head, pulling him down onto the knee
@@ -226,8 +226,16 @@ Object.assign(MOVES, {
     K(0, {}, TRN.CLINCH), K(0.12, { lean: -0.35, rx: -1.8, ry: 14.6, head: 0.2, f0x: -9, f1x: 3, a0s: 1.0, a0e: 0.5, a1s: 1.1, a1e: 0.4 }, TRN.CLINCH),
     K(0.2, { lean: 0.55, rx: 3, ry: 14.8, head: -0.2, f0x: -9, f1x: 6, a0s: 2.3, a0e: 0.2, a1s: 2.4, a1e: 0.15 }, TRN.CLINCH, 'in'),
     K(0.34, { lean: 0.5, rx: 3, ry: 14.8, head: -0.2, f0x: -9, f1x: 6, a0s: 2.2, a0e: 0.3, a1s: 2.3, a1e: 0.25 }, TRN.CLINCH), K(0.6, {}, GUARD, 'out')] },
+  // the ground slam (in the clinch, ↓ + W; or F + ↓ on a goon at finisher health): dip under him, press him overhead, drive him down into the floor
+  // (win: the impact, SLAM.down[1]; it sets the chain point, so a stomp can follow)
+  gslam: { dur: 0.82, win: [0.46, 0.5], limb: 6, power: 0, up: 0, clinch: true, keys: [
+    K(0, {}, TRN.CLINCH), K(0.1, { ry: 12.8, lean: 0.3, rx: 0.6, head: 0.25, f0x: -7, f1x: 5, a0s: 1.0, a0e: 0.6, a1s: 1.1, a1e: 0.5 }, TRN.CLINCH),   // under him
+    K(0.3, { ry: 16.6, lean: -0.12, rx: 0, head: -0.4, f0x: -6, f1x: 5, a0s: 3.0, a0e: 0.25, a1s: 3.1, a1e: 0.2 }, GUARD, 'in'),   // pressed overhead
+    K(0.38, { ry: 16.8, lean: -0.18, rx: -0.3, head: -0.45, f0x: -6, f1x: 5, a0s: 3.05, a0e: 0.2, a1s: 3.15, a1e: 0.15 }),
+    K(0.46, { ry: 11.6, lean: 1.0, rx: 3.2, head: -0.3, f0x: -9, f1x: 7, a0s: 0.95, a0e: 0.15, a1s: 1.05, a1e: 0.1 }, GUARD, 'in'),   // driven down
+    K(0.62, { ry: 11.8, lean: 0.95, rx: 3.2, head: -0.25, f0x: -9, f1x: 7, a0s: 0.9, a0e: 0.2, a1s: 1.0, a1e: 0.15 }), K(0.82, {}, GUARD, 'out')] },
 });
-for (const k of ['lpl', 'lpw', 'stomp', 'knee', 'gtoss']) MOVES[k].pre = strikeFrom(MOVES[k]);
+for (const k of ['lpl', 'lpw', 'stomp', 'knee', 'gtoss', 'gslam']) MOVES[k].pre = strikeFrom(MOVES[k]);
 // the finishers (#6), one per weapon class: f = fists, k = katana, a = axe, g = gun. gap: where he stands from the goon; hit: the killing blow (s);
 // kneel: the goon drops to his knees for it. The gun's arms are held by the gun's IK (only the body moves)
 export const FINS = {
@@ -257,10 +265,13 @@ export const SPLAT = { vx: 250, vy: -45, fly: 0.75, stick: 0.45, dmg: 10, crowd:
 export const GRAB = { hold: 1.6, knees: 3, knee: 7, v: 235, vy: -100, fly: 0.9, self: 8, gap: 19 };
 export const OTG = { stomp: 12, shot: 1.4, n: 2, reach: 22 };
 export const DIVE = { v: 190, t: 0.55, h: 9, inv: 0.5, down: 0.3 };
+// SLAM: the ground slam. up = he is overhead (s), down = driven into the floor (the impact, s); lift = px over the hero's feet at the top,
+// fwd = px in front where he lands; dmg (no finisher); the shockwave floors the goons within r px (dy px up or down)
+export const SLAM = { up: [0.1, 0.3], down: [0.38, 0.46], lift: 38, fwd: 15, dmg: 22, r: 40, dy: 10 };
 // focus (#6), the Sandman's meter: 0..max; F starts Sandman time with at least min in it: dur s of world at slow x speed for a full meter (the hero
 // at full speed), drained as it runs. gain: per varied hit (rep: a repeat), ender, counter, juggle hit, wall-splat, knee, clinch throw, parry,
 // perfect dodge, kill, a bullet that lands, a stomp; none while it runs. fin: a finisher on a goon at <= hp of his max; stop = hit-stop (4 frames);
 // cam = the punch-in time (s). last/boss: the auto slow-motion (real s) on the last kill of a wave and on the boss kill
 export const FOCUS = { max: 100, min: 25, dur: 3, slow: 0.3, last: 0.6, boss: 1.2,
-  gain: { hit: 4, rep: 1, ender: 8, ctr: 6, jug: 5, splat: 10, knee: 3, gthrow: 8, parry: 15, pdodge: 12, kill: 4, shot: 0.6, otg: 3 } };
+  gain: { hit: 4, rep: 1, ender: 8, ctr: 6, jug: 5, splat: 10, knee: 3, gthrow: 8, parry: 15, pdodge: 12, kill: 4, shot: 0.6, otg: 3, slam: 10 } };
 export const FIN = { hp: 0.3, reach: 34, stop: 4 / 60, cam: 0.7 };

@@ -305,6 +305,14 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
       lfo.start(v.t); lfo.stop(v.t + 0.4 * v.k);
       noise(v, { filter: 'bandpass', f0: 700, f1: 400, q: 0.7, at: 0.45, a: 0.15, d: 0.4, vol: 0.18, lin: true });   // breath out
     },
+    ground_slam(v) {   // a body driven into the floor: a deep boom, the thud of the body, grit and a rattle
+      tone(v, { f0: 62, f1: 22, d: 0.7, vol: 1, drive: 9 });
+      noise(v, { buf: brown, filter: 'lowpass', f0: 900, f1: 80, d: 0.55, vol: 1.1, drive: 5 });
+      tone(v, { f0: 120, f1: 45, d: 0.18, vol: 0.7, drive: 4 });                                              // the body
+      noise(v, { filter: 'bandpass', f0: 2200, f1: 700, q: 1, d: 0.05, vol: 0.55, drive: 3 });                // the crack
+      for (let i = 0; i < 5; i++) noise(v, { filter: 'bandpass', f0: 1200 + rand() * 1600, q: 5, at: 0.06 + rand() * 0.3, d: 0.03, vol: 0.22 });   // grit
+      send(v, 0.35);
+    },
     ko_thud(v) {
       tone(v, { f0: 70, f1: 24, d: 0.9, vol: 1, drive: 8 });
       tone(v, { type: 'triangle', f0: 140, f1: 45, d: 0.4, vol: 0.5, drive: 3 });
