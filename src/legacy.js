@@ -215,7 +215,7 @@ import * as P9 from './levels/pier9.js';
   // static world layer: street, facades, vehicles, lamps, the mattress pile (0 = see-through)
   const PROPS = new Uint8Array(W * H);   // pixels of solid street props (vehicles, scaffold, balcony, lamps) that blood sticks to
   let STAT_BG = null;   // the street before the props were drawn on it: the 3D view's wall behind a lamp post or a vehicle
-  let WALLM = null;   // the level's wall mask (1 = a wall or a prop is behind the pixel); null = a wall everywhere (the street)
+  let WALLM = null;   // the level's wall mask (1 = a wall or a prop is behind the pixel; the sky, the sea and the fog are 0); null = a wall everywhere
   const stat = (() => {
     const b = new Uint32Array(W * H);
     const put = (x, y, c) => { if (x >= 0 && y >= 0 && x < W && y < H) b[y * W + x] = c; };
@@ -514,6 +514,7 @@ import * as P9 from './levels/pier9.js';
     for (let i = 0; i < b.length; i++) if (b[i] !== pre[i]) PROPS[i] = 1;
     return b;
   })();
+  WALLM = stat.map((c, i) => c || PROPS[i] ? 1 : 0);   // the street's: blood sprayed above the rooftops falls instead of sticking to the sky
 
   // parallax backdrop: a night sky with a veiled moon, then three rows of old gothic town: spires, gables, lit windows
   const SKY = ['#151729', '#1b1d35', '#23243f', '#2d2b48', '#3a3352'].map(C);
@@ -8750,7 +8751,7 @@ import * as P9 from './levels/pier9.js';
   function loadLevel(id) {
     if (LV.id === id) return;
     boards.length = 0; while (objs.length) removeObj(objs[0]);
-    if (!streetSnap) { streetSnap = { stat: stat.slice(), PROPS: PROPS.slice(), STAT_BG, GOAL }; for (const k in LEVEL_LISTS) streetSnap[k] = LEVEL_LISTS[k].slice(); }
+    if (!streetSnap) { streetSnap = { stat: stat.slice(), PROPS: PROPS.slice(), STAT_BG, GOAL, WALLM }; for (const k in LEVEL_LISTS) streetSnap[k] = LEVEL_LISTS[k].slice(); }
     let d;
     if (id === 'pier9') {
       if (!p9Data) {
