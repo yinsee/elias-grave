@@ -11,6 +11,9 @@ import { CLIMB, MOVES, keyAt, TRN, DASH, STOP } from './sim/hero/moves.js';
 import { initRaster, pickArt, plot, plotV, disc, seg, line1, withView } from './render2d/raster.js';
 import { bus } from './core/events.js';
 import { gameAudio } from './audio/game.js';
+import { playPanels } from './cutscene/panels.js';
+import { playDialog } from './cutscene/dialog.js';
+import * as P9 from './levels/pier9.js';
 
 (() => {
   'use strict';
@@ -71,7 +74,11 @@ import { gameAudio } from './audio/game.js';
   const BAG_X = -400;   // the old punching bag is parked off the map (it does not belong on a city street)
   const GROUND_S = { x0: -99, x1: W + 99, y: GROUND };
   const hy = h => GROUND - h;   // ledge top at a height above the ground
-  const GOAL = { x0: 2160, x1: 2374, y: hy(170) };
+  let GOAL = { x0: 2160, x1: 2374, y: hy(170) };   // (let: Pier 9 swaps in a surface off the map, see loadLevel)
+  // the level being played: the tutorial street (this file's own painter and data) or Pier 9 (src/levels/pier9.js). loadLevel() swaps
+  // the level lists below in place, so every function that reads them sees the new level.
+  let LV = { id: 'street', title: 'The Street', startX: 60 };
+  const isP9 = () => LV.id === 'pier9';
   const KIOSK_X = GOAL.x1 - 70;   // the left wall of the rooftop kiosk: the club's side door is in it, facing the roof   // the flat roof of the club building; the club door is in the kiosk at its right end
   const PLATS = [
     { x0: 190, x1: 240, y: hy(26) },     // the sports car: a jump and a short pull-up
@@ -602,23 +609,27 @@ import { gameAudio } from './audio/game.js';
   }
   function drawBackdrop() {
     if (flags.club) {
+      if (isP9()) P9.drawHall(R9); else {
       drawClub();
       drawDancers();   // the crowd at the back: bar, speakers and fighters are all in front of it
+      }
       for (let vy = 0; vy < cam.vh; vy++) {
         const wy = vy + cam.y; if (wy < 0 || wy >= H) continue;
         const srow = wy * W + cam.x, row = vy * CW;
         for (let vx = 0; vx < cam.vw; vx++) { const c = GORE[srow + vx] || (wy < GROUND ? stat[srow + vx] : 0); if (c) buf[row + vx] = c; }
       }
-      drawClubFloor();
+      if (isP9()) P9.drawHallFloor(R9); else drawClubFloor();
       for (let vy = 0; vy < cam.vh; vy++) { const wy = vy + cam.y; if (wy < GROUND || wy >= H) continue; const srow = wy * W + cam.x, row = vy * CW; for (let vx = 0; vx < cam.vw; vx++) if (GORE[srow + vx]) buf[row + vx] = GORE[srow + vx]; }
+      if (isP9()) P9.drawHallProps(R9, { ph: enc.boss && !enc.boss.dead ? enc.boss.ph : 0, hz: p9.tuna });
       return;
     }
-    drawSky();
+    if (isP9()) P9.drawSky(R9); else drawSky();
     for (let vy = 0; vy < cam.vh; vy++) {
       const wy = vy + cam.y; if (wy < 0 || wy >= H) continue;
       const srow = wy * W + cam.x, row = vy * CW;
       for (let vx = 0; vx < cam.vw; vx++) { const c = GORE[srow + vx] || stat[srow + vx]; if (c) buf[row + vx] = c; }
     }
+    if (isP9()) P9.drawFront(R9, p9.shutter);
     glassMask.fill(0);
     drawHouseWindows();
     drawGlass();
@@ -1127,6 +1138,7 @@ import { gameAudio } from './audio/game.js';
   let crowdTossT = 4;
   const tossed = [];
   function crowdToss(dt) {
+    if (isP9()) return;
     if (!flags.club || !enc.boss || enc.boss.dead || !slamDone) return;
     if ((crowdTossT -= dt) > 0) return;
     crowdTossT = 6 + simRand() * 5;
@@ -1459,7 +1471,7 @@ import { gameAudio } from './audio/game.js';
   const GORE = new Uint32Array(W * H);   // blood stains painted onto the world
   const BLOOD = [C('#b3122a'), C('#7d0d1e'), C('#e02a3c')], BLOOD_D = C('#5a0a14'), STAIN_L = C('#6e3a42');   // STAIN_L: the faint trail a run of blood leaves
   const BCW = (W >> 4) + 1, BCAP = new Uint8Array(BCW * ((H >> 4) + 1));   // stains per 16-px cell on props: capped so a car does not turn into paint
-  const VEH = [[166, 278], [1124, 1240], [1436, 1536], [2006, 2120]], VCAP = new Uint8Array(VEH.length);   // the parked vehicles: at most 12 single dark pixels of blood on each
+  const VEH = [[166, 278], [1124, 1240], [1436, 1536], [2006, 2120]], VCAP = new Uint8Array(8);   // the parked vehicles: at most 12 single dark pixels of blood on each
   const vehAt = x => { for (let i = 0; i < VEH.length; i++) if (x >= VEH[i][0] && x <= VEH[i][1]) return i; return -1; };
   // blood that reaches the street smears down the wet stones and runs into the puddles, staining them red
   // blood in water puddles (per column); blood pooling on dry stones: a field over the street, row d (0 at the wall... STREET at the
@@ -1676,7 +1688,9 @@ import { gameAudio } from './audio/game.js';
   };
   let hudTarget = null, hudTargetT = 0;
   const BODY_MAX = 99;
-  function spawnEnemy(type, x, zone) {
+  const LOOK_X = { ...LOOK, ...P9.SALT_LOOKS };   // the street's outfits and Pier 9's Saltmen
+  // opts (Pier 9): { role, look, R: role overrides } for a Saltman; { boss: P9.MARCHETTI } for a level boss. The street passes none.
+  function spawnEnemy(type, x, zone, opts) {
     const T = ETYPE[type];
     const e = { type, ...T, x, y: GROUND - 2, vx: 0, vy: 0, air: false, face: x > P[2].x ? -1 : 1, hp: T.hp, maxHp: T.hp, zone,
       q: GUARD.slice(), phase: simRand(), act: null, actT: 0, cdT: (0.6 + simRand()) / DIF().A, hurtT: 0, flash: 0, hitBy: -1, struck: false, slammed: false,
@@ -1688,23 +1702,31 @@ import { gameAudio } from './audio/game.js';
       fkX: 0, fkV: 0, slide: 0, down: false, downT: 0, gu: null, pendH: null, pendAtk: -1 });
     // role and look: zone and spawn order pick the role, the role picks an outfit; build, colors and facial hair vary per goon
     const n = zone != null ? (zoneN[zone] = (zoneN[zone] || 0) + 1) - 1 : 0;
-    const role = type === 'boss' ? 'brawler' : zone === 'arena' ? (n < AROLES.length ? AROLES[n] : pick(AMIX)) : ZROLES[zone] ? ZROLES[zone][n % ZROLES[zone].length] : 'brawler';
-    const R = ROLE[role], lk = type === 'boss' ? LOOK.boss : LOOK[pick(R.looks)], B = BUILD[lk.build];
+    const role = opts && opts.role ? opts.role : type === 'boss' ? 'brawler' : zone === 'arena' ? (n < AROLES.length ? AROLES[n] : pick(AMIX)) : ZROLES[zone] ? ZROLES[zone][n % ZROLES[zone].length] : 'brawler';
+    const R = opts && opts.boss ? { ...ROLE.machete, ...opts.boss.R } : opts && opts.R ? { ...ROLE[role], ...opts.R } : ROLE[role];
+    const lk = opts && opts.boss ? LOOK_X[opts.boss.look] : opts && opts.look ? LOOK_X[opts.look] : type === 'boss' ? LOOK.boss : LOOK[pick(R.looks)], B = BUILD[lk.build];
     e.role = role; e.R = R; e.look = lk; e.bw = B.bw; e.hk = B.hk;
     e.hair = pick(lk.hair); e.beard = pick(lk.beards); e.scar = type === 'boss' || simRand() < 0.3; e.gloves = type === 'boss' || lk.top === 'coat' || simRand() < 0.25;
     const sk = type === 'boss' ? ['#a68a72', '#7a6250'] : pick(EPAL.skins), tc = pick(lk.cols), pc = pick(lk.pants), hc = type === 'boss' ? '#4a3020' : pick(EPAL.hair);
     e.pal = { skin: C(sk[0]), skinB: C(sk[1]), top: C(tc[0]), topB: C(tc[1]), pants: C(pc), pantsB: eShade(C(pc), 0.72),
-      hair: C(hc), loud: C(pick(EPAL.loud)), shoe: C(EPAL.shoe), glove: C(EPAL.glove), belt: type === 'boss' ? C('#e8b43a') : C('#2a2228') };
+      hair: C(hc), loud: C(pick(EPAL.loud)), shoe: C(lk.boots || EPAL.shoe), glove: C(EPAL.glove), belt: type === 'boss' ? C('#e8b43a') : C('#2a2228') };
+    if (lk.hat) { e.pal.hat = C(lk.hat); e.pal.hatB = eShade(e.pal.hat, 0.72); }
+    if (lk.apron) e.pal.apron = C(lk.apron);
     if (type === 'goon') {
       if (zone === 'arena') e.agg = Math.min(1, e.agg * 0.7 + n * 0.04);   // later arena help is bolder
       Object.assign(e, { reach: R.reach * B.s, dmg: R.dmg, heavyDmg: R.heavyDmg, windup: R.windup, hp: Math.round(R.hp * B.hp), s: B.s });
       e.maxHp = e.hp; e.speed = T.speed * B.spd * (0.9 + 0.25 * e.agg); e.stance = e.reach + (16 + 16 * (1 - e.agg)) / (1 + 0.6 * dLv());
     } else e.s = B.s;
+    if (opts && opts.boss) {   // a level boss: its own stats (hp by difficulty), size and name
+      const Bd = opts.boss;
+      Object.assign(e, { hp: Bd.hp[diffSel], maxHp: Bd.hp[diffSel], s: Bd.s, m: Bd.m, speed: Bd.speed, reach: Bd.reach, dmg: Bd.dmg, heavyDmg: Bd.heavyDmg, poise: Bd.poise,
+        windup: Bd.windup, cd: Bd.cd.slice(), kind: 'marchetti', hookCd: 3.5, hook: null });
+    }
     e.cons = CONSTRAINTS.map(([a, b, lo, hi]) => [a, b, lo * e.s, hi * e.s]);
     poseEnemy(e, 0);
     enemies.push(e);
     if (zone != null) zoneAlive[zone] = (zoneAlive[zone] || 0) + 1;
-    e.name = type === 'boss' ? BOSS_NAME : gangName();
+    e.name = opts && opts.boss ? opts.boss.name : type === 'boss' ? BOSS_NAME : gangName();
     if (typeof zone === 'number' && zone >= 3) { const k = 1 + 0.15 * (zone - 2); e.dmg = Math.round(e.dmg * k); e.heavyDmg = Math.round(e.heavyDmg * k); }   // later stages hit harder: a ramp up to the boss
     emit('spawn', { enemy: e, type, source: zone, x });
     return e;
@@ -2112,7 +2134,7 @@ import { gameAudio } from './audio/game.js';
     if (adx < e.reach + 1 && level && !ctl.air && hero.mode === 'anim' && (cornered || e.cdT <= 0)) {   // pressed close: a pistol-whip or an elbow
       e.combo = CMB[0]; e.ci = 0; eStart(e, 'jab', e.windup); return;
     }
-    if (e.cdT <= 0 && enc.eShotN < (DIF().A >= 4 ? 2 : 1) && dyl < 34 && adx > 28 && adx < 175 && hero.mode === 'anim') {
+    if (e.cdT <= 0 && enc.eShotN < (DIF().A >= 4 ? 2 : 1) && dyl < (e.perch > 0 ? 200 : 34) && adx > 28 && adx < 175 && hero.mode === 'anim') {
       enc.eShotN++; e.combo = null; e.ci = 0; eStart(e, e.R.w === 'pistol' ? 'shoot' : 'throw', e.R.aim); if (e.R.w === 'pistol') e.mark = e.R.aim;   // (no tell for a knife throw) e.ay = P[1].y + 1;
     }
   }
@@ -2122,7 +2144,8 @@ import { gameAudio } from './audio/game.js';
     if (e.act === 'shoot') {
       const mx = h.x + dir * 4 * e.s, my = h.y, sp = 230;
       emit('shot', { by: 'enemy', enemy: e, w: 'pistol', x: mx, y: my, dir, pellets: 1, auto: false });
-      eshots.push({ k: 'b', x: mx, y: my, px: mx, py: my, vx: dir * sp, vy: clamp((e.ay - my) / (d / sp), -50, 50), life: 1, dmg: e.R.shot, t: 0 });
+      const vl = e.perch > 0 ? 260 : 50;   // (a Pier 9 shooter up on a container fires down at him)
+      eshots.push({ k: 'b', x: mx, y: my, px: mx, py: my, vx: dir * sp, vy: clamp((e.ay - my) / (d / sp), -vl, vl), life: 1, dmg: e.R.shot, t: 0 });
       e.muz = 0.07; dust(mx, my, 1); if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.03);
     } else {
       const T = clamp(d / 170, 0.3, 0.75), ty = P[1].y + 5, g = 260;
@@ -2173,8 +2196,79 @@ import { gameAudio } from './audio/game.js';
       e.ci = 0; eStart(e, e.combo[0], e.windup);
     }
   }
+  // Sal Marchetti (Pier 9): cleaver strings and a meat hook on a chain that pulls the hero in for a free chop; at half health he roars,
+  // speeds up, and the hall's conveyor starts swinging frozen tuna across the arena (p9Step), while his crew comes in.
+  // Telegraphs scale with the difficulty: t / A^0.25.
+  let hookPull = false;   // the hook has the hero: no input until the pull lands
+  function marchettiThink(e, dt, px, dx, adx, level, aggro) {
+    const M = P9.MARCHETTI, dir = Math.sign(dx) || 1, A = DIF().A;
+    e.tx = null; e.run = 1;
+    if (e.stunT > 0) e.stunT -= dt;
+    if (e.recT > 0) { e.recT -= dt; if (simRand() < dt * 5) particles.push({ x: e.J[0].x + e.face * 4, y: e.J[0].y, vx: e.face * 15, vy: -40, life: 0.5, c: EFX.sweat }); return; }
+    if (simRand() < dt * (e.ph === 2 ? 5 : 1.5)) particles.push({ x: e.J[0].x + e.face * 5, y: e.J[0].y + 1, vx: e.face * 14, vy: -18, life: 0.45, c: EFX.steam });   // breath in the cold
+    if (!aggro || e.sp || e.act || e.hurtT > 0 || e.air) return;
+    if (e.ph === 1 && e.hp < e.maxHp * M.ph2.below) {   // phase 2: a roar, then faster, and the conveyor swings
+      e.ph = 2; e.sp = 'roar'; e.spT = 0; e.speed = M.ph2.speed; e.cd = M.ph2.cd.slice(); e.windup = M.ph2.windup; e.mark = 1; e.hookCd = Math.min(e.hookCd, 3);
+      emit('boss:phase', { boss: e, phase: 2 }); emit('boss:telegraph', { boss: e, move: 'roar', t: 0.25, x: e.x });
+      bark(e, "Market's closing, Sandman! Everything must go!");
+      return;
+    }
+    e.hookCd -= dt;
+    if (e.hookCd <= 0 && level && hero.mode === 'anim' && !ctl.air && adx > 45 && adx < M.hook.range[diffSel]) {   // the meat hook: the chain spins, a red line on the floor, then it flies
+      e.hookCd = (M.hook.cd[0] + simRand() * (M.hook.cd[1] - M.hook.cd[0])) * (e.ph === 2 ? 0.75 : 1);
+      e.sp = 'hook'; e.spT = -M.hook.windup / A ** 0.25; e.face = dir; e.hook = null; e.hookTx = px; e.mark = -e.spT;
+      emit('boss:telegraph', { boss: e, move: 'hook', t: -e.spT, x: e.x, mark: px });
+      return;
+    }
+    if (adx > e.reach + 1) { e.tx = px - dir * e.reach * 0.65; return; }
+    e.face = dir;
+    if (level && !ctl.air && hero.mode === 'anim' && (e.cdT -= dt) <= 0) {
+      const r = simRand(), Cb = M.combos;
+      e.combo = e.ph === 2 ? Cb[r < 0.3 ? 3 : r < 0.55 ? 1 : r < 0.8 ? 2 : 0] : Cb[r < 0.4 ? 0 : r < 0.7 ? 2 : r < 0.88 ? 1 : 3];
+      e.ci = 0; eStart(e, e.combo[0], e.windup);
+    }
+  }
+  function hookStep(e, dt, px) {   // the hook in flight, the pull, the reel-in after a miss (a 1.2 s punish window)
+    const M = P9.MARCHETTI.hook;
+    if (e.spT < 0) { if (e.spT < -0.2) { e.face = Math.sign(px - e.x) || e.face; e.hookTx = px; } return; }
+    if (!e.hook) { e.hook = { x: e.x + e.face * 8 * e.s, y: GROUND - 24, st: 'fly', d: 0 }; emit('sfx', { name: 'dodge_whoosh', x: e.x, vol: 0.8, pitch: 0.6 }); }
+    const k = e.hook;
+    if (k.st === 'fly') {
+      k.x += e.face * M.v * dt; k.d += M.v * dt;
+      if (hitsPlayer(k.x, k.y, 2) || hitsPlayer(k.x, k.y - 8, 2)) {
+        k.st = 'pull'; hookPull = true; hero.act = null; queued = null; ctl.spd = 0;
+        sparks.push({ x: k.x, y: k.y, t: 0 }); shakeIt(0.15, 2); bark(e, 'On the scale!');
+        emit('hit', { by: 'enemy', target: 'hero', x: k.x, y: k.y, dir: -e.face, power: 0.6, force: 120, dmg: 0, blade: false, weapon: 0, isBoss: true });
+      } else if (k.d > M.range[diffSel] || k.x < 2442 || k.x > W - 10) k.st = 'back';
+    } else if (k.st === 'pull') {
+      const tx = e.x + e.face * 24, d = tx - ctl.x;
+      if (hero.mode !== 'anim') { k.st = 'back'; hookPull = false; }
+      else if (Math.abs(d) < 3) {   // landed at his feet: a free heavy chop, unless he rolls away in time
+        hookPull = false; e.sp = null; e.hook = null; e.face = Math.sign(ctl.x - e.x) || e.face;
+        e.combo = ['hchop']; e.ci = 0; eStart(e, 'hchop', 0.3 / DIF().A ** 0.25);
+      } else { ctl.x += Math.sign(d) * Math.min(Math.abs(d), M.pull * dt); ctl.spd = 0; ctl.face = -e.face; k.x = ctl.x - e.face * 3; }
+    } else {
+      const d = e.x - k.x;
+      if (Math.abs(d) < 8) { e.sp = null; e.hook = null; e.recT = 1.2; }
+      else k.x += Math.sign(d) * 260 * dt;
+    }
+  }
+  function drawHookMarks(e, J) {   // the hook spinning in his hand, the red line on the floor, the chain out to the hook
+    const h = J[4], chain = C('#5a5a66'), steel = ECOL.steel;
+    if (e.sp === 'hook' && e.spT < 0) {
+      const a = simTime * 18, hx = h.x + Math.cos(a) * 5 * e.s, hyy = h.y - 4 + Math.sin(a) * 5 * e.s;
+      line1(h.x, h.y, hx, hyy, chain); plot(Math.floor(hx), Math.floor(hyy), steel); plot(Math.floor(hx) + 1, Math.floor(hyy), steel);
+      if (Math.floor(simTime * 12) % 2) for (let x = Math.min(e.x, e.hookTx); x <= Math.max(e.x, e.hookTx); x += 4) { plot(Math.floor(x), GROUND - 1, BLOOD[2]); plot(Math.floor(x) + 1, GROUND - 1, BLOOD[2]); }
+    }
+    if (e.hook) {
+      const k = e.hook; line1(h.x, h.y, k.x, k.y, chain);
+      const f = e.face * (k.st === 'back' ? -1 : 1);
+      plot(Math.floor(k.x), Math.floor(k.y), steel); plot(Math.floor(k.x + f), Math.floor(k.y), steel); plot(Math.floor(k.x + f * 2), Math.floor(k.y + 1), steel); plot(Math.floor(k.x + f * 2), Math.floor(k.y + 2), steel); plot(Math.floor(k.x + f), Math.floor(k.y + 3), steel);
+    }
+  }
   // committed big moves; runs before the body moves (the charge sets its own speed)
   function bossSpecial(e, dt, px) {
+    if (e.sp === 'hook') { hookStep(e, dt, px); return; }
     const t0 = e.spT; e.spT += dt;
     if (e.sp === 'roar') {
       if (t0 < 0.25 && e.spT >= 0.25) { if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.4); waves.push({ x: e.x, y: e.y + 1, t: 0 }); dust(e.x - 8, e.y + 1, 6); dust(e.x + 8, e.y + 1, 6); }
@@ -2205,7 +2299,7 @@ import { gameAudio } from './audio/game.js';
   }
   function enemyStep(dt) {
     if (hero.invT > 0) hero.invT -= dt;
-    if (enc.boss && !enc.boss.dead && enc.arena && enc.arenaSpawned < 10 && (enc.spawnT -= dt) <= 0) {   // the boss calls in his crew: one every 3 s (4.5 s once enraged), 10 in all
+    if (!isP9() && enc.boss && !enc.boss.dead && enc.arena && enc.arenaSpawned < 10 && (enc.spawnT -= dt) <= 0) {   // the boss calls in his crew: one every 3 s (4.5 s once enraged), 10 in all
       enc.spawnT = enc.boss.ph > 1 ? 4.5 : 3;
       if (enemies.filter(g => !g.dead && g.zone === 'arena').length < 4) {
         enc.arenaSpawned++;
@@ -2233,9 +2327,10 @@ import { gameAudio } from './audio/game.js';
       if (e.muz > 0) e.muz -= dt;
       if (e.down) { eDownStep(e, dt); continue; }
       const dx = px - e.x, adx = Math.abs(dx), dy = Math.abs(P[2].y - (e.y - 16 * e.s));
-      const aggro = adx < 200 && dy < 80 * e.s && hero.mode !== 'getup', level = Math.abs(py - e.y) < 14;
+      const aggro = adx < 200 && dy < (e.perch > 0 ? 200 : 80) * e.s && hero.mode !== 'getup', level = Math.abs(py - e.y) < 14;
       e.fight = aggro && adx < 60 * e.s && !e.intro;
       if (e.intro) { e.act = null; e.sp = null; e.tx = e.introX; e.run = 0.5; e.cdT = Math.max(e.cdT, 0.8); if (Math.abs(e.introX - e.x) <= 3) e.face = -1; }   // the entrance: a slow walk to his mark under the spot, nothing else
+      else if (e.kind === 'marchetti') marchettiThink(e, dt, px, dx, adx, level, aggro);
       else if (e.type === 'boss') bossThink(e, dt, px, dx, adx, level, aggro); else goonThink(e, dt, px, dx, adx, level, aggro, pm);
       if (!e.air) {
         if (e.crouchT > 0) { e.vx *= 0.7; if ((e.crouchT -= dt) <= 0) eHop(e, e.jvx, e.jvy); }
@@ -2302,7 +2397,7 @@ import { gameAudio } from './audio/game.js';
           const dl = Math.abs(P[2].x - e.x);
           if (e.combo && ++e.ci < e.combo.length && hero.mode === 'anim' && dl < e.reach + 10 && Math.abs(py - e.y) < 14) eStart(e, e.combo[e.ci], e.type === 'boss' ? 0.2 : 0.08);   // the string goes on
           else {
-            if (e.type === 'boss') { e.combo = null; if (was === 'slam') e.recT = 0.6; e.cdT = (e.cd[0] + simRand() * (e.cd[1] - e.cd[0])) / Math.sqrt(DIF().A); }   // (the boss: half the steps, his moves are big)
+            if (e.type === 'boss') { e.combo = null; if (was === 'slam' || (was === 'hchop' && e.kind === 'marchetti')) e.recT = 0.6; e.cdT = (e.cd[0] + simRand() * (e.cd[1] - e.cd[0])) / Math.sqrt(DIF().A); }   // (the boss: half the steps, his moves are big)
             else eRelease(e, (e.R.ranged ? 1.4 + simRand() * 1.2 : (e.cd[0] + simRand() * (e.cd[1] - e.cd[0])) * (1.3 - 0.6 * e.agg)) / DIF().A);
           }
         }
@@ -2323,6 +2418,10 @@ import { gameAudio } from './audio/game.js';
     if (Math.abs(fw) > HW || up > HU || up < -HD) {   // outside the box: mohawk, cap brim, hood, beard below the jaw, handlebar ends
       if (hair === 'mohawk' && up > HU && up <= HU + 2.4 * k && fw > -2.6 * k && fw < k) return p.loud;
       if (hair === 'cap' && fw > HW && fw <= HW + 2.2 * k && up > 1.4 * k && up <= 2.4 * k) return p.topB;
+      if (hair === 'souwester') {   // a sou'wester: a wide brim all round, a long flap down the back of the neck
+        if (up > 1.5 * k && up <= 2.5 * k && Math.abs(fw) <= HW + 1.8 * k) return p.hatB;
+        if (fw < -HW && fw >= -HW - 1.4 * k && up > -2 * k && up <= 2.5 * k) return p.hat;
+      }
       if (hair === 'hood' && fw < -HW && fw >= -HW - k && up > -k && up < HU - 0.5 * k) return p.top;
       if (bd === 'huge' && up < -HD && up >= -HD - 3.4 * k && fw > -1.6 * k && fw <= HW + 0.5 - (-up - HD) * 0.45) return p.hair;
       if (bd === 'full' && up < -HD && up >= -HD - 1.2 * k && fw > -0.6 * k && fw < HW - 0.4 * k) return p.hair;
@@ -2332,6 +2431,7 @@ import { gameAudio } from './audio/game.js';
     if (hair === 'hood') { if (up > 1.8 * k || fw < -0.4 * k) return fw > -0.4 * k && fw < 0.8 * k && up < HU - 0.8 * k ? p.topB : p.top; }   // the rim shades the face
     else if (hair === 'cap') { if (up > 2.3 * k) return up < 3 * k ? p.topB : p.top; if (fw < -1.4 * k && up > 0.5 * k) return p.hair; }
     else if (hair === 'short') { if (up > 2.6 * k - Math.max(0, -fw) * 0.6 || fw < -1.4 * k || (fw < 0.4 * k && up > 1.2 * k)) return p.hair; }
+    else if (hair === 'souwester') { if (up > 2.0 * k) return up < 2.6 * k ? p.hatB : p.hat; if (fw < -1.4 * k && up > 0) return p.hair; }
     else if (hair === 'mohawk') { if (up > HU - k && fw > -2.6 * k && fw < k) return p.loud; if (fw < -1.4 * k && up > 0 && par) return p.skinB; }   // shaved sides
     const mouth = fw > 1.4 * k && up > -2.1 * k && up < -1.5 * k;
     switch (bd) {   // facial hair: full, huge, goatee, chin strap, big mustache, stubble
@@ -2372,6 +2472,15 @@ import { gameAudio } from './audio/game.js';
       const hx = g.x + g.dx * 2.5 * s, hy = g.y + g.dy * 2.5 * s;
       seg(g.x, g.y, g.tx, g.ty, 1.4 * s, O); seg(hx, hy, g.tx, g.ty, 2.0 * s, O);
       seg(g.x, g.y, hx, hy, 0.6 * s, c(ECOL.grip)); seg(hx, hy, g.tx, g.ty, 1.1 * s, c(ECOL.steelD)); line1(hx, hy, g.tx, g.ty, c(ECOL.steel));
+    } else if (w === 'gaff') {   // a long wooden pole with a steel hook at the end
+      seg(g.x - g.dx * 3 * s, g.y - g.dy * 3 * s, g.tx, g.ty, 1.2 * s, O); line1(g.x - g.dx * 3 * s, g.y - g.dy * 3 * s, g.tx, g.ty, c(PAL.wood));
+      const hx = g.tx - g.dy * e.face * 2.5 * s, hy = g.ty + g.dx * e.face * 2.5 * s;
+      line1(g.tx, g.ty, g.tx + g.dx * 2 * s, g.ty + g.dy * 2 * s, c(ECOL.steel)); line1(g.tx + g.dx * 2 * s, g.ty + g.dy * 2 * s, hx, hy, c(ECOL.steel)); plot(Math.floor(hx), Math.floor(hy), O);
+    } else if (w === 'cleaver') {   // a heavy square cleaver: a short grip, a deep blade
+      const hx = g.x + g.dx * 2.5 * s, hy = g.y + g.dy * 2.5 * s, ox = -g.dy * e.face * 1.4 * s, oy = g.dx * e.face * 1.4 * s;
+      seg(g.x, g.y, hx, hy, 1.2 * s, O); seg(g.x, g.y, hx, hy, 0.6 * s, c(ECOL.grip));
+      seg(hx + ox, hy + oy, g.tx + ox, g.ty + oy, 2.4 * s, O); seg(hx + ox, hy + oy, g.tx + ox, g.ty + oy, 1.6 * s, c(ECOL.steelD));
+      line1(hx + ox * 2, hy + oy * 2, g.tx + ox * 2, g.ty + oy * 2, c(ECOL.steel));
     } else { seg(g.x, g.y, g.tx, g.ty, 1.2 * s, O); line1(g.x, g.y, g.tx, g.ty, c(ECOL.steel)); }   // knife
   }
   function drawEnemy(e) {
@@ -2382,7 +2491,7 @@ import { gameAudio } from './audio/game.js';
     const leg = (h, k, ft, c) => {
       const [dx, dy] = norm(ft.x - k.x, ft.y - k.y), tx = ft.x + dy * 2.5 * s * f + dx * 0.5, ty = ft.y - dx * 2.5 * s * f + dy * 0.5;
       seg(h.x, h.y, k.x, k.y, 2.5 * s * lw, O); seg(k.x, k.y, ft.x, ft.y, 2.5 * s * lw, O); seg(ft.x, ft.y, tx, ty, 2.5 * s, O);
-      seg(h.x, h.y, k.x, k.y, 1.5 * s * lw, col(c)); seg(k.x, k.y, ft.x, ft.y, 1.5 * s * lw, col(c)); seg(ft.x, ft.y, tx, ty, 1.5 * s, col(pal.shoe));
+      seg(h.x, h.y, k.x, k.y, 1.5 * s * lw, col(c)); seg(k.x, k.y, ft.x, ft.y, 1.5 * s * lw, col(e.look.boots ? pal.shoe : c)); seg(ft.x, ft.y, tx, ty, 1.5 * s, col(pal.shoe));   // (rubber boots to the knee)
     };
     const arm = (sh, el, h, cu, cl, ch) => {
       seg(sh.x, sh.y, el.x, el.y, 2.2 * s * bw, O); seg(el.x, el.y, h.x, h.y, 2.2 * s * Math.min(bw, 1.3), O);
@@ -2408,6 +2517,12 @@ import { gameAudio } from './audio/game.js';
       if (e.role === 'thrower') for (let i = 1; i <= 3; i++) plot(Math.floor(nk.x + (mx - nk.x) * i / 4 + nx * (1.5 - i) * s), Math.floor(nk.y + (my - nk.y) * i / 4), ECOL.steel);   // knives on the chest strap
     }
     leg(pl, kF, fF, pal.pants); if (top === 'coat') tail(kF, pal.top);
+    if (pal.apron) {   // a rubber apron from the chest to the knees, with old stains
+      const ax = (kB.x + kF.x) / 2, ay = (kB.y + kF.y) / 2, sx0 = nk.x + (pl.x - nk.x) * 0.3, sy0 = nk.y + (pl.y - nk.y) * 0.3, bx = pl.x + (ax - pl.x) * 0.8, by = pl.y + (ay - pl.y) * 0.8;
+      seg(sx0, sy0, bx, by, tw * 0.95 + 0.6, O); seg(sx0, sy0, bx, by, tw * 0.95 - 0.4, pal.apron);
+      plot(Math.floor(pl.x + nx), Math.floor(pl.y - 1), BLOOD[1]); plot(Math.floor((sx0 + pl.x) / 2), Math.floor((sy0 + pl.y) / 2), BLOOD_D);
+    }
+    if (e.look.neck) for (let i = -1; i <= 1; i++) plot(Math.floor(nk.x + nx * 1.2 * s + i), Math.floor(nk.y + 2 * s - Math.abs(i) * 0.5), Math.floor(simTime * 2 + i) % 5 === 0 ? PAL.white : PAL.gold);   // the gold fish-scale chain glints
     const [ex, ey] = eHead(e, hd, nk, f, fl);
     if (e.dead) { plot(ex, ey, O); plot(ex - 1, ey - 1, O); plot(ex + 1, ey + 1, O); plot(ex + 1, ey - 1, O); plot(ex - 1, ey + 1, O); }
     else {
@@ -2437,6 +2552,7 @@ import { gameAudio } from './audio/game.js';
       const gy = GROUND - 1, sp = e.spT < -0.2 ? 10 : 7;
       if (blink || e.leapt) for (const k of [-2, -1, 1, 2]) { plot(Math.floor(e.jx + k * sp), gy, BLOOD[2]); plot(Math.floor(e.jx + k * sp) + 1, gy, BLOOD[2]); }
     }
+    if (e.kind === 'marchetti') drawHookMarks(e, J);
     if (e.stunT > 0) for (let k = 0; k < 3; k++) {   // dizzy stars after a charge into the wall
       const a = simTime * 6 + k * 2.1;
       plot(Math.floor(hd.x + Math.cos(a) * 7 * s), Math.floor(hd.y - r - 3 + Math.sin(a) * 2), PAL.accent);
@@ -3421,6 +3537,7 @@ import { gameAudio } from './audio/game.js';
     else animStep(dt);
     objStep(dt);
     enemyStep(dt);
+    if (isP9()) p9Step(dt);
     bulletStep(dt);
     bHit.cd -= dt;
     if (bHit.n) {   // [feel] bullets that land: a short freeze (longer for a shotgun blast), a spark and a kick along the shot
@@ -3495,7 +3612,7 @@ import { gameAudio } from './audio/game.js';
     });
   }
   function reset() {
-    if (!flags.attract) gameAudio.playMusic('docks_explore', { volume: 0.45 });   // a game: the calm street track, low (the title screen plays the title theme)
+    if (!flags.attract) gameAudio.playMusic('docks_explore', { volume: isP9() ? 0.6 : 0.45 });   // a game: the calm street track, low (the title screen plays the title theme)
     if (openT >= 0) endOpening();
     endPh = null; endT = 0; endCam = null; dog = null; ctl.bottle = false; jumpEnd = false;
     releaseGrab();
@@ -3510,6 +3627,7 @@ import { gameAudio } from './audio/game.js';
     flags.club = false; clubT = 0; fade = 0; fadeDir = 0; slamDone = false;
     cam.xf = START_X - 80; cam.yf = GROUND - 60; cam.v.x = cam.v.y = cam.v.z = 0; cam.zoom = 1;   // [feel] a restart cuts to the start, it does not fly the camera back
     resetTutorial();
+    if (isP9()) p9Reset();
   }
 
   // ---------- tutorial: zones, lessons, weapon pickups ----------
@@ -3558,10 +3676,10 @@ import { gameAudio } from './audio/game.js';
   });
   bus.on('ko', p => { if (!p.perma) toast('K.O.', 'You get back up with full health'); });
   bus.on('kill', p => { if (!p.isBoss) { kills.push({ name: p.enemy.name, w: p.weapon, t: simTime }); feedDirty = true; } });
-  bus.on('boss:defeated', () => toast('Boss defeated', 'Club Noir is yours. The street is yours.'));
-  bus.on('boss:intro', () => gameAudio.playMusic('docks_explore', { volume: 0.85 }));   // the same track, up (boss_marchetti is Level 1's)
+  bus.on('boss:defeated', () => isP9() ? toast('Marchetti is down', 'The collector has been collected.') : toast('Boss defeated', 'Club Noir is yours. The street is yours.'));
+  bus.on('boss:intro', () => isP9() ? gameAudio.playMusic('boss_marchetti', { volume: 0.85 }) : gameAudio.playMusic('docks_explore', { volume: 0.85 }));   // the street: the same track, up
   bus.on('run:over', p => { if (p.result === 'wasted') gameAudio.stopMusic(2); });
-  bus.on('boss:phase', p => { if (p.phase === 2) toast('Boss enraged', 'Watch for the charge. Jump the shockwave of his slam. Punish the recovery.'); });
+  bus.on('boss:phase', p => { if (p.phase === 2 && isP9()) toast('Market close', 'The conveyor swings frozen tuna: watch the red lamp, then duck or roll under it.'); else if (p.phase === 2) toast('Boss enraged', 'Watch for the charge. Jump the shockwave of his slam. Punish the recovery.'); });
   // the gate: a stage's lessons must all be done before the street opens on to the next one (the demo walks free).
   // A lesson that cannot be done any more is made possible again: a sparring goon when the stage's goons are down,
   // a fresh crate, stack, bin, can or bottle when the stage has none left.
@@ -3661,7 +3779,7 @@ import { gameAudio } from './audio/game.js';
     if (hero.mode !== 'rag') runS.down = false;
     if (hero.mode === 'getup' && runS.prevMode !== 'getup' && runS.koUp) { runS.koUp = false; secondWind(); }
     runS.prevMode = hero.mode;
-    if (enc.bossBeaten && endPh === null && !flags.wasted) { endPh = 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card (not after a Wicked K.O.)
+    if (enc.bossBeaten && endPh === null && !flags.wasted) { endPh = isP9() ? 'p9wait' : 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card (not after a Wicked K.O.)
     if (enc.bossBeaten && runS.endT < 0 && endPh === 'done' && !flags.wasted) runS.endT = 0.4;
     if (runS.endT > 0 && (runS.endT -= rdt) <= 0) showResults();
   }
@@ -3672,6 +3790,7 @@ import { gameAudio } from './audio/game.js';
       if (toastQ.length) { const [a, b] = toastQ.shift(); toast(a, b); }
     }
     runTick(rdt);
+    if (isP9()) { p9Tick(rdt); return; }
     if (hero.mode === 'anim') {
       if (ctl.spd > 5 && ctl.spd < WALK + 6) emit('feat', 'walk');
       if (ctl.spd > WALK + 20 && !ctl.air) emit('feat', 'run');
@@ -4414,9 +4533,10 @@ import { gameAudio } from './audio/game.js';
     if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     cam.xf = CLUB_X; cam.yf = GROUND - 120; cam.v.x = cam.v.y = cam.v.z = 0;
     rain.drops.length = 0; rain.splash.length = 0;
-    emit('section:enter', { from: 'street', to: 'club' });
+    emit('section:enter', isP9() ? { from: 'bay', to: 'hall' } : { from: 'street', to: 'club' });
   }
   function clubTick(rdt) {
+    if (isP9() && !flags.club && fadeDir === 0 && hero.mode === 'anim' && p9.shutter >= 1 && !ctl.air && ctl.x >= P9.MARKET.shutter[0] + 26) fadeDir = 1;   // through the open shutter into the hall
     if (!flags.club && fadeDir === 0 && hero.mode === 'anim' && ctl.surf === GOAL && !ctl.air && ctl.x >= KIOSK_X - 4 && (flags.demo || stageDone(ZONES.length - 2))) { fadeDir = 1; emit('feat', 'enter'); }   // walk through the side door (once stage 7 is done)
     if (fadeDir === 1) { input.dir = 1; if ((fade += rdt * 2.2) >= 1) { fade = 1; enterClub(); fadeDir = -1; } }
     else if (fadeDir === -1 && (fade -= rdt * 1.6) <= 0) { fade = 0; fadeDir = 0; }
@@ -4428,7 +4548,8 @@ import { gameAudio } from './audio/game.js';
       }
       if (enc.introT >= 0) {   // the entrance, 1.7 s: spot and walk, the name card at 0.5 s, the boss bar fills from 0.7 s, then the fight
         enc.introT += rdt;
-        if (enc.introT > 0.5 && cardT <= 0 && cardEl.hidden) { cardEl.innerHTML = `<b>${BOSS_NAME}</b><small>Owner of Club Noir</small>`; cardEl.hidden = false; cardT = 3.2; toastEl.hidden = true; toastT = 0; }
+        if (enc.introT > 0.5 && cardT <= 0 && cardEl.hidden) { cardEl.innerHTML = isP9() ? `<b>${P9.MARCHETTI.name}</b><small>${P9.MARCHETTI.title}</small>` : `<b>${BOSS_NAME}</b><small>Owner of Club Noir</small>`; cardEl.hidden = false; cardT = 3.2; toastEl.hidden = true; toastT = 0; }
+        if (isP9() && enc.introT > 1.2 && !p9.bossDlg) { p9.bossDlg = true; cardEl.hidden = true; cardT = 0; playScene('dialog', 'marchetti_intro'); }   // the portrait dialog, then the fight
         bossBarK = clamp((enc.introT - 0.7) / 1, 0, 1);
         if (enc.introT >= 1.7 || !enc.boss || enc.boss.dead) {
           enc.introT = -1; bossBarK = 1; enc.spawnT = 3;
@@ -4462,6 +4583,12 @@ import { gameAudio } from './audio/game.js';
   }
   function drawDoor() {
     if (!flags.club) return;
+    if (isP9()) {   // the market's shutter, seen from the hall: it rolls down behind him
+      const k = clamp((clubT - 0.45) / 0.3, 0, 1), y1 = GROUND - 50 + Math.round(50 * k);
+      for (let y = GROUND - 50; y < GROUND; y++) for (let x = DOOR_X - 12; x < DOOR_X; x++) plot(x, y, y < y1 ? ((y - (GROUND - 50)) % 3 === 0 ? C('#4e4a46') : C('#76706a')) : x === DOOR_X - 12 ? PAL.out : C('#8a8c92'));
+      for (let x = DOOR_X - 14; x <= DOOR_X + 1; x++) plot(x, GROUND - 52, C('#3a3c44'));
+      return;
+    }
     const k = clamp((clubT - 0.45) / 0.3, 0, 1), w = Math.round(2 + 10 * k * k);   // the panel swings shut toward us
     for (let y = GROUND - 36; y < GROUND; y++) for (let x = DOOR_X - 10; x < DOOR_X; x++) plot(x, y, x === DOOR_X - 10 ? PAL.out : C('#120c18'));   // the dark doorway
     for (let y = GROUND - 36; y < GROUND; y++) for (let x = DOOR_X - w; x < DOOR_X; x++)
@@ -4477,6 +4604,7 @@ import { gameAudio } from './audio/game.js';
   };
   const SIGN = { x0: 2176, x1: 2330, y0: GOAL.y - 100, y1: GOAL.y - 60 };   // 2.7 m clear above the roof: the hero walks under it
   function drawSign() {
+    if (isP9()) return;
     if (flags.club || cam.x > SIGN.x1 + 40 || cam.x + cam.vw < SIGN.x0 - 40) return;
     const t = simTime, { x0, x1, y0, y1 } = SIGN;
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) plot(x, y, x === x0 || x === x1 || y === y0 || y === y1 ? PAL.out : x === x0 + 1 || x === x1 - 1 || y === y0 + 1 || y === y1 - 1 ? C('#3a3a48') : C('#160d1c'));
@@ -4507,6 +4635,7 @@ import { gameAudio } from './audio/game.js';
   // at the foot of the fire escape: a blade sign (a neon cocktail over NOIR) hangs off the corner of the club, and three chevrons on the wall climb toward the roof
   const BLADE = { x0: 2163, x1: 2179, y0: 116, y1: 194 }, CHEV_X = STAIR_X0 + 10;
   function drawStairSign() {
+    if (isP9()) return;
     if (flags.club || cam.x > STAIR_X0 + 60 || cam.x + cam.vw < BLADE.x0 - 20) return;
     const t = simTime, { x0, x1, y0, y1 } = BLADE, iron = C('#2a2a34'), ironL = C('#4a4a58');
     // two iron arms hold the blade off the wall
@@ -4553,6 +4682,7 @@ import { gameAudio } from './audio/game.js';
     flush(); return out;
   })();
   function drawStairRails() {
+    if (isP9()) return;
     if (flags.club || cam.x > STAIR_X1 + 20 || cam.x + cam.vw < STAIR_X0 - 20) return;
     const top = C('#7c7c96'), post = C('#34343f');
     for (const [ax, ay, bx, by, run] of RAILSEG) {
@@ -4657,6 +4787,7 @@ import { gameAudio } from './audio/game.js';
   // ---------- night lighting, wet street reflections and rain ----------
   const rain = { k: 0, goal: 0, t: 14, drops: [], splash: [], rip: [], flash: 0 };
   function weatherStep(dt) {
+    if (isP9()) { sleetStep(dt); return; }
     if ((rain.t -= dt) <= 0) { rain.goal = rain.goal ? 0 : 0.6 + simRand() * 0.4; rain.t = rain.goal ? 25 + simRand() * 25 : 30 + simRand() * 40; }
     rain.k += (rain.goal - rain.k) * (1 - Math.exp(-0.4 * dt));
     if (rain.flash > 0) rain.flash -= dt;
@@ -4704,6 +4835,7 @@ import { gameAudio } from './audio/game.js';
   }
   // the scene's light: an ambient tint, and pools [x, y (view), radius², r, g, b weights, glow] from lamps, lit windows, signs, club spots
   function lightList() {
+    if (isP9()) return p9Lights();
     const strobe = flags.club && !reduceMotion && enc.boss && !enc.boss.dead && enc.introT < 0 && (simTime * 6 % 1) < 0.12 && Math.floor(simTime * 6) % 4 === 0 ? 1.7 : 1;
     const cut = flags.club && enc.introT >= 0 ? 1 - 0.72 * clamp(enc.introT / 0.25, 0, 1) : 1;   // the entrance: the house lights drop to a quarter
     const fl = flags.club ? strobe : rain.flash > 0 ? 1 + Math.max(0, Math.sin(rain.flash * 40)) * 0.9 * (rain.flash / 0.3) : 1, dim = flags.club ? cut : 1 - rain.k * 0.12;
@@ -4726,12 +4858,13 @@ import { gameAudio } from './audio/game.js';
   const SPOT_COL = [[1.3, 0.3, 0.9], [0.3, 1.1, 1.3], [0.9, 0.4, 1.4], [1.3, 1.1, 0.3]];
   function clubSpots() {
     const t = simTime, out = [];
+    if (isP9()) return P9.HALL_LAMPS.map(x => ({ fx: x, x, c: [1.1, 1.0, 0.85] }));
     if (enc.introT >= 0 && enc.boss) return [{ fx: enc.boss.x, x: enc.boss.x, c: [1.5, 1.5, 1.5] }];   // the entrance: one white spot follows the boss
     for (let i = 0; i < 3; i++) out.push({ fx: CLUB_X + 20 + i * 120, x: CLUB_X + 80 + i * 120 + Math.sin(t * 0.8 + i * 2.1) * 60, c: SPOT_COL[(i + Math.floor(t / 2)) & 3] });
     return out;
   }
   function drawBeams() {   // light cones from the fixtures to the pools, added on top
-    if (!flags.club) return;
+    if (!flags.club || isP9()) return;
     for (const sp of clubSpots()) {
       const y0 = GROUND - 144, y1 = GROUND - 2, cr = sp.c[0] * 40, cg = sp.c[1] * 40, cb = sp.c[2] * 40;
       for (let y = y0; y < y1; y++) {
@@ -4790,6 +4923,15 @@ import { gameAudio } from './audio/game.js';
   }
   function drawRain() {
     if (!rain.drops.length || flags.club) return;
+    if (isP9()) {   // sleet: heavier, slower, whiter streaks on a steeper slant, and wet flakes
+      for (const d of rain.drops) {
+        const x = Math.floor(d.x), y = Math.floor(d.y), far = d.v < 150, n = far ? 3 : 5;
+        for (let k = 0; k < n; k++) blendPlot(x + Math.floor(k / 2), y - k, 226, 232, 240, far ? 0.2 : k ? 0.34 : 0.6);
+        if (d.flake) blendPlot(x + 1, y + 1, 240, 244, 250, 0.7);
+      }
+      for (const s of rain.splash) { const k = s.t / 0.12, a = 0.45 * (1 - k); blendPlot(Math.floor(s.x - 1 - k * 2), Math.floor(s.y - 1 - k), 220, 228, 238, a); blendPlot(Math.floor(s.x + 1 + k * 2), Math.floor(s.y - 1 - k), 220, 228, 238, a); }
+      return;
+    }
     for (const d of rain.drops) {   // thin, see-through slanted streaks; the slower ones are farther away and fainter
       const x = Math.floor(d.x), y = Math.floor(d.y), far = d.v < 290, n = far ? 3 : 5;
       for (let k = 0; k < n; k++) blendPlot(x + Math.floor(k / 3), y - k, 170, 185, 220, far ? 0.14 : k ? 0.26 : 0.42);
@@ -4818,6 +4960,7 @@ import { gameAudio } from './audio/game.js';
       if (L === LANE.FRONT) drawDogHeart();
       if (L === LANE.PLAT) drawStairRails();   // the fire escape's outer rail: in front of anyone on the stairs, behind the street
     }
+    if (isP9() && flags.club) P9.drawTunaHazard(R9, p9.tuna);   // the swinging tuna: in front of everyone it can hit
     pickArt.on = true; drawPickups(); drawThrown('lying'); drawAmmo(); pickArt.on = false;   // weapons, ammo and bandages waiting to be picked up: on top, always in sight
     if (!flags.club) glassReflect();
     drawGroundFx();
@@ -4826,6 +4969,7 @@ import { gameAudio } from './audio/game.js';
     pickGlow();   // over the lit scene: the pickables stand out
     drawBeams();
     drawSearchlights();
+    if (isP9() && !flags.club) P9.drawFxTop(R9, p9.open);
     drawFx();
     drawRain();
     drawOffscreen();   // markers sit on top, unlit
@@ -6735,6 +6879,7 @@ import { gameAudio } from './audio/game.js';
   const threeCanvas = document.getElementById('three-canvas');
   const b3d = document.getElementById('b-3d');
   function setMode3D(on) {
+    if (on && isP9()) { toast('3D view', 'Pier 9 is not built for the 3D view yet: this level plays in 2D'); return; }
     mode3D = on;
     threeCanvas.classList.toggle('hidden', !on);
     if (b3d) { b3d.setAttribute('aria-pressed', on ? 'true' : 'false'); b3d.textContent = on ? '2D view' : '3D view'; }
@@ -6834,8 +6979,9 @@ import { gameAudio } from './audio/game.js';
     const c = e.code;
     if (menuKey(e)) { e.preventDefault(); return; }   // the menu has the keys while it is open (the title screen, or Esc in a game)
     if (openT >= 0) { if ((c === 'Escape' || c === 'Enter') && !e.repeat) endOpening(); return; }
+    if (isP9() && endPh === 'done' && !flags.wasted) { if (c === 'Enter' && !e.repeat && !resultsEl.hidden) quitToTitle(); return; }   // Pier 9 cleared: Enter goes back to the menu
     if (flags.wasted || (endPh === 'done' && !resultsEl.hidden)) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) reset(); return; }   // the Wasted or Club cleared card: only a restart (Esc opens the menu above)
-    if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) endFinish(); return; }   // the ending: Esc or Enter jumps to the card
+    if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) { if (isP9()) p9Outro(); else endFinish(); } return; }   // the ending: Esc or Enter jumps to the card
     // the keys: arrows move (up jumps, down squats), Q punches, W kicks, Space rolls, Shift runs
     if (c === 'ArrowLeft') { keys.left = true; takeOver(); }
     else if (c === 'ArrowRight') { keys.right = true; takeOver(); }
@@ -6921,6 +7067,7 @@ import { gameAudio } from './audio/game.js';
   // test the boss level: the earlier stages count as done, a loaded machine gun, start on the club roof and walk in
   let autoWalk = false;
   function skipToBoss() {
+    if (isP9()) { p9SkipToBoss(); return; }
     reset();
     for (const Z of ZONES.slice(0, ZONES.length - 1)) for (const [k] of Z.tasks) done.add(k);
     for (const k in WAVES) { spawned.add(+k); cleared.add(+k); }   // the street's goons are behind him: their waves do not come out now
@@ -6936,7 +7083,7 @@ import { gameAudio } from './audio/game.js';
     if (flags.demo) { di = Math.max(0, DEMO.findIndex(st => st.tag === 'club')); dk = 0; dTry = 0; dStarted = false; }
     else autoWalk = true;
   }
-  function toggleDemo() { if (flags.demo) setDemo(false); else { setDemo(true); } }
+  function toggleDemo() { if (isP9()) return; if (flags.demo) setDemo(false); else { setDemo(true); } }
   // ---------- the opening: a dead goon flies in from the left and hits the street; he walks in after it and asks for his dog ----------
   const OPEN = { camX: 40, enter: 18, walkAt: 0.85, throwP: 150, line: 'Where is my dog?', sayFor: 3.4 };
   let openBody = null, openStopT = -1, openBled = false;
@@ -6971,6 +7118,7 @@ import { gameAudio } from './audio/game.js';
     endCam = { x: END.mid };
   }
   function endTick(rdt) {
+    if (isP9()) { p9EndTick(rdt); return; }
     endT += rdt;
     for (const k of ['jump', 'jumpHeld', 'attack', 'fireHeld', 'dash', 'dashHeld', 'downHeld']) input[k] = k === 'attack' ? null : false;
     input.dir = 0; input.run = false;
@@ -7168,6 +7316,238 @@ import { gameAudio } from './audio/game.js';
       if (st > OPEN.sayFor) endOpening();
     }
   }
+  // ---------- levels: the tutorial street and Pier 9 (src/levels/pier9.js) ----------
+  // loadLevel swaps the level lists in place (surfaces, lamps, doors, props, pickups, the static layer). The street's own lists are
+  // kept in a snapshot the first time it is left, so going back restores them exactly. The caller then calls reset().
+  const STREET_LV = LV, PIER9_LV = { id: 'pier9', title: 'Pier 9', startX: 60 };
+  const LEVEL_LISTS = { PLATS, STEPS, LAMPS, WINL, FEAT, VPARTS, HOUSEWIN, DOORS, ALLEYS, CARDOORS, CLUB_DOORS, OBJ_START, pickups, VEH };
+  let streetSnap = null, p9Data = null, want3D = false;
+  function loadLevel(id) {
+    if (LV.id === id) return;
+    boards.length = 0; while (objs.length) removeObj(objs[0]);
+    if (!streetSnap) { streetSnap = { stat: stat.slice(), PROPS: PROPS.slice(), STAT_BG, GOAL }; for (const k in LEVEL_LISTS) streetSnap[k] = LEVEL_LISTS[k].slice(); }
+    let d;
+    if (id === 'pier9') {
+      if (!p9Data) {
+        const pt = P9.paint({ W, H, PAL, PUDDLE, STREET, LAMP_GLASS, WIN_A, WIN_B, WIN_C, LAMP_IRON });
+        p9Data = { stat: pt.b, PROPS: pt.props, STAT_BG: pt.bg, GOAL: { x0: -999, x1: -998, y: -999 }, PLATS: P9.surfaces(), STEPS: [], LAMPS: pt.lamps, WINL: pt.winl, FEAT: [], VPARTS: [],
+          HOUSEWIN: pt.housewin, DOORS: pt.doors, ALLEYS: [], CARDOORS: pt.cdoors, CLUB_DOORS: P9.HALL_DOORS, OBJ_START: P9.OBJ_START, VEH: pt.veh,
+          pickups: P9.PICKUPS.map(k => ({ w: k.w, x: k.x, y: restY(k.w) + (k.yOff || 0), taken: false, rack: !!k.rack })) };
+      }
+      d = p9Data; LV = PIER9_LV;
+      if (mode3D) { want3D = true; setMode3D(false); }   // the 3D view is not built for Pier 9: it plays in 2D
+    } else { d = streetSnap; LV = STREET_LV; }
+    for (const k in LEVEL_LISTS) { LEVEL_LISTS[k].length = 0; LEVEL_LISTS[k].push(...d[k]); }
+    stat.set(d.stat); PROPS.set(d.PROPS); STAT_BG = d.STAT_BG; GOAL = d.GOAL;
+    SURF.length = 0; SURF.push(GROUND_S, ...PLATS, ...TRAMPS);
+    for (const w of HOUSEWIN) { w.off = false; w.peek = false; w.t = 0; w.lv = 1; }
+    if (id !== 'pier9' && want3D) { want3D = false; setMode3D(true); }
+  }
+  // the Pier 9 run: waves along the quay, the shutter, the boss in the hall, the conveyor's tuna, the ending
+  const p9 = { w: {}, queue: [], shutter: 0, open: false, bossDlg: false, crewT: 0, obj: '', tuna: { st: 'off', t: 0, x: 0, dir: 1, a: 0, hit: null } };
+  const R9 = { buf, CW, cam, plot, plotV, line1, blendPlot: (x, y, r, g, b, a) => blendPlot(x, y, r, g, b, a), get t() { return simTime; } };
+  function p9Reset() {
+    p9.w = {}; for (const w of P9.WAVES) p9.w[w.id] = { out: false, n: 0 };
+    p9.queue.length = 0; p9.shutter = 0; p9.open = false; p9.bossDlg = false; p9.crewT = 0; p9.obj = '';
+    Object.assign(p9.tuna, { st: 'off', t: 0, hit: null }); hookPull = false; barkT = 0; sayEl.hidden = true;
+    rain.k = rain.goal = 0.8; rain.drops.length = 0;
+    setObjective('Pier 9', 'Find the collector');
+  }
+  function setObjective(h, sub) {
+    const html = `<span class="stage-n">Level 1 · Dawn</span><h2>${h}</h2>${sub ? `<div class="next">${sub}</div>` : ''}`;
+    if (p9.obj !== html) { p9.obj = html; tutEl.innerHTML = html; }
+  }
+  const saltOpts = v => { const S = P9.SALTMEN[v]; return { role: S.role, look: S.look, R: S.R || null }; };
+  function p9Wave(W_) {   // a wave: each Saltman steps out of a door, a container or the fog, one after another
+    const st = p9.w[W_.id]; if (st.out) return;
+    const roster = W_.roster[diffSel]; st.out = true; st.n = roster.length;
+    roster.forEach((v, i) => p9.queue.push({ v, wave: W_.id, src: W_.from[i % W_.from.length], t: 0.15 + i * 0.5 }));
+    toast('Saltmen', `${roster.length} of them`, true);
+  }
+  function p9SpawnOne(q) {
+    const src = q.src;
+    let x = src.x;
+    if (src.kind === 'fog') x = clamp(cam.x + cam.vw + 14, 20, STREET_END - 20);   // out of the sleet beyond the edge of the view
+    const e = spawnEnemy('goon', x, q.wave, saltOpts(q.v));
+    if (src.kind === 'top') { e.y = src.y - 2; e.perch = 14; dust(x, src.y - 1, 4); }   // a perched shooter: fires down from a stack top, then climbs down
+    else if (src.kind === 'door') { const d = DOORS.find(d => d.x === src.x); if (d) spawnFx.push({ kind: 'door', d, x, t: 0 }); }
+    else if (src.kind === 'cdoor') { const d = CARDOORS.find(d => d.x === src.x); if (d) spawnFx.push({ kind: 'car', d, x, t: 0 }); }
+    e.cdT = Math.max(e.cdT, 0.9);
+  }
+  let barkT = 0, barkE = null;
+  function bark(e, text) { barkE = e; barkT = 2.2; sayEl.textContent = text; sayEl.hidden = false; }
+  function p9Tick(rdt) {   // per frame (UI clock): waves, the shutter, the boss start, the objective line, barks
+    const dt = rdt * timeScale;
+    if (barkT > 0) {
+      barkT -= rdt;
+      const J = barkE && (barkE.dead ? barkE.pts : barkE.J);
+      if (barkT <= 0 || !J) { barkT = 0; sayEl.hidden = true; }
+      else { const k = cv.clientWidth / cam.vw; sayEl.style.left = `${(J[0].x - cam.x) * k}px`; sayEl.style.top = `${(J[0].y - cam.y - 8) * k}px`; }
+    }
+    if (endPh) return;
+    if (hero.mode === 'anim' && !flags.club) for (const W_ of P9.WAVES) if (W_.at != null && P[2].x >= W_.at) p9Wave(W_);
+    for (const W_ of P9.WAVES) if (W_.then && p9.w[W_.id].out && !p9.w[W_.then].out && !p9.queue.some(q => q.wave === W_.id) && (zoneAlive[W_.id] || 0) <= p9.w[W_.id].n / 2) p9Wave(P9.WAVES.find(w => w.id === W_.then));
+    for (let i = p9.queue.length - 1; i >= 0; i--) { const q = p9.queue[i]; if ((q.t -= dt) <= 0) { p9.queue.splice(i, 1); p9SpawnOne(q); } }
+    if (!p9.open && P9.WAVES.every(w => p9.w[w.id].out && !(zoneAlive[w.id] > 0)) && !p9.queue.length) {
+      p9.open = true; toast('The shutter rolls up', 'The fish market is open. The collector is inside.');
+      emit('sfx', { name: 'crate_break', x: P9.MARKET.shutter[0], vol: 0.5, pitch: 0.5 });
+    }
+    if (p9.open) p9.shutter = Math.min(1, p9.shutter + dt * 0.6);
+    if (!enc.boss && !enc.bossBeaten && hero.mode === 'anim' && flags.club && slamDone) startMarchetti();
+    const left = P9.WAVES.reduce((n, w) => n + (zoneAlive[w.id] || 0), 0) + p9.queue.length;
+    if (flags.club) setObjective('The fish market', enc.boss && !enc.boss.dead ? `Defeat ${P9.MARCHETTI.name}` : 'Find the collector');
+    else if (p9.open) setObjective('Pier 9', 'Find the collector · into the fish market →');
+    else setObjective('Pier 9', left ? `Find the collector · Saltmen: ${left}` : 'Find the collector');
+  }
+  function startMarchetti() {   // the hatch slams; he walks out of the cold-store door; the portrait dialog; the fight
+    enc.arena = { x0: 2440, x1: W - 12 }; enc.spawnT = 99; enc.arenaSpawned = 0; p9.crewT = 0;
+    const dx = CLUB_DOORS[1];
+    enc.boss = spawnEnemy('boss', dx, 'boss', { boss: P9.MARCHETTI });
+    enc.boss.intro = true; enc.boss.introX = dx - 70; enc.boss.face = -1;
+    enc.introT = 0; bossBarK = 0; spawnFx.push({ kind: 'club', x: dx, t: 0 });
+    emit('boss:intro', { boss: enc.boss, name: enc.boss.name });
+    toastEl.hidden = true; toastT = 0; toastQ.length = 0;
+  }
+  function p9Step(dt) {   // fixed step: the boss's crew, the conveyor's swinging tuna
+    const B = enc.boss, M = P9.MARCHETTI, A = DIF().A;
+    if (!B || B.dead) hookPull = false;
+    for (const e of enemies) {   // perched shooters: after a while (or once he is up with them) they come down off the stack
+      if (!(e.perch > 0) || e.dead) continue;
+      if ((e.perch -= dt) > 0 && Math.abs(ctl.y - e.y) > 6) continue;
+      const level = e.perch > 0; e.perch = 0;
+      if (level) continue;   // he climbed up to them: they fight him up there
+      const s = floorBelow(e.x, e.y + 1.5, 0);
+      if (s !== GROUND_S) e.dropTo = P[2].x < (s.x0 + s.x1) / 2 ? s.x0 - 8 : s.x1 + 8;
+    }
+    for (const e of enemies) if (e.dropTo != null) { if (e.dead || (!e.air && e.y > GROUND - 6)) e.dropTo = null; else if (!e.down && !e.act) { e.x += Math.sign(e.dropTo - e.x) * 40 * dt; e.face = Math.sign(e.dropTo - e.x) || e.face; } }
+    if (B && !B.dead && enc.arena && enc.introT < 0 && flags.club) {   // the crew comes through the hall doors
+      const Cw = M.crew, ph2 = B.ph >= 2, cfg = ph2 ? Cw.ph2 : Cw.ph1, alive = enemies.filter(g => !g.dead && g.zone === 'arena').length;
+      p9.crewT += dt;
+      if ((ph2 || p9.crewT > Cw.ph1.delay) && enc.arenaSpawned < Cw.max[diffSel] && alive < cfg.alive[diffSel] && (enc.spawnT = Math.min(enc.spawnT, cfg.every) - dt) <= 0) {
+        enc.spawnT = cfg.every; enc.arenaSpawned++;
+        const roles = ph2 ? Cw.ph2Roles : Cw.ph1Roles, dx = CLUB_DOORS[enc.arenaSpawned % 2];
+        const g = spawnEnemy('goon', clamp(dx, enc.arena.x0 + 6, enc.arena.x1 - 4), 'arena', saltOpts(roles[enc.arenaSpawned % roles.length]));
+        g.cdT = Math.max(g.cdT, 0.8); spawnFx.push({ kind: 'club', x: dx, t: 0 });
+        if (simRand() < 0.5) bark(g, ['For Sal!', 'Is that really him?', "Don't look at his eyes."][Math.floor(simRand() * 3)]);
+      }
+    }
+    const T = p9.tuna, TM = M.tuna;
+    if (!(B && !B.dead && B.ph >= 2 && flags.club)) { T.st = 'off'; return; }
+    if (T.st === 'off') { T.st = 'idle'; T.t = 2.5; }
+    if (T.st === 'idle') { if ((T.t -= dt) <= 0) { T.st = 'warn'; T.t = Math.max(0.7, TM.warn / A ** 0.25); T.dir = simRand() < 0.5 ? 1 : -1; emit('boss:telegraph', { boss: B, move: 'tuna', t: T.t, x: T.dir > 0 ? 2440 : W - 10 }); } }
+    else if (T.st === 'warn') { if ((T.t -= dt) <= 0) { T.st = 'swing'; T.x = T.dir > 0 ? 2428 : W + 6; T.hit = new Set(); emit('sfx', { name: 'dodge_whoosh', x: T.x, vol: 1, pitch: 0.45 }); } }
+    else if (T.st === 'swing') {   // a frozen tuna on its hook sweeps the arena at chest height: crouch or roll under it; it floors anyone it hits
+      T.x += T.dir * TM.v * dt; T.a = -T.dir * (0.25 + 0.1 * Math.sin(simTime * 6));
+      const top = P9.TUNA.top - 4, bot = P9.TUNA.bottom;
+      if (!T.hit.has('hero') && hero.mode === 'anim' && hero.invT <= 0 && Math.abs(P[2].x - T.x) < 9 && P[0].y < bot && P[0].y > top - 40) {
+        T.hit.add('hero'); hurtPlayer(TM.dmg[diffSel], T.x, P[1].y, T.dir, true, 1.6);
+      }
+      for (const e of enemies) {
+        if (e.dead || e.down || !e.J || T.hit.has(e) || Math.abs(e.x - T.x) > 8 * e.s || e.J[0].y > bot) continue;
+        T.hit.add(e); enc.eHitKind = 0;
+        if (e === B) {   // the boss takes it hard: a stagger and a free second
+          damageEnemy(e, TM.bossDmg, T.dir, 300, 0.3, e.x, e.J[1].y, false);
+          if (!e.dead) { e.sp = null; e.hook = null; hookPull = false; e.act = null; e.combo = null; e.stunT = 1; e.recT = 1; e.vx = T.dir * 60; }
+        } else { damageEnemy(e, 14, T.dir, 300, 0.3, e.x, e.J[1].y, false); if (!e.dead && !e.down) knockDown(e, T.dir, 300, 'hp'); }
+        sparks.push({ x: T.x, y: e.J[1].y, t: 0 }); shakeIt(0.12, 2);
+      }
+      if (T.x < 2420 || T.x > W + 14) { T.st = 'idle'; T.t = (TM.every[0] + simRand() * (TM.every[1] - TM.every[0])) / Math.sqrt(A); }
+    }
+  }
+  function sleetStep(dt) {   // Pier 9 weather: steady sleet outdoors (the rain system, slower and heavier), none in the hall
+    rain.k += (0.8 - rain.k) * (1 - Math.exp(-0.4 * dt)); rain.flash = 0;
+    const want = flags.club ? 0 : Math.round(rain.k * 150);
+    while (rain.drops.length < want) rain.drops.push({ x: cam.x + simRand() * (cam.vw + 90), y: cam.y - simRand() * cam.vh, v: 110 + simRand() * 70, flake: simRand() < 0.3 });
+    if (rain.drops.length > want) rain.drops.length = want;
+    for (const d of rain.drops) {
+      d.x -= 62 * dt; d.y += d.v * dt;
+      const fl = d.y > cam.y + 10 ? floorBelow(d.x, d.y - 6, 0).y : 1e9;
+      if (d.y >= fl || d.y > cam.y + cam.vh + 10 || d.x < cam.x - 40) {
+        if (d.y >= fl && d.y < cam.y + cam.vh) { rain.splash.push({ x: d.x, y: fl - 1, t: 0 }); if (fl === GROUND && simRand() < 0.4) rain.rip.push({ x: d.x, d: 1 + Math.floor(simRand() * (STREET - 2)), t: 0 }); }
+        d.x = cam.x + simRand() * (cam.vw + 90); d.y = cam.y - simRand() * 30; d.v = 110 + simRand() * 70;
+      }
+    }
+    for (let i = rain.splash.length - 1; i >= 0; i--) if ((rain.splash[i].t += dt) > 0.12) rain.splash.splice(i, 1);
+    for (let i = rain.rip.length - 1; i >= 0; i--) if ((rain.rip[i].t += dt) > 0.45) rain.rip.splice(i, 1);
+  }
+  function p9Lights() {   // dawn: a grey-blue ambient, sodium pools, the drum's red flicker; the hall: cold light under enamel lamps
+    const ls = [];
+    if (!flags.club) {
+      const dim = 1 - rain.k * 0.08, aR = 0.5 * dim, aG = 0.55 * dim, aB = 0.7 * dim;
+      for (const lx of LAMPS) if (lx > cam.x - 100 && lx < cam.x + cam.vw + 100) ls.push([lx + 8 - cam.x, GROUND - 78 - cam.y, 95 * 95, 1.45, 1.05, 0.45, 50]);
+      for (const [wx, wy, wr] of WINL) if (wr > 0 && wx > cam.x - wr && wx < cam.x + cam.vw + wr) ls.push([wx - cam.x, wy - cam.y, wr * wr, 0.55, 0.4, 0.14, 0]);
+      const fl = 0.85 + 0.15 * Math.sin(simTime * 17) * Math.sin(simTime * 5.3);
+      if (Math.abs(P9.DRUM_X - cam.x - cam.vw / 2) < cam.vw) ls.push([P9.DRUM_X - cam.x, GROUND - 22 - cam.y, 72 * 72, 1.6 * fl, 0.6 * fl, 0.25 * fl, 30]);
+      ls.push([1823 - cam.x, 64 - cam.y, 40 * 40, 1.0, 0.75, 0.35, 0], [P9.MARKET.shutter[0] + 29 - cam.x, GROUND - 64 - cam.y, 34 * 34, p9.open ? 0.3 : 1.3, p9.open ? 1.1 : 0.2, 0.2, 0]);
+      return [aR, aG, aB, ls];
+    }
+    const cut = enc.introT >= 0 ? 1 - 0.5 * clamp(enc.introT / 0.25, 0, 1) : 1;
+    for (const lx of P9.HALL_LAMPS) ls.push([lx - cam.x, GROUND - 116 - cam.y, 90 * 90, 1.15 * cut, 1.05 * cut, 0.85 * cut, 40]);
+    ls.push([2790 - cam.x, GROUND - 36 - cam.y, 70 * 70, 0.45, 0.85, 1.2, 0]);
+    if (p9.tuna.st === 'warn' && Math.floor(simTime * 8) % 2 === 0) ls.push([2452 - cam.x, GROUND - 177 - cam.y, 130 * 130, 1.6, 0.15, 0.15, 40]);
+    if (enc.introT >= 0 && enc.boss) ls.push([enc.boss.x - cam.x, GROUND - 30 - cam.y, 50 * 50, 1.2, 1.2, 1.2, 0]);
+    ls.push([P[2].x - cam.x, P[2].y - 12 - cam.y, 46 * 46, 0.4, 0.4, 0.45, 0]);
+    return [0.44 * cut, 0.47 * cut, 0.6 * cut, ls];
+  }
+  function p9SkipToBoss() {   // test: the quay is cleared, the shutter open, he walks into the hall
+    reset();
+    for (const w of P9.WAVES) p9.w[w.id] = { out: true, n: 0 };
+    p9.open = true; p9.shutter = 1;
+    const dx = P9.MARKET.shutter[0] - 10 - ctl.x;
+    ctl.x += dx; for (const p of P) { p.x += dx; p.px += dx; }
+    for (const st of hair) for (const p of st) { p.x += dx; p.px += dx; }
+    if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; }
+    cam.xf = ctl.x - 80; cam.v.x = 0;
+    autoWalk = true;
+  }
+  // the ending: he stands over the boss a moment, then the outro panels, then the card
+  function p9EndTick(rdt) {
+    endT += rdt;
+    for (const k of ['jump', 'jumpHeld', 'attack', 'fireHeld', 'dash', 'dashHeld', 'downHeld']) input[k] = k === 'attack' ? null : false;
+    input.dir = 0; input.run = false;
+    if (endPh === 'p9wait' && endT > 2.4) p9Outro();
+  }
+  async function p9Outro() {
+    if (endPh !== 'p9wait') return;
+    endPh = 'p9scene'; toastEl.hidden = true; toastT = 0; toastQ.length = 0;
+    await playScene('panels', 'docks_outro');
+    endPh = 'done';
+    emit('run:over', { result: 'cleared' });
+    const t = Math.round(runS.t), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
+    resultsEl.innerHTML = `<h2>Pier 9 cleared</h2><dl><dt>Difficulty</dt><dd>${DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${runS.kills}</dd>`
+      + `<dt>Knock-outs</dt><dd>${kos}</dd></dl><small>Enter: back to the menu</small>`;
+    resultsEl.hidden = false; toastEl.hidden = true;
+  }
+  // cutscenes: the comic-panel and dialog players over the stage; the game waits (frame() does nothing) while one plays
+  let sceneOn = false;
+  const csAudio = {
+    music: { play: (id, o = {}) => gameAudio.playMusic(id, { loop: o.loop !== false }), stop: f => gameAudio.stopMusic(f) },
+    voice: { play: id => gameAudio.voice(id), stop: () => gameAudio.stopVoice() },
+    sfx: { play: (n, o) => gameAudio.sfx(n, o || {}) },
+  };
+  const scripts = {};
+  const loadScript = id => scripts[id] || (scripts[id] = fetch(`assets/cutscenes/${id}.json`).then(r => { if (!r.ok) throw new Error(`${r.status} ${id}`); return r.json(); }));
+  async function playScene(kind, id) {
+    sceneOn = true; toastEl.hidden = true; sayEl.hidden = true;
+    keys.left = keys.right = keys.shift = false; btn.p.down = btn.k.down = false; Object.assign(input, { dir: 0, run: false, jump: false, jumpHeld: false, downHeld: false, fireHeld: false, attack: null, dash: false, dashHeld: false });
+    try { const sc = await loadScript(id); return await (kind === 'dialog' ? playDialog : playPanels)(sc, { root: stage, audio: csAudio, bus }); }
+    catch (err) { console.warn('cutscene failed:', id, err); return { id, skipped: true }; }
+    finally { sceneOn = false; last = FIXED ? fixedT : performance.now(); keys.left = keys.right = keys.shift = false; input.dir = 0; }
+  }
+  // Chapter: Prologue + Pier 9. The prologue's two scenes (Escape on the first skips both), the docks intro, then the level
+  async function startChapter1() {
+    if (sceneOn) return;
+    leaveTitle(); setDemo(false); hideMenu();
+    loadLevel('pier9'); reset();
+    sceneOn = true;   // (the level waits behind the panels)
+    const a = await playScene('panels', 'prologue_intro');
+    if (!a.skipped) await playScene('panels', 'prologue_outro');
+    await playScene('panels', 'docks_intro');
+    gameAudio.playMusic('docks_explore', { volume: 0.6 });
+    toast('Pier 9', 'Dawn. Sleet. Find the collector.');
+  }
+  function startTutorial() { if (isP9()) loadLevel('street'); if (flags.attract) endAttract(); else { hideMenu(); setDemo(false); reset(); startOpening(); } }
+  function quitToTitle() { hideMenu(); if (isP9()) loadLevel('street'); reset(); startAttract(); }
   // ---- the menu: a console-style list down the left. It stays up on the title screen while the demo plays; in a game, Esc opens
   // it and pauses. Settings (view, run, camera) are remembered in this browser.
   let runAlways = false, menuShown = false, menuSel = 0, menuPauseTS = null;
@@ -7184,9 +7564,16 @@ import { gameAudio } from './audio/game.js';
     if (st.view3d && typeof THREE !== 'undefined') setMode3D(true);
   }
   const toggleFull = () => { try { if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen(); } catch (err) {} };
+  let menuPage = 'main';   // 'main' or 'chapter' (the chapter list)
   function menuItems() {
+    if (menuPage === 'chapter') return [
+      { label: 'Tutorial: The Street', act: () => { menuPage = 'main'; startTutorial(); } },
+      { label: 'Prologue + Pier 9', act: () => { menuPage = 'main'; startChapter1(); } },
+      { label: 'Back', act: () => { menuPage = 'main'; menuSel = 0; } },
+    ];
     const items = [
       { label: flags.attract ? 'Start game' : 'Resume', act: () => flags.attract ? endAttract() : hideMenu() },
+      { label: 'Chapter', value: () => isP9() && !flags.attract ? 'Pier 9' : 'Choose', act: () => { menuPage = 'chapter'; menuSel = isP9() ? 1 : 0; } },
       { label: 'Difficulty', value: () => DIFFS[diffSel].name, change: d => { diffSel = (diffSel + d + DIFFS.length) % DIFFS.length; charge.forEach((c, w) => { charge[w] = Math.min(c, fullCharge(w)); }); saveSettings(); } },
       { label: 'View', value: () => mode3D ? '3D' : '2D', change: () => { setMode3D(!mode3D); saveSettings(); } },
       { label: 'Shift', value: () => runAlways ? 'to walk' : 'to run', change: () => { runAlways = !runAlways; saveSettings(); } },
@@ -7216,10 +7603,11 @@ import { gameAudio } from './audio/game.js';
     const it = menuItems()[menuSel]; if (!it) return;
     if (!dir && it.act) gameAudio.sfx('ui_confirm', { vol: 0.5 });
     if (it.change) it.change(dir || 1); else if (!dir && it.act) it.act();
+    else if (dir && it.act && menuPage === 'main' && it.label === 'Chapter') it.act();
     if (menuShown) drawMenu();
   }
   function showMenu(title) {
-    menuShown = true; menuEl.hidden = false; menuSel = 0; ccEl.hidden = true;
+    menuShown = true; menuEl.hidden = false; menuSel = 0; ccEl.hidden = true; menuPage = 'main';
     if (!title && !flags.attract && menuPauseTS === null) { menuPauseTS = timeScale; timeScale = 0; }   // a game pauses under the menu
     drawMenu();
   }
@@ -7240,6 +7628,7 @@ import { gameAudio } from './audio/game.js';
     else if (c === 'ArrowLeft') menuDo(-1);
     else if (c === 'ArrowRight') menuDo(1);
     else if ((c === 'Enter' || c === 'Space') && !e.repeat) menuDo(0);
+    else if (c === 'Escape' && menuPage !== 'main' && !e.repeat) { menuPage = 'main'; menuSel = 1; drawMenu(); }
     else if (c === 'Escape' && !flags.attract && !e.repeat) hideMenu();
     return true;
   }
@@ -7247,6 +7636,7 @@ import { gameAudio } from './audio/game.js';
   const titleEl = document.getElementById('title');
   let titleFadeT = null;
   function startAttract() {
+    if (isP9()) { loadLevel('street'); reset(); }
     flags.attract = true; gameAudio.playMusic('title'); showMenu(true); titleEl.hidden = false; titleEl.classList.remove('faded'); document.body?.classList.add('attract'); setDemo(true);
     clearTimeout(titleFadeT); titleFadeT = setTimeout(() => { if (flags.attract) titleEl.classList.add('faded'); }, 2500);   // the card fades out after 2.5 s; the demo plays on
   }
@@ -7315,6 +7705,7 @@ import { gameAudio } from './audio/game.js';
   function show(key, el, v) { if (shown[key] !== v) { shown[key] = v; el.textContent = v; } }
   function frame(now) {
     if (FIXED) now = (fixedT += 1000 / 60);   // (test harness: the same clock every run)
+    if (sceneOn) { last = now; if (!AUTOTEST && !MANUAL) requestAnimationFrame(frame); return; }   // a cutscene plays over the stage: the game waits
     const rdt = clamp((now - last) / 1000, 0, 0.05); last = now;   // (never negative: a clock that steps back would poison the easing)
     const sdt = rdt * timeScale; simTime += sdt;
     if (!flags.demo) { input.dir = (keys.right || touch.right ? 1 : 0) - (keys.left || touch.left ? 1 : 0); input.run = (runAlways ? !keys.shift : keys.shift) || runToggle; }   // (the menu can make running the default: Shift walks)
@@ -7323,7 +7714,7 @@ import { gameAudio } from './audio/game.js';
     if (openT >= 0) openTick(rdt);
     if (endPh && endPh !== 'done') endTick(rdt);
     if (jumpEnd && enc.boss && !enc.boss.dead && enc.introT < 0 && enc.boss.hp > 0) { enc.boss.hp = 1; enc.eHitKind = 1; damageEnemy(enc.boss, 60, 1, 300, 0.5, enc.boss.x, enc.boss.y - 20, false); enc.eHitKind = 0; }   // ?ending: the boss drops as the fight starts
-    if (enc.introT >= 0) { input.dir = 0; input.run = false; input.jump = false; input.jumpHeld = false; input.attack = null; input.fireHeld = false; input.dash = false; input.dashHeld = false; input.downHeld = false; }   // the boss entrance: no input
+    if (enc.introT >= 0 || hookPull) { input.dir = 0; input.run = false; input.jump = false; input.jumpHeld = false; input.attack = null; input.fireHeld = false; input.dash = false; input.dashHeld = false; input.downHeld = false; }   // the boss entrance: no input
     for (let i = spawnFx.length - 1; i >= 0; i--) if ((spawnFx[i].t += sdt) > 0.45) spawnFx.splice(i, 1);
     if (grabIdx >= 0 && now - lastMove > 40) { pv.x *= 0.7; pv.y *= 0.7; }
     if (hitStop > 0) hitStop -= rdt; else acc += sdt;
@@ -7412,7 +7803,7 @@ import { gameAudio } from './audio/game.js';
     }
     bossBar.hidden = !(enc.boss && !enc.boss.dead);
     { const top = bossBar.hidden ? '8px' : '42px'; if (shown.tutTop !== top) { shown.tutTop = top; tutEl.style.top = top; } }   // the mission panel steps down under the boss bar
-    { const hide = done.has('enter'); if (shown.tutHide !== hide) { shown.tutHide = hide; tutEl.hidden = hide; } }   // inside the club the lesson panel goes: the boss bar and the card carry the fight
+    { const hide = isP9() ? !!endPh : done.has('enter'); if (shown.tutHide !== hide) { shown.tutHide = hide; tutEl.hidden = hide; } }   // inside the club the lesson panel goes: the boss bar and the card carry the fight
     if (enc.boss) { bossFill.style.width = (Math.max(0, enc.boss.hp / enc.boss.maxHp * 100) * bossBarK).toFixed(1) + '%'; show('bname', bossNameEl, enc.boss.name.toUpperCase()); }
     const tgt = null;
     if (tgt && false) { show('tname', tNameEl, tgt.dead ? tgt.name + ' — down' : tgt.name); tFill.style.width = Math.max(0, tgt.hp / tgt.maxHp * 100).toFixed(0) + '%'; }
@@ -7458,5 +7849,11 @@ import { gameAudio } from './audio/game.js';
       club: flags.club, boss: enc.boss ? Math.round(enc.boss.hp) : null, quakes: quakes.length, enemies: enemies.filter(e => !e.dead).map(e => [Math.round(e.x), e.lane, Math.round(e.hp)]), kills: kills.length, lessons: done.size,
       pickups: pickups.map(k => k.taken ? 1 : 0).join(''), demo: flags.demo, attract: flags.attract });
     window.__skipToBoss = () => { leaveTitle(); setDemo(false); skipToBoss(); };
+    // Pier 9 (tests): start the chapter (with its cutscenes) or the level at once; read its state; skip to the hall
+    window.__pier9 = { chapter: () => startChapter1(), start: () => { leaveTitle(); setDemo(false); hideMenu(); loadLevel('pier9'); reset(); }, toBoss: () => { leaveTitle(); setDemo(false); hideMenu(); loadLevel('pier9'); p9SkipToBoss(); },
+      peek: () => ({ level: LV.id, scene: sceneOn, x: Math.round(ctl.x), y: Math.round(ctl.y), mode: hero.mode, hp: Math.round(hero.hp), club: flags.club, open: p9.open, shutter: +p9.shutter.toFixed(2), waves: Object.fromEntries(Object.entries(p9.w).map(([k, v]) => [k, [v.out, zoneAlive[k] || 0]])), queue: p9.queue.length,
+        boss: enc.boss ? { hp: Math.round(enc.boss.hp), max: enc.boss.maxHp, ph: enc.boss.ph, sp: enc.boss.sp, act: enc.boss.act, x: Math.round(enc.boss.x), dead: enc.boss.dead, intro: !!enc.boss.intro } : null, tuna: p9.tuna.st, hookPull, endPh, kills: runS.kills, kos, wasted: flags.wasted,
+        enemies: enemies.filter(e => !e.dead).map(e => [e.role, Math.round(e.x), Math.round(e.y), Math.round(e.hp), e.zone]) }),
+      hurtBoss: n => { if (enc.boss) { enc.boss.hp = Math.max(1, enc.boss.hp - n); } }, hurtHero: n => { hero.hp = Math.max(1, hero.hp - n); }, setDiff: i => { diffSel = i; }, kill: () => { for (const e of enemies) if (!e.dead && e !== enc.boss) killEnemy(e, 1, 200, 0.3); } };
   } else requestAnimationFrame(frame);
 })();
