@@ -81,21 +81,31 @@ export const BOSUN = {
   guard: 0.6,                                                         // s his guard stays up after a read
 };
 // waves: trigger x, spawn sources, the roster by difficulty (E, M, H, W); `then` follows when half of this wave is down;
-// `after`: waits until that wave is all down (and the hero is past `at`); `half`: comes once that variant is under half health.
+// `after`: waits until that wave (or each of a list) is all down (and the hero is past `at`); `half`: comes once that variant is under half health.
+// reinf: a reinforcement wave (Hard and Wicked only: its Easy and Medium rosters are empty), a 'then' of the wave before it.
 // Each wave's first variant is its 'teacher' (the new one): it comes out first, nearest the hero.
 export const WAVES = [
   { id: 'w1', at: 280, from: [{ kind: 'door', x: 700 }, { kind: 'door', x: 980 }, { kind: 'fog', x: 1 }],
     roster: [['deckhand', 'filleter', 'deckhand', 'pipeman'], ['deckhand', 'filleter', 'pipeman', 'deckhand', 'pipeman', 'gaffer'],
-      ['deckhand', 'filleter', 'pipeman', 'deckhand', 'pipeman', 'gaffer', 'filleter'], ['deckhand', 'filleter', 'pipeman', 'deckhand', 'pipeman', 'gaffer', 'filleter', 'gaffer']] },
+      ['deckhand', 'filleter', 'pipeman', 'deckhand', 'pipeman', 'gaffer', 'filleter'], ['deckhand', 'filleter', 'pipeman', 'deckhand', 'pipeman', 'gaffer', 'filleter', 'gaffer']],
+    then: 'w1b' },
+  { id: 'w1b', reinf: true, from: [{ kind: 'fog', x: 1 }, { kind: 'door', x: 980 }, { kind: 'fogL', x: 1 }],
+    roster: [[], [], ['deckhand', 'pipeman'], ['deckhand', 'pipeman', 'filleter']] },
   { id: 'w2', at: 1150, ckpt: 'the containers', from: [{ kind: 'cdoor', x: 1291 }, { kind: 'cdoor', x: 1351 }, { kind: 'cdoor', x: 1661 }],
     roster: [['deckhand', 'pipeman'], ['gaffer', 'deckhand', 'pipeman'], ['gaffer', 'pipeman', 'deckhand'], ['gaffer', 'pipeman', 'deckhand', 'gaffer']],
     then: 'w2b' },
   { id: 'w2b', perch: true, from: [{ kind: 'top', x: 1556, y: hy(171) }, { kind: 'top', x: 1720, y: hy(114) }, { kind: 'cdoor', x: 1661 }],
-    roster: [['hookthrower'], ['tallyman', 'hookthrower'], ['tallyman', 'hookthrower', 'filleter'], ['tallyman', 'hookthrower', 'filleter', 'tallyman']] },
+    roster: [['hookthrower'], ['tallyman', 'hookthrower'], ['tallyman', 'hookthrower', 'filleter'], ['tallyman', 'hookthrower', 'filleter', 'tallyman']],
+    then: 'w2c' },
+  { id: 'w2c', reinf: true, from: [{ kind: 'cdoor', x: 1351 }, { kind: 'cdoor', x: 1661 }, { kind: 'fog', x: 1 }],
+    roster: [[], [], ['pipeman', 'gaffer'], ['pipeman', 'gaffer', 'deckhand']] },
   { id: 'w3', at: 1860, from: [{ kind: 'fog', x: 1 }, { kind: 'door', x: 2160 }, { kind: 'cdoor', x: 1892 }],
     roster: [['bulwark', 'deckhand', 'filleter'], ['bulwark', 'deckhand', 'filleter', 'gaffer'], ['bulwark', 'deckhand', 'filleter', 'hookthrower', 'gaffer'],
-      ['bulwark', 'deckhand', 'filleter', 'hookthrower', 'gaffer', 'bulwark']] },
-  { id: 'wb', at: 2150, after: 'w3', ckpt: 'the Bosun', from: [{ kind: 'shutter', x: 2381 }, { kind: 'door', x: 2160 }, { kind: 'fog', x: 1 }],
+      ['bulwark', 'deckhand', 'filleter', 'hookthrower', 'gaffer', 'bulwark']],
+    then: 'w3b' },
+  { id: 'w3b', reinf: true, from: [{ kind: 'fog', x: 1 }, { kind: 'door', x: 2160 }, { kind: 'fogL', x: 1 }],
+    roster: [[], [], ['deckhand', 'gaffer'], ['filleter', 'gaffer', 'deckhand']] },
+  { id: 'wb', at: 2150, after: ['w3', 'w3b'], ckpt: 'the Bosun', from: [{ kind: 'shutter', x: 2381 }, { kind: 'door', x: 2160 }, { kind: 'fog', x: 1 }],
     roster: [['bosun'], ['bosun', 'deckhand'], ['bosun', 'deckhand', 'deckhand'], ['bosun', 'deckhand', 'deckhand']] },
   { id: 'wb2', half: 'bosun', from: [{ kind: 'door', x: 2160 }, { kind: 'fog', x: 1 }, { kind: 'fogL', x: 1 }],
     roster: [['filleter'], ['gaffer'], ['filleter', 'gaffer'], ['filleter', 'gaffer', 'deckhand']] },
@@ -104,7 +114,7 @@ export const WAVES = [
 // Melee only on the quay and in the yard; the shotgun opens at the market front (w3, where its trestle stands) and in the hall; no machine gun
 export const DROPS = {
   carry: { knife: ['katana'], machete: ['katana'], gaff: ['axe'], pipe: ['axe'], pistol: ['shotgun'] },
-  tier: { w1: ['katana', 'axe'], w2: ['katana', 'axe'], w2b: ['katana', 'axe'], w3: ['katana', 'axe', 'shotgun'], arena: ['katana', 'axe', 'shotgun'] },
+  tier: { w1: ['katana', 'axe'], w1b: ['katana', 'axe'], w2: ['katana', 'axe'], w2b: ['katana', 'axe'], w2c: ['katana', 'axe'], w3: ['katana', 'axe', 'shotgun'], w3b: ['katana', 'axe', 'shotgun'], arena: ['katana', 'axe', 'shotgun'] },
 };
 // Sal "the Scale" Marchetti (docs/levels/01-pier9.md 5): stats per difficulty, his moves' numbers
 export const MARCHETTI = {

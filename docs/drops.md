@@ -127,3 +127,40 @@ Special cases (street):
 | stage 5, shotgun held, 6 rounds | 4 boxes | 2 boxes |
 | stage 5, shotgun held, 1 round | 4 boxes | 4 boxes |
 | arena, hero at 30 HP | 5 bandages (E: 6) | 2 bandages |
+
+## Goons by difficulty (waves and reinforcements)
+
+More goons on a higher difficulty come as reinforcement waves, not as bigger first waves. The data is `DIFFS[].reinf` and
+`DIFFS[].crew` in `src/core/difficulty.js` (the street) and the `reinf` waves (`w1b`, `w2c`, `w3b`) in `src/levels/pier9.js`.
+
+- Street: each fight stage keeps its first wave (`WAVES` in `src/legacy.js`). When half of the stage's goons are down, the next
+  reinforcement wave walks in from a door, an alley, a car or off the screen, on both sides, never on top of the hero, with a
+  "Reinforcements" toast. The stage's kill lesson and its gate wait for the last wave. Easy has none (it teaches).
+- Pier 9: on Hard and Wicked, w1, w2b and w3 each call one reinforcement wave (`then`) at half down; the Bosun waits for w3 and w3b.
+- The street boss's crew: `crew.n` goons in all, at most `crew.alive` at once. Marchetti's crew was already scaled (`MARCHETTI.crew`).
+- The swing cap and the spacing rules (`DIFFS` `swing`, `gap`, `sepStep`) keep the bigger fights readable. The drop caps hold: they
+  count what lies on the ground, not the kills (more kills only feed the pity counter).
+
+| Stage (street) | first wave | Easy | Medium | Hard | Wicked |
+|---|---|---|---|---|---|
+| reinforcement waves | | none | 2 | 2, 3 | 2, 3, 3 |
+| 2 Bare hands | 2 | 2 | 4 | 7 | 10 |
+| 3 Katana | 3 | 3 | 5 | 8 | 11 |
+| 4 Axe | 3 | 3 | 5 | 8 | 11 |
+| 5 Shotgun | 4 | 4 | 6 | 9 | 12 |
+| 6 Machine gun | 4 | 4 | 6 | 9 | 12 |
+| Street waves in all | 16 | 16 | 26 | 41 | 56 |
+| Boss crew (in all / at once) | | 6 / 2 | 8 / 2 | 10 / 3 | 12 / 3 |
+
+| Pier 9 wave | Easy | Medium | Hard | Wicked |
+|---|---|---|---|---|
+| w1 + w1b | 4 | 6 | 7 + 2 | 8 + 3 |
+| w2 + w2b + w2c | 2 + 1 | 3 + 2 | 3 + 3 + 2 | 4 + 4 + 3 |
+| w3 + w3b | 3 | 4 | 5 + 2 | 6 + 3 |
+| wb + wb2 (the Bosun and help) | 1 + 1 | 2 + 1 | 3 + 2 | 3 + 3 |
+| Pier 9 waves in all | 12 | 18 | 29 | 37 |
+| Marchetti's crew (at most) | 4 | 6 | 9 | 12 |
+
+Measured with `?manual`: `__pier9.street()`, `.setDiff(i)`, the stage's other lessons in `__sim.done`, then `__pier9.kill(1)` with steps
+between (`__pier9.kill(n)` kills at most n); Pier 9 with `__pier9.start()` and `.tp(x)`. Lesson goons (the stage gate's spare goon for an
+unlearned goon lesson) are not counted.

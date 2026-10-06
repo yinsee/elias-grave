@@ -2186,7 +2186,7 @@ import * as P9 from './levels/pier9.js';
     bleed(e.J[1].x, e.J[1].y, dirx, e.type === 'boss' ? 60 : !hero.weapon && killBy == null && enc.eHitKind === 1 ? 7 : 24, 1.4);   // beaten down with fists: less blood
     bodyStain(e, hx ?? e.J[1].x, hy ?? e.J[1].y + 3, !hero.weapon && killBy == null && enc.eHitKind === 1 ? 4 : 10);
     lootDrop(e, dirx);   // his weapon, an ammo box, a bandage (docs/drops.md)
-    if (e.zone != null && --zoneAlive[e.zone] === 0) {
+    if (e.zone != null && --zoneAlive[e.zone] === 0 && !reinfLeft(e.zone)) {
       if (typeof e.zone === 'number') emit('feat', 'kill' + e.zone);
       if (e.zone !== 'arena' && e.zone !== 'boss' && !(isP9() && p9.queue.some(q => q.wave === e.zone))) slowMo(FOCUS.last, 'lastkill');   // the last of a wave: a beat of slow motion
     }
@@ -2826,9 +2826,9 @@ import * as P9 from './levels/pier9.js';
     }
   }
   function enemyStep(dt) {
-    if (!isP9() && enc.boss && !enc.boss.dead && enc.arena && enc.arenaSpawned < 10 && (enc.spawnT -= dt) <= 0) {   // the boss calls in his crew: one every 3 s (4.5 s once enraged), 10 in all
+    if (!isP9() && enc.boss && !enc.boss.dead && enc.arena && enc.arenaSpawned < DIF().crew.n && (enc.spawnT -= dt) <= 0) {   // the boss calls in his crew: one every 3 s (4.5 s once enraged), DIF().crew.n in all
       enc.spawnT = enc.boss.ph > 1 ? 4.5 : 3;
-      if (enemies.filter(g => !g.dead && g.zone === 'arena').length < 4) {
+      if (enemies.filter(g => !g.dead && g.zone === 'arena').length < DIF().crew.alive) {
         enc.arenaSpawned++;
         const dx = CLUB_DOORS[enc.arenaSpawned % 2];   // out of a staff doorway in the back wall: by the entrance speaker stack, or behind the far one
         const g = spawnEnemy('goon', clamp(dx, enc.arena.x0 + 6, enc.arena.x1 - 4), 'arena');
@@ -4581,16 +4581,16 @@ import * as P9 from './levels/pier9.js';
       ['gthrow', 'Knee and throw: in a grab, [Q] knees, [W] throws'], ['slam', 'Slam: grab a goon, hold [↓], press [W]'],
       ['smash', 'Smash a crate: hit it until it breaks'], ['split', 'Break the crate stack: hold [Q] or [W] next to it'],
       ['lift', 'Lift the dustbin: hands empty, hold [↓] next to it'], ['bash', 'Hit a goon with it: tap [Q]'], ['toss', 'Throw a dustbin: lift one, hold [Q] with no goon near'],
-      ['pocket', 'Pocket a can or a bottle: hold [↓] next to it'], ['pockethit', 'Throw it at a goon: hold [Q] with no goon near'], ['kill1', 'Beat the 2 goons: they hit back']] },
+      ['pocket', 'Pocket a can or a bottle: hold [↓] next to it'], ['pockethit', 'Throw it at a goon: hold [Q] with no goon near'], ['kill1', 'Beat the goons: they hit back']] },
     { x0: 900, title: '3 · Katana', tasks: [['pick1', 'Take the katana: walk over it'], ['ks', 'Slash: tap [Q]'], ['kw', 'Heavy slash: hold [Q] near a goon'], ['kh', 'Overhead finisher: tap [Q], then hold [Q]'],
       ['sslash', 'Low cut: hold [↓], tap [Q]'], ['kair', 'Jump slash: jump [↑], then tap [Q]'], ['tw', 'Throw the blade: hold [Q] with no goon near'], ['catch', 'Get the blade back: walk over it'],
-      ['focus', 'Sandman time: fill the focus bar, it starts by itself'], ['finisher', 'Finisher: hold [W] by a reeling, beaten goon'], ['kill2', 'Cut down the 3 goons']] },
+      ['focus', 'Sandman time: fill the focus bar, it starts by itself'], ['finisher', 'Finisher: hold [W] by a reeling, beaten goon'], ['kill2', 'Cut down the goons']] },
     { x0: 1250, title: '4 · Axe', tasks: [['pick2', 'Take the axe: walk over it'], ['al', 'Chop combo: tap [Q] again and again'], ['aw', 'Heavy chop: hold [Q] near a goon'],
       ['ah', 'Slam finisher: tap [Q], then hold [Q] near a goon'], ['aair', 'Plunge: jump off the van, then tap [Q]'], ['throwhit', 'Throw it at a goon: hold [Q] from a distance'],
-      ['swap', 'Swap weapons: hold [↓] on a weapon on the ground'], ['kill3', 'Chop down the 3 goons']] },
-    { x0: 1600, title: '5 · Shotgun', tasks: [['pick3', 'Take the shotgun: walk over it'], ['fire3', 'Fire: press [Q]'], ['runfire', 'Fire on the run: press [Q] as you run'], ['ammo', 'Reload: walk over an ammo box'], ['kill4', 'Blast the 4 goons']] },
+      ['swap', 'Swap weapons: hold [↓] on a weapon on the ground'], ['kill3', 'Chop down the goons']] },
+    { x0: 1600, title: '5 · Shotgun', tasks: [['pick3', 'Take the shotgun: walk over it'], ['fire3', 'Fire: press [Q]'], ['runfire', 'Fire on the run: press [Q] as you run'], ['ammo', 'Reload: walk over an ammo box'], ['kill4', 'Blast the goons']] },
     { x0: 1900, title: '6 · Machine gun', tasks: [['pick4', 'Take the machine gun: walk over it'], ['burst', 'Burst fire: hold [Q]'], ['airfire', 'Fire in the air: jump [↑], hold [Q]'],
-      ['hurl', 'Out of ammo: press [Q] to throw the gun'], ['kill5', 'Mow down the 4 goons']] },
+      ['hurl', 'Out of ammo: press [Q] to throw the gun'], ['kill5', 'Mow down the goons']] },
     { x0: 2150, title: '7 · The club roof', tasks: [['stairs', 'Fire escape: walk up the stairs'], ['top', 'Club roof: climb to the top']] },
     { x0: 2420, title: '8 · Boss', tasks: [['enter', 'Enter the club: walk the red carpet'], ['techroll', 'Tech-roll: knocked down, press [Space] as you land'], ['boss', 'Beat the boss: jump [↑] over his shockwave']] },
   ];
@@ -4603,6 +4603,9 @@ import * as P9 from './levels/pier9.js';
   pickups.push({ w: 4, x: 2486, y: restY(4), taken: false, rack: true });   // a loaded machine gun lying on the dais inside the club door
   const WAVES = { 1: [770, 815], 2: [1060, 1120, 1190], 3: [1340, 1410, 1570], 4: [1720, 1790, 1850, 1880], 5: [1990, 2060, 2110, 2135] };
   const spawned = new Set(), zoneTs = {};   // the stages whose goons are out; the time spent in each stage
+  const reinf = {};   // per fight stage: { k: reinforcement waves sent (DIF().reinf), n: goons in the last wave out }
+  const reinfLeft = z => typeof z === 'number' && !isP9() && !!reinf[z] && reinf[z].k < DIF().reinf.length;   // (a stage is not clear while one is to come; the demo's own goons have none)
+  const stageGoons = i => WAVES[i].length + DIF().reinf.reduce((a, b) => a + b, 0);
   const tutEl = document.getElementById('tut'), toastEl = document.getElementById('toast');
   let tutZone = -1, tutDirty = true, toastT = 0;
   const toastQ = [], cleared = new Set(), pickToasted = new Set(), wavePend = new Set();
@@ -4744,7 +4747,7 @@ import * as P9 from './levels/pier9.js';
     if (C.kind !== 'start') {
       if (isP9() && C.kind === 'wave') P9.WAVES.forEach((w, j) => { if (j < C.i) p9.w[w.id] = { out: true, n: 0 }; });   // a wave checkpoint: the waves before it stay beaten
       else if (isP9()) { for (const w of P9.WAVES) p9.w[w.id] = { out: true, n: 0 }; p9.open = true; p9.shutter = 1; }
-      else for (const k in WAVES) if (boss || +k < C.i) { spawned.add(+k); cleared.add(+k); }   // the stages behind him stay cleared
+      else for (const k in WAVES) if (boss || +k < C.i) { spawned.add(+k); cleared.add(+k); reinf[k] = { k: 99, n: 0 }; }   // the stages behind him stay cleared
       pickups.forEach((k, j) => { k.taken = C.taken[j]; });
       if (C.w) equip(C.w, C.ch[C.w]);
       for (let w = 0; w < charge.length; w++) charge[w] = C.ch[w];
@@ -4810,7 +4813,20 @@ import * as P9 from './levels/pier9.js';
       walkT = ctl.spd > 5 && ctl.spd < WALK + 6 && !ctl.air ? walkT + rdt : 0; if (walkT > 0.5) emit('feat', 'walk');   // a steady walk (not the run's first strides)
       if (ctl.spd > WALK + 20 && !ctl.air) emit('feat', 'run');
       }
-    // the stage panel switches with hysteresis: 24 px past a stage line going right, 24 px back over it going left, and never while the old stage's goons stand
+    // a stage goon steps out of the nearest unused house door, alley gap or parked-car door near x0; with none near (or one too close to the hero)
+  // he walks in from off screen on x0's side
+  function stageGoon(i, x0, used) {
+    const hx = P[2].x; let src = null, best = 46;
+    for (const [kind, list] of [['door', DOORS], ['alley', ALLEYS], ['car', CARDOORS]]) for (const d of list) {
+      const dd = Math.abs(d.x - x0); if (dd < best && !used.has(d) && Math.abs(d.x - hx) > 60) { best = dd; src = { kind, d }; }
+    }
+    let x;
+    if (src) { used.add(src.d); x = src.d.x; spawnFx.push({ kind: src.kind, d: src.d, x, t: 0 }); }
+    else x = clamp(x0 >= hx ? Math.max(x0, cam.x + cam.vw + 14) : Math.min(x0, cam.x - 14), 12, Math.min(W, STREET_END) - 20);
+    const g = spawnEnemy('goon', x, i);
+    g.cdT = Math.max(g.cdT, 0.9);
+  }
+  // the stage panel switches with hysteresis: 24 px past a stage line going right, 24 px back over it going left, and never while the old stage's goons stand
     let zc = 0; while (zc + 1 < ZONES.length && P[2].x >= ZONES[zc + 1].x0) zc++;
     const onRoof = ctl.surf === GOAL && stageDone(ZONES.length - 2);   // up on the club roof with stage 7 done: the red carpet is stage 8
     if (onRoof) zc = ZONES.length - 1;
@@ -4821,7 +4837,7 @@ import * as P9 from './levels/pier9.js';
     }
     if (z !== tutZone) { tutZone = z; tutDirty = true; }
     if (!flags.demo && !flags.attract && !flags.club && ckpt && ckpt.kind !== 'boss' && zc > ckpt.i && zc < ZONES.length - 1 && hero.mode === 'anim' && P[2].x >= ZONES[zc].x0 + 16) setCkpt('stage', zc);   // a new stage: a checkpoint
-    for (const i of wavePend) if (enemies.some(e => !e.dead && e.zone === i && e.x > cam.x - 4 && e.x < cam.x + cam.vw + 4) && toast('Here they come', `Beat the ${WAVES[i].length} goons`, true)) wavePend.delete(i);
+    for (const i of wavePend) if (enemies.some(e => !e.dead && e.zone === i && e.x > cam.x - 4 && e.x < cam.x + cam.vw + 4) && toast('Here they come', `Beat the ${stageGoons(i)} goons`, true)) wavePend.delete(i);
     // each stage's goons come out by where the hero really is (not by the stage panel, which waits while goons stand):
     // once its moves are learned (so each is taught in peace first), after 30 s in it, past its middle, near its exit, or at once
     // if he runs in (skipping the lessons: he wants a fight). A runner meets them ahead of him, not behind.
@@ -4831,21 +4847,17 @@ import * as P9 from './levels/pier9.js';
       const learned = ZONES[i].tasks.every(([k]) => k.startsWith('kill') || FIGHT_TASKS.has(k) || done.has(k)), x1 = ZONES[i + 1].x0, mid = (ZONES[i].x0 + x1) / 2;
       const rushing = !flags.demo && ctl.spd > WALK + 10 && ctl.face > 0, go = learned || zoneTs[i] > 30 || (!flags.demo && P[2].x > mid) || P[2].x > x1 - (flags.demo ? 50 : 120) || rushing || zc > i;   // (the demo keeps to the lessons-first order)
       if (!go || zoneTs[i] < 0.3 && !(zc > i)) continue;
-      spawned.add(i); wavePend.add(i);
+      spawned.add(i); wavePend.add(i); reinf[i] = { k: 0, n: WAVES[i].length };
       const used = new Set(), hx = P[2].x;
-      WAVES[i].forEach((w0, n) => {
-        const x0 = w0 < hx + 40 ? hx + 70 + n * 26 : w0;   // a spot he has already passed: the goon comes out ahead of him instead
-        // each goon steps out of the nearest unused house door, alley gap or parked-car door; with none near (or too close to you) he walks in from off screen
-        let src = null, best = 46;
-        for (const [kind, list] of [['door', DOORS], ['alley', ALLEYS], ['car', CARDOORS]]) for (const d of list) {
-          const dd = Math.abs(d.x - x0); if (dd < best && !used.has(d) && Math.abs(d.x - hx) > 60) { best = dd; src = { kind, d }; }
-        }
-        let x;
-        if (src) { used.add(src.d); x = src.d.x; spawnFx.push({ kind: src.kind, d: src.d, x, t: 0 }); }
-        else x = clamp(x0 >= hx ? Math.max(x0, cam.x + cam.vw + 14) : Math.min(x0, cam.x - 14), 12, Math.min(W, STREET_END) - 20);
-        const g = spawnEnemy('goon', x, i);
-        g.cdT = Math.max(g.cdT, 0.9);
-      });
+      WAVES[i].forEach((w0, n) => stageGoon(i, w0 < hx + 40 ? hx + 70 + n * 26 : w0, used));   // (a spot he has already passed: the goon comes out ahead of him instead)
+    }
+    // reinforcements (Medium and up, DIF().reinf): when half the stage's goons are down, the next wave walks in, from both sides
+    if (!flags.club && !isP9()) for (const key in WAVES) {
+      const i = +key, R = reinf[i];
+      if (!R || !spawned.has(i) || cleared.has(i) || R.k >= DIF().reinf.length || (zoneAlive[i] || 0) > R.n / 2) continue;
+      const n = DIF().reinf[R.k++], used = new Set(), hx = P[2].x; R.n = (zoneAlive[i] || 0) + n;
+      for (let j = 0; j < n; j++) { const sd = j % 2 ? -1 : 1; stageGoon(i, hx + sd * (130 + j * 22), used); }
+      if (!flags.demo && !flags.attract) toast('Reinforcements', `${n} more`, true);
     }
     if (!enc.boss && !enc.bossBeaten && hero.mode === 'anim' && flags.club && slamDone) {   // inside the club, the door shut: the entrance
       // the room goes dark but for one white spot; the crowd flinches back; the boss walks out of the far doorway to his mark under the light
@@ -4970,7 +4982,7 @@ import * as P9 from './levels/pier9.js';
     }
   }
   function resetTutorial() {
-    done.clear(); tutDirty = true; tutZone = -1; spawned.clear(); for (const k in zoneTs) delete zoneTs[k]; clearEnemies(); resetRun();
+    done.clear(); tutDirty = true; tutZone = -1; spawned.clear(); for (const k in reinf) delete reinf[k]; for (const k in zoneTs) delete zoneTs[k]; clearEnemies(); resetRun();
     charge.fill(0); thrown.length = 0; ammoBoxes.length = 0; loot.n = 0;
     for (const k of pickups) k.taken = false;
     weaponBtns.forEach(b => { b.disabled = +b.dataset.w !== 0; });
@@ -8511,7 +8523,7 @@ import * as P9 from './levels/pier9.js';
     if (isP9()) { p9SkipToBoss(); return; }
     reset();
     for (const Z of ZONES.slice(0, ZONES.length - 1)) for (const [k] of Z.tasks) done.add(k);
-    for (const k in WAVES) { spawned.add(+k); cleared.add(+k); }   // the street's goons are behind him: their waves do not come out now
+    for (const k in WAVES) { spawned.add(+k); cleared.add(+k); reinf[k] = { k: 99, n: 0 }; }   // the street's goons are behind him: their waves do not come out now
     tutDirty = true;
     for (const k of pickups) k.taken = !k.rack;
     equip(4, WEAPONS[4].ammo);
@@ -8804,6 +8816,7 @@ import * as P9 from './levels/pier9.js';
     if (W_.ckpt && !flags.demo && !flags.attract) setCkpt('wave', P9.WAVES.indexOf(W_));   // a long level: a checkpoint as a big fight starts
     roster.forEach((v, i) => p9.queue.push({ v, wave: W_.id, src: W_.from[i % W_.from.length], t: 0.15 + i * 0.5 }));
     if (roster.includes('bosun')) toast(P9.BOSUN.name, 'His guard stops a lone heavy: end a combo on it, or parry him', true);
+    else if (W_.reinf) { if (roster.length) toast('Reinforcements', `${roster.length} more`, true); }
     else toast('Saltmen', `${roster.length} of them`, true);
   }
   // spawns never land on the hero: a door or container closer than SPAWN_GAP px to him (or on screen at the edge of the view) is
@@ -8847,7 +8860,7 @@ import * as P9 from './levels/pier9.js';
     }
     if (endPh) return;
     const allDown = id => p9.w[id].out && !(zoneAlive[id] > 0) && !p9.queue.some(q => q.wave === id);
-    if (hero.mode === 'anim' && !flags.club) for (const W_ of P9.WAVES) if (W_.at != null && P[2].x >= W_.at && (!W_.after || allDown(W_.after))) p9Wave(W_);
+    if (hero.mode === 'anim' && !flags.club) for (const W_ of P9.WAVES) if (W_.at != null && P[2].x >= W_.at && (!W_.after || [].concat(W_.after).every(allDown))) p9Wave(W_);
     for (const W_ of P9.WAVES) if (W_.half && !p9.w[W_.id].out && enemies.some(g => g.v === W_.half && (g.dead || g.hp < g.maxHp / 2))) p9Wave(W_);   // the Bosun's help at half his health
     for (const W_ of P9.WAVES) if (W_.then && p9.w[W_.id].out && !p9.w[W_.then].out && !p9.queue.some(q => q.wave === W_.id) && (zoneAlive[W_.id] || 0) <= p9.w[W_.id].n / 2) p9Wave(P9.WAVES.find(w => w.id === W_.then));
     for (let i = p9.queue.length - 1; i >= 0; i--) { const q = p9.queue[i]; if ((q.t -= dt) <= 0) { p9.queue.splice(i, 1); p9SpawnOne(q); } }
@@ -9359,6 +9372,6 @@ import * as P9 from './levels/pier9.js';
       tp: x => { const dx = x - ctl.x; ctl.x += dx; for (const p of P) { p.x += dx; p.px += dx; } for (const st of hair) for (const p of st) { p.x += dx; p.px += dx; } if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; } cam.xf += dx; },
       street: () => { leaveTitle(); setDemo(false); hideMenu(); loadLevel('street'); reset(); },   // back to the tutorial street
       t3mem: () => Three3D.renderer ? { ...Three3D.renderer.info.memory, programs: Three3D.renderer.info.programs.length } : null,   // the 3D view's GPU objects (a level switch must not leak them)
-      hurtBoss: n => { if (enc.boss) { enc.boss.hp = Math.max(1, enc.boss.hp - n); } }, hurtHero: n => { hero.hp = Math.max(1, hero.hp - n); }, setDiff: i => { diffSel = i; }, kill: () => { for (const e of enemies) if (!e.dead && e !== enc.boss) killEnemy(e, 1, 200, 0.3); } };
+      hurtBoss: n => { if (enc.boss) { enc.boss.hp = Math.max(1, enc.boss.hp - n); } }, hurtHero: n => { hero.hp = Math.max(1, hero.hp - n); }, setDiff: i => { diffSel = i; }, kill: (n = 1e9) => { for (const e of enemies) if (!e.dead && e !== enc.boss && n-- > 0) killEnemy(e, 1, 200, 0.3); } }   // (kill(n): at most n);
   } else requestAnimationFrame(frame);
 })();
