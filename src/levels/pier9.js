@@ -36,7 +36,8 @@ export const HALL_DOORS = [2496, 2726];   // the crew doors in the hall's back w
 export const HALL_LAMPS = [2490, 2610, 2730];
 export const ICE = [[2540, 2590], [2680, 2730]];
 export const CONVEYOR_Y = hy(170);         // the rail
-export const TUNA = { top: hy(78), bottom: hy(34) };   // a hanging tuna in the swing lane: crouch top (y 252) passes under 246
+export const TUNA = { top: hy(78), bottom: hy(34) };
+export const HOOK_COVER = [[2553, 2577, hy(27)], [2612, 2648, hy(32)]];   // hall props tall enough to stop Marchetti's hook (the 3-high fish crates, the podium): [x0, x1, top]   // a hanging tuna in the swing lane: crouch top (y 252) passes under 246
 
 export const SALT_LOOKS = {   // Saltmen outfits (src/sim/enemies/roster.js LOOK format, plus hat / boots / apron)
   oilskin: { build: 'tall', top: 'coat', hair: ['souwester'], beards: ['full', 'stubble', 'stache', 'chin'], cols: [['#d8b02a', '#a8841c'], ['#cfa024', '#9c7618']], pants: ['#2e3038'], boots: '#17171c', hat: '#e0b828' },
