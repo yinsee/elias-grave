@@ -4,7 +4,30 @@ Run with a static server (`python3 -m http.server 8765`) and open the URL; the p
 Two runs of the same URL must give the same hashes. A refactor step that keeps both hashes changed nothing.
 A step that changes behaviour on purpose records new hashes here, with the reason.
 
-## Current (from migration step 6, 2026-10-06)
+## Current (from the feedback layer, 2026-10-06)
+
+| URL | state | buf | l3 | note |
+|---|---|---|---|---|
+| `index.html?autotest=demo&frames=1200` | `c5dbe2b2` | `5e2e219f` | | 2D (attract demo, seed 1, 960x540 view) |
+| `index.html?autotest=boss&frames=1800` | `daa2ec28` | `7faca013` | | 2D (skipToBoss + demo, seed 1) |
+| `index.html?autotest=demo&frames=1200&view3d` | `c5dbe2b2` | `f05556a9` | `b922f55b` | 3D view: the same state hash as 2D |
+| `index.html?autotest=boss&frames=1800&view3d` | `daa2ec28` | `571dd39e` | `0cc1f74f` | 3D view: the same state hash as 2D |
+
+The feedback layer (review improvement #10: style meter, music director, grunts, heartbeat and vignette, graded results card,
+toasts, fight camera, 2D rim light, 3D head yaw), two runs each in headless Chrome, the same hashes both times:
+- **demo state `5ae6a552` -> `c5dbe2b2`: the fight camera.** The sim has no combat change, but one sim line reads the camera:
+  a wave goon with no door near his spot walks in from just off screen (`cam.x + cam.vw + 14`, the `spawned` loop in `tutTick`).
+  The camera now frames the middle of a fight (the hero within 30 % of the view width of the centre) instead of sliding just
+  enough to fit everyone, so `cam.x` differs during the demo's street fights, and such a goon steps in at another x.
+  Checked: with only the camera change switched off, the demo state hash is `5ae6a552` again. The zoom rules did not change.
+  The boss run's state is the same (`daa2ec28`): it leaves the club roof before such a spawn.
+- **2D buf (both URLs): the 2D rim light** (`rimPass` after `lightPass`; fighters are marked with `figArt` in `render2d/raster.js`).
+  The demo buf also sees the other fight framing.
+- **3D demo buf and l3: the camera** (the 2D art in the 3D layers is drawn for the camera's window). The 3D boss run keeps its
+  buf and l3: the 3D view has no rim pass (its fighter shader already has a rim light), and the head yaw is GPU-only.
+- The style meter, the vignette, the music director and the results card are DOM and audio only.
+
+### Before the feedback layer (from migration step 6, 2026-10-06)
 
 | URL | state | buf | l3 | note |
 |---|---|---|---|---|
