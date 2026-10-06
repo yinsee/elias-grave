@@ -24,7 +24,12 @@ export function createAudio({ base = '', ctx = new (window.AudioContext || windo
   const musicLP = ctx.createBiquadFilter();
   musicLP.type = 'lowpass'; musicLP.frequency.value = 20000;
   const duck = ctx.createGain();
-  musicLP.connect(duck).connect(bus.music);
+  // the music director's layer (director.js): the state filter and level on the track, and a percussion input under it.
+  // Both go through the voice duck, so a voice line ducks the drums too.
+  const layerLP = ctx.createBiquadFilter(), layerGain = ctx.createGain(), percIn = ctx.createGain();
+  layerLP.type = 'lowpass'; layerLP.frequency.value = 20000;
+  musicLP.connect(layerLP).connect(layerGain).connect(duck).connect(bus.music);
+  percIn.connect(duck);
 
   const sfx = createSfx(ctx, { destination: bus.sfx });
 
@@ -56,8 +61,12 @@ export function createAudio({ base = '', ctx = new (window.AudioContext || windo
       g.gain.exponentialRampToValueAtTime(1, ctx.currentTime + fade);
       src.connect(g).connect(musicLP);
       src.start();
-      cur = { src, g };
+      cur = { src, g, buf, t0: ctx.currentTime, loop: src.loop };
     },
+    // what plays now, for the director's beat clock: { buf, t0 (ctx time at its start), loop }; null when nothing plays
+    get now() { return cur ? { id: music.id, buf: cur.buf, t0: cur.t0, loop: cur.loop } : null; },
+    get slow() { return slow; },
+    layer: { lp: layerLP, gain: layerGain, perc: percIn },
     stop(fade = 1.5) {
       if (!cur) return;
       const { src, g } = cur, t = ctx.currentTime;
@@ -118,13 +127,31 @@ export function createAudio({ base = '', ctx = new (window.AudioContext || windo
       if (KICK.test(mv)) return sfx.play(heavy || HEAVY_KICK.test(mv) ? 'kick_heavy' : 'kick_light', o);
       return sfx.play(heavy ? 'punch_heavy' : 'punch_light', o);
     };
+    // grunts: the hero on every blow he takes; a goon on a heavy blow and on every other light one (never two at once)
+    let gruntT = -9, lightN = 0;
+    const grunt = (name, p, o) => { const t = ctx.currentTime; if (t - gruntT < 0.16) return; gruntT = t; sfx.play(name, { pan: pan(p), ...o }); };
+    const goonGrunt = (p) => {
+      if (p.outcome !== 'clean' || !p.target || typeof p.target !== 'object' || p.by === 'enemy') return;
+      if (p.power <= 1 && (lightN++ & 1)) return;
+      grunt('grunt_goon', p, { vol: p.power > 1 ? 0.8 : 0.55, pitch: p.isBoss ? 0.7 : 1, when: 0.02 });
+    };
+    // the parry ring: a 'parry' event and a 'parry' feat for the same parry ring once
+    let parryT = -9;
+    const parryRing = (p) => { const t = ctx.currentTime; if (t - parryT < 0.08) return; parryT = t; sfx.play('parry_ring', { pan: pan(p) }); };
+    const featName = (f) => String(f && typeof f === 'object' ? f.name || f.feat || f.id || '' : f || '').toLowerCase().replace(/[^a-z]/g, '');
     const offs = [
-      events.on('hit', (p = {}) => hitSound(p)),
-      events.on('hurt', (p = {}) => sfx.play(p.heavy ? 'punch_heavy' : 'punch_light', { pan: pan(p), vol: 0.9 })),
+      events.on('hit', (p = {}) => { hitSound(p); goonGrunt(p); }),
+      events.on('hurt', (p = {}) => {
+        sfx.play(p.heavy ? 'punch_heavy' : 'punch_light', { pan: pan(p), vol: 0.9 });
+        grunt('grunt_hero', p, { vol: p.heavy ? 0.9 : 0.6, pitch: p.outcome === 'ko' ? 0.85 : 1, when: 0.02 });
+      }),
+      events.on('parry', (p = {}) => parryRing(p)),
+      events.on('feat', (f) => { if (featName(f) === 'parry') parryRing(f && typeof f === 'object' ? f : null); }),
       events.on('ko', () => sfx.play('ko_thud')),
       events.on('kill', (p = {}) => {   // the kill confirm under the last blow, then the body hits the floor
         sfx.play('kill_confirm', { pan: pan(p), vol: p.isBoss ? 1 : 0.7, pitch: p.isBoss ? 0.75 : 1 });
         sfx.play('body_fall', { pan: pan(p.enemy), when: 0.25 });
+        sfx.play('grunt_die', { pan: pan(p), vol: 0.6, pitch: p.isBoss ? 0.62 : 1, when: 0.04 });
       }),
       events.on('pickup', (p = {}) => sfx.play(p.kind === 'bandage' ? 'bandage' : 'pickup')),
       events.on('glass:break', (p = {}) => sfx.play((p.pane && p.pane.w * p.pane.h > 2400) ? 'glass_large' : 'glass_small', { pan: pan(p) })),

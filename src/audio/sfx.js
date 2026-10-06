@@ -313,6 +313,48 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
       tone(v, { type: 'sawtooth', f0: 55, f1: 52, at: 0.1, a: 0.3, d: 1.2, vol: 0.06 });            // low drone after
       send(v, 0.4);
     },
+    // voices: a short grunt through two vowel formants ("uh"), with a breath. The hero is low and dry, a goon a little higher and rougher.
+    grunt_hero(v) { grunt(v, 98, 0.16, 1); },
+    grunt_goon(v) { grunt(v, 128, 0.14, 1.6); },
+    grunt_die(v) { grunt(v, 112, 0.42, 2.2, 0.62); },   // a goon's last breath: longer, falling
+    heartbeat(v) {   // lub-dub: two muffled low thumps
+      for (const [at, f, vol] of [[0, 62, 1], [0.17, 54, 0.7]]) {
+        tone(v, { f0: f * 1.4, f1: f, at, a: 0.006, d: 0.16, vol, sweep: 0.05, drive: 1.5 });
+        noise(v, { buf: brown, filter: 'lowpass', f0: 160, at, a: 0.005, d: 0.1, vol: vol * 0.7 });
+      }
+    },
+    parry_ring(v) {   // steel on steel: a bright strike, a long inharmonic ring, a shimmer
+      noise(v, { filter: 'highpass', f0: 3500, d: 0.02, vol: 0.9, drive: 2 });
+      tone(v, { type: 'triangle', f0: 900, f1: 600, d: 0.05, vol: 0.5, drive: 3 });
+      ring(v, { f: 2350, ratios: [1, 1.34, 1.93, 2.61, 3.47], d: 1.2, vol: 0.3 });
+      ring(v, { f: 1180, ratios: [1, 2.02], at: 0.01, d: 0.8, vol: 0.12 });
+      send(v, 0.45);
+    },
+    // the music director: a percussion layer for fights (played on the beat of the track) and a stinger when a fight is won
+    perc_kick(v) {
+      tone(v, { f0: 120, f1: 42, d: 0.22, vol: 1, drive: 3, sweep: 0.08 });
+      noise(v, { buf: brown, filter: 'lowpass', f0: 300, d: 0.06, vol: 0.5 });
+    },
+    perc_tom(v) {   // a low, dry floor tom
+      tone(v, { f0: 150, f1: 92, d: 0.26, vol: 0.8, drive: 2, sweep: 0.1 });
+      noise(v, { filter: 'bandpass', f0: 600, q: 1, d: 0.05, vol: 0.25 });
+    },
+    perc_snare(v) {   // a rim-heavy snare, more crack than body
+      noise(v, { filter: 'bandpass', f0: 2200, f1: 1600, q: 0.9, d: 0.12, vol: 0.7, drive: 2 });
+      tone(v, { type: 'triangle', f0: 230, f1: 170, d: 0.07, vol: 0.45 });
+      send(v, 0.12);
+    },
+    perc_hat(v) {
+      noise(v, { filter: 'highpass', f0: 7000, d: 0.035, vol: 0.4 });
+    },
+    stinger_clear(v) {   // the fight is won: a deep hit, a minor-key brass stab that swells and fades, a cymbal tail
+      tone(v, { f0: 70, f1: 30, d: 0.9, vol: 0.9, drive: 4 });
+      noise(v, { filter: 'highpass', f0: 4000, f1: 6000, a: 0.01, d: 1.6, vol: 0.25 });
+      for (const [f, at] of [[146.8, 0], [174.6, 0.02], [220, 0.04], [293.7, 0.06]])   // D minor
+        tone(v, { type: 'sawtooth', f0: f, at, a: 0.05, d: 1.4, vol: 0.09, drive: 2 });
+      ring(v, { f: 880, ratios: [1, 2.01, 3], at: 0.05, d: 1.6, vol: 0.05 });
+      send(v, 0.5);
+    },
     ui_blip(v) {
       tone(v, { type: 'square', f0: 1200, f1: 900, d: 0.04, vol: 0.4 });
       tone(v, { f0: 300, f1: 200, d: 0.03, vol: 0.3 });
@@ -334,6 +376,24 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
       tone(v, { f0: f, f1: f * 0.97, at, a: 0.001, d: 0.03 + rand() * 0.12, vol: vol * (0.08 + rand() * 0.12) * (1 - at / len * 0.6) });
       if (i % 3 === 0) noise(v, { filter: 'bandpass', f0: f, q: 6, at, d: 0.04, vol: vol * 0.25 });
     }
+  }
+
+  // A vocal grunt: a sawtooth glottal buzz at f0 (falls 25 %), shaped by "uh" formants, with a breath of noise. rough = drive.
+  function grunt(v, f0, d, rough, fall = 0.75) {
+    const t = v.t, o = ctx.createOscillator(), g = ctx.createGain(), sh = ctx.createWaveShaper();
+    o.type = 'sawtooth';
+    const f = f0 * (1 + (rand() - 0.5) * 0.12) * v.p;
+    o.frequency.setValueAtTime(f * 1.08, t); o.frequency.exponentialRampToValueAtTime(f * fall, t + d * v.k);
+    sh.curve = curve(rough);
+    env(g, t, 0.55, 0.012 * v.k, d * v.k);
+    o.connect(sh).connect(g);
+    for (const [ff, q, gv] of [[640, 6, 1], [1150, 8, 0.55], [2500, 10, 0.18]]) {
+      const bp = ctx.createBiquadFilter(), bg = ctx.createGain();
+      bp.type = 'bandpass'; bp.frequency.value = ff * (0.9 + v.p * 0.1); bp.Q.value = q; bg.gain.value = gv * 2.2;
+      g.connect(bp).connect(bg).connect(v.out);
+    }
+    o.start(t); o.stop(t + d * v.k + 0.05);
+    noise(v, { filter: 'bandpass', f0: 1300, f1: 800, q: 1.2, a: 0.01, d: d * 0.8, vol: 0.18 });   // breath
   }
 
   function play(name, { vol = 1, pan = 0, pitch = 1, when = 0 } = {}) {
