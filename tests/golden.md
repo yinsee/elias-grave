@@ -29,6 +29,12 @@ Pier 9 itself has no golden hash yet. Test it with `?manual`: `window.__pier9.st
 The Pier 9 3D view (2026-10-06: `Three3D.rebuildWorld`, the `p9*` builders) kept all four URLs' hashes (state, buf, l3): every Pier 9 branch in the 3D view is behind `isP9()`.
 Test it with `?manual`: `__pier9.start()` then the 3D button; `__pier9.street()` goes back to the street; `__pier9.t3mem()` reads the 3D view's GPU object counts (they must stay the same after many level switches).
 
+The play-test sim fixes (2026-10-06: the restart soft-lock, no boss knock-down from objects, the tutorial ammo lessons, no ledge camping,
+the difficulty lock, the travelling boss slam, the `hit` event after the guard, the blade throw on ↓ + hold Q, M only with `?dev`, the Pier 9
+wave alert, the street boss scaled by difficulty, the hook clank, the settings key) kept all four URLs' hashes (state, buf, l3), run in Chrome.
+The attract demo does not reach these branches in 1200 frames, and the boss autotest leaves the club roof before the boss spawns.
+They were play-tested with `?manual` (`window.__sim` holds the live sim state for such tests).
+
 Options: `?seed=N` (repeatable random numbers), `?fixed` (clock steps exactly 1/60 s per frame), `?autotest=demo|boss&frames=N`, `?view3d`,
 `?manual` (no requestAnimationFrame: a test calls `window.__step(n)` and reads `window.__peek()`; `window.__skipToBoss()` starts at the club roof).
 

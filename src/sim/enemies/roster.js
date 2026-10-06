@@ -32,5 +32,5 @@ export const AROLES = ['brawler', 'knife', 'brawler', 'thrower', 'pipe', 'knife'
 // s = size; poise = damage needed to stagger; cd = seconds between attacks
 export const ETYPE = {
   goon: { s: 1, hp: 50, m: 1, speed: 30, reach: 17, dmg: 8, heavyDmg: 14, cd: [0.9, 1.7], poise: 0, windup: 0.22 },
-  boss: { s: 1.25, hp: 780, m: 6, speed: 27, reach: 22, dmg: 22, heavyDmg: 30, cd: [0.7, 1.4], poise: 30, windup: 0.35 },
+  boss: { s: 1.25, hp: 780, hpD: [600, 780, 950, 1150], m: 6, speed: 27, reach: 22, dmg: 22, heavyDmg: 30, cd: [0.7, 1.4], poise: 30, windup: 0.35 },
 };
