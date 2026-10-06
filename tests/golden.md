@@ -1,6 +1,6 @@
 # Golden autotest hashes
 
-Run with a static server (`python3 -m http.server 8765`) and open the URL; the page title shows the result.
+Run with a static server (`tools/serve.py`, port 8765, no browser cache; or `python3 -m http.server 8765`) and open the URL; the page title shows the result.
 Two runs of the same URL must give the same hashes. A refactor step that keeps both hashes changed nothing.
 A step that changes behaviour on purpose records new hashes here, with the reason.
 
