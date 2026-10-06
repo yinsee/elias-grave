@@ -167,8 +167,29 @@ TRN.DUCK = mod(IDLE, { rx: -2.5, ry: 4.2, lean: 0.55, head: 1.0, f0x: -6, f1x: 5
 TRN.BACK = mod(GUARD, { rx: -2.2, ry: 15.2, lean: -0.22, head: 0.18, f0x: -8, f1x: 1, a0s: 0.9, a0e: 2.0, a1s: 1.3, a1e: 1.6 });
 TRN.ADASH = mod(AIR, { lean: 0.5, head: -0.35, f0x: -8, f0y: 9, f1x: -3, f1y: 8, a0s: -1.5, a0e: 0.3, a1s: -1.1, a1e: 0.5 });
 
-// dodge: v/dur = ground roll, back/backDur = step back (no direction), air/airDur = air dash; inv = time attacks miss
+// short dodge (Space): forward = a slip in under the blow; back = TRN.BACK. Block: forearms up at the face; parry: the front arm knocks the blow aside; gbreak: guard smashed open
+TRN.SLIP = mod(GUARD, { rx: 1.5, ry: 13.8, lean: 0.55, head: -0.3, f0x: -9, f1x: 5, a0s: 1.1, a0e: 2.3, a1s: 1.3, a1e: 2.0 });
+TRN.BLOCK = mod(GUARD, { rx: -0.8, ry: 15.0, lean: 0.12, head: 0.25, f0x: -7, f1x: 4.5, a0s: 1.35, a0e: 2.1, a1s: 1.6, a1e: 1.85 });
+TRN.PARRY = mod(GUARD, { rx: -1, ry: 15.2, lean: -0.05, head: 0.15, a0s: 1.2, a0e: 2.3, a1s: 2.3, a1e: 0.9 });
+TRN.GBREAK = mod(GUARD, { rx: -2.5, ry: 14.6, lean: -0.4, head: 0.4, f0x: -9, f1x: 2, a0s: 0.2, a0e: 0.8, a1s: 2.2, a1e: 0.4 });
+
+// dodge: v/dur = the long roll (↓ at a run), air/airDur = air dash; inv = time attacks miss
 export const DASH = { v: 300, dur: 0.66, inv: 0.26, cd: 0.4, back: 160, backDur: 0.26, air: 155, airDur: 0.2 };
+// combat tuning (shared by both views: all of it is sim)
+// heavyT: a held Q/W turns its light into the heavy; throwT: a hold that throws. step: the short dodge (d px in t s, inv = i-frames, atk = attack-cancel from).
+// pd: perfect dodge = a dodge started within win s of a hit's contact: slow-mo (x slow for slowT real s), the attacker exposed (counter window).
+// parry: a block tap within win s before contact (lock: no parry again for a press this soon after the last); the attacker reels stag s.
+// block: chip = share of a light hit that gets through. wake: i-frames after a get-up; floor: most time on the floor; tech: window (s on the floor) for a tech-roll.
+// str: the hero's string (hits within gap s): rep = per repeat of the same move, lone = a heavy that opens, ender = a heavy after 2+ hits, ctr = a counter-hit
+export const DEF = {
+  heavyT: 0.18, throwT: 0.3,
+  step: { d: 36, t: 0.25, inv: 0.14, atk: 0.15 },
+  pd: { win: 0.1, slow: 0.3, slowT: 0.5, expose: 0.8 },
+  parry: { win: 0.125, lock: 0.3, stag: 0.6, stop: 0.12 },
+  block: { chip: 0.2, inv: 0.12, push: 70 },
+  wake: 0.5, floor: 1.2, tech: [0.05, 0.9],
+  str: { gap: 0.9, rep: 0.65, lone: 0.6, ender: 1.2, ctr: 1.25 },
+};
 // hit-stop per move (seconds the world freezes when it connects); moves not listed use their power
 export const STOP = { lp0: 0.05, lp1: 0.05, hp: 0.12, lk0: 0.06, lk1: 0.06, hk0: 0.12, hk1: 0.12, airkick: 0.08, ks0: 0.06, ks1: 0.06, kh: 0.12, kair: 0.07, al: 0.08, al1: 0.08, aw: 0.13, ks2: 0.05, kw: 0.1, ah: 0.15, aair: 0.1, gb: 0.08,
   slp: 0.04, sweep: 0.09, sslash: 0.06, tw: 0.08 };
