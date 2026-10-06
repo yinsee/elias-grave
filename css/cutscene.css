@@ -11,7 +11,7 @@
   --cs-red: #ff4a5c;
   --cs-text: #efe6d8;
   --cs-muted: #a79dbd;
-  --cs-display: var(--display, "Pixelify Sans", "Courier New", monospace);
+  --cs-display: var(--display, "Pixelify Sans", "Courier New", monospace);   /* weight 500, at 16, 24, 32, 48 px only: bold or off the grid its C reads as O */
   --cs-mono: var(--mono, "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace);
   --cs-fs: clamp(11px, 1.85cqw, 22px);
   --g: max(6px, 2.6cqh);
@@ -54,7 +54,7 @@
 .cs-frame.missing { background: repeating-linear-gradient(135deg, #0d0b12 0 12px, #13101b 12px 24px); }
 .cs-missing { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .6em;
   padding: 6% 10%; box-sizing: border-box; text-align: center; color: #8f86a6; font: 500 clamp(10px, 1.45cqw, 16px)/1.5 var(--cs-mono); }
-.cs-missing b { font: 700 1.05em/1 var(--cs-display); letter-spacing: .14em; color: var(--cs-amber); }
+.cs-missing b { font: 500 16px/1 var(--cs-display); letter-spacing: .14em; color: var(--cs-amber); }
 .cs-missing p { margin: 0; max-width: 44em; }
 .cs-port .cs-missing { font-size: clamp(10px, 1.6cqw, 16px); }
 
@@ -77,7 +77,7 @@
 .cs-cap.left { align-self: flex-start; }
 .cs-cap.vo { background: linear-gradient(175deg, var(--cs-paper), var(--cs-paper-2)); color: var(--cs-paper-ink); font-weight: 500; }
 .cs-cap.say { background: var(--cs-white); color: var(--cs-black); font-weight: 600; }
-.cs-tag { display: block; margin-bottom: .3em; font: 700 .78em/1 var(--cs-display); letter-spacing: .14em; text-transform: uppercase; color: #8e1e28; }
+.cs-tag { display: block; margin-bottom: .3em; font: 700 .78em/1 var(--cs-mono); letter-spacing: .14em; text-transform: uppercase; color: #8e1e28; }
 .cs-bubble { position: absolute; z-index: 2; max-width: 46%; padding: .6em .95em .65em; background: var(--cs-white); color: var(--cs-black);
   border: 2px solid var(--cs-black); border-radius: 1.1em; font-weight: 600; box-shadow: 2px 3px 0 rgba(0, 0, 0, .55); animation: cs-pop .2s ease-out backwards; }
 .cs-bubble::before, .cs-bubble::after { content: ""; position: absolute; width: 0; height: 0; border-style: solid; }
@@ -90,7 +90,7 @@
 .cs-text.typed::after { content: " \25BC"; font-size: .7em; color: #8e1e28; animation: cs-blink 1s steps(2) infinite; }
 .cs-dlg-text .cs-text.typed::after { color: var(--cs-amber); }
 .cs-sfx { position: absolute; z-index: 1; transform: translate(-50%, -50%) rotate(-7deg); pointer-events: none; white-space: nowrap;
-  font: 700 clamp(18px, 4.6cqw, 58px)/1 var(--cs-display); letter-spacing: .1em; color: #f1f3f6;
+  font: 500 48px/1 var(--cs-display); letter-spacing: .1em; color: #f1f3f6;
   text-shadow: 2px 2px 0 #000, -2px 2px 0 #000, 2px -2px 0 #000, -2px -2px 0 #000, 0 0 14px #ff3048, 0 0 28px #b0182c;
   animation: cs-sfx .7s cubic-bezier(.2, 1.4, .4, 1) backwards, cs-hum .09s linear .7s infinite alternate; }
 
@@ -119,7 +119,7 @@
 
 /* ---------- shared chrome ---------- */
 .cs-skip { all: unset; position: absolute; top: max(6px, 1.4cqh); right: max(8px, 1.4cqw); z-index: 6; cursor: pointer; padding: .45em .7em;
-  font: 700 clamp(10px, 1.15cqw, 14px)/1 var(--cs-display); letter-spacing: .16em; color: rgba(239, 230, 216, .5); text-shadow: 0 1px 0 #000; }
+  font: 700 clamp(10px, 1.15cqw, 14px)/1 var(--cs-mono); letter-spacing: .16em; color: rgba(239, 230, 216, .5); text-shadow: 0 1px 0 #000; }
 .cs-skip:hover, .cs-skip:focus-visible { color: #ffe14f; text-shadow: 0 0 8px #c99a10, 0 1px 0 #000; }
 .cs-skip:focus-visible { outline: 2px solid var(--cs-amber); outline-offset: 2px; }
 .cs-live { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
@@ -148,8 +148,8 @@
 .cs-dlg-box[data-side="right"] { border-color: #7a2a36; }
 .cs-plate { position: absolute; top: -.95em; left: 1em; display: flex; align-items: baseline; gap: .7em; padding: .32em .8em .3em;
   background: #0a0810; border: 2px solid currentColor; box-shadow: 0 2px 0 #000; color: var(--cs-amber); white-space: nowrap; }
-.cs-plate b { font: 700 .92em/1 var(--cs-display); letter-spacing: .1em; text-shadow: 0 0 8px currentColor; }
-.cs-plate small { font: 700 .62em/1 var(--cs-display); letter-spacing: .18em; color: var(--cs-muted); text-transform: uppercase; }
+.cs-plate b { font: 500 16px/1 var(--cs-display); letter-spacing: .1em; text-shadow: 0 0 8px currentColor; }
+.cs-plate small { font: 600 .62em/1 var(--cs-mono); letter-spacing: .18em; color: var(--cs-muted); text-transform: uppercase; }
 .cs-plate small:empty { display: none; }
 .cs-dlg-box[data-side="right"] .cs-plate { left: auto; right: 1em; color: var(--cs-red); }
 .cs-dlg-text { margin: 0; min-height: 2.9em; font: 500 1em/1.45 var(--cs-mono); color: var(--cs-text); text-shadow: 0 1px 0 #000; }
@@ -180,3 +180,7 @@
 @media (prefers-reduced-motion: reduce) {
   .cs *, .cs, .cs::before, .cs::after { animation: none !important; transition: none !important; }
 }
+/* the pixel font steps by grid sizes with the stage (never a size in between) */
+@container cs (min-width: 1200px) { .cs-plate b { font-size: 24px; } }
+@container cs (max-width: 960px) { .cs-sfx { font-size: 32px; } }
+@container cs (max-width: 640px) { .cs-sfx { font-size: 24px; } }
