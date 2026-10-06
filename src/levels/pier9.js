@@ -70,6 +70,12 @@ export const WAVES = [
     roster: [['filleter', 'gaffer', 'deckhand'], ['filleter', 'gaffer', 'deckhand', 'hookthrower'], ['filleter', 'gaffer', 'deckhand', 'hookthrower', 'pipeman'],
       ['filleter', 'gaffer', 'deckhand', 'hookthrower', 'pipeman', 'gaffer']] },
 ];
+// drops (docs/drops.md): a Saltman leaves the hero weapon that stands for his own (a gaff hooks like an axe); tier: by his wave.
+// Melee only on the quay and in the yard; the shotgun opens at the market front (w3, where its trestle stands) and in the hall; no machine gun
+export const DROPS = {
+  carry: { knife: ['katana'], machete: ['katana'], gaff: ['axe'], pipe: ['axe'], pistol: ['shotgun'] },
+  tier: { w1: ['katana', 'axe'], w2: ['katana', 'axe'], w2b: ['katana', 'axe'], w3: ['katana', 'axe', 'shotgun'], arena: ['katana', 'axe', 'shotgun'] },
+};
 // Sal "the Scale" Marchetti (docs/levels/01-pier9.md 5): stats per difficulty, his moves' numbers
 export const MARCHETTI = {
   name: 'Sal "the Scale" Marchetti', title: 'Tenor of the Choir · Pier 9', look: 'marchetti',

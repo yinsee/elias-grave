@@ -2,6 +2,7 @@ import { clamp, lerp, smooth, norm, snap, lerpA, segDist, smoothDamp } from './c
 import { C, eShade } from './core/color.js';
 import { rng } from './core/rng.js';
 import { WEAPONS } from './sim/weapons/defs.js';
+import { LOOT, STREET_DROPS } from './sim/weapons/drops.js';
 import { KINDS, LIFTABLE, TOSS, FLOOR_BREAK, PUSH_BREAK } from './sim/objects/kinds.js';
 import { EPAL, BUILD, LOOK, ROLE, ZROLES, AROLES, AMIX, ETYPE } from './sim/enemies/roster.js';
 import { DIFFS } from './core/difficulty.js';
@@ -77,7 +78,7 @@ import * as P9 from './levels/pier9.js';
   let GOAL = { x0: 2160, x1: 2374, y: hy(170) };   // (let: Pier 9 swaps in a surface off the map, see loadLevel)
   // the level being played: the tutorial street (this file's own painter and data) or Pier 9 (src/levels/pier9.js). loadLevel() swaps
   // the level lists below in place, so every function that reads them sees the new level.
-  let LV = { id: 'street', title: 'The Street', startX: 60 };
+  let LV = { id: 'street', title: 'The Street', startX: 60, drops: STREET_DROPS };
   const isP9 = () => LV.id === 'pier9';
   const KIOSK_X = GOAL.x1 - 70;   // the left wall of the rooftop kiosk: the club's side door is in it, facing the roof   // the flat roof of the club building; the club door is in the kiosk at its right end
   const PLATS = [
@@ -1939,12 +1940,7 @@ import * as P9 from './levels/pier9.js';
     });
     bleed(e.J[1].x, e.J[1].y, dirx, e.type === 'boss' ? 60 : !hero.weapon && killBy == null && enc.eHitKind === 1 ? 7 : 24, 1.4);   // beaten down with fists: less blood
     bodyStain(e, hx ?? e.J[1].x, hy ?? e.J[1].y + 3, !hero.weapon && killBy == null && enc.eHitKind === 1 ? 4 : 10);
-    // sometimes an enemy drops an ammo box; you have to walk over it to load it
-    const nBox = e === enc.boss ? 3 : simRand() < (WEAPONS[hero.weapon].ammo ? 0.55 : 0.35) ? 1 : 0;
-    for (let i = 0; i < nBox; i++) ammoBoxes.push({ x: e.x, y: e.y - 12 * e.s, vx: dirx * 30 + (simRand() - 0.5) * 70, vy: -110 - simRand() * 50, life: 30 });
-    if ((e === enc.boss || simRand() < BAND_P) && ammoBoxes.filter(b => b.band).length < BAND_MAX)   // and a bandage now and then: walk over it for 30 s of regen
-      ammoBoxes.push({ band: true, x: e.x, y: e.y - 12 * e.s, vx: -dirx * 20 + (simRand() - 0.5) * 60, vy: -120 - simRand() * 40, life: 30 });
-    if (e !== enc.boss && simRand() < DROP_P) dropWeapon(e);   // and often a weapon, lying by the body
+    lootDrop(e, dirx);   // his weapon, an ammo box, a bandage (docs/drops.md)
     if (e.zone != null && --zoneAlive[e.zone] === 0 && typeof e.zone === 'number') emit('feat', 'kill' + e.zone);
     if (e === enc.boss) {
       enc.bossBeaten = true; enc.arena = null; emit('feat', 'boss'); crowdReact(e.x, 0, 'big');
@@ -2637,7 +2633,7 @@ import * as P9 from './levels/pier9.js';
   const charge = [0, 0, 0, 0, 0], fullCharge = w => WEAPONS[w].ammo || Math.round((WEAPONS[w].dura || 0) * DIF().dura);   // blades wear out faster on a harder level
   let wornId = -1, ammoFlash = 0;
   const ammoBoxes = [];   // ammo boxes and bandages (band: true)
-  const BAND_P = 0.25, BAND_MAX = 3, BAND_T = 30, BAND_REGEN = 2.5;   // a bandage: drop chance, most on the ground, how long it heals, HP/s
+  const BAND_T = 30, BAND_REGEN = 2.5;   // a bandage: how long it heals, HP/s (drop chances: LOOT)
   function ammoStep(dt) {
     const Wp = WEAPONS[hero.weapon];
     for (let i = ammoBoxes.length - 1; i >= 0; i--) {
@@ -2720,15 +2716,36 @@ import * as P9 from './levels/pier9.js';
     setWeapon(0); if (Wp.gun) emit('feat', 'hurl');
     if (!reduceMotion) cam.shake = Math.max(cam.shake, 0.05);
   }
-  // a goon's body leaves a random weapon by it (a gun part-loaded): walk over it with empty hands, or squat on it to swap.
-  // At most DROP_MAX of them lie about: the oldest goes
-  const DROP_P = 0.5, DROP_MAX = 5;
-  function dropWeapon(e) {
-    const w = 1 + Math.floor(simRand() * 4), Wp = WEAPONS[w], x = clamp(e.x + (simRand() - 0.5) * 16, 20, W - 20), fl = floorBelow(x, e.y - 4, 0);
-    const ch = Wp.ammo ? Math.max(1, Math.round(Wp.ammo * (0.3 + simRand() * 0.4))) : fullCharge(w);
+  // a goon's body leaves his weapon by it (a gun part-loaded): walk over it with empty hands, or squat on it to swap.
+  // At most LOOT.wMax of them lie about: the oldest goes
+  function dropWeapon(e, w) {
+    const Wp = WEAPONS[w], x = clamp(e.x + (simRand() - 0.5) * 16, 20, W - 20), fl = floorBelow(x, e.y - 4, 0), [a0, a1] = LOOT.gunAmmo;
+    const ch = Wp.ammo ? Math.max(1, Math.round(Wp.ammo * (a0 + simRand() * (a1 - a0)))) : fullCharge(w);
     thrown.push({ w, ch, x, y: fl.y, vx: 0, vy: 0, a: simRand() < 0.5 ? 0 : Math.PI, av: 0, g: 0.6, len: Wp.len, face: 1, stuck: true, flat: true, armed: true, hit: false, ids: new Set(), t: 1, drop: true });
     const drops = thrown.filter(t => t.drop);
-    if (drops.length > DROP_MAX) thrown.splice(thrown.indexOf(drops[0]), 1);
+    if (drops.length > LOOT.wMax) thrown.splice(thrown.indexOf(drops[0]), 1);
+  }
+  // what a dead goon leaves (docs/drops.md): the level's table (LV.drops) and LOOT, all from simRand
+  const loot = { n: 0 };   // n: kills since the last weapon drop (the pity counter)
+  function lootDrop(e, dirx) {
+    const boss = e === enc.boss, d = DIFFS.indexOf(DIF()), k = LOOT.k[d], Wp = WEAPONS[hero.weapon], D = LV.drops;
+    if (!boss) {   // his own weapon, if the level has opened its tier by his stage; one per wGap kills at most, then likelier each kill
+      loot.n++;
+      const own = D && e.R && D.carry[e.R.w], open = D && D.tier[e.zone], can = own && open ? own.filter(id => open.includes(id)) : [];
+      if (can.length && loot.n >= LOOT.wGap[d] && simRand() < (LOOT.wP + LOOT.wPity * (loot.n - LOOT.wGap[d])) * k) {
+        const id = can[Math.floor(simRand() * can.length)]; loot.n = 0; dropWeapon(e, WEAPONS.findIndex(w => w.id === id));
+      }
+    }
+    // an ammo box: only with a gun in his hands or one lying near him; a nearly empty gun makes one likelier
+    const gun = Wp.ammo || thrown.some(t => t.stuck && WEAPONS[t.w].gun && Math.abs(t.x - ctl.x) < LOOT.boxReach);
+    let nBox = 0;
+    if (gun && boss) nBox = LOOT.bossBox[d];
+    else if (gun) { const low = Wp.ammo && charge[hero.weapon] < Wp.ammo / 4; nBox = simRand() < Math.min(0.9, (low ? LOOT.boxLowP : LOOT.boxP) * k) ? 1 : 0; }
+    nBox = Math.min(nBox, LOOT.boxMax - ammoBoxes.filter(b => !b.band).length);   // at most boxMax on the ground
+    for (let i = 0; i < nBox; i++) ammoBoxes.push({ x: e.x, y: e.y - 12 * e.s, vx: dirx * 30 + (simRand() - 0.5) * 70, vy: -110 - simRand() * 50, life: 30 });
+    // a bandage now and then (walk over it for 30 s of regen); hurt, likelier; a boss always leaves one
+    if (boss || (ammoBoxes.filter(b => b.band).length < LOOT.bandMax[d] && simRand() < (hero.hp < LOOT.bandLow ? LOOT.bandLowP : LOOT.bandP) * k))
+      ammoBoxes.push({ band: true, x: e.x, y: e.y - 12 * e.s, vx: -dirx * 20 + (simRand() - 0.5) * 60, vy: -120 - simRand() * 40, life: 30 });
   }
   // a hurled (empty) gun is spent: it breaks apart where it lands
   function gunBreak(t, i) {
@@ -3952,7 +3969,7 @@ import * as P9 from './levels/pier9.js';
   }
   function resetTutorial() {
     done.clear(); tutDirty = true; tutZone = -1; spawned.clear(); for (const k in zoneTs) delete zoneTs[k]; clearEnemies(); resetRun();
-    charge.fill(0); thrown.length = 0; ammoBoxes.length = 0;
+    charge.fill(0); thrown.length = 0; ammoBoxes.length = 0; loot.n = 0;
     for (const k of pickups) k.taken = false;
     weaponBtns.forEach(b => { b.disabled = +b.dataset.w !== 0; });
     setWeapon(0);
@@ -7630,7 +7647,7 @@ import * as P9 from './levels/pier9.js';
   // ---------- levels: the tutorial street and Pier 9 (src/levels/pier9.js) ----------
   // loadLevel swaps the level lists in place (surfaces, lamps, doors, props, pickups, the static layer). The street's own lists are
   // kept in a snapshot the first time it is left, so going back restores them exactly. The caller then calls reset().
-  const STREET_LV = LV, PIER9_LV = { id: 'pier9', title: 'Pier 9', startX: 60 };
+  const STREET_LV = LV, PIER9_LV = { id: 'pier9', title: 'Pier 9', startX: 60, drops: P9.DROPS };
   const LEVEL_LISTS = { PLATS, STEPS, LAMPS, WINL, FEAT, VPARTS, HOUSEWIN, DOORS, ALLEYS, CARDOORS, CLUB_DOORS, OBJ_START, pickups, VEH };
   let streetSnap = null, p9Data = null;
   function loadLevel(id) {
@@ -8172,7 +8189,7 @@ import * as P9 from './levels/pier9.js';
       club: flags.club, boss: enc.boss ? Math.round(enc.boss.hp) : null, quakes: quakes.length, enemies: enemies.filter(e => !e.dead).map(e => [Math.round(e.x), e.lane, Math.round(e.hp)]), kills: kills.length, lessons: done.size,
       pickups: pickups.map(k => k.taken ? 1 : 0).join(''), demo: flags.demo, attract: flags.attract });
     window.__skipToBoss = () => { leaveTitle(); setDemo(false); skipToBoss(); };
-    window.__sim = { enc, enemies, objs, ctl, hero, quakes, ammoBoxes, done, bus, makeObj, spawnEnemy, P, get hookPull() { return hookPull; }, get diffSel() { return diffSel; } };   // (tests: the live sim state, read and poke)
+    window.__sim = { enc, enemies, objs, ctl, hero, quakes, ammoBoxes, thrown, charge, loot, setWeapon, done, bus, makeObj, spawnEnemy, P, get hookPull() { return hookPull; }, get diffSel() { return diffSel; } };   // (tests: the live sim state, read and poke)
     // Pier 9 (tests): start the chapter (with its cutscenes) or the level at once; read its state; skip to the hall
     window.__pier9 = { chapter: () => startChapter1(), start: () => { leaveTitle(); setDemo(false); hideMenu(); loadLevel('pier9'); reset(); }, toBoss: () => { leaveTitle(); setDemo(false); hideMenu(); loadLevel('pier9'); p9SkipToBoss(); },
       peek: () => ({ level: LV.id, scene: sceneOn, x: Math.round(ctl.x), y: Math.round(ctl.y), mode: hero.mode, hp: Math.round(hero.hp), club: flags.club, open: p9.open, shutter: +p9.shutter.toFixed(2), waves: Object.fromEntries(Object.entries(p9.w).map(([k, v]) => [k, [v.out, zoneAlive[k] || 0]])), queue: p9.queue.length,

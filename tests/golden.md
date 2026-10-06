@@ -4,14 +4,22 @@ Run with a static server (`python3 -m http.server 8765`) and open the URL; the p
 Two runs of the same URL must give the same hashes. A refactor step that keeps both hashes changed nothing.
 A step that changes behaviour on purpose records new hashes here, with the reason.
 
-## Current (from migration step 6, 2026-10-06)
+## Current (from the drop rules, 2026-10-06)
 
 | URL | state | buf | l3 | note |
 |---|---|---|---|---|
-| `index.html?autotest=demo&frames=1200` | `5ae6a552` | `e8b8b31b` | | 2D (attract demo, seed 1, 960x540 view) |
-| `index.html?autotest=boss&frames=1800` | `daa2ec28` | `397917f1` | | 2D (skipToBoss + demo, seed 1) |
-| `index.html?autotest=demo&frames=1200&view3d` | `5ae6a552` | `d2d255f9` | `0e3d61c3` | 3D view: the same state hash as 2D |
-| `index.html?autotest=boss&frames=1800&view3d` | `daa2ec28` | `571dd39e` | `0cc1f74f` | 3D view: the same state hash as 2D |
+| `index.html?autotest=demo&frames=1200` | `42c63444` | `af711dee` | | 2D (attract demo, seed 1, 960x540 view) |
+| `index.html?autotest=boss&frames=1800` | `30f266d5` | `28567ba5` | | 2D (skipToBoss + demo, seed 1) |
+| `index.html?autotest=demo&frames=1200&view3d` | `42c63444` | `07a9f99a` | `baf6df5a` | 3D view: the same state hash as 2D |
+| `index.html?autotest=boss&frames=1800&view3d` | `30f266d5` | `d3634768` | `90089939` | 3D view: the same state hash as 2D |
+
+The drop rules (2026-10-06, `docs/drops.md`: `lootDrop()`, `src/sim/weapons/drops.js`, `DROPS` in `src/levels/pier9.js`) changed all four URLs' hashes (two runs each in Chrome, the same hashes; 2D state = 3D state).
+The attract demo kills goons: a kill now takes a different number of `simRand` values (a weapon only from an armed goon of an opened tier, a pity counter,
+ammo boxes only near a gun, capped bandages), so the random sequence and what lies on the street differ from then on.
+
+Drop tests: `?manual&seed=1`, `__pier9.street()` or `.start()`, `.setDiff(i)`, then spawn a goon with `__sim.spawnEnemy('goon', x, zone, opts)`, `__pier9.kill()`, and read `__sim.thrown` (`drop: true`), `__sim.ammoBoxes` and `__sim.loot.n` (`__sim.setWeapon`, `__sim.charge` arm the hero). The numbers are in `docs/drops.md`.
+
+Before the drop rules (migration step 6): demo `5ae6a552` / `e8b8b31b` (3D `d2d255f9`, l3 `0e3d61c3`); boss `daa2ec28` / `397917f1` (3D `571dd39e`, l3 `0cc1f74f`).
 
 Step 6 reasons:
 - The simulation draws its random numbers from its own seeded generator (`simRand`), not from `Math.random`.
