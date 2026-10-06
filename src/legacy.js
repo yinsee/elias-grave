@@ -6983,6 +6983,7 @@ import * as P9 from './levels/pier9.js';
   addEventListener('keydown', e => {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     const c = e.code;
+    if (sceneOn) return;   // a cutscene is loading or playing: its own controller has the keys (Escape must not open the menu between scenes)
     if (menuKey(e)) { e.preventDefault(); return; }   // the menu has the keys while it is open (the title screen, or Esc in a game)
     if (openT >= 0) { if ((c === 'Escape' || c === 'Enter') && !e.repeat) endOpening(); return; }
     if (isP9() && endPh === 'done' && !flags.wasted) { if (c === 'Enter' && !e.repeat && !resultsEl.hidden) quitToTitle(); return; }   // Pier 9 cleared: Enter goes back to the menu
