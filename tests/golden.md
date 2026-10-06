@@ -35,6 +35,9 @@ wave alert, the street boss scaled by difficulty, the hook clank, the settings k
 The attract demo does not reach these branches in 1200 frames, and the boss autotest leaves the club roof before the boss spawns.
 They were play-tested with `?manual` (`window.__sim` holds the live sim state for such tests).
 
+The play-test fixes for audio, visuals and UI (2026-10-06: hit sounds by move and outcome, the Pier 9 wall mask for blood, the 3D belt and hair, the title logo, key labels, fonts) kept all four URLs' hashes (state, buf, l3), two runs each.
+The blood wall mask is null on the street, the 3D belt and hair changes touch only the Pier 9 boss and the hero's 3D hair (the 3D hashes did not see a change), and the rest is audio, HTML and CSS.
+
 Options: `?seed=N` (repeatable random numbers), `?fixed` (clock steps exactly 1/60 s per frame), `?autotest=demo|boss&frames=N`, `?view3d`,
 `?manual` (no requestAnimationFrame: a test calls `window.__step(n)` and reads `window.__peek()`; `window.__skipToBoss()` starts at the club roof).
 

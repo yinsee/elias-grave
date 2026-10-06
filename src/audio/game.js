@@ -26,6 +26,15 @@ function sfxOpts(p, o = {}) {
   return { ...o, pan: x == null ? 0 : Math.max(-1, Math.min(1, panOf(x))) };
 }
 
+// boss tells: move -> [sound, options]
+const TELL = {
+  roar: ['boss_roar', { vol: 0.9 }],
+  charge: ['tell_charge', { vol: 0.9 }],
+  jslam: ['tell_jslam', { vol: 0.9 }],
+  hook: ['chain_spin', { vol: 0.8 }],
+  tuna: ['tuna_creak', { vol: 0.8 }],
+};
+
 // game sounds for events audio.js does not map itself (it maps hit, hurt, ko, kill, pickup, glass/object:break, music, voice)
 function bindGame(a) {
   const play = (name, p, o) => a.sfx.play(name, sfxOpts(p, o));
@@ -36,14 +45,18 @@ function bindGame(a) {
       else if (p.move !== 'tw') play('dodge_whoosh', p, { vol: p.heavy ? 0.35 : 0.2, pitch: p.heavy ? 1.1 : 1.5 });
     }),
     bus.on('shot', (p) => {
-      if (p.by === 'enemy') return play('shotgun', p, { vol: 0.45, pitch: 1.6 });
+      if (p.by === 'enemy') return p.w === 'shotgun' ? play('shotgun', p, { vol: 0.6 }) : play('pistol', p, { vol: 0.7 });   // a goon's gun
       if (p.w === 'shotgun') return play('shotgun', p);
       const t = a.ctx.currentTime;   // the machine gun: one burst sound covers several rounds
       if (t - lastMg > 0.3) { lastMg = t; play('mg_burst', p, { vol: 0.8 }); }
     }),
     bus.on('step', (p) => play('footstep_wet', p, { vol: p.run ? 0.55 : 0.35, pitch: p.wet ? 1 : 1.25 })),
     bus.on('land', (p) => play('footstep_wet', p, { vol: p.heavy ? 1 : 0.6, pitch: p.heavy ? 0.7 : 0.85 })),
-    bus.on('boss:telegraph', (p) => play('ui_blip', p, { vol: 0.5, pitch: p.move === 'roar' ? 0.5 : 0.7 })),
+    bus.on('boss:telegraph', (p) => {   // a sound for each wind-up (an unknown move: a low blip)
+      const s = TELL[p.move];
+      if (s) play(s[0], p, s[1]); else play('ui_blip', p, { vol: 0.5, pitch: 0.7 });
+    }),
+    bus.on('hook:clank', (p) => play('hook_clank', p)),   // Marchetti's hook stops on a prop
     bus.on('run:over', () => play('ui_confirm', null, { vol: 0.6 })),
   ];
 }

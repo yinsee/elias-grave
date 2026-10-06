@@ -9,7 +9,7 @@
 <div class="wrap">
   <header>
     <div>
-      <h1>Club Noir</h1>
+      <h1>Elias Grave</h1>
     </div>
     <span id="status" class="chip" data-state="idle" role="status" hidden>Idle</span>
   </header>
@@ -22,12 +22,12 @@
     <div id="card" class="card" hidden aria-live="polite"></div>
     <div id="say" class="say" hidden aria-live="polite"></div>
     <div id="results" class="results" hidden aria-live="polite"></div>
-    <div id="title" class="title" hidden></div>
+    <div id="title" class="title" hidden><h2>ELIAS <span>GRAVE</span></h2><p class="tagline">The city takes everything. Tonight he takes it back.</p></div>
     <nav id="menu" class="menu" aria-label="Game menu"><ul id="menu-list"></ul></nav>
     <div id="controls-card" class="controls-card" hidden role="dialog" aria-label="Controls"><h3>CONTROLS</h3><dl>
       <dt>← →</dt><dd>move</dd><dt>Shift</dt><dd id="cc-run">run</dd><dt>↑</dt><dd>jump · hold it at a ledge to climb</dd>
       <dt>↓</dt><dd>squat · at a run: dodge roll · squat beside a crate or a bin to pick it up </dd><dt>Space</dt><dd>dodge roll · with ↓ held up on a roof: drop through it</dd>
-      <dt>Q</dt><dd>punch or swing · tap = light, hold = heavy · hold with no goon in reach = throw</dd><dt>W</dt><dd>kick · tap = light, hold = heavy</dd>
+      <dt>Q</dt><dd>punch or swing · tap = light, hold = heavy</dd><dt>↓ + Q</dt><dd>throw what you hold</dd><dt>W</dt><dd>kick · tap = light, hold = heavy</dd>
       <dt>Esc</dt><dd>menu (pauses): view, camera, restart</dd></dl><small>Enter or Esc to close</small></div>
     <div class="hud hud-hp"><span class="hud-label">HP</span><div class="bar"><i id="hp-fill"></i></div></div>
     <div id="regen" class="regen" hidden title="Regen from a bandage"><svg viewBox="0 0 14 14" aria-hidden="true"><g transform="rotate(-45 7 7)"><rect x="0.5" y="4" width="13" height="6" rx="3" fill="#e8e2d4" stroke="#000" stroke-width="1"/><rect x="5" y="4" width="4" height="6" fill="#c9b49a"/><path d="M7 5.2v3.6M5.2 7h3.6" stroke="#c8323a" stroke-width="1.2"/></g></svg></div>
@@ -36,7 +36,7 @@
     <div class="hud-weapon"><span class="wicon"><img id="w-icon" alt=""></span><span class="wtext"><span id="w-name">FISTS</span><span id="ammo" class="ammo"></span><span id="pocket" class="pocket"></span></span></div>
   </div>
 
-  <p class="keys"><b>← →</b> move · <b>Shift</b> run · <b>↑</b> jump (hold at a ledge: climb) · <b>↓</b> squat · <b>Space</b> roll (or <b>↓</b> at a run) · <b>Q</b> punch · <b>W</b> kick (tap = light, hold = heavy) · hold <b>Q</b> with no goon in reach to throw · <b>Esc</b> menu</p>
+  <p class="keys"><b>← →</b> move · <b>Shift</b> run · <b>↑</b> jump (hold at a ledge: climb) · <b>↓</b> squat · <b>Space</b> roll (or <b>↓</b> at a run) · <b>Q</b> punch · <b>W</b> kick (tap = light, hold = heavy) · <b>↓</b>+<b>Q</b> throw · <b>Esc</b> menu</p>
   <details class="more">
   <summary>Controls and options</summary>
   <div class="readout" hidden>
@@ -51,19 +51,19 @@
     <div class="group">
       <span class="group-label">Move</span>
       <div class="row">
-        <button id="c-left" class="hold" aria-label="Walk left">◀ <kbd>A</kbd></button>
-        <button id="c-right" class="hold" aria-label="Walk right">▶ <kbd>D</kbd></button>
+        <button id="c-left" class="hold" aria-label="Walk left">◀ <kbd>←</kbd></button>
+        <button id="c-right" class="hold" aria-label="Walk right">▶ <kbd>→</kbd></button>
         <button id="c-run" aria-pressed="false">Run <kbd>Shift</kbd></button>
-        <button id="c-jump">Jump <kbd>W</kbd></button>
-        <button id="c-down" aria-label="Squat. Hold it and press jump to drop through a ledge">Squat <kbd>S</kbd></button>
-        <button id="c-dash" aria-label="Dodge. Roll toward the held direction, step back with no direction, dash in the air. Attacks cannot hit you while it lasts">Dodge <kbd>U</kbd></button>
+        <button id="c-jump">Jump <kbd>↑</kbd></button>
+        <button id="c-down" aria-label="Squat. Hold it and press jump to drop through a ledge">Squat <kbd>↓</kbd></button>
+        <button id="c-dash" aria-label="Dodge. Roll toward the held direction, step back with no direction, dash in the air. Attacks cannot hit you while it lasts">Dodge <kbd>Space</kbd></button>
       </div>
     </div>
     <div class="group">
       <span class="group-label">Fight</span>
       <div class="row">
-        <button id="c-lp" class="primary" aria-label="Punch. Tap for a light hit, hold for a heavy hit, hold longer to throw what you hold"><span>Punch</span> <kbd>J</kbd></button>
-        <button id="c-lk" class="primary" aria-label="Kick. Tap for a light kick, hold for a heavy kick. Squat and hold for a leg sweep">Kick <kbd>K</kbd></button>
+        <button id="c-lp" class="primary" aria-label="Punch. Tap for a light hit, hold for a heavy hit. Hold squat and press it to throw what you hold"><span>Punch</span> <kbd>Q</kbd></button>
+        <button id="c-lk" class="primary" aria-label="Kick. Tap for a light kick, hold for a heavy kick. Squat and hold for a leg sweep">Kick <kbd>W</kbd></button>
       </div>
     </div>
     <div class="group" hidden>
@@ -77,7 +77,7 @@
       </div>
     </div>
     <div class="group">
-      <span class="group-label">Camera <kbd>Z</kbd></span>
+      <span class="group-label">Camera</span>
       <div class="row">
         <button class="zoom" data-zoom="auto" aria-pressed="true">Auto</button>
         <button class="zoom" data-zoom="1" aria-pressed="false">100%</button>
@@ -98,7 +98,7 @@
         <button id="b-demo" aria-pressed="false">Demo <kbd>M</kbd></button>
         <button id="b-knock">Knock over <kbd>X</kbd></button>
         <button id="b-drop">Drop from sky <kbd>B</kbd></button>
-        <button id="b-reset">Reset <kbd>R</kbd></button>
+        <button id="b-reset">Reset</button>
         <button id="b-boss">Skip to boss <kbd>G</kbd></button>
         <button id="b-slow" aria-pressed="false">Slow motion <kbd>T</kbd></button>
         <button id="b-skel" aria-pressed="false">Skeleton <kbd>V</kbd></button>
@@ -107,7 +107,7 @@
     </div>
   </div>
 
-  <p class="hint devonly">A tutorial level, left to right. The panel on the game view shows each lesson and ticks it off when you do it. Walk into a weapon to pick it up. You carry one weapon. With empty hands you walk over a weapon to take it; with a weapon in hand you squat (S) on another to swap, and the old one drops. Hold J to throw your weapon; walk over it to take it back. Guns do not refill by themselves: enemies sometimes drop ammo boxes, and you walk over a box to load it. A fire escape zig-zags up the club building to its roof. U rolls a long way along the ground (then a short wait); in the air it is a dash. Attacks cannot hit you while you roll. Drag a body part to throw the fighter, or click near the body or an object to hit it. Goons wait in each stage and hit back; the boss waits at the far end. R restarts the tutorial. Demo (M) plays the whole tutorial by itself; press any control to take over. F switches to a 12 fps sprite look.</p>
+  <p class="hint devonly">A tutorial level, left to right. The panel on the game view shows each lesson and ticks it off when you do it. Walk into a weapon to pick it up. You carry one weapon. With empty hands you walk over a weapon to take it; with a weapon in hand you squat (↓) on another to swap, and the old one drops. Hold ↓ and press Q to throw your weapon; walk over it to take it back. Guns do not refill by themselves: enemies sometimes drop ammo boxes, and you walk over a box to load it. A fire escape zig-zags up the club building to its roof. Space rolls a long way along the ground (then a short wait); in the air it is a dash. Attacks cannot hit you while you roll. Drag a body part to throw the fighter, or click near the body or an object to hit it. Goons wait in each stage and hit back; the boss waits at the far end. R restarts the tutorial. Demo (M) plays the whole tutorial by itself; press any control to take over. F switches to a 12 fps sprite look.</p>
   </details>
 </div>
 

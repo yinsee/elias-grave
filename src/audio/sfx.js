@@ -125,16 +125,13 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
       noise(v, { buf: brown, filter: 'lowpass', f0: 1200, f1: 300, d: 0.14, vol: 1, drive: 3 });
       send(v, 0.15);
     },
+    // the kicks play on the hit (the swing event already plays the leg's whoosh), so the impact is at once
     kick_light(v) {
-      noise(v, { filter: 'bandpass', f0: 500, f1: 1800, q: 1.5, a: 0.04, d: 0.03, vol: 0.25, lin: true });   // leg swish
-      v = { ...v, t: v.t + 0.06 * v.k };
       tone(v, { f0: 140, f1: 45, d: 0.12, vol: 0.95, drive: 3 });
       noise(v, { buf: brown, filter: 'lowpass', f0: 700, d: 0.09, vol: 0.9, drive: 2 });
       noise(v, { filter: 'bandpass', f0: 1800, q: 1, d: 0.025, vol: 0.4 });
     },
     kick_heavy(v) {
-      noise(v, { filter: 'bandpass', f0: 300, f1: 1400, q: 1.2, a: 0.08, d: 0.04, vol: 0.35, lin: true });
-      v = { ...v, t: v.t + 0.1 * v.k };
       tone(v, { f0: 110, f1: 32, d: 0.28, vol: 1, drive: 6 });
       noise(v, { buf: brown, filter: 'lowpass', f0: 1000, f1: 200, d: 0.2, vol: 1, drive: 4 });
       noise(v, { filter: 'bandpass', f0: 2400, f1: 700, q: 0.8, d: 0.06, vol: 0.6, drive: 3 });
@@ -164,6 +161,73 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
       tone(v, { type: 'square', f0: 320, f1: 180, at: 0.42, d: 0.03, vol: 0.12 });
       noise(v, { filter: 'bandpass', f0: 1700, q: 2, at: 0.56, d: 0.04, vol: 0.5, drive: 3 });
       tone(v, { type: 'square', f0: 260, f1: 140, at: 0.56, d: 0.04, vol: 0.14 });
+    },
+    pistol(v) {   // a dry, short crack: no long tail, no pump
+      noise(v, { filter: 'highpass', f0: 2800, d: 0.01, vol: 1 });
+      noise(v, { filter: 'lowpass', f0: 6000, f1: 1200, d: 0.09, vol: 0.85, drive: 6, sweep: 0.07 });
+      tone(v, { f0: 180, f1: 70, d: 0.08, vol: 0.7, drive: 4 });
+      noise(v, { buf: brown, filter: 'lowpass', f0: 500, f1: 200, at: 0.02, d: 0.18, vol: 0.35 });
+      send(v, 0.18);
+    },
+    bullet_flesh(v) {   // a round into a body: a snap, a wet thwack, a spatter
+      noise(v, { filter: 'highpass', f0: 2500, d: 0.012, vol: 0.6 });
+      tone(v, { f0: 160, f1: 60, d: 0.07, vol: 0.8, drive: 4 });
+      noise(v, { buf: brown, filter: 'bandpass', f0: 900, f1: 400, q: 2.5, d: 0.12, vol: 0.9 });
+      noise(v, { filter: 'bandpass', f0: 1800, f1: 700, q: 5, at: 0.02, d: 0.08, vol: 0.3 });
+    },
+    block(v) {   // the forearms take it: a dull, padded knock, no crack
+      tone(v, { type: 'triangle', f0: 220, f1: 120, d: 0.06, vol: 0.7, drive: 2 });
+      noise(v, { buf: brown, filter: 'lowpass', f0: 600, d: 0.05, vol: 0.7 });
+      noise(v, { filter: 'bandpass', f0: 1200, q: 2, d: 0.02, vol: 0.35 });   // sleeve slap
+    },
+    guard_catch(v) {   // the fist caught in a palm: a sharp slap, then a shove
+      noise(v, { filter: 'bandpass', f0: 2200, f1: 1400, q: 1.4, d: 0.035, vol: 0.9, drive: 2 });
+      tone(v, { f0: 260, f1: 150, d: 0.05, vol: 0.4 });
+      noise(v, { filter: 'bandpass', f0: 400, f1: 900, q: 1.2, at: 0.06, a: 0.05, d: 0.1, vol: 0.4, lin: true });
+    },
+    kill_confirm(v) {   // the last blow: a low boom and a bone crack under the hit
+      tone(v, { f0: 60, f1: 28, d: 0.5, vol: 0.9, drive: 6 });
+      noise(v, { filter: 'bandpass', f0: 3200, f1: 1500, q: 3, d: 0.03, vol: 0.6, drive: 4 });
+      noise(v, { filter: 'bandpass', f0: 2400, q: 4, at: 0.018, d: 0.025, vol: 0.4, drive: 3 });
+      noise(v, { buf: brown, filter: 'lowpass', f0: 400, f1: 80, d: 0.5, vol: 0.6 });
+      send(v, 0.3);
+    },
+    hook_clank(v) {   // the meat hook hits a crate or a steel post: a hard knock and a ring
+      tone(v, { type: 'triangle', f0: 320, f1: 140, d: 0.08, vol: 0.8, drive: 4 });
+      noise(v, { filter: 'bandpass', f0: 2600, q: 2, d: 0.03, vol: 0.8, drive: 3 });
+      ring(v, { f: 1450, d: 0.7, vol: 0.14 });
+      send(v, 0.3);
+    },
+    // boss tells: one sound for each wind-up, so the ear reads the move as well as the eye
+    boss_roar(v) {
+      [55, 82, 110].forEach((f, i) => tone(v, { type: 'sawtooth', f0: f * 1.2, f1: f * 0.8, a: 0.12, d: 0.9, vol: 0.25 / (1 + i * 0.5), drive: 4, sweep: 1 }));
+      noise(v, { buf: brown, filter: 'bandpass', f0: 300, f1: 180, q: 1.5, a: 0.1, d: 0.9, vol: 0.9, drive: 3 });
+      noise(v, { filter: 'bandpass', f0: 900, f1: 500, q: 2, a: 0.1, d: 0.7, vol: 0.25 });   // the rasp in the throat
+      send(v, 0.35);
+    },
+    tell_charge(v) {   // he digs in: two heavy foot scrapes and a snort
+      for (const at of [0, 0.22]) {
+        noise(v, { buf: brown, filter: 'lowpass', f0: 500, at, d: 0.07, vol: 1 });
+        noise(v, { filter: 'bandpass', f0: 1400, f1: 600, q: 1.5, at, a: 0.02, d: 0.12, vol: 0.35, lin: true });
+      }
+      noise(v, { filter: 'bandpass', f0: 700, f1: 1100, q: 2, at: 0.4, a: 0.03, d: 0.15, vol: 0.4 });
+    },
+    tell_jslam(v) {   // a grunt and a rising strain before the leap
+      noise(v, { buf: brown, filter: 'lowpass', f0: 500, d: 0.08, vol: 0.9 });
+      noise(v, { buf: brown, filter: 'bandpass', f0: 250, f1: 420, q: 2, a: 0.08, d: 0.35, vol: 0.9, drive: 3 });
+      tone(v, { type: 'sawtooth', f0: 70, f1: 130, a: 0.1, d: 0.35, vol: 0.18, drive: 3, sweep: 0.45 });
+    },
+    chain_spin(v) {   // the hook's chain whirled overhead: a rising whoosh and a link rattle on each turn, each turn faster
+      for (let i = 0, at = 0; i < 4; i++, at += 0.2 - i * 0.025) {
+        noise(v, { filter: 'bandpass', f0: 400 + i * 150, f1: 1400 + i * 300, q: 2, at, a: 0.07, d: 0.08, vol: 0.35 + i * 0.08, lin: true });
+        for (let j = 0; j < 3; j++) noise(v, { filter: 'bandpass', f0: 3000 + rand() * 2500, q: 6, at: at + 0.04 + j * 0.02, d: 0.02, vol: 0.25 });
+      }
+    },
+    tuna_creak(v) {   // the conveyor lurches: a chain clank and a long creak of the rail
+      noise(v, { filter: 'bandpass', f0: 1800, q: 3, d: 0.04, vol: 0.6, drive: 3 });
+      ring(v, { f: 900, d: 0.4, vol: 0.08 });
+      tone(v, { type: 'sawtooth', f0: 140, f1: 95, at: 0.05, a: 0.1, d: 0.6, vol: 0.12, drive: 2, sweep: 0.7 });
+      noise(v, { filter: 'bandpass', f0: 600, f1: 420, q: 8, at: 0.05, a: 0.1, d: 0.6, vol: 0.35 });
     },
     mg_burst(v) {
       for (let i = 0; i < 6; i++) {
