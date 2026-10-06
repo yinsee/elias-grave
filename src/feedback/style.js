@@ -27,6 +27,9 @@ const GRACE = 2.5;                                       // s after a score befo
 const FEATS = {
   parry: 70, perfectdodge: 60, pdodge: 60, perfect: 60, counter: 50, counterhit: 50, techroll: 30, tech: 30,
   throwhit: 30, tosshit: 30, pockethit: 30, bash: 25, bounce: 6, bouncethree: 25, split: 10,
+  // the Saltmen and the Bosun: each answer to a variant's trick
+  lowblock: 35, lowhop: 30, gaffslip: 50, reloadpunish: 40, shieldbreak: 50, flank: 25, guardbreak: 50,
+  propreturn: 45, propdrop: 25, propdodge: 25, chainhop: 40, grabslip: 45, cover: 30,
 };
 const featName = (f) => String(f && typeof f === 'object' ? f.name || f.feat || f.id || '' : f || '').toLowerCase().replace(/3/g, 'three').replace(/[^a-z]/g, '');
 
