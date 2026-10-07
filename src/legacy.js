@@ -4969,6 +4969,13 @@ import * as P9 from './levels/pier9.js';
     if (todo.some(k => AMMO_TASKS.has(k)) && !ammoBoxes.some(b => !b.band && b.x >= Z.x0 && b.x < x1)) {   // a gun lesson with no box left (they expire): one drops in near him
       const x = clamp(P[2].x + ctl.face * 30, Z.x0 + 10, x1 - 10); ammoBoxes.push({ x, y: GROUND - 40, vx: 0, vy: 0, life: 30 }); puff(x, GROUND - 1);
     }
+    // the stage's bench weapon comes back to its bench while the stage has lessons left, if he does not hold it and no copy lies in
+    // reach in the stage (thrown past the stage line, stuck high on a wall, a spent gun broken): a lesson never becomes impossible
+    const bench = pickups.find(k => k.x >= Z.x0 && k.x < x1);
+    if (bench && bench.taken && todo.length && hero.weapon !== bench.w && !thrown.some(t => t.w === bench.w && (!t.stuck || (t.x >= Z.x0 && t.x < x1 && t.y > GROUND - 40)))) {
+      for (let j = thrown.length - 1; j >= 0; j--) if (thrown[j].w === bench.w) thrown.splice(j, 1);   // (out of reach: gone, so there is one)
+      bench.taken = false; puff(bench.x, GROUND - 1); toast(`${WEAPONS[bench.w].name} is back on the bench`, 'Finish the stage with it', true);
+    }
     for (const k of todo) {
       const kinds = PROP_TASKS[k]; if (!kinds) continue;
       if (k === 'pockethit' && pocket.length) continue;
