@@ -1676,7 +1676,8 @@ import * as P9 from './levels/pier9.js';
     bashW: mod(GUARD, { lean: -0.2, rx: -2, ry: 15, a1s: 1.2, a1e: 0.6, a0s: 1.1, a0e: 2.2 }),                  // the shield pulled in to the chest
     grabW: mod(GUARD, { lean: 0.2, rx: -0.5, ry: 14.6, head: -0.1, a0s: 0.7, a0e: 0.3, a1s: 0.9, a1e: 0.3 }),    // arms spread wide, low: a bear hug coming
     carry: mod(IDLE, { a0s: 3.0, a0e: 0.3, a1s: 3.1, a1e: 0.25, lean: -0.08 }),                                // both hands up under a load over the head
-    reload: mod(GUARD, { head: 0.45, lean: 0.12, ry: 15.4, a0s: 0.95, a0e: 1.5, a1s: 0.7, a1e: 1.85 }),           // chin down, the revolver broken open at the belt
+    reload: mod(GUARD, { head: 0.65, lean: 0.22, ry: 15.2, a0s: 0.55, a0e: 0.9, a1s: 0.5, a1e: 0.55 }),             // head down over the revolver broken open at the belt, the back hand at the cylinder
+    dazed: mod(IDLE, { ry: 15.4, lean: 0.25, head: 0.5, rx: -0.6, f0x: -4, f1x: 4, a0s: 0.1, a0e: 0.15, a1s: 0.05, a1e: 0.2 }),   // stunned: knees soft, arms hanging loose, head lolling
     held: mod(GUARD, { ry: 13.5, lean: 1.0, head: -0.45, rx: -2, f0x: -7, f1x: 3, a0s: 0.6, a0e: 1.5, a1s: 0.9, a1e: 1.4 }),   // in the hero's clinch: doubled over, his head pulled down
     beg: mod(KNEEL, { lean: 0.15, head: 0.25, a0s: 0.3, a0e: 0.6, a1s: 0.6, a1e: 1.2 }),   // a finisher: on his knees
     beaten: mod(IDLE, { ry: 14.4, lean: 0.55, head: 0.55, rx: -1, f0x: -5, f1x: 5, a0s: 0.35, a0e: 2.0, a1s: -0.15, a1e: 0.25 }),   // finisher-ready: sagging on wobbly legs, a hand on his gut, the other arm hanging, head lolling
@@ -1770,7 +1771,7 @@ import * as P9 from './levels/pier9.js';
     // brain: agg 0 = cautious (keeps far, blocks a lot), 1 = aggressive (pushes in, long strings, lunges)
     Object.assign(e, { agg: type === 'boss' ? 1 : 1 - (1 - simRand()) * 0.65 ** dLv(), seed: simRand(), tok: false, tokT: 0, side: e.face > 0 ? -1 : 1, slot: 0, flankT: 0,
       tx: null, run: 1, guardT: 0, react: null, reactT: 0, seenAtk: -1, punId: -1, punish: 0, aimT: 0, dodgeCd: 0, jumpCd: 0, crouchT: 0, jvx: 0, jvy: 0,
-      combo: null, ci: 0, feint: false, fled: false, retreatT: 0, sp: null, spT: 0, recT: 0, stunT: 0, leapt: false, jx: 0, hitP: false, ph: 1, bigCd: 2.5, mark: 0, ay: 0, muz: 0, blockN: 0,
+      combo: null, ci: 0, feint: false, fled: false, retreatT: 0, sp: null, spT: 0, recT: 0, stunT: 0, leapt: false, jx: 0, hitP: false, ph: 1, bigCd: 2.5, ay: 0, muz: 0, blockN: 0,
       fkX: 0, fkV: 0, slide: 0, down: false, downT: 0, gu: null, pendH: null, pendAtk: -1 });
     // role and look: zone and spawn order pick the role, the role picks an outfit; build, colors and facial hair vary per goon
     const n = zone != null ? (zoneN[zone] = (zoneN[zone] || 0) + 1) - 1 : 0;
@@ -1843,12 +1844,17 @@ import * as P9 from './levels/pier9.js';
       if (!e.air && sl > 0.4 && simRand() < 0.3) dust(e.x - e.face * 2, e.y + 1, 1);
     }
     else if (e.exposed > 0) { t = lerpA(GUARD, EHURT, 0.75); t[1] -= 0.8; }   // off balance after a perfect dodge (a boss, the Bosun)
+    else if (e.stunT > 0) {   // stunned (a boss into a wall, torn off the hook): a slow drunken sway, the head lolls, the arms swing loose
+      const w = simTime * 3.2 + e.seed * 7, sn = Math.sin(w); t = EP.dazed.slice();
+      t[0] += 1.8 * sn; t[2] += 0.18 * Math.sin(w + 0.8); t[3] += 0.4 * Math.sin(w * 1.4); t[1] -= 0.5 * Math.abs(sn);
+      t[8] += 0.35 * Math.sin(w + 2); t[10] += 0.35 * Math.sin(w + 2.6); t[4] += 1.5 * sn; t[6] += 1.5 * sn;
+    }
     else if (e.sp === 'roar') t = EP.roar;
     else if (e.sp && (t = spPose(e))) { /* a boss special */ }
     else if (e.sp === 'charge' && e.spT < 0) t = EP.chargeW;
     else if (e.sp === 'jslam') { t = e.leapt ? EP.jumpA : EP.jumpW; air = false; }
     else if (e.recT > 0) { t = EP.tired.slice(); t[1] += 0.5 * Math.sin(simTime * 9); }
-    else if (e.reloadT > 0) { t = EP.reload.slice(); t[11] += 0.25 * Math.sin(simTime * 14); }   // thumbing rounds in
+    else if (e.reloadT > 0) { t = EP.reload.slice(); t[9] += 0.3 * Math.sin(simTime * 14); }   // the back hand thumbs rounds in
     else if (e.crouchT > 0) t = EP.hop;
     else if (e.guardT > 0) t = EP.guard;
     else {
@@ -1859,6 +1865,7 @@ import * as P9 from './levels/pier9.js';
         ry: (near ? 15.6 : 17.2) - 0.5 * w + 0.6 * w * Math.cos(2 * ph), lean: (near ? 0.1 : 0) + 0.1 * w });
       if (!near) { t[8] = 0.05 + 0.45 * w * sn; t[10] = 0.05 - 0.45 * w * sn; t[9] = t[11] = 0.3; }
       if (e.sp === 'charge') { t[2] = 0.7; t[3] = -0.4; t[8] = -0.6; t[10] = 1.35; t[11] = 1.3; }   // head down, shoulder first
+      else if (e.retreatT > 0) { t[8] = 1.3; t[9] = 2.3; t[10] = 1.5; t[11] = 2.2; }   // backing off hurt: both fists up at the face
     }
     if (e.carry && !e.act) { t = t.slice(); for (const i of [8, 9, 10, 11]) t[i] = EP.carry[i]; }   // a deckhand's load: both hands up over the head
     if (e.held > 0) { t = t.slice(); t[8] = 1.4; t[9] = 1.2; t[10] = 1.5; t[11] = 1.1; t[2] = 0.15; }   // the Bosun's bear hug
@@ -2288,10 +2295,9 @@ import * as P9 from './levels/pier9.js';
     e.act = a; e.actT = -windup; e.struck = false; e.slammed = false; e.guardT = 0; e.pendH = null; e.actDmg = null;
     if (!e.shield) e.face = Math.sign(P[2].x - e.x) || e.face;   // (a shield man turns slowly: enemyStep)
     const M = EMOVES[a];
-    if (M.heavy) e.mark = windup;   // heavy moves flash a '!' over the head
     if (e.type !== 'goon') return;
-    // [read] every goon attack has a tell: a melee wind-up flashes a rim on the body for 1-2 frames (white; red: no block stops it;
-    // cyan: low, block it low or jump it); a ranged one glints at the hand with a ping, and an arrow marks a shooter off the screen
+    // [read] every goon attack has a tell on the body: the held wind-up pose, and for a melee one a rim flash for 1-2 frames (white;
+    // red: a heavy; cyan: low, jump it); a ranged one glints at the hand with a ping, and an arrow marks a shooter off the screen
     const ranged = a === 'shoot' || a === 'throw' || a === 'gaff';
     if (ranged) {
       e.glint = windup;
@@ -2405,7 +2411,7 @@ import * as P9 from './levels/pier9.js';
     if (!e.fled && !e.elite && e.hp < e.maxHp * 0.3) { e.fled = true; if (simRand() < 0.9 - e.agg - 0.3 * dLv()) { e.retreatT = 1.0 + simRand() * 0.8; eRelease(e); } }
     if (e.retreatT > 0) {
       if ((e.retreatT -= dt) > 0) { if (e.tok) eRelease(e); e.tx = px - dir * (e.reach + 70); e.run = 0.8; return; }
-      e.agg = Math.min(1, e.agg + 0.35); e.mark = 0.4; e.cdT = 0;
+      e.agg = Math.min(1, e.agg + 0.35); e.cdT = 0;
     }
     // the player is stuck in a long recovery: step in and punish
     if (pm && pm.dur >= 0.7 && hero.actT > pm.win[1] && e.punId !== hero.atkId && level && adx < e.reach + 40) {
@@ -2487,7 +2493,7 @@ import * as P9 from './levels/pier9.js';
     }
     // the gaff: the hook raised behind the head, then it flies out and pulls him in for a chop (dodge through it: he is left open)
     if (S.gaff && e.gaffCd <= 0 && canAct && adx > 30 && adx < S.gaff.range && swingFree() && (e.tok || enc.eTokN < enc.eTokMax)) {
-      e.face = dir; e.combo = null; e.ci = 0; eStart(e, 'gaff', S.gaff.windup / cA() ** 0.1); e.mark = -e.actT; e.gaffCd = S.gaff.cd[0] + simRand() * (S.gaff.cd[1] - S.gaff.cd[0]);
+      e.face = dir; e.combo = null; e.ci = 0; eStart(e, 'gaff', S.gaff.windup / cA() ** 0.1); e.gaffCd = S.gaff.cd[0] + simRand() * (S.gaff.cd[1] - S.gaff.cd[0]);
       emit('sfx', { name: 'chain_spin', x: e.x, vol: 0.5, pitch: 1.5 });
       return true;
     }
@@ -2662,7 +2668,7 @@ import * as P9 from './levels/pier9.js';
       e.combo = CMB[0]; e.ci = 0; eStart(e, 'jab', e.windup); return;
     }
     if (e.cdT <= 0 && enc.eShotN < (DIF().A >= 4 ? 2 : 1) && adx > 28 && adx < 175 && hero.mode === 'anim') {
-      enc.eShotN++; e.combo = null; e.ci = 0; eStart(e, e.R.w === 'pistol' ? 'shoot' : 'throw', e.R.aim); if (e.R.w === 'pistol') e.mark = e.R.aim;   // (no tell for a knife throw) e.ay = P[1].y + 1;
+      enc.eShotN++; e.combo = null; e.ci = 0; eStart(e, e.R.w === 'pistol' ? 'shoot' : 'throw', e.R.aim);
     }
   }
   // a throwing knife arcs to where the player stood at release; a pistol shot flies straight at the height locked during the aim
@@ -3108,7 +3114,6 @@ import * as P9 from './levels/pier9.js';
       if (e.flash > 0) e.flash -= dt;
       if (e.exposed > 0) e.exposed -= dt;   // off balance after a perfect dodge: every hit is a counter-hit
       if (e.hurtT > 0) e.hurtT = e.air ? Math.max(0.06, e.hurtT - dt) : e.hurtT - dt;   // a stagger lasts until the feet are down
-      if (e.mark > 0) e.mark -= dt;
       if (e.tellF > 0) e.tellF -= dt;
       if (e.muz > 0) e.muz -= dt;
       if (e.rimT > 0) e.rimT -= dt;
@@ -3226,8 +3231,8 @@ import * as P9 from './levels/pier9.js';
   }
   const ECOL = { steel: C(EPAL.steel), steelD: C(EPAL.steelD), grip: C(EPAL.grip), iron: C(EPAL.iron), gun: C(EPAL.gun), scar: C(EPAL.scar), cane: C('#3a2c3c') };
   const EW = { x: 0, y: 0, tx: 0, ty: 0, dx: 0, dy: 0 };   // reused: the held weapon from the front hand
-  function eWeapon(e, J) {
-    const el = J[5], h = J[6], a = Math.atan2(h.y - el.y, h.x - el.x) + e.R.off * e.face;
+  function eWeapon(e, J) {   // the weapon in the front hand: grip, direction, tip (a reloading revolver hangs broken open, muzzle down)
+    const el = J[5], h = J[6], a = e.reloadT > 0 ? Math.PI / 2 - 0.5 * e.face : Math.atan2(h.y - el.y, h.x - el.x) + e.R.off * e.face;
     EW.dx = Math.cos(a); EW.dy = Math.sin(a); EW.x = h.x; EW.y = h.y; EW.tx = h.x + EW.dx * e.R.len * e.s; EW.ty = h.y + EW.dy * e.R.len * e.s;
     return EW;
   }
@@ -3284,6 +3289,7 @@ import * as P9 from './levels/pier9.js';
     const g = eWeapon(e, J), s = e.s, O = PAL.out, c = x => fl ? PAL.white : x;
     if (w === 'pistol') {
       seg(g.x, g.y, g.tx, g.ty, 1.5 * s, O); seg(g.x, g.y, g.tx, g.ty, 0.7 * s, c(ECOL.gun));
+      if (e.reloadT > 0) { const cx = g.x + g.dx * 2 * s - e.face * 1.6 * s, cy = g.y + g.dy * 2 * s; disc(snap(cx), snap(cy), 1.3 * s, O); disc(snap(cx), snap(cy), 0.8 * s, c(ECOL.steel)); }   // the cylinder swung out
       if (e.muz > 0) for (let d = 1; d <= 4; d++) plot(Math.floor(g.tx + g.dx * d), Math.floor(g.ty + g.dy * d), d < 3 ? PAL.white : PAL.accent);   // muzzle flash
       else if (e.act === 'shoot' && e.actT < 0 && Math.floor(simTime * 14) % 2) plot(Math.floor(g.tx + g.dx), Math.floor(g.ty + g.dy), PAL.white);   // glint on the aim
     } else if (w === 'pipe') { seg(g.x, g.y, g.tx, g.ty, 1.7 * s, O); seg(g.x, g.y, g.tx, g.ty, 0.9 * s, c(ECOL.iron)); }
@@ -3306,7 +3312,7 @@ import * as P9 from './levels/pier9.js';
       disc(snap(kx), snap(ky), 1.0 * s, c(ECOL.steel)); plot(Math.floor(g.tx), Math.floor(g.ty), c(ECOL.steel));
     } else { seg(g.x, g.y, g.tx, g.ty, 1.2 * s, O); line1(g.x, g.y, g.tx, g.ty, c(ECOL.steel)); }   // knife
   }
-  // [read] the rim flash on a melee wind-up (enemy.rimT): white = a normal blow, red = no block stops it, cyan = low (block low or jump)
+  // [read] the rim flash on a melee wind-up (enemy.rimT): white = a normal blow, red = a heavy, cyan = low (jump it)
   const RIMC = [C('#fff4d8'), C('#ff3a30'), C('#58e0ff')];
   let rimO = 0;   // the outline colour of the goon being drawn (0: the usual dark outline)
   const SHIELD = { face: C('#7a8290'), faceL: C('#a4acb8'), rim: C('#3a3e46'), slit: C('#1a1c22'), rivet: C('#c8ccd4') };
@@ -3402,14 +3408,11 @@ import * as P9 from './levels/pier9.js';
       plot(x, y, e > 0.8 ? PAL.out : Math.abs(u + hw * 0.6) < 2.2 && v < 0.5 ? COAT[2] : (Math.floor(u * 0.7 + v) & 1) ? COAT[0] : COAT[1]);
     }
   }
-  // over the head: a health bar on a hurt goon, the '!' tell, the slam target, dizzy stars, a sweat drop
+  // what a goon carries outside his body: the boss floor tells (sweep, jump slam, frost ring, hook), a gun's glint, the gaff, the chain.
+  // No signs over anyone: a goon's state reads from his pose (wind-up, reload, daze, retreat); the HUD carries the bars
   function drawEnemyMarks(e) {
     const J = e.dead ? e.pts : e.J; if (!J) return;
-    const hd = J[0], s = e.s, f = e.face, O = PAL.out, r = 4.6 * e.hk * s;
-    if (!e.dead && e.type !== 'boss' && e.hp < e.maxHp) {   // small health bar over a hurt goon
-      const x0 = Math.floor(e.x - 6), y0 = Math.floor(hd.y - r - 6);
-      for (let i = 0; i < 12; i++) { plot(x0 + i, y0, O); plot(x0 + i, y0 + 1, i < 12 * e.hp / e.maxHp ? BLOOD[2] : C('#3a2230')); plot(x0 + i, y0 + 2, O); }
-    }
+    const hd = J[0], s = e.s, f = e.face, r = 4.6 * e.hk * s;
     if (e === enc.boss && enc.coat) drawCoat(enc.coat);   // Malaspina's fur coat, thrown off
     if (e.dead) return;
     const blink = Math.floor(simTime * 14) % 2;
@@ -3417,10 +3420,6 @@ import * as P9 from './levels/pier9.js';
       const nk = J[1], bt = simTime % 1.2, gl = e.sp === 'charge' && e.spT < 0 ? (simTime * 4) % 1 < 0.3 : simTime % 1.5 < 0.15;
       if (bt < 0.35) for (let k = 0; k < 3; k++) plot(Math.floor(hd.x + f * (4 + bt * 14 + k)), Math.floor(hd.y + 1 - bt * 6 - (k & 1)), PAL.white);
       if (gl) { plot(Math.floor(nk.x + f * 1.5 * s), Math.floor(nk.y + 2 * s), PAL.gold); plot(Math.floor(nk.x + f * 1.5 * s) + 1, Math.floor(nk.y + 2 * s), PAL.white); }
-    }
-    if (e.mark > 0 && e.type !== 'boss') {   // '!' tell over a goon's head: a heavy, committed or ranged move is coming (a boss: his pose and a white flash only)
-      const mx = Math.floor(hd.x), my = Math.floor(hd.y - r - 12), mc = blink ? PAL.white : BLOOD[2];
-      for (let y = 0; y < 4; y++) plot(mx, my + y, mc); plot(mx, my + 5, mc);
     }
     if (e.sp === 'sweep' && e.spT < 0 && blink) for (let k = 4; k < e.reach + 18; k += 3) plot(Math.floor(e.x + f * k), GROUND - 1, BLOOD[2]);   // the sweep's reach on the floor: jump it
     if (e.sp === 'charge' && e.spT < 0 && e.kind === 'marchetti' && Math.floor(simTime * 8) % 2) { const nk = J[1]; plot(Math.floor(nk.x + f * 1.5 * s), Math.floor(nk.y + 2 * s), PAL.white); plot(Math.floor(nk.x + f * 1.5 * s) + 1, Math.floor(nk.y + 2 * s) - 1, PAL.gold); }   // the gold chain glints
@@ -3443,15 +3442,6 @@ import * as P9 from './levels/pier9.js';
       const a = simTime * 22 + k * 0.5, rr = 7 * s;
       plot(Math.floor(hd.x + Math.cos(a) * rr), Math.floor(hd.y - r - 2 + Math.sin(a) * rr * 0.35), k % 2 ? ECOL.steel : ECOL.iron);
     }
-    if (e.reloadT > 0 && e.S) {   // the Tallyman's reload: six chambers fill round a ring over his head (a punish window while it lasts)
-      const cx = Math.floor(hd.x), cy = Math.floor(hd.y - r - 9), n = Math.floor((1 - e.reloadT / e.S.reload) * 6);
-      for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2 - Math.PI / 2; plot(Math.round(cx + Math.cos(a) * 3), Math.round(cy + Math.sin(a) * 3), i < n ? PAL.gold : blink ? PAL.white : C('#5a4a3a')); }
-    }
-    if (e.stunT > 0) for (let k = 0; k < 3; k++) {   // dizzy stars after a charge into the wall
-      const a = simTime * 6 + k * 2.1;
-      plot(Math.floor(hd.x + Math.cos(a) * 7 * s), Math.floor(hd.y - r - 3 + Math.sin(a) * 2), PAL.accent);
-    }
-    if (e.retreatT > 0 && blink) plot(Math.floor(hd.x - f * (r + 1)), Math.floor(hd.y - r + 1), EFX.sweat);   // scared: a sweat drop
   }
   function drawEnemies(L) {   // the goons in lane L (all of them when L is not given)
     const inL = e => L == null || (e.lane ?? LANE.FIGHT) === L;
@@ -3862,7 +3852,7 @@ import * as P9 from './levels/pier9.js';
     dust(ctl.x - d * 3, ctl.y + 1, 3); emit('feat', 'sdive'); emit('feat', 'dodge'); emit('roll', { x: ctl.x, y: ctl.y, dir: d, dive: true });
     tryPerfect();
   }
-  // ---------- finishers (#6): F by a reeling goon low on health (the prompt shows over him): a short kill, one per weapon class ----------
+  // ---------- finishers (#6): Q by a reeling goon low on health (he shows it: the beaten sway): a short kill, one per weapon class ----------
   let finE = null;   // the goon a finisher can take now
   const finCam = { t: 0, x: 0, y: 0 };   // the camera's punch-in: time left (real s), the point it closes on
   const finKind = () => { const Wp = WEAPONS[hero.weapon]; return Wp.gun ? 'g' : Wp.id === 'katana' ? 'k' : Wp.id === 'axe' ? 'a' : 'f'; };
@@ -4779,7 +4769,7 @@ import * as P9 from './levels/pier9.js';
     quakeStep(dt);
     regenStep(dt);
     laneTick();   // last: every body takes the lane of the surface it ended the step on
-    finE = finFoe();   // (the finisher prompt over his head, both views)
+    finE = finFoe();   // (the goon Q finishes now)
   }
 
   function toRag() {
@@ -6399,7 +6389,6 @@ import * as P9 from './levels/pier9.js';
       if (L === LANE.FIGHT) drawEShots();
       if (L === LANE.FRONT) drawDog();
       if (ctl.lane === L) { figArt.on = true; drawCharacter(look, face); figArt.on = false; drawBottle(); }
-      if (L === LANE.FRONT) drawDogHeart();
       if (L === LANE.PLAT) drawStairRails();   // the fire escape's outer rail: in front of anyone on the stairs, behind the street
     }
     if (isP9() && flags.club) P9.drawTunaHazard(R9, p9.tuna);   // the swinging tuna: in front of everyone it can hit
@@ -8199,6 +8188,7 @@ import * as P9 from './levels/pier9.js';
       if (w && !(w === 'tknife' && !(e.act === 'throw' && e.actT < 0.06))) {   // the goon's weapon in his front hand
         const g = eWeapon(e, J), L = e.R.len * s, geo = this.geo('E' + w + Math.round(L * 4), () => t3weaponGeo(w === 'tknife' ? 'knife' : w, 0, L));
         this.place(geo, g.x, g.y, g.dx, g.dy, g.dx >= 0 ? 1 : -1, ZA + this.bz, 0);   // mirrored so the pistol's grip hangs down either way
+        if (e.reloadT > 0) this.ball(g.x + g.dx * 2 * s - f * 1.6 * s, g.y + g.dy * 2 * s, ZA, 0.9 * s, 0.4, ECOL.steel);   // the cylinder swung out (eDrawWeapon)
       }
       if (e.shield) {   // the hatch-lid shield: a tall steel slab in front of the front hand, deep across the body
         const sx = hF.x + f * 2.5 * s;
@@ -8486,7 +8476,7 @@ import * as P9 from './levels/pier9.js';
         drawEShots(false);
       });
       this.layer(this.lFx, () => {
-        drawP9Fog(true); drawFx(); drawDogHeart(); drawOffscreen();
+        drawP9Fog(true); drawFx(); drawOffscreen();
         for (const e of enemies) {   // a goon's muzzle flash
           const J = e.dead ? e.pts : e.J; if (!J || e.R.w !== 'pistol' || !(e.muz > 0)) continue;
           const g = eWeapon(e, J); for (let d = 1; d <= 4; d++) plot(Math.floor(g.tx + g.dx * d), Math.floor(g.ty + g.dy * d), d < 3 ? PAL.white : PAL.accent);
@@ -8787,7 +8777,7 @@ import * as P9 from './levels/pier9.js';
     if (flags.wasted) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) retry(); return; }   // the Wasted card: retry from the checkpoint (Wicked: a restart); Esc opens the menu above
     if (endPh === 'done' && !resultsEl.hidden) { if (!e.repeat && c === 'Enter') startChapter1(); else if (!e.repeat && c === 'KeyR') reset(); return; }   // Club cleared: Enter goes on with the story (prologue, then Pier 9), R plays the tutorial again
     if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) { if (isP9()) p9Outro(); else endFinish(); } return; }   // the ending: Esc or Enter jumps to the card
-    // the keys: arrows move (up jumps, down squats; down at a run rolls), Q punches, W kicks (held by a beaten goon: the finisher), Space dodges, Shift walks (runs, with run off)
+    // the keys: arrows move (up jumps, down squats; down at a run rolls), Q punches (by a beaten goon: the finisher), W kicks, Space dodges, Shift walks (runs, with run off)
     if (c === 'ArrowLeft') { keys.left = true; takeOver(); }
     else if (c === 'ArrowRight') { keys.right = true; takeOver(); }
     else if (c === 'ArrowDown') { takeOver(); input.downHeld = true; }
@@ -8945,7 +8935,7 @@ import * as P9 from './levels/pier9.js';
     else if (endPh === 'meet') {
       fade = Math.max(0, fade - rdt * 1.2);
       if (dog.x - ctl.x < 50) { dog.st = 'stand'; dog.wag = 1; }
-      if (walkTo(dog.x - 34, 1) || endT > 8) { endGo('pet'); hero.act = 'pet'; hero.actT = 0; dog.heart = 0; }
+      if (walkTo(dog.x - 34, 1) || endT > 8) { endGo('pet'); hero.act = 'pet'; hero.actT = 0; }
     }
     else if (endPh === 'pet') { hero.act = 'pet'; dog.wag = 2; if (endT > 2.6) { hero.act = null; endGo('leave'); } }
     else if (endPh === 'leave') {
@@ -8958,7 +8948,6 @@ import * as P9 from './levels/pier9.js';
       else dog.vx = 0;
       dog.headDip = endPh === 'pet' ? 2 + Math.sin(endT * 9) * 0.6 : 0;   // leans its head into the hand
       dogStep(dog, rdt);
-      if (dog.heart >= 0) dog.heart += rdt;
     }
   }
   // the dog: a German Shepherd, black saddle over tan, black muzzle, upright ears, a low bushy tail; waist high on him (15 px at the shoulder). A small skeleton: hips and shoulders on a spine,
@@ -8972,7 +8961,7 @@ import * as P9 from './levels/pier9.js';
     return [ax + Math.cos(a + c) * l1, ay + Math.sin(a + c) * l1, tx, ty];
   }
   function makeDog(x, face) {
-    const d = { x, face, st: 'sit', ph: 0, up: 0, wag: 0.3, heart: -1, vx: 0, tail: [], ear: [] };
+    const d = { x, face, st: 'sit', ph: 0, up: 0, wag: 0.3, vx: 0, tail: [], ear: [] };
     for (let i = 0; i < 5; i++) d.tail.push({ x, y: GROUND - 18, px: x, py: GROUND - 18 });
     for (let i = 0; i < 2; i++) d.ear.push({ x, y: GROUND - 26, px: x, py: GROUND - 26 });
     return d;
@@ -9083,12 +9072,6 @@ import * as P9 from './levels/pier9.js';
     for (const k of px.keys()) { const [x, y] = k.split(',').map(Number); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const kk = (x + dx) + ',' + (y + dy); if (!px.has(kk) && y + dy <= GROUND - 1) out.push([x + dx, y + dy]); } }
     for (const [x, y] of out) plot(x, y, PAL.out);
     for (const [k, c] of px) { const [x, y] = k.split(',').map(Number); plot(x, y, c); }
-  }
-  function drawDogHeart() {   // a small heart floats up over the dog while he pets it (drawn over everyone)
-    if (!dog || flags.club || !(dog.heart >= 0 && dog.heart < 1.8)) return;
-    const ry = GROUND - 24 - Math.round(dog.heart * 7), rx = Math.round(dog.x) + dog.face * 4, pink = C('#ff5a8a');
-    for (const [x, y] of [[-1, -1], [0, -1], [2, -1], [3, -1], [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [-1, 1], [0, 1], [1, 1], [2, 1], [3, 1], [0, 2], [1, 2], [2, 2], [1, 3]]) plot(rx + x, ry + y, pink);
-    plot(rx - 1, ry - 1, C('#ffd0dc'));
   }
   function drawBottle() {   // the bottle in his hand at the bar: dark green glass along the forearm, a bright edge
     if (!ctl.bottle || hero.mode !== 'anim') return;
