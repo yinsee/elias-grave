@@ -10,7 +10,7 @@
 import { RANKS } from './style.js';
 
 export const BEST_KEY = 'eliasgrave.best';
-const CHAPTERS = { ch1: { par: 600, kills: 16 }, ch2: { par: 300, kills: 12 } };   // street tutorial (it teaches as it goes), Pier 9
+const CHAPTERS = { ch1: { par: 600, kills: 16 }, ch2: { par: 300, kills: 12 }, ch3: { par: 630, kills: 38 } };   // street tutorial (it teaches as it goes), Pier 9, Line Zero
 const GRADES = [['S', 8500], ['A', 7000], ['B', 5500], ['C', 4000], ['D', 0]];
 const clamp01 = (v) => Math.max(0, Math.min(1, v));
 

@@ -19,6 +19,8 @@ import { gradeRun, rankHtml, rankName } from './feedback/results.js';
 import { playPanels } from './cutscene/panels.js';
 import { playDialog } from './cutscene/dialog.js';
 import * as P9 from './levels/pier9.js';
+import * as METRO from './levels/metro/index.js';
+import { metro3d } from './levels/metro/three.js';
 
 (() => {
   'use strict';
@@ -83,7 +85,10 @@ import * as P9 from './levels/pier9.js';
   // the level being played: the tutorial street (this file's own painter and data) or Pier 9 (src/levels/pier9.js). loadLevel() swaps
   // the level lists below in place, so every function that reads them sees the new level.
   let LV = { id: 'street', title: 'The Street', startX: 60, drops: STREET_DROPS };
-  const isP9 = () => LV.id === 'pier9';
+  // the level being played: isLv(id). The street is the tutorial (this file's own painter and data); every other level is a module
+  // (src/levels/*) whose run hooks are LVH (Pier 9's run still lives in this file: its isP9() branches)
+  const isLv = id => LV.id === id, isP9 = () => isLv('pier9'), isMetro = () => isLv('metro'), isStreet = () => isLv('street');
+  let LVH = {};   // the level run's hooks (Line Zero: src/levels/metro/run.js); {} for the street and Pier 9
   const KIOSK_X = GOAL.x1 - 70;   // the left wall of the rooftop kiosk: the club's side door is in it, facing the roof   // the flat roof of the club building; the club door is in the kiosk at its right end
   const PLATS = [
     { x0: 190, x1: 240, y: hy(26) },     // the sports car: a jump and a short pull-up
@@ -104,7 +109,8 @@ import * as P9 from './levels/pier9.js';
     y -= 34;
     if (k < 4) STEPS.push(dir > 0 ? { x0: STAIR_X1 - 16, x1: STAIR_X1, y, landing: true, next: -1 } : { x0: STAIR_X0, x1: STAIR_X0 + 16, y, landing: true, next: 1 });
   }
-  const nearStairs = x => x > STAIR_X0 - 6 && x < STAIR_X1 + 6;
+  const STAIR_R = { x0: STAIR_X0, x1: STAIR_X1 };   // where the level's stair flight is (loadLevel swaps it)
+  const nearStairs = x => x > STAIR_R.x0 - 6 && x < STAIR_R.x1 + 6;
   function railTop(side, from) {   // the top of the rail at one end of the fire escape, for a jump from 'from': the landing gate at or above it
     let L = null;
     for (const s of STEPS) if (s.landing && (side > 0 ? s.x1 === STAIR_X1 : s.x0 === STAIR_X0) && s.y <= from.y + 2 && (!L || s.y > L.y)) L = s;
@@ -146,7 +152,8 @@ import * as P9 from './levels/pier9.js';
     for (const o of objs) { const l = laneAt(o.x, o.y + o.r, false); if (o.carried) o.lane = ctl.lane ?? LANE.FIGHT; else if (o.lane == null || o.vy >= -5) o.lane = l; }   // (one in his hand goes where he goes)
     // a ragdoll lies where its pelvis lies (as bodyFloor decides), not where a dangling foot hangs
     ctl.lane = hero.act === 'climb' && ctl.climb ? laneOf(ctl.climb.s, true) : hero.mode === 'anim' && !ctl.air ? laneOf(ctl.surf, true) : hero.mode !== 'anim' ? laneAt(P[2].x, P[2].y + P[2].r, true) : laneOf(floorBelow(P[2].x, footOf(P) - 0.5, 0, true), true);
-    for (const e of enemies) { const J = e.dead ? e.pts : e.J; e.lane = !J ? LANE.FIGHT : e.dead ? laneAt(J[2].x, J[2].y + 3, true) : laneAt(J[2].x, footOf(J), true); }
+    for (const e of enemies) { const J = e.dead ? e.pts : e.J; e.lane = !J ? LANE.FIGHT : e.dead ? laneAt(J[2].x, J[2].y + 3, true) : laneAt(J[2].x, footOf(J), true); if (e.niche || (e.perchS && e.perchS.back)) e.lane = LANE.PLAT; }
+    if (ctl.niche) ctl.lane = LANE.PLAT;   // in a refuge niche (Line Zero): back in the wall, behind a passing train
     for (const t of thrown) { let l = laneAt(t.x, t.y + 1, true); if (t.stuck && l === LANE.FIGHT) l = LANE.FRONT; if (t.lane == null || t.stuck || t.vy >= 0) t.lane = l; }   // a weapon lying in the street: the front lane, where nothing hides it
     for (const b of ammoBoxes) b.lane = LANE.FRONT;   // ammo and bandages: always in the front lane, where nothing hides them
     for (const b of boards) b.lane = laneAt(b.x, b.y + 1, false);   // splinters: with the crate they came from
@@ -615,6 +622,16 @@ import * as P9 from './levels/pier9.js';
     }
   }
   function drawBackdrop() {
+    if (isMetro()) {   // Line Zero: underground, no sky; the static layer is the whole world (the junction too), then the live parts on the wall
+      buf.fill(0xff0b0c10);
+      for (let vy = 0; vy < cam.vh; vy++) {
+        const wy = vy + cam.y; if (wy < 0 || wy >= H) continue;
+        const srow = wy * W + cam.x, row = vy * CW;
+        for (let vx = 0; vx < cam.vw; vx++) { const c = GORE[srow + vx] || stat[srow + vx]; if (c) buf[row + vx] = c; }
+      }
+      LVH.drawWorld();
+      return;
+    }
     if (flags.club) {
       if (isP9()) P9.drawHall(R9); else {
       drawClub();
@@ -1761,7 +1778,7 @@ import * as P9 from './levels/pier9.js';
   };
   let hudTarget = null, hudTargetT = 0;
   const BODY_MAX = 99;
-  const LOOK_X = { ...LOOK, ...P9.SALT_LOOKS };   // the street's outfits and Pier 9's Saltmen
+  const LOOK_X = { ...LOOK, ...P9.SALT_LOOKS, ...METRO.RAT_LOOKS };   // the street's outfits, Pier 9's Saltmen, Line Zero's Tunnel Rats
   // opts (Pier 9): { role, look, R: role overrides } for a Saltman; { boss: P9.MARCHETTI } for a level boss. The street passes none.
   function spawnEnemy(type, x, zone, opts) {
     const T = ETYPE[type];
@@ -1799,10 +1816,11 @@ import * as P9 from './levels/pier9.js';
     if (opts && opts.boss) {   // a level boss: its own stats (hp by difficulty), size and name
       const Bd = opts.boss;
       Object.assign(e, { hp: Bd.hp[diffSel], maxHp: Bd.hp[diffSel], s: Bd.s, m: Bd.m, speed: Bd.speed, reach: Bd.reach, dmg: Bd.dmg, heavyDmg: Bd.heavyDmg, poise: Bd.poise,
-        windup: Bd.windup, cd: Bd.cd.slice(), kind: 'marchetti', hookCd: 3.5, hook: null, chgCd: 6, tunaCd: 3, iceCd: 7, stalkT: 0, hidden: false });
+        windup: Bd.windup, cd: Bd.cd.slice(), kind: Bd.kind || 'marchetti', hookCd: 3.5, hook: null, chgCd: 6, tunaCd: 3, iceCd: 7, stalkT: 0, hidden: false });
+      if (Bd.skin) e.pal.skin = C(Bd.skin[0]), e.pal.skinB = C(Bd.skin[1]);
     }
-    // a Saltman variant (Pier 9): its behaviour row; the Bosun gets his own stats
-    const S = opts && opts.v ? P9.SALTMEN[opts.v] : null;
+    // a level's goon variant: its behaviour row (opts.S; Pier 9 passes v, a Saltman); the Bosun gets his own stats
+    const S = opts && (opts.S || (opts.v ? P9.SALTMEN[opts.v] : null)) || null;
     e.v = opts && opts.v || null; e.S = S; e.weapon = S ? S.weapon : R.weapon ?? null;
     Object.assign(e, { rimT: 0, rimC: 0, propCd: 0.6 + simRand(), carry: null, gaffCd: 1 + simRand() * 1.5, gaff: null, ammo: 0, reloadT: 0, rpun: false,
       shield: role === 'shield', turnT: 0, sweepCd: 3, kickCd: 4, grabCd: 2, holdT: 0, held: 0, feintN: 0 });
@@ -1959,7 +1977,7 @@ import * as P9 from './levels/pier9.js';
     emit('feat', 'otg'); focGain(FOCUS.gain.otg);
   }
   function wallX(d, x) {   // the wall a body flying d-ward at x meets: the level's ends, the street's end wall, the club's or the arena's walls (null: none)
-    const lo = enc.arena ? enc.arena.x0 : flags.club && !isP9() ? DOOR_X + 2 : 8, hi = enc.arena ? enc.arena.x1 : !flags.club && !isP9() ? STREET_END + 6 : W - 10;
+    const lo = enc.arena ? enc.arena.x0 : flags.club && isStreet() ? DOOR_X + 2 : 8, hi = enc.arena ? enc.arena.x1 : !flags.club && isStreet() ? STREET_END + 6 : W - 10;
     return d < 0 && x <= lo + 1 ? lo : d > 0 && x >= hi - 1 ? hi : null;
   }
   function flyStep(e, dt) {   // a body in flight (a clinch throw or kick-away): it hits the goons and boxes in its way; a wall stops it and he drops
@@ -1995,6 +2013,7 @@ import * as P9 from './levels/pier9.js';
     hstr.n = 0; hstr.t = -9;   // hit: his string is broken
     if (ctl.grab) grabFree(30);   // hit in the clinch: he lets go
     hero.hp = Math.max(0, hero.hp - dmg); hero.invT = 0.45;
+    if (LVH.hurt) LVH.hurt(dmg, src);
     const vx = ctl.air ? ctl.face * ctl.spd : ctl.face * ctl.spd, into = Math.max(0, -dirx * vx);
     const braced = hero.act === 'squat' || hero.act === 'guard' ? 0.7 : 1;
     const impact = dmg * impK * (heavy ? 1.7 : 1) * (1 + into / 55) * (ctl.air ? 1.35 : 1) * braced;
@@ -2052,8 +2071,9 @@ import * as P9 from './levels/pier9.js';
     for (const b of eshots) { const d = (P[2].x - b.x) * Math.sign(b.vx); if (d > -2 && Math.abs(P[2].y - b.y) < 26) { pdTc = d / Math.max(1, Math.abs(b.vx)); if (pdTc < 0.6) return b; } }
     const B = enc.boss;
     if (B && !B.dead && B.sp === 'charge' && (ctl.x - B.x) * B.face > 0 && (ctl.x - B.x) * B.face < 230 && Math.abs(B.y - ctl.y) < 16) { pdTc = Math.max(0, -B.spT) + (ctl.x - B.x) * B.face / (B.chgV || 215); return B; }   // the charge, from its tell
-    if (B && !B.dead && B.sp === 'hook' && !B.hook && (ctl.x - B.x) * B.face > 0 && (ctl.x - B.x) * B.face < P9.MARCHETTI.hook.range[diffSel]) { pdTc = -B.spT + (ctl.x - B.x) * B.face / P9.MARCHETTI.hook.v; return B; }   // the hook, from its tell
-    if (B && !B.dead && B.sp === 'hook' && B.hook && B.hook.st === 'fly') { const d = (ctl.x - B.hook.x) * B.face; if (d > -2) { pdTc = d / P9.MARCHETTI.hook.v; return B; } }   // and in flight
+    const HK = B && (B.hookD || P9.MARCHETTI.hook);   // the boss's hook (Marchetti's meat hook, Switch's chain hook)
+    if (B && !B.dead && B.sp === 'hook' && !B.hook && (ctl.x - B.x) * B.face > 0 && (ctl.x - B.x) * B.face < HK.range[diffSel]) { pdTc = -B.spT + (ctl.x - B.x) * B.face / HK.v; return B; }   // the hook, from its tell
+    if (B && !B.dead && B.sp === 'hook' && B.hook && B.hook.st === 'fly') { const d = (ctl.x - B.hook.x) * B.face; if (d > -2) { pdTc = d / HK.v; return B; } }   // and in flight
     if (B && !B.dead && B.sp && B.pdAt != null && Math.abs(ctl.x - B.x) < B.pdR + D.margin && B.pdAt - simTime > -0.04) { pdTc = B.pdAt - simTime; return B; }   // a boss special's strike (grab, sweep, shove, tuna swing), from its tell
     for (const q of quakes) if (!q.hit && (ctl.x - q.x) * q.dir > -2) { pdTc = (ctl.x - q.x) * q.dir / QUAKE.v; if (pdTc < 0.6) return q; }
     return null;
@@ -2085,6 +2105,7 @@ import * as P9 from './levels/pier9.js';
   function damageEnemy(e, dmg, dirx, power, up, x, y, blade) {
     if (enc.eHitKind) e.hitAt = simTime;   // (a goon at finisher health stays finisher-ready FIN.open s after the hero's hit lands)
     if (e === enc.boss) dmg = Math.max(1, Math.round(dmg * (enc.eHitKind === 2 ? 0.8 : 0.75)));   // the boss shrugs off part of every hit (guns no worse than fists)
+    if (e.dmgK && e.dmgK !== 1) dmg = Math.round(dmg * e.dmgK);   // (Tinder doused: he takes more)
     // the hero's melee: string scaling; a counter-hit = he struck the goon mid wind-up or swing, or while exposed (after a perfect dodge)
     const mel = enc.eHitKind === 1 && !!hitCtx, M0 = e.act && EMOVES[e.act];
     let ctr = false, ender = false, base = null;
@@ -2220,12 +2241,12 @@ import * as P9 from './levels/pier9.js';
     lootDrop(e, dirx);   // his weapon, an ammo box, a bandage (docs/drops.md)
     if (e.zone != null && --zoneAlive[e.zone] === 0 && !reinfLeft(e.zone)) {
       if (typeof e.zone === 'number') emit('feat', 'kill' + e.zone);
-      if (e.zone !== 'arena' && e.zone !== 'boss' && !(isP9() && p9.queue.some(q => q.wave === e.zone))) slowMo(FOCUS.last, 'lastkill');   // the last of a wave: a beat of slow motion
+      if (e.zone !== 'arena' && e.zone !== 'boss' && !(isP9() && p9.queue.some(q => q.wave === e.zone)) && !(LVH.queued && LVH.queued(e.zone))) slowMo(FOCUS.last, 'lastkill');   // the last of a wave: a beat of slow motion
     }
     if (e === enc.boss) {
       enc.bossBeaten = true; enc.arena = null; emit('feat', 'boss'); crowdReact(e.x, 0, 'big'); slowMo(FOCUS.boss, 'boss');
       emit('boss:defeated', { boss: e, x: e.x });
-      if (!flags.demo && !flags.attract) unlock(isP9() ? 'ch2' : 'ch1');   // a real win opens the next chapter
+      if (!flags.demo && !flags.attract) unlock(isP9() ? 'ch2' : isMetro() ? 'ch3' : 'ch1');   // a real win opens the next chapter
       for (const g of enemies) if (!g.dead && g.zone === 'arena') killEnemy(g, Math.sign(g.x - e.x) || 1, 200, 0.5);
     }
   }
@@ -2674,6 +2695,7 @@ import * as P9 from './levels/pier9.js';
   // a throwing knife arcs to where the player stood at release; a pistol shot flies straight at the height locked during the aim
   function eFire(e) {
     if (e.carry) { throwProp(e); return; }   // a deckhand's crate or barrel
+    if (LVH.fire && LVH.fire(e)) return;   // a level's own shots (Line Zero: rail spikes, fire bottles, flares)
     const h = e.J[6], dir = e.face, px = P[2].x, d = Math.max(20, Math.abs(px - h.x));
     if (e.act === 'shoot') {
       const mx = h.x + dir * 4 * e.s, my = h.y, sp = 230;
@@ -2693,8 +2715,10 @@ import * as P9 from './levels/pier9.js';
       if (b.k === 'k' || b.k === 't') b.vy += 260 * dt;
       b.x += b.vx * dt; b.y += b.vy * dt; b.life -= dt;
       if (b.k === 't') { if (tunaShotStep(b)) eshots.splice(i, 1); continue; }   // Marchetti's lobbed tuna
+      if (b.mk && b.k !== 'b' && LVH.shotStep) { if (LVH.shotStep(b)) eshots.splice(i, 1); continue; }   // a level's own shot (fire bottles, flares)
+      if (b.harmless) { if (b.life <= 0) eshots.splice(i, 1); continue; }
       let dead = b.life <= 0 || b.x < 0 || b.x > W || b.y > GROUND + 2;
-      if (!dead) for (const s of SURF) if (b.x >= s.x0 && b.x <= s.x1 && b.py < s.y && b.y >= s.y) { dead = true; puff(b.x, s.y - 1); break; }
+      if (!dead) for (const s of SURF) if (s !== b.src && b.x >= s.x0 && b.x <= s.x1 && b.py < s.y && b.y >= s.y) { dead = true; puff(b.x, s.y - 1); break; }
       // a bullet coming at him: half the time he reads it and ducks under it
       // [feel] the duck starts by time to impact (fast shots too), early enough to be down when the bullet arrives
       if (b.k === 'b' && b.duck === undefined && hero.mode === 'anim' && Math.sign(P[2].x - b.x) === Math.sign(b.vx) && Math.abs(P[2].x - b.x) / Math.max(1, Math.abs(b.vx)) < 0.24 && Math.abs(P[2].y - b.y) < 30) {
@@ -2903,7 +2927,7 @@ import * as P9 from './levels/pier9.js';
     if (diffSel >= 2) p9.crewNow = 1;   // Hard, Wicked: a crewman rushes in to cover his back
   }
   function hookStep(e, dt, px) {   // the hook in flight, the pull, the reel-in after a miss (a 1.2 s punish window)
-    const M = P9.MARCHETTI.hook;
+    const M = e.hookD || P9.MARCHETTI.hook;   // (Marchetti's meat hook, or a level boss's own: Switch's chain hook)
     e.spT += dt;
     if (e.spT < 0) { if (e.spT < -0.2) { e.face = Math.sign(px - e.x) || e.face; e.hookTx = px; } return; }
     if (!e.hook) { e.hook = { x: e.x + e.face * 8 * e.s, y: GROUND - 24, st: 'fly', d: 0, x0: e.x }; emit('sfx', { name: 'dodge_whoosh', x: e.x, vol: 0.8, pitch: 0.6 }); }
@@ -2911,7 +2935,7 @@ import * as P9 from './levels/pier9.js';
     if (k.st === 'fly') {
       k.x += e.face * M.v * dt; k.d += M.v * dt;
       // a solid prop in its way stops it with a clank (cover): the hall's tall props, a loose crate, barrel or bin as high as the hook
-      const cov = P9.HOOK_COVER.find(([x0, x1, top]) => k.x >= x0 && k.x <= x1 && k.y >= top && !(k.x0 >= x0 && k.x0 <= x1))
+      const cov = (isP9() ? P9.HOOK_COVER : []).find(([x0, x1, top]) => k.x >= x0 && k.x <= x1 && k.y >= top && !(k.x0 >= x0 && k.x0 <= x1))
         || objs.find(o => !o.carried && !o.pocket && Math.abs(o.x - k.x) < (o.hw || o.r) + 1 && o.y - o.r <= k.y + 1 && o.y + o.r >= k.y - 1);
       if (cov) {
         k.st = 'back'; k.clank = true; sparks.push({ x: k.x, y: k.y, t: 0 }); shakeIt(0.08, 1);
@@ -2934,7 +2958,7 @@ import * as P9 from './levels/pier9.js';
       }
       else if (Math.abs(d) < 3) {   // landed at his feet: a free heavy chop, unless he dodges away in time
         hookPull = false; e.sp = null; e.hook = null; e.face = Math.sign(ctl.x - e.x) || e.face;
-        e.combo = ['hchop']; e.ci = 0; bStart(e, 'hchop', bTell(0.3), 'cleaverHeavy'); bark(e, 'On the scale!');
+        e.combo = ['hchop']; e.ci = 0; bStart(e, 'hchop', bTell(0.3), 'cleaverHeavy'); bark(e, M.line || 'On the scale!');
       } else { ctl.x += Math.sign(d) * Math.min(Math.abs(d), M.pull * dt); ctl.spd = 0; ctl.face = -e.face; k.x = ctl.x - e.face * 3; }
     } else {
       const d = e.x - k.x;
@@ -2965,6 +2989,7 @@ import * as P9 from './levels/pier9.js';
   }
   // committed big moves; runs before the body moves (the charge sets its own speed)
   function bossSpecial(e, dt, px) {
+    if (LVH.special && LVH.special(e, dt, px)) return;   // a level boss's own moves (Tinder's volley and kick; Switch's spikes, lever, handcar)
     if (e.sp === 'hook') { hookStep(e, dt, px); return; }
     const t0 = e.spT; e.spT += dt;
     if (e.sp === 'roar') {
@@ -3079,7 +3104,7 @@ import * as P9 from './levels/pier9.js';
   }
   const CHG_STOP = new Set(['barrel', 'crate', 'bigcrate', 'bin', 'stack', 'tuna']);   // a loose prop that stops a shoulder charge dead
   function enemyStep(dt) {
-    if (!isP9() && enc.boss && !enc.boss.dead && enc.arena && enc.introT < 0 && enc.arenaSpawned < DIF().crew.n) {   // his crew, tied to the fight's beats:
+    if (isStreet() && enc.boss && !enc.boss.dead && enc.arena && enc.introT < 0 && enc.arenaSpawned < DIF().crew.n) {   // his crew, tied to the fight's beats:
       // phase 1, one at a time after MAL.crew.delay s; at the coat (phase 2) DIF().crew.alive come in at once (Easy, Medium 2; Hard, Wicked 3),
       // then at most that many; DIF().crew.n in all
       const B = enc.boss, p2 = B.ph >= 2, Cw = MAL.crew, alive = enemies.filter(g => !g.dead && g.zone === 'arena').length;
@@ -3121,9 +3146,10 @@ import * as P9 from './levels/pier9.js';
       if (e.down) { eDownStep(e, dt); continue; }
       if (e.clinch || e.fin) { e.vx = e.vy = 0; e.air = false; e.act = null; poseEnemy(e, dt); continue; }   // in the clinch or a finisher: the hero moves him
       const dx = px - e.x, adx = Math.abs(dx);   // (no height leash: a ledge does not shake them off)
-      const aggro = e.aggro = (adx < (e.alert ? 600 : 200) || (e.kind === 'marchetti' && flags.club)) && hero.mode !== 'getup', level = Math.abs(py - e.y) < 14;
+      const aggro = e.aggro = (adx < (e.alert ? 600 : 200) || ((e.kind === 'marchetti' || e.kind === 'switch') && flags.club)) && hero.mode !== 'getup', level = Math.abs(py - e.y) < 14;
       e.fight = aggro && adx < 60 * e.s && !e.intro;
       if (e.intro) { e.act = null; e.sp = null; e.tx = e.introX; e.run = e.kind === 'marchetti' ? 1 : 0.5; e.cdT = Math.max(e.cdT, 0.8); if (Math.abs(e.introX - e.x) <= 3) e.face = -1; }   // the entrance: a slow walk to his mark under the spot, nothing else
+      else if (LVH.think && LVH.think(e, dt, px, dx, adx, level, aggro)) { /* a level boss's brain (Tinder, Switch) */ }
       else if (e.kind === 'marchetti') marchettiThink(e, dt, px, dx, adx, level, aggro);
       else if (e.kind === 'malaspina') malaspinaThink(e, dt, px, dx, adx, level, aggro);
       else if (hookPull && e.zone === 'arena') { e.tx = null; if (e.act && e.actT < 0) e.act = null; if (e.tok) eRelease(e); }   // the boss has the hero: his crew holds off (no stun-lock)
@@ -3310,6 +3336,22 @@ import * as P9 from './levels/pier9.js';
       const kx = g.x - g.dx * 1.6 * s, ky = g.y - g.dy * 1.6 * s;
       seg(kx, ky, g.tx, g.ty, 1.0 * s, O); line1(kx, ky, g.tx, g.ty, c(ECOL.cane));
       disc(snap(kx), snap(ky), 1.0 * s, c(ECOL.steel)); plot(Math.floor(g.tx), Math.floor(g.ty), c(ECOL.steel));
+    } else if (w === 'chain') {   // Switch's chain whip: links swinging from the hand, a hook at the end
+      const n = 7, sag = e.act && e.actT >= 0 ? 0.2 : 1.6;
+      let lx = g.x, ly = g.y;
+      for (let k = 1; k <= n; k++) { const t = k / n, x = g.x + (g.tx - g.x) * t, y = g.y + (g.ty - g.y) * t + Math.sin(Math.PI * t) * sag * 3 * s; line1(lx, ly, x, y, c(k % 2 ? ECOL.iron : ECOL.steel)); lx = x; ly = y; }
+      plot(Math.floor(lx), Math.floor(ly), c(ECOL.steel)); plot(Math.floor(lx + e.face), Math.floor(ly + 1), c(ECOL.steel)); plot(Math.floor(lx), Math.floor(ly + 2), O);
+    } else if (w === 'flare') {   // Tinder's road flare: a red stick, the lit end hisses (its flame is drawn with the fire)
+      seg(g.x, g.y, g.tx, g.ty, 1.3 * s, O); line1(g.x, g.y, g.tx, g.ty, c(C('#c02a2a'))); plot(Math.floor(g.tx), Math.floor(g.ty), e.douseT > 0 ? C('#3a3a3a') : C('#fff0d0'));
+    } else if (w === 'wrench') {   // a Lineman's short rail wrench
+      seg(g.x, g.y, g.tx, g.ty, 1.6 * s, O); seg(g.x, g.y, g.tx, g.ty, 0.8 * s, c(ECOL.iron));
+      const hx = g.tx - g.dy * e.face * 1.5 * s, hy = g.ty + g.dx * e.face * 1.5 * s; plot(Math.floor(hx), Math.floor(hy), c(ECOL.steel)); plot(Math.floor(g.tx), Math.floor(g.ty), c(ECOL.steel));
+    } else if (w === 'hook') {   // a Crawler's hooked blade
+      seg(g.x, g.y, g.tx, g.ty, 1.2 * s, O); line1(g.x, g.y, g.tx, g.ty, c(ECOL.steel));
+      plot(Math.floor(g.tx - g.dy * e.face * 1.5), Math.floor(g.ty + g.dx * e.face * 1.5), c(ECOL.steel));
+    } else if (w === 'flaregun') {   // a Flare Rat's brass flare pistol: a fat short barrel
+      seg(g.x, g.y, g.tx, g.ty, 1.9 * s, O); seg(g.x, g.y, g.tx, g.ty, 1.1 * s, c(C('#b8902a')));
+      if (e.muz > 0) for (let d = 1; d <= 3; d++) plot(Math.floor(g.tx + g.dx * d), Math.floor(g.ty + g.dy * d), d < 2 ? PAL.white : C('#ff4040'));
     } else { seg(g.x, g.y, g.tx, g.ty, 1.2 * s, O); line1(g.x, g.y, g.tx, g.ty, c(ECOL.steel)); }   // knife
   }
   // [read] the rim flash on a melee wind-up (enemy.rimT): white = a normal blow, red = a heavy, cyan = low (jump it)
@@ -3428,7 +3470,7 @@ import * as P9 from './levels/pier9.js';
       const gy = GROUND - 1, sp = e.spT < -0.2 ? 10 : 7;
       if (blink || e.leapt) for (const k of [-2, -1, 1, 2]) { plot(Math.floor(e.jx + k * sp), gy, BLOOD[2]); plot(Math.floor(e.jx + k * sp) + 1, gy, BLOOD[2]); }
     }
-    if (e.kind === 'marchetti') drawHookMarks(e, J);
+    if (e.kind === 'marchetti' || e.kind === 'switch') drawHookMarks(e, J);
     if (e.glint > 0 && e.act && e.actT < 0) {   // [read] a ranged wind-up glints at the hand: a 4-point star
       const h = J[6], gx = Math.floor(h.x + f * 2), gy = Math.floor(h.y - 1), L = blink ? 3 : 2, gc = blink ? PAL.white : PAL.accent;
       plot(gx, gy, PAL.white); for (let k = 1; k <= L; k++) { plot(gx + k, gy, gc); plot(gx - k, gy, gc); plot(gx, gy + k, gc); plot(gx, gy - k, gc); }
@@ -3448,9 +3490,10 @@ import * as P9 from './levels/pier9.js';
     for (const e of enemies) if (e.dead && inL(e)) drawEnemy(e);
     for (const e of enemies) if (!e.dead && inL(e)) drawEnemy(e);
   }
-  function drawGate() { if (enc.arena) for (let y = GROUND - 44; y < GROUND; y += 3) { plot(2429, y, BLOOD[2]); plot(2429, y + 1, BLOOD[1]); } }   // the gate is shut
+  function drawGate() { if (enc.arena && !isMetro()) for (let y = GROUND - 44; y < GROUND; y += 3) { plot(2429, y, BLOOD[2]); plot(2429, y + 1, BLOOD[1]); } }   // the gate is shut
   function drawEShots(knives = true) {
     for (const b of eshots) {   // enemy shots: red tracers, spinning knives
+      if (b.mk && LVH.drawShot) { LVH.drawShot(b); continue; }   // a level's own shots (both views: the 3D front layer draws them too)
       if (b.k === 'b') { line1(b.x - b.vx * 0.025, b.y - b.vy * 0.025, b.x, b.y, BLOOD[2]); plot(Math.floor(b.x), Math.floor(b.y), PAL.white); }
       else if (b.k === 't') { if (knives) P9.drawTunaAt(R9, b.x, b.y, Math.atan2(b.vy, b.vx), 20); }   // a lobbed tuna (3D: a model)
       else if (knives) { const a = b.t * 22, cx = Math.cos(a) * 2, sy = Math.sin(a) * 2; line1(b.x - cx, b.y - sy, b.x + cx, b.y + sy, ECOL.steel); plot(Math.floor(b.x - cx), Math.floor(b.y - sy), ECOL.grip); }
@@ -3464,6 +3507,8 @@ import * as P9 from './levels/pier9.js';
 
   // ---------- state ----------
   let hits = 0, landed = 0, timeScale = 1, showSkel = false, ragFace = 1, settleT = 0, gu = null;
+  let lockT = 0;   // sim s the hero's input is locked (Line Zero: a third-rail shock's stun, the dive)
+  const bossDlg = { on: false, done: false };   // a level boss's entrance dialog (Pier 9, Line Zero): started, closed
   const ctl = { stOff: 0, combo: 0, comboEnd: -9, x: START_X, y: GROUND - 2, face: 1, spd: 0, phase: 0, air: false, vu: 0, accS: 0, jumps: 0, flipT: -1, spin: 0, landDip: 4, landDur: 0.22, baseY: GROUND - 2, cap: MAX_AIR, surf: GROUND_S, squatT: 0, squatEnd: -9, charged: false, wr: 0, yw: 0, slam: false, push: 0 };
   let queued = null, hitDone = false, wAct = 0, apSm = IDLE.slice(), lastHand = 0, kickLeg = 1;
   let hitStop = 0, bagFlash = 0, ragT = 0;
@@ -3999,6 +4044,7 @@ import * as P9 from './levels/pier9.js';
   function tryDash(kind) {   // kind 'roll': the long roll (↓ at a run); else on the ground the short dodge, in the air the air dash
     if (dashCd > 0 || hero.mode !== 'anim' || hero.act === 'dash' || hero.act === 'hero' || hero.act === 'rise' || hero.act === 'crouch' || hero.act === 'climb' || hero.act === 'fin' || hero.act === 'sdive' || hero.act === 'gtoss') return false;
     if (MOVES[hero.act] && !(ctl.air ? hero.actT > (MOVES[hero.act].win || [0, MOVES[hero.act].dur])[1] && hero.act !== 'aair' : cancelOK())) return false;
+    if (kind !== 'roll' && LVH.dive && LVH.dive()) { dashCd = DASH.cd; return true; }   // ↑ + Space at a gap of a passing freight (Line Zero): the dive through it
     if (ctl.grab) grabFree(20);   // a dodge out of the clinch lets him go
     const d = input.dir;
     queued = null; ctl.slam = false; ctl.flipT = -1;
@@ -4194,13 +4240,14 @@ import * as P9 from './levels/pier9.js';
 
     // presses wait in a short buffer until the fighter can act on them
     if (input.jump) { input.jump = false; if (hero.act !== 'crouch') ibuf.jump = BUF; }   // a press during the take-off squat is the same jump
-    if (!flags.demo && enc.introT < 0 && !hookPull && !gaffHold) btnTick(dt);   // (the boss entrance and the hook pull lock the controls: a held Q or W does not go off there)
+    if (!flags.demo && enc.introT < 0 && !hookPull && !gaffHold && !(lockT > 0)) btnTick(dt);   // (the boss entrance and the hook pull lock the controls: a held Q or W does not go off there)
     if (input.attack) { ibuf.atk = input.attack; ibuf.atkT = BUF; input.attack = null; }
     if (input.dash) { input.dash = false; ibuf.dash = BUF; }
     if (ibuf.dash > 0 && input.downHeld && !ctl.air && ctl.surf !== GROUND_S && !ctl.surf.box && (!locked || cancelOK())) {   // squat + Space up on a ledge: drop through it
       ignoreS = ctl.surf; ignoreT = 0.35; startFall(); emit('feat', 'drop'); ibuf.dash = 0;
     }
     if (ibuf.dash > 0) { if (tryDash()) { ibuf.dash = 0; ibuf.jump = 0; } else ibuf.dash -= dt; }   // (on the ground it is the roll)
+    if (ibuf.jump > 0 && !ctl.air && LVH.up && LVH.up()) ibuf.jump = 0;   // ↑ by a refuge niche (Line Zero): he steps in (or out); no jump
     if (ibuf.jump > 0) {
       const free = !locked || cancelOK();
       let used = true;
@@ -4742,6 +4789,8 @@ import * as P9 from './levels/pier9.js';
     objStep(dt);
     enemyStep(dt);
     if (isP9()) p9Step(dt);
+    if (LVH.step) LVH.step(dt);
+    if (lockT > 0) lockT -= dt;
     bulletStep(dt);
     bHit.cd -= dt;
     if (bHit.n) {   // [feel] bullets that land: a short freeze (longer for a shotgun blast), a spark and a kick along the shot
@@ -4818,7 +4867,7 @@ import * as P9 from './levels/pier9.js';
     });
   }
   function reset() {
-    if (!flags.attract) gameAudio.playMusic('docks_explore', { volume: isP9() ? 0.6 : 0.45 });   // a game: the calm street track, low (the title screen plays the title theme)
+    if (!flags.attract) gameAudio.playMusic('docks_explore', { volume: isP9() ? 0.6 : isMetro() ? 0.4 : 0.45 });   // a game: the calm street track, low (the title screen plays the title theme)
     if (openT >= 0) endOpening();
     endPh = null; endT = 0; endCam = null; dog = null; ctl.bottle = false; jumpEnd = false;
     releaseGrab();
@@ -4833,9 +4882,11 @@ import * as P9 from './levels/pier9.js';
     flags.club = false; clubT = 0; fade = 0; fadeDir = 0; slamDone = false;
     cam.xf = START_X - 80; cam.yf = GROUND - 60; cam.v.x = cam.v.y = cam.v.z = 0; cam.zoom = 1;   // [feel] a restart cuts to the start, it does not fly the camera back
     resetTutorial();
-    enc.introT = -1; bossBarK = 1; hookPull = false; gaffHold = null; enc.holdK = 0; enc.swingT = -9; p9.bossDlg = p9.dlgDone = false; cardEl.hidden = true; cardT = 0;   // a restart mid-entrance: no input lock left behind
+    enc.introT = -1; bossBarK = 1; hookPull = false; gaffHold = null; enc.holdK = 0; enc.swingT = -9; cardEl.hidden = true; cardT = 0;   // a restart mid-entrance: no input lock left behind
     bossBeat = 0; bossMash = 0; malDlg = false; barkT = 0; sayEl.hidden = true;
+    lockT = 0; ctl.niche = false; bossDlg.on = bossDlg.done = false;
     if (isP9()) p9Reset();
+    if (LVH.reset) LVH.reset();
     setCkpt('start', 0, true); ckBoss = false; slowT = 0; hstr.n = 0; hstr.t = -9; ctl.stepV = 0;
     styleM.reset(); director.reset();
     endFocus(); foc.m = 0; accW = 0; ctl.grab = null; ctl.fin = null; ctl.dive = null; ctl.diveH = 0; ctl.aimDnT = 0; finE = null; finCam.t = 0;
@@ -4880,7 +4931,7 @@ import * as P9 from './levels/pier9.js';
   const WAVES = { 1: [770, 815], 2: [1060, 1120, 1190], 3: [1340, 1410, 1570], 4: [1720, 1790, 1850, 1880], 5: [1990, 2060, 2110, 2135] };
   const spawned = new Set(), zoneTs = {};   // the stages whose goons are out; the time spent in each stage
   const reinf = {};   // per fight stage: { k: reinforcement waves sent (DIF().reinf), n: goons in the last wave out }
-  const reinfLeft = z => typeof z === 'number' && !isP9() && !!reinf[z] && reinf[z].k < DIF().reinf.length;   // (a stage is not clear while one is to come; the demo's own goons have none)
+  const reinfLeft = z => typeof z === 'number' && isStreet() && !!reinf[z] && reinf[z].k < DIF().reinf.length;   // (a stage is not clear while one is to come; the demo's own goons have none)
   const stageGoons = i => WAVES[i].length + DIF().reinf.reduce((a, b) => a + b, 0);
   const tutEl = document.getElementById('tut'), toastEl = document.getElementById('toast');
   let tutZone = -1, tutDirty = true, toastT = 0;
@@ -4912,10 +4963,10 @@ import * as P9 from './levels/pier9.js';
   });
   bus.on('ko', p => { const n = hero.wind; if (!p.perma && (n > 0 || flags.demo)) toast('K.O.', n > 1 ? `Second wind · ${n - 1} left` : 'Second wind · that was the last one'); });
   bus.on('kill', p => { if (!p.isBoss) { kills.push({ name: p.enemy.name, w: p.weapon, t: simTime }); feedDirty = true; } });
-  bus.on('boss:defeated', () => isP9() ? toast('Marchetti is down', 'The collector has been collected.') : toast('Boss defeated', 'Club Noir is yours. The street is yours.'));
-  bus.on('boss:intro', () => isP9() ? gameAudio.playMusic('boss_marchetti', { volume: 0.85 }) : gameAudio.playMusic('docks_explore', { volume: 0.85 }));   // the street: the same track, up
+  bus.on('boss:defeated', () => isP9() ? toast('Marchetti is down', 'The collector has been collected.') : isMetro() ? toast('Switch is down', 'The 23:10 is coming.') : toast('Boss defeated', 'Club Noir is yours. The street is yours.'));
+  bus.on('boss:intro', () => !isStreet() ? gameAudio.playMusic('boss_marchetti', { volume: 0.85 }) : gameAudio.playMusic('docks_explore', { volume: 0.85 }));   // the street: the same track, up (Line Zero: Marchetti's track until 'switch' exists)
   bus.on('run:over', p => { if (p.result === 'wasted') gameAudio.stopMusic(2); });
-  bus.on('boss:phase', p => { if (!isP9() && p.phase === 2) toast('The coat comes off', 'He is faster. Jump the low cane sweep and the shockwaves; dodge the charge, then punish.'); });   // (Pier 9: its lever pulls tell the story)
+  bus.on('boss:phase', p => { if (isStreet() && p.phase === 2) toast('The coat comes off', 'He is faster. Jump the low cane sweep and the shockwaves; dodge the charge, then punish.'); });   // (Pier 9: its lever pulls tell the story)
   // the gate: a stage's lessons must all be done before the street opens on to the next one (the demo walks free).
   // A lesson that cannot be done any more is made possible again: a sparring goon when the stage's goons are down,
   // a fresh crate, stack, bin, can or bottle when the stage has none left.
@@ -5005,7 +5056,7 @@ import * as P9 from './levels/pier9.js';
   // checkpoints: each tutorial stage, the boss door (street); the quay start, the shutter, the boss door (Pier 9). Reaching one refills the
   // second winds (a boss fight has its own count). Wasted with none left: retry from the last one; the lessons done stay done.
   let ckpt = null, ckBoss = false;   // ckBoss: a retry at the boss door (the entrance and the dialog are skipped)
-  const ckptName = () => !ckpt ? 'the start' : ckpt.kind === 'boss' ? 'the boss door' : ckpt.kind === 'shutter' ? 'the shutter' : ckpt.kind === 'wave' ? P9.WAVES[ckpt.i].ckpt : ckpt.kind === 'stage' ? `stage ${ckpt.i + 1}` : 'the start';
+  const ckptName = () => !ckpt ? 'the start' : LVH.ckptName ? LVH.ckptName(ckpt) : ckpt.kind === 'boss' ? 'the boss door' : ckpt.kind === 'shutter' ? 'the shutter' : ckpt.kind === 'wave' ? P9.WAVES[ckpt.i].ckpt : ckpt.kind === 'stage' ? `stage ${ckpt.i + 1}` : 'the start';
   function setCkpt(kind, i = 0, quiet) {
     ckpt = { lv: LV.id, kind, i, w: hero.weapon, ch: charge.slice(), taken: pickups.map(k => k.taken) };
     hero.wind = DIF().wind;
@@ -5027,14 +5078,21 @@ import * as P9 from './levels/pier9.js';
     for (const k of keep) done.add(k); tutDirty = true;   // the lessons stay done
     ZONES.forEach((Z, i) => { if (stageDone(i)) cleared.add(i); });   // (no 'stage clear' toasts again)
     Object.assign(runS, rs, { down: false, koUp: false, endT: -1, hp: 100 }); kos = k0;
-    if (C.kind !== 'start') {
+    if (C.kind !== 'start' && LVH.retry) {   // a level module restores its own state; the boss door is the club's
+      const x = LVH.retry(C);
+      pickups.forEach((k, j) => { k.taken = C.taken[j]; });
+      if (C.w) equip(C.w, C.ch[C.w]);
+      for (let w = 0; w < charge.length; w++) charge[w] = C.ch[w];
+      if (C.kind === 'boss') { enterClub(); slamDone = true; clubT = 1; fade = 0; fadeDir = 0; ckBoss = true; bossDlg.on = bossDlg.done = true; }
+      else if (x != null) heroTo(x);
+    } else if (C.kind !== 'start') {
       if (isP9() && C.kind === 'wave') P9.WAVES.forEach((w, j) => { if (j < C.i) p9.w[w.id] = { out: true, n: 0 }; });   // a wave checkpoint: the waves before it stay beaten
       else if (isP9()) { for (const w of P9.WAVES) p9.w[w.id] = { out: true, n: 0 }; p9.open = true; p9.shutter = 1; }
       else for (const k in WAVES) if (boss || +k < C.i) { spawned.add(+k); cleared.add(+k); reinf[k] = { k: 99, n: 0 }; }   // the stages behind him stay cleared
       pickups.forEach((k, j) => { k.taken = C.taken[j]; });
       if (C.w) equip(C.w, C.ch[C.w]);
       for (let w = 0; w < charge.length; w++) charge[w] = C.ch[w];
-      if (boss) { enterClub(); slamDone = true; clubT = 1; fade = 0; fadeDir = 0; ckBoss = true; if (isP9()) p9.bossDlg = p9.dlgDone = true; }
+      if (boss) { enterClub(); slamDone = true; clubT = 1; fade = 0; fadeDir = 0; ckBoss = true; if (isP9()) bossDlg.on = bossDlg.done = true; }
       else heroTo(!isP9() ? ZONES[C.i].x0 + 20 : C.kind === 'wave' ? P9.WAVES[C.i].at - 60 : P9.MARKET.shutter[0] - 40);
     }
     ckpt = C; hero.wind = DIF().wind; hero.hp = 100;
@@ -5079,8 +5137,8 @@ import * as P9 from './levels/pier9.js';
     if (hero.mode !== 'rag') runS.down = false;
     if (hero.mode === 'getup' && runS.prevMode !== 'getup' && runS.koUp) { runS.koUp = false; secondWind(); }
     runS.prevMode = hero.mode;
-    if (enc.bossBeaten && endPh === null && !flags.wasted) { endPh = isP9() ? 'p9wait' : 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card (not after a Wicked K.O.)
-    if (enc.bossBeaten && runS.endT < 0 && endPh === 'done' && !flags.wasted && !isP9()) runS.endT = 0.4;   // (Pier 9 shows its own card after the outro)
+    if (enc.bossBeaten && endPh === null && !flags.wasted) { endPh = isP9() ? 'p9wait' : isMetro() ? 'mwait' : 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card (not after a Wicked K.O.)
+    if (enc.bossBeaten && runS.endT < 0 && endPh === 'done' && !flags.wasted && isStreet()) runS.endT = 0.4;   // (Pier 9 shows its own card after the outro)
     if (runS.endT > 0 && (runS.endT -= rdt) <= 0) { runS.endT = 0; showResults(); }   // (once: a negative endT would arm it again)
   }
   let walkT = 0;   // s of a steady walk (the walk lesson)
@@ -5093,6 +5151,7 @@ import * as P9 from './levels/pier9.js';
     runTick(rdt);
     barkTick(rdt);
     if (isP9()) { p9Tick(rdt); return; }
+    if (LVH.tick) { LVH.tick(rdt); return; }
     if (hero.mode === 'anim') {
       walkT = ctl.spd > 5 && ctl.spd < WALK + 6 && !ctl.air ? walkT + rdt : 0; if (walkT > 0.5) emit('feat', 'walk');   // a steady walk (not the run's first strides)
       if (ctl.spd > WALK + 20 && !ctl.air) emit('feat', 'run');
@@ -5136,7 +5195,7 @@ import * as P9 from './levels/pier9.js';
       WAVES[i].forEach((w0, n) => stageGoon(i, w0 < hx + 40 ? hx + 70 + n * 26 : w0, used));   // (a spot he has already passed: the goon comes out ahead of him instead)
     }
     // reinforcements (Medium and up, DIF().reinf): when half the stage's goons are down, the next wave walks in, from both sides
-    if (!flags.club && !isP9()) for (const key in WAVES) {
+    if (!flags.club && isStreet()) for (const key in WAVES) {
       const i = +key, R = reinf[i];
       if (!R || !spawned.has(i) || cleared.has(i) || R.k >= DIF().reinf.length || (zoneAlive[i] || 0) > R.n / 2) continue;
       const n = DIF().reinf[R.k++], used = new Set(), hx = P[2].x; R.n = (zoneAlive[i] || 0) + n;
@@ -5185,7 +5244,7 @@ import * as P9 from './levels/pier9.js';
   }
   function objTick(rdt) {
     const z = tutZone;
-    const hide = isP9() || z < 0 || flags.demo || flags.attract || sceneOn || openT >= 0 || !!endPh || menuShown || enc.introT >= 0 || flags.wasted || done.has('enter');
+    const hide = !isStreet() || z < 0 || flags.demo || flags.attract || sceneOn || openT >= 0 || !!endPh || menuShown || enc.introT >= 0 || flags.wasted || done.has('enter');
     if (objEl.hidden !== hide) objEl.hidden = hide;
     if (obj.peekT > 0) obj.peekT -= rdt;
     if (obj.bump > 0) obj.bump -= rdt;
@@ -5214,7 +5273,7 @@ import * as P9 from './levels/pier9.js';
   // the bench weapons: walk into one to take it (walking back past a lesser weapon keeps yours; squat to swap). Runs in the fixed step.
   function pickupStep() {
     if (hero.mode !== 'anim') return;
-    for (const k of pickups) if (!endPh && !k.taken && !ctl.carry && (!hero.weapon || k.w >= hero.weapon || input.downHeld) && Math.abs(ctl.x - k.x) < 9 && ctl.y > GROUND - 12) {
+    for (const k of pickups) if (!endPh && !k.taken && !k.hidden && !ctl.carry && (!hero.weapon || k.w >= hero.weapon || input.downHeld) && Math.abs(ctl.x - k.x) < 9 && ctl.y > GROUND - 12) {
       k.taken = true; equip(k.w, fullCharge(k.w)); emit('feat', 'pick' + k.w);
       sparks.push({ x: k.x, y: k.y, t: 0 }); waves.push({ x: k.x, y: GROUND - 1, t: 0 });
       emit('pickup', { kind: 'weapon', w: k.w, source: 'bench', x: k.x, y: k.y });
@@ -5258,7 +5317,7 @@ import * as P9 from './levels/pier9.js';
   }
   function drawPickups() {
     for (const k of pickups) {
-      if (k.taken) continue;
+      if (k.taken || k.hidden) continue;
       const bob = -Math.round(Math.abs(Math.sin(simTime * 1.5 + k.w)) * 1.5), y = k.y + bob, id = WEAPONS[k.w].id;   // (it lifts off the seat and settles back)
       if (Math.floor(simTime * 6 + k.w) % 3 === 0) plot(k.x + ((k.w * 7 + Math.floor(simTime * 6)) % 13) - 6, y - 6, PAL.white);   // glint
       const len = WEAPONS[k.w].len, g = { x: k.x - len / 2 + (id === 'katana' || id === 'axe' ? 2 : 0), y, dx: 1, dy: 0, s: 1, len };
@@ -5912,7 +5971,7 @@ import * as P9 from './levels/pier9.js';
     if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     cam.xf = CLUB_X; cam.yf = GROUND - 120; cam.v.x = cam.v.y = cam.v.z = 0;
     rain.drops.length = 0; rain.splash.length = 0;
-    emit('section:enter', isP9() ? { from: 'bay', to: 'hall' } : { from: 'street', to: 'club' });
+    emit('section:enter', isP9() ? { from: 'bay', to: 'hall' } : isMetro() ? { from: 'yard', to: 'junction' } : { from: 'street', to: 'club' });
   }
   let malDlg = false, malDlgDone = false;   // the street boss's entrance dialog: started, closed
   function clubTick(rdt) {
@@ -5928,19 +5987,20 @@ import * as P9 from './levels/pier9.js';
       }
       if (enc.introT >= 0) {   // the entrance, 1.7 s: spot and walk, the name card at 0.5 s, the boss bar fills from 0.7 s, then the fight
         if (!menuShown) enc.introT += rdt;   // (the pause menu stops the entrance's clock too)
-        if (enc.introT > 0.5 && cardT <= 0 && cardEl.hidden && !(isP9() ? p9.bossDlg : malDlg)) { cardEl.innerHTML = isP9() ? `<b>${P9.MARCHETTI.name}</b><small>${P9.MARCHETTI.title}</small>` : `<b>${BOSS_NAME}</b><small>Owner of Club Noir</small>`; cardEl.hidden = false; cardT = 3.2; toastEl.hidden = true; toastT = 0; }
-        // Pier 9: he walks out to his mark (at most 4.5 s), the portrait dialog plays, and the fight starts when it closes
-        if (isP9() && !p9.bossDlg && !menuShown && enc.boss && (Math.abs(enc.boss.x - enc.boss.introX) <= 3 || enc.introT > 4.5)) {
-          p9.bossDlg = true; cardEl.hidden = true; cardT = 0;
-          playScene('dialog', 'marchetti_intro').then(() => { if (p9.bossDlg) p9.dlgDone = true; });
+        const LB = isP9() ? { name: P9.MARCHETTI.name, title: P9.MARCHETTI.title, dlg: 'marchetti_intro' } : isMetro() ? { name: METRO.SWITCH.name, title: METRO.SWITCH.title, dlg: METRO.LEVEL.bossDialog } : null;   // a level boss: its card and its dialog
+        if (enc.introT > 0.5 && cardT <= 0 && cardEl.hidden && !(LB ? bossDlg.on : malDlg)) { cardEl.innerHTML = LB ? `<b>${LB.name}</b><small>${LB.title}</small>` : `<b>${BOSS_NAME}</b><small>Owner of Club Noir</small>`; cardEl.hidden = false; cardT = 3.2; toastEl.hidden = true; toastT = 0; }
+        // a level boss (Pier 9, Line Zero): at the mark (at most 4.5 s), the portrait dialog plays, and the fight starts when it closes
+        if (LB && !bossDlg.on && !menuShown && enc.boss && (Math.abs(enc.boss.x - enc.boss.introX) <= 3 || enc.introT > 4.5)) {
+          bossDlg.on = true; cardEl.hidden = true; cardT = 0;
+          playScene('dialog', LB.dlg).then(() => { if (bossDlg.on) bossDlg.done = true; });
         }
         // the street: at his mark Malaspina says his piece (a text-only portrait dialog; not in the demo, not on a retry)
-        if (!isP9() && !malDlg && !flags.demo && !flags.attract && !menuShown && enc.boss && enc.introT > 1.2) {
+        if (!LB && !malDlg && !flags.demo && !flags.attract && !menuShown && enc.boss && enc.introT > 1.2) {
           malDlg = true; malDlgDone = false; cardEl.hidden = true; cardT = 0;
           playScene('dialog', 'malaspina_intro').then(() => { if (malDlg) malDlgDone = true; });
         }
         bossBarK = clamp((enc.introT - 0.7) / 1, 0, 1);
-        if ((isP9() ? p9.dlgDone : enc.introT >= 1.7 && (!malDlg || malDlgDone)) || !enc.boss || enc.boss.dead) {
+        if ((LB ? bossDlg.done : enc.introT >= 1.7 && (!malDlg || malDlgDone)) || !enc.boss || enc.boss.dead) {
           enc.introT = -1; bossBarK = 1; enc.spawnT = 3;
           if (enc.boss) { enc.boss.intro = false; enc.boss.cdT = 0.6; }
           for (const d of dancers) if (d.home0 != null) { d.home = d.home0; d.home0 = null; }
@@ -5972,6 +6032,11 @@ import * as P9 from './levels/pier9.js';
   }
   function drawDoor() {
     if (!flags.club) return;
+    if (isMetro()) {   // the junction side of the blast door: it drops shut behind him
+      const k = clamp((clubT - 0.45) / 0.3, 0, 1), y1 = GROUND - 84 + Math.round(84 * k);
+      for (let y = GROUND - 84; y < GROUND; y++) for (let x = DOOR_X - 10; x < DOOR_X; x++) plot(x, y, y < y1 ? (((x + y) >> 3) % 2 ? C('#d8b020') : C('#1a1a1a')) : x === DOOR_X - 10 ? PAL.out : C('#060608'));
+      return;
+    }
     if (isP9()) {   // the market's shutter, seen from the hall: it rolls down behind him
       const k = clamp((clubT - 0.45) / 0.3, 0, 1), y1 = GROUND - 50 + Math.round(50 * k);
       for (let y = GROUND - 50; y < GROUND; y++) for (let x = DOOR_X - 12; x < DOOR_X; x++) plot(x, y, y < y1 ? ((y - (GROUND - 50)) % 3 === 0 ? C('#4e4a46') : C('#76706a')) : x === DOOR_X - 12 ? PAL.out : C('#8a8c92'));
@@ -6177,6 +6242,7 @@ import * as P9 from './levels/pier9.js';
   const rain = { k: 0, goal: 0, t: 14, drops: [], splash: [], rip: [], flash: 0 };
   function weatherStep(dt) {
     if (isP9()) { sleetStep(dt); return; }
+    if (LVH.weather) { LVH.weather(dt); return; }
     if ((rain.t -= dt) <= 0) { rain.goal = rain.goal ? 0 : 0.6 + simRand() * 0.4; rain.t = rain.goal ? 25 + simRand() * 25 : 30 + simRand() * 40; }
     rain.k += (rain.goal - rain.k) * (1 - Math.exp(-0.4 * dt));
     if (rain.flash > 0) rain.flash -= dt;
@@ -6265,6 +6331,7 @@ import * as P9 from './levels/pier9.js';
   // the scene's light: an ambient tint, and pools [x, y (view), radius², r, g, b weights, glow] from lamps, lit windows, signs, club spots
   function lightList() {
     if (isP9()) return p9Lights();
+    if (LVH.lights) return LVH.lights();
     const strobe = flags.club && !reduceMotion && enc.boss && !enc.boss.dead && enc.introT < 0 && (simTime * 6 % 1) < 0.12 && Math.floor(simTime * 6) % 4 === 0 ? 1.7 : 1;
     const cut = flags.club && enc.introT >= 0 ? 1 - 0.72 * clamp(enc.introT / 0.25, 0, 1) : 1;   // the entrance: the house lights drop to a quarter
     const fl = flags.club ? strobe : rain.flash > 0 ? 1 + Math.max(0, Math.sin(rain.flash * 40)) * 0.9 * (rain.flash / 0.3) : 1, dim = flags.club ? cut : 1 - rain.k * 0.12;
@@ -6288,12 +6355,13 @@ import * as P9 from './levels/pier9.js';
   function clubSpots() {
     const t = simTime, out = [];
     if (isP9()) return P9.HALL_LAMPS.map(x => ({ fx: x, x, c: [1.1, 1.0, 0.85] }));
+    if (!isStreet()) return [];
     if (enc.introT >= 0 && enc.boss) return [{ fx: enc.boss.x, x: enc.boss.x, c: [1.5, 1.5, 1.5] }];   // the entrance: one white spot follows the boss
     for (let i = 0; i < 3; i++) out.push({ fx: CLUB_X + 20 + i * 120, x: CLUB_X + 80 + i * 120 + Math.sin(t * 0.8 + i * 2.1) * 60, c: SPOT_COL[(i + Math.floor(t / 2)) & 3] });
     return out;
   }
   function drawBeams() {   // light cones from the fixtures to the pools, added on top
-    if (!flags.club || isP9()) return;
+    if (!flags.club || !isStreet()) return;
     for (const sp of clubSpots()) {
       const y0 = GROUND - 144, y1 = GROUND - 2, cr = sp.c[0] * 40, cg = sp.c[1] * 40, cb = sp.c[2] * 40;
       for (let y = y0; y < y1; y++) {
@@ -6351,6 +6419,7 @@ import * as P9 from './levels/pier9.js';
     buf[i] = (255 << 24 | ((c >> 16 & 255) * (1 - a) + b * a) << 16 | ((c >> 8 & 255) * (1 - a) + g * a) << 8 | ((c & 255) * (1 - a) + r * a)) >>> 0;
   }
   function drawRain() {
+    if (LVH.drawRain) { LVH.drawRain(); return; }   // (Line Zero: drips down the shafts, the junction too)
     if (!rain.drops.length || flags.club) return;
     if (isP9()) {   // sleet: heavier, slower, whiter streaks on a steeper slant, and wet flakes
       for (const d of rain.drops) {
@@ -6387,6 +6456,8 @@ import * as P9 from './levels/pier9.js';
       if (L === LANE.FRONT) drawDog();
       if (ctl.lane === L) { figArt.on = true; drawCharacter(look, face); figArt.on = false; drawBottle(); }
       if (L === LANE.PLAT) drawStairRails();   // the fire escape's outer rail: in front of anyone on the stairs, behind the street
+      if (L === LANE.PLAT && LVH.drawBackTrains) LVH.drawBackTrains();   // Line Zero: a train on track 2 (the back lane), in front of the far ledge and the niches
+      if (L === LANE.FIGHT && LVH.drawFrontTrains) LVH.drawFrontTrains();   // a train on track 1 (the floor): in front of the fight lane
     }
     if (isP9() && flags.club) P9.drawTunaHazard(R9, p9.tuna);   // the swinging tuna: in front of everyone it can hit
     pickArt.on = true; drawPickups(); drawThrown('lying'); drawAmmo(); pickArt.on = false;   // weapons, ammo and bandages waiting to be picked up: on top, always in sight
@@ -6468,6 +6539,7 @@ import * as P9 from './levels/pier9.js';
     }
   }
   function drawGroundFx() {   // lit like the scene: the slam's shockwaves, the landing waves
+    if (LVH.drawGround) LVH.drawGround();   // (Line Zero: the stripe on the track a train is coming down)
     for (const q of quakes) {   // the slam's shockwave: a crest of heaved paving with a bright leading edge
       const k = 1 - q.t / QUAKE.life, h = Math.round(2 + 6 * k), x = Math.floor(q.x), y = Math.floor(q.y);
       for (let j = 0; j < 9; j++) {
@@ -6482,6 +6554,7 @@ import * as P9 from './levels/pier9.js';
     }
   }
   function drawFx() {   // unlit, over the lit scene: tracers, muzzle flashes, particles, impact sparks
+    if (LVH.drawFx) LVH.drawFx();   // (Line Zero: fire, arcs on the third rail, eyes in the dark, flares)
     for (const b of bullets) { line1(b.x - b.vx * 0.012, b.y - b.vy * 0.012, b.x, b.y, PAL.accent); plot(Math.floor(b.x), Math.floor(b.y), PAL.white); }
     for (const f of flashes) {   // muzzle flash: a short star along the barrel
       const n = f.big ? 7 : 4;
@@ -6554,7 +6627,7 @@ import * as P9 from './levels/pier9.js';
       if (bx.x1 - bx.x0 <= cam.vw - 16) tx = clamp(tx, bx.x1 - cam.vw / 2 + 8, bx.x0 + cam.vw / 2 - 8);
       tx = clamp(tx, P[2].x - m, P[2].x + m);
     } else tx = bx.x1 - bx.x0 <= cam.vw - 16 ? clamp(tx, bx.x1 - cam.vw / 2 + 8, bx.x0 + cam.vw / 2 - 8) : (bx.x0 + bx.x1) / 2;
-    if (isP9() && enc.boss && enc.boss.intro) tx = enc.boss.x - 24;   // Pier 9: the entrance frames him as he walks out of the cold store
+    if (!isStreet() && enc.boss && enc.boss.intro) tx = enc.boss.x - 24;   // Pier 9: the entrance frames him as he walks out of the cold store
     if (bossBeat > 0 && enc.boss && !enc.boss.dead) tx = enc.boss.x * 0.7 + P[2].x * 0.3;   // the phase change: on the boss
     ty = bx.y1 - bx.y0 <= cam.vh - 10 ? clamp(ty, bx.y1 - cam.vh / 2 + 5, bx.y0 + cam.vh / 2 - 5) : (bx.y0 + bx.y1) / 2;
     if (punch) { tx = finCam.x; ty = finCam.y; }
@@ -6987,6 +7060,10 @@ import * as P9 from './levels/pier9.js';
     if (id === 'cleaver') return t3all([t3rod(0, 2.5, 0.6, ECOL.grip, 6), t3box(2.5, -3.0, -0.22, L, 0.2, 0.22, ECOL.steelD, 0.3), t3box(2.5, -3.4, -0.12, L, -3.0, 0.12, ECOL.steel, 0.2)]);   // a square cleaver: a deep blade under the grip line
     if (id === 'gaff') return t3all([t3rod(-3, L, 0.5, PAL.wood, 6), t3rod(L, L + 2, 0.4, ECOL.steel, 6), t3box(L + 1.6, -2.5, -0.3, L + 2.2, 0, 0.3, ECOL.steel, 0.2), t3box(L + 0.6, -2.9, -0.3, L + 2.2, -2.3, 0.3, ECOL.steel, 0.2)]);   // a pole with a steel hook
     if (id === 'machete') return t3all([t3rod(0, 2.5, 0.6, ECOL.grip, 6), t3box(2.5, -1.1, -0.18, L, 0.9, 0.18, ECOL.steelD, 0.3), t3box(2.5, -1.5, -0.12, L - 0.5, -1.1, 0.12, ECOL.steel, 0.25)]);
+    if (id === 'chain') return t3all([...Array.from({ length: 7 }, (_, k) => t3box(k * L / 7, -0.45, -0.45, k * L / 7 + L / 8, 0.45, 0.45, k % 2 ? ECOL.iron : ECOL.steel, 0.2)), t3box(L - 0.4, -2.2, -0.3, L + 0.6, 0.2, 0.3, ECOL.steel, 0.2)]);   // Switch's chain whip and its hook
+    if (id === 'flare') return t3all([t3rod(0, L - 1, 0.55, C('#c02a2a'), 6), t3rod(L - 1, L, 0.45, C('#fff0d0'), 6)]);   // Tinder's road flare
+    if (id === 'wrench') return t3all([t3rod(0, L, 0.7, ECOL.iron, 6), t3box(L - 1.2, -1.6, -0.5, L + 0.4, 1.6, 0.5, ECOL.steel, 0.25)]);
+    if (id === 'flaregun') return t3all([t3box(0, -0.8, -0.6, L + 1, 0.9, 0.6, C('#b8902a'), 0.3), t3box(-0.3, -3, -0.45, 1.4, -0.6, 0.45, C('#6a4a2a'), 0.3)]);
     return t3all([t3rod(0, 1.8, 0.5, ECOL.grip, 6), t3box(1.8, -0.5, -0.12, L, 0.4, 0.12, ECOL.steel, 0.25)]);   // a knife
   }
   // ----- the vehicles, modelled from the 2D side profile (VPARTS): a lofted body with a rounded shoulder, a narrower glasshouse
@@ -7256,7 +7333,7 @@ import * as P9 from './levels/pier9.js';
       const g = this.world = new THREE.Group(); this.scene.add(g);
       const add = (mesh, ...ls) => { g.add(t3L(mesh, ...(ls.length ? ls : [0, 2]))); return mesh; };
       const { ZF, ZS } = T3, CHUNK = 1024, NF = H - GROUND - STREET - 1;
-      const p9 = isP9(); this.builtFor = LV.id;   // (frame() rebuilds the world when the level changes)
+      const p9 = isP9(), custom = !isStreet(); this.builtFor = LV.id;   // (frame() rebuilds the world when the level changes)
       for (const v of VPARTS) v.built = false;
       // the props stand out of the wall at their own depth: each object is one block, found as a connected group of prop pixels.
       // Every block holds the platform lane (laneZ), so a body up on one stands inside its depth.
@@ -7272,11 +7349,11 @@ import * as P9 from './levels/pier9.js';
       for (let y = 0; y < GROUND; y++) for (let x = 0; x < W; x++) {
         const i = y * W + x; if (!PROPS[i] || !stat[i]) continue;
         LIFT[i] = 1;
-        if (p9) continue;   // (Pier 9: its blocks are named by p9Zones below)
+        if (custom) continue;   // (Pier 9: its blocks are named by p9Zones below)
         if (y >= GOAL.y - 1 && y <= GOAL.y + 4 && x >= GOAL.x0 - 1 && x <= GOAL.x1 + 1) zone[i] = zGoal;
         else if (x >= STAIR_X0 - 3 && x <= STAIR_X1 + 3 && y > GOAL.y + 4) { const s = flightAt(x, y); zone[i] = s && s.step ? zFl[s.k % 2] : zStairs; }
       }
-      if (p9) this.p9Zones(zone, LIFT, mkZone);
+      if (p9) this.p9Zones(zone, LIFT, mkZone); else if (isMetro()) this.mZones(zone, LIFT, mkZone);
       const stack = [];
       for (let y = 0; y < GROUND; y++) for (let x = 0; x < W; x++) {   // the other props: one block per connected group
         const i0 = y * W + x; if (!LIFT[i0] || zone[i0] >= 0) continue;
@@ -7287,14 +7364,14 @@ import * as P9 from './levels/pier9.js';
           Z.x0 = Math.min(Z.x0, px); Z.x1 = Math.max(Z.x1, px); Z.y0 = Math.min(Z.y0, py); Z.y1 = Math.max(Z.y1, py);
           for (const j of [i - 1, i + 1, i - W, i + W, i - W - 1, i - W + 1, i + W - 1, i + W + 1]) if (j >= 0 && j < W * GROUND && Math.abs((j % W) - px) <= 1 && LIFT[j] && zone[j] < 0) { zone[j] = id; stack.push(j); }   // (8 ways: a diagonal brace stays with its scaffold)
         }
-        let k = p9 ? -1 : PLATS.findIndex((s, n) => n < ZD.length && s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 && s.y <= Z.y1);
-        if (k < 0 && !p9 && Z.x1 - Z.x0 > 14 && Z.y1 > GROUND - 45) k = PLATS.findIndex((s, n) => n < ZD.length && s.x0 - 40 <= Z.x1 && s.x1 + 40 >= Z.x0);   // a pickup's cab beside its bed
-        if (Z.x1 - Z.x0 <= 14 && Z.y1 - Z.y0 >= 40) { Z.z0 = -12; Z.z1 = -8; }   // a street lamp: a tall thin post at the kerb
+        let k = custom ? -1 : PLATS.findIndex((s, n) => n < ZD.length && s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 && s.y <= Z.y1);
+        if (k < 0 && !custom && Z.x1 - Z.x0 > 14 && Z.y1 > GROUND - 45) k = PLATS.findIndex((s, n) => n < ZD.length && s.x0 - 40 <= Z.x1 && s.x1 + 40 >= Z.x0);   // a pickup's cab beside its bed
+        if (Z.x1 - Z.x0 <= 14 && Z.y1 - Z.y0 >= 40 && !isMetro()) { Z.z0 = -12; Z.z1 = -8; }   // a street lamp: a tall thin post at the kerb
         else if (k >= 0) { Z.z0 = ZF; Z.z1 = ZF + ZD[k]; }
         else { Z.z0 = ZF; Z.z1 = ZF + 8; }
         for (const s of PLATS) if (s !== GOAL && s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 - 1 && s.y <= Z.y1) this.frontZ.set(s, Math.max(this.frontZ.get(s) ?? -99, Z.z1));   // every ledge on this block
       }
-      if (!p9) for (const px_ of PEDESTALS) {   // the iron benches the weapons wait on, out on the pavement
+      if (isStreet()) for (const px_ of PEDESTALS) {   // the iron benches the weapons wait on, out on the pavement
         const id = mkZone(-8, -2);
         const bench = (x, y) => (y >= GROUND - 7 && y <= GROUND - 2 && x >= px_ - 8 && x <= px_ + 8) || ((x === px_ - 5 || x === px_ - 4 || x === px_ + 5 || x === px_ + 6) && y >= GROUND - 5);   // slats and legs, as stat draws them
         for (let y = GROUND - 8; y < GROUND; y++) for (let x = px_ - 9; x <= px_ + 9; x++) { const i = y * W + x; if (stat[i] && !LIFT[i] && bench(x, y)) { LIFT[i] = 1; zone[i] = id; } }
@@ -7302,7 +7379,7 @@ import * as P9 from './levels/pier9.js';
       this.benchZ = -5;   // the weapons on them: at the back of the fight lane
       const propMat = this.propMat || (this.propMat = t3mat({ vertexColors: true }, 1));
       // the facade's relief: cornices, fascias, pilasters, door steps and lanterns stand out of the wall; awnings slope out over the pavement
-      for (const F of p9 ? this.p9Feat() : FEAT) {
+      for (const F of p9 ? this.p9Feat() : custom ? [] : FEAT) {
         if (F.awn) {
           const w = F.x1 - F.x0 + 1, h = F.y1 - F.y0 + 1, px = new Uint32Array(w * h), ix = [];
           for (let k = 0; k < h; k++) for (let x = F.xs(k); x <= F.x1; x++) {   // its own stripes (the shop window's top is painted over them in 2D)
@@ -7434,6 +7511,7 @@ import * as P9 from './levels/pier9.js';
       }
       this.lift = LIFT; this.goreT = 0;
       if (p9) { this.p9Build(add); return; }
+      if (custom) return;   // (Line Zero: no signs; its trains and handcar are models: mModels)
       // the neon signs: a dark box off the wall; their animated faces are layers on its front (buildLayers)
       const box =(x0, y0, x1, y1, z0, z1, c) => { const m = add(new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, y1 - y0, z1 - z0), t3mat({ color: t3rgb(c) }, 1))); m.position.set((x0 + x1) / 2, -(y0 + y1) / 2, (z0 + z1) / 2); };
       box(SIGN.x0, SIGN.y0, SIGN.x1 + 1, SIGN.y1 + 1, ZF, ZF + 5, C('#160d1c'));
@@ -7656,6 +7734,55 @@ import * as P9 from './levels/pier9.js';
       const parts = [t3turn(bands, N)];
       for (let k = 0; k < 4; k++) for (const sd of [-1, 1]) parts.push(t3box(sd * (3 - k) - 0.55, -k - 0.55, -0.35, sd * (3 - k) + 0.55, -k + 0.55, 0.35, back, 0.25));   // the tail fork
       return parts.reduce((a, b) => t3merge(a, b));
+    },
+
+    // ----- Line Zero (src/levels/metro/three.js): its named blocks; the trains and the handcar as models clipped at the portals -----
+    mZones(zone, LIFT, mkZone) {
+      for (const B of metro3d.blocks(T3)) {
+        const id = mkZone(B.z0, B.z1), Z = this.zones[id];
+        for (let y = Math.max(0, B.y0); y <= Math.min(GROUND - 1, B.y1); y++) for (let x = Math.max(0, B.x0); x <= Math.min(W - 1, B.x1); x++) {
+          const i = y * W + x; if (!PROPS[i] || !stat[i] || zone[i] >= 0) continue;
+          LIFT[i] = 1; zone[i] = id;
+          if (x < Z.x0) Z.x0 = x; if (x > Z.x1) Z.x1 = x; if (y < Z.y0) Z.y0 = y; if (y > Z.y1) Z.y1 = y;
+        }
+        if (B.s) { const s = PLATS.find(p => p.x0 === B.s.x0 && p.y === B.s.y); if (s) this.frontZ.set(s, B.z1); }
+      }
+    },
+    mModels() {
+      if (!isMetro() || !MR) { if (this.tpool) for (const m of this.tpool) m.visible = false; return; }
+      if (!this.trainMat) {   // the cars' own material: clipped at the section's portals (a car half out of the tunnel mouth shows only its inside half)
+        this.renderer.localClippingEnabled = true;
+        this.clipA = new THREE.Plane(new THREE.Vector3(1, 0, 0), 0); this.clipB = new THREE.Plane(new THREE.Vector3(-1, 0, 0), 0);
+        this.trainMat = t3mat({ vertexColors: true, clippingPlanes: [this.clipA, this.clipB] }, 1);
+        this.tpool = [];
+      }
+      let n = 0;
+      const put = (geo, x, y, z, c0, c1) => {
+        let m = this.tpool[n];
+        if (!m) { m = new THREE.Mesh(geo, this.trainMat); m.frustumCulled = false; this.scene.add(t3L(m, 0, 1, 2)); this.tpool.push(m); }
+        n++; m.geometry = geo; m.position.set(x, -y, z); m.visible = true;
+        return m;
+      };
+      const trs = MR.trains(); let clip = null;
+      for (const tr of trs) {
+        if (tr.t < -0.6) continue;
+        const Zt = metro3d.trainZ(tr.track), yb = GROUND - (tr.track === 2 ? 3 : 0);
+        clip = tr.clip;
+        for (const car of METRO.trainCars(tr)) {
+          if (car.x1 < tr.clip[0] || car.x0 > tr.clip[1] || car.x1 < cam.x - 60 || car.x0 > cam.x + cam.vw + 60) continue;
+          const I = METRO.carPx(car.type, tr.dir), key = 'mcar' + car.type + (tr.dir < 0 ? 'L' : 'R') + tr.track;
+          const geo = this.geo(key, () => t3voxels(I.px, I.w, I.h, 0, 0, Zt.d, true));
+          put(geo, Math.round(car.x0), yb - I.h + 1, Zt.z);
+        }
+      }
+      // one clip window for all cars this frame (the trains of a section share its portals)
+      const c = clip || [-1e5, 1e5]; this.clipA.constant = -c[0]; this.clipB.constant = c[1];
+      const h = MR.handcar();
+      if (h) {   // the handcar: drawHandcar's pixels, extruded (rebuilt as its pump lever rocks)
+        const ox = Math.round(h.x) - 20, oy = GROUND - 30;
+        this.sprite(40, ox, oy, () => METRO.drawHandcar(R9, { ...h, x: ox + 20 + (h.x - Math.round(h.x)) }), metro3d.handcarZ.d, metro3d.handcarZ.z, 'handcar');
+      }
+      for (let i = n; i < (this.tpool ? this.tpool.length : 0); i++) this.tpool[i].visible = false;
     },
 
     // ----- the windows: holes in the facade, a real room behind each (walls, furniture, a lamp, the people), 3D frames and sills, a glass pane -----
@@ -8169,7 +8296,7 @@ import * as P9 from './levels/pier9.js';
         this.seg(sx0, sy0, pl.x + (ax - pl.x) * 0.8, pl.y + (ay - pl.y) * 0.8, 0, tw * 0.8, 0.6 * s, pal.apron, Math.max(TZ, (ZL + 1.5 * s * lw) / (tw * 0.8)) * 1.08);
       }
       if (e.look.neck) { const [tx, ty] = norm(pl.x - nk.x, pl.y - nk.y), nx = ty * f; for (let i = -1; i <= 1; i++) this.ball(nk.x + nx * 1.2 * s + i, nk.y + 2 * s - Math.abs(i) * 0.5, tw * TZ * 0.85, 0.45, 0, Math.floor(simTime * 2 + i) % 5 === 0 ? PAL.white : PAL.gold); }   // the gold chain
-      if (e.kind === 'marchetti' && e.hook) {   // the meat hook on its chain, from his back hand (drawHookMarks)
+      if ((e.kind === 'marchetti' || e.kind === 'switch') && e.hook) {   // the meat hook on its chain, from his back hand (drawHookMarks)
         const q = e.hook, h = J[4], d = e.face * (q.st === 'back' ? -1 : 1), st = ECOL.steel;
         this.seg(h.x, h.y, q.x, q.y, -ZA * 0.5, 0.35, 0.25, T3P9.CHAIN);
         this.seg(q.x, q.y, q.x + d * 1.6, q.y, -ZA * 0.5, 0.45, 0.25, st); this.seg(q.x + d * 1.6, q.y, q.x + d * 2.4, q.y + 1.6, -ZA * 0.5, 0.45, 0.25, st); this.seg(q.x + d * 2.4, q.y + 1.6, q.x + d, q.y + 3.2, -ZA * 0.5, 0.45, 0.25, st);
@@ -8236,7 +8363,7 @@ import * as P9 from './levels/pier9.js';
       for (const e of enemies) if (e.dead) this.enemyRig(e);
       for (const e of enemies) if (!e.dead) this.enemyRig(e);
       this.playerRig();
-      if (dog && !flags.club) this.dogRig();
+      if (dog && !dog.hidden && (!flags.club || isMetro())) this.dogRig();
       this.p9Rig();
       const nC = Math.min(this.nC, 1200), nS = Math.min(this.nS, 2400);
       for (const m of [this.cylF, this.cylO]) { m.count = nC; m.instanceMatrix.needsUpdate = true; }
@@ -8359,7 +8486,7 @@ import * as P9 from './levels/pier9.js';
       this.nG = 0; if (this.glowMat) this.glowMat.opacity = 0.6 + 0.25 * Math.sin(simTime * 5);
       for (const o of objs) { const m = this.obj(o, o.x, o.y, o.a, this.ease(o, this.laneZ[objLane(o) ?? LANE.FRONT]), 1); if (o.pocket && !o.carried) this.glow(m); }
       for (const k of pickups) {   // the weapons waiting on the benches
-        if (k.taken) continue;
+        if (k.taken || k.hidden) continue;
         const bob = -Math.round(Math.abs(Math.sin(simTime * 1.5 + k.w)) * 1.5), id = WEAPONS[k.w].id, len = WEAPONS[k.w].len;   // (as drawPickups bobs it)
         this.glow(this.weapon(id, { x: k.x - len / 2 + (id === 'katana' || id === 'axe' ? 2 : 0), y: k.y + bob, dx: 1, dy: 0, s: 1 }, 0, this.benchZ, 0));
       }
@@ -8380,7 +8507,7 @@ import * as P9 from './levels/pier9.js';
       }
       for (const b of eshots) if (b.k === 't') this.tunaModel(b.x, b.y, Math.atan2(b.vy, b.vx), this.ease(b, this.laneZ[LANE.FIGHT]), 20);   // Marchetti's lobbed tuna
       for (const b of eshots) if (b.k === 'k') { const m = this.model(this.knifeGeo); m.position.set(b.x, -b.y, this.ease(b, this.laneZ[b.lane ?? LANE.FIGHT])); m.rotation.set(0, 0, -(b.t * 22)); }
-      this.p9Models();
+      this.p9Models(); this.mModels();
       for (let i = this.nM; i < this.mpool.length; i++) this.mpool[i].visible = false;
       if (this.gpool) for (let i = this.nG; i < this.gpool.length; i++) this.gpool[i].visible = false;
     },
@@ -8443,13 +8570,13 @@ import * as P9 from './levels/pier9.js';
     },
     updateLayers() {
       const { ZF } = T3;
-      if (flags.club && !isP9()) this.layer(this.lClub, () => { drawClub(); drawDancers(); }, { glow: true, z: ZF - 0.6 }); else this.lClub.mesh.visible = false;   // (the hall's wall is a mesh: p9Build)
-      this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); }, { glow: true, z: flags.club ? ZF - 0.3 : ZF + 0.3 });
+      if (flags.club && isStreet()) this.layer(this.lClub, () => { drawClub(); drawDancers(); }, { glow: true, z: ZF - 0.6 }); else this.lClub.mesh.visible = false;   // (the hall's wall is a mesh: p9Build)
+      this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); if (LVH.drawWorld) LVH.drawWorld(); }, { glow: true, z: flags.club && !isMetro() ? ZF - 0.3 : ZF + 0.3 });
       this.layer(this.lSign, drawSign, { glow: true, z: ZF + 5.05 });
       this.layer(this.lBlade, drawStairSign, { glow: true, z: ZF + 4.05 });
       if (!flags.club && cam.x < STAIR_X1 + 160 && cam.x + cam.vw > STAIR_X0 - 160) this.layer(this.lRail, drawStairRails, { z: ZF + T3.STAIR + 0.4 }); else this.lRail.mesh.visible = false;
-      this.lFloor.mesh.visible = flags.club;
-      if (flags.club) {   // drawClubFloor in camera-sized strips across the sheet
+      this.lFloor.mesh.visible = flags.club && !isMetro();
+      if (flags.club && !isMetro()) {   // drawClubFloor in camera-sized strips across the sheet
         const F = this.lFloor, S = STREET + 1, step = 256;
         for (let ox = 0; ox < F.w; ox += step) {
           withView({ x: F.x0 + ox, y: GROUND, vw: step, vh: S }, isP9() ? () => P9.drawHallFloor(R9, p9.ice) : drawClubFloor);
@@ -8503,6 +8630,7 @@ import * as P9 from './levels/pier9.js';
     },
     // the far scene, exactly as the 2D view draws it (sky, moon, clouds, far town, or the club's back wall and crowd), lit the same way
     updateBackground() {
+      if (isMetro()) { this.scene.background = this.voidBg || (this.voidBg = t3rgb(C('#0b0c10'))); return; }   // Line Zero: underground, no sky
       if (flags.club) { this.scene.background = isP9() ? this.hallBg || (this.hallBg = t3rgb(C('#101218'))) : this.clubBg || (this.clubBg = t3rgb(C('#0d0913'))); return; }   // the club's wall is a layer in the world (updateLayers); the hall's is a mesh (p9Build)
       this.scene.background = this.bgTex;
       buf.fill(0);
@@ -8535,7 +8663,7 @@ import * as P9 from './levels/pier9.js';
       m.scale.set(r1, len, r1); m.material.color.setRGB(...rgb); m.material.opacity = op; m.visible = true;
     },
     updateFx() {
-      const p = this.rain.geometry.attributes.position, n = flags.club ? 0 : Math.min(rain.drops.length, this.rainMax), sleet = isP9();
+      const p = this.rain.geometry.attributes.position, n = flags.club && !LVH.drawRain ? 0 : Math.min(rain.drops.length, this.rainMax), sleet = isP9();
       if (this.rainSleet !== sleet) { this.rainSleet = sleet; const m = this.rain.material; if (sleet) { m.color.setRGB(226 / 255, 232 / 255, 240 / 255); m.opacity = 0.5; } else { m.color.setRGB(170 / 255, 185 / 255, 220 / 255); m.opacity = 0.35; } }   // Pier 9: sleet, whiter and steeper
       for (let i = 0; i < n; i++) {
         const d = rain.drops[i], far = d.v < (sleet ? 150 : 290), l = far ? 3 : 5, onProp = floorBelow(d.x, d.y, 0) !== GROUND_S;
@@ -8547,7 +8675,7 @@ import * as P9 from './levels/pier9.js';
       if (sleet) { const fp = this.flakes.geometry.attributes.position; for (let i = 0; i < n; i++) { const d = rain.drops[i]; if (d.flake) fp.setXYZ(nf++, d.x + 1, -(d.y + 1), d.v < 150 ? -10 - (i * 7 % 9) : (i * 37 % 41) - 12); } fp.needsUpdate = true; }
       this.flakes.geometry.setDrawRange(0, nf);
       for (const b of this.beams) b.visible = false;
-      if (flags.club && !isP9()) clubSpots().forEach((sp, i) => this.beam(i, sp.fx, GROUND - 144, sp.x, GROUND - 2, 13, -3, sp.c.map(v => Math.min(1, v / 1.4)), 0.13));
+      if (flags.club && isStreet()) clubSpots().forEach((sp, i) => this.beam(i, sp.fx, GROUND - 144, sp.x, GROUND - 2, 13, -3, sp.c.map(v => Math.min(1, v / 1.4)), 0.13));
       else if (cam.x < GOAL.x1 + 60 && cam.x + cam.vw > GOAL.x0 - 60) [[GOAL.x0 + 8, 0, GOAL.y - 2], [GOAL.x1 - 8, 2.2, GOAL.y - 70]].forEach(([bx, ph, by], i) => {
         const a = Math.sin(simTime * 0.5 + ph) * 0.5;
         this.beam(i, bx, by, bx + Math.tan(a) * 220, by - 220, 13, T3.ZF + 2, [0.55, 0.55, 0.5], 0.09);
@@ -8770,10 +8898,10 @@ import * as P9 from './levels/pier9.js';
     if (sceneOn) return;   // a cutscene is loading or playing: its own controller has the keys (Escape must not open the menu between scenes)
     if (menuKey(e)) { e.preventDefault(); return; }   // the menu has the keys while it is open (the title screen, or Esc in a game)
     if (openT >= 0) { if ((c === 'Escape' || c === 'Enter') && !e.repeat) endOpening(); return; }
-    if (isP9() && endPh === 'done' && !flags.wasted) { if (c === 'Enter' && !e.repeat && !resultsEl.hidden) quitToTitle(); return; }   // Pier 9 cleared: Enter goes back to the menu
+    if (!isStreet() && endPh === 'done' && !flags.wasted) { if (c === 'Enter' && !e.repeat && !resultsEl.hidden) { if (isP9() && progress.ch2) startChapter2(); else quitToTitle(); } return; }   // Pier 9 cleared: on to Line Zero; Line Zero: back to the menu   // Pier 9 cleared: Enter goes back to the menu
     if (flags.wasted) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) retry(); return; }   // the Wasted card: retry from the checkpoint (Wicked: a restart); Esc opens the menu above
     if (endPh === 'done' && !resultsEl.hidden) { if (!e.repeat && c === 'Enter') startChapter1(); else if (!e.repeat && c === 'KeyR') reset(); return; }   // Club cleared: Enter goes on with the story (prologue, then Pier 9), R plays the tutorial again
-    if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) { if (isP9()) p9Outro(); else endFinish(); } return; }   // the ending: Esc or Enter jumps to the card
+    if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) { if (isP9()) p9Outro(); else if (isMetro()) LVH.outro(); else endFinish(); } return; }   // the ending: Esc or Enter jumps to the card
     // the keys: arrows move (up jumps, down squats; down at a run rolls), Q punches (by a beaten goon: the finisher), W kicks, Space dodges, Shift walks (runs, with run off)
     if (c === 'ArrowLeft') { keys.left = true; takeOver(); }
     else if (c === 'ArrowRight') { keys.right = true; takeOver(); }
@@ -8861,6 +8989,7 @@ import * as P9 from './levels/pier9.js';
   let autoWalk = false;
   function skipToBoss() {
     if (isP9()) { p9SkipToBoss(); return; }
+    if (LVH.skipToBoss) { LVH.skipToBoss(); return; }
     reset();
     for (const Z of ZONES.slice(0, ZONES.length - 1)) for (const [k] of Z.tasks) done.add(k);
     for (const k in WAVES) { spawned.add(+k); cleared.add(+k); reinf[k] = { k: 99, n: 0 }; }   // the street's goons are behind him: their waves do not come out now
@@ -8876,7 +9005,7 @@ import * as P9 from './levels/pier9.js';
     if (flags.demo) { di = Math.max(0, DEMO.findIndex(st => st.tag === 'club')); dk = 0; dTry = 0; dStarted = false; }
     else autoWalk = true;
   }
-  function toggleDemo() { if (isP9()) return; if (flags.demo) setDemo(false); else { setDemo(true); } }
+  function toggleDemo() { if (!isStreet()) return; if (flags.demo) setDemo(false); else { setDemo(true); } }
   // ---------- the opening: a dead goon flies in from the left and hits the street; he walks in after it and asks for his dog ----------
   const OPEN = { camX: 40, enter: 18, walkAt: 0.85, throwP: 150, line: 'Where is my dog?', sayFor: 3.4 };
   let openBody = null, openStopT = -1, openBled = false;
@@ -8912,6 +9041,7 @@ import * as P9 from './levels/pier9.js';
   }
   function endTick(rdt) {
     if (isP9()) { p9EndTick(rdt); return; }
+    if (LVH.endTick) { endT += rdt; LVH.endTick(rdt); return; }
     endT += rdt;
     for (const k of ['jump', 'jumpHeld', 'attack', 'fireHeld', 'dash', 'dashHeld', 'downHeld']) input[k] = k === 'attack' ? null : false;
     input.dir = 0; input.run = false;
@@ -9013,7 +9143,7 @@ import * as P9 from './levels/pier9.js';
     return { hind: false, root, mid: [ex, ey], low: wrist, toe: [paw[0] + 0.5 * f, paw[1] - 0.6], paw };
   }
   function drawDog() {
-    if (!dog || flags.club) return;
+    if (!dog || dog.hidden || (flags.club && !isMetro())) return;
     const P = dogPose(dog), f = P.f, px = new Map();
     const TAN = C('#b97a3c'), TANL = C('#d9a05e'), TAND = C('#7a4e24'), BLK = C('#1c171a'), BLKL = C('#3b3238'), EYE = C('#0a0809');
     const put = (x, y, c) => px.set(Math.round(x) + ',' + Math.round(y), c);
@@ -9102,36 +9232,67 @@ import * as P9 from './levels/pier9.js';
       if (st > OPEN.sayFor) endOpening();
     }
   }
-  // ---------- levels: the tutorial street and Pier 9 (src/levels/pier9.js) ----------
+  // ---------- levels: the tutorial street, Pier 9 (src/levels/pier9.js), Line Zero (src/levels/metro/) ----------
   // loadLevel swaps the level lists in place (surfaces, lamps, doors, props, pickups, the static layer). The street's own lists are
   // kept in a snapshot the first time it is left, so going back restores them exactly. The caller then calls reset().
-  const STREET_LV = LV, PIER9_LV = { id: 'pier9', title: 'Pier 9', startX: 60, drops: P9.DROPS };
+  const STREET_LV = LV, PIER9_LV = { id: 'pier9', title: 'Pier 9', startX: 60, drops: P9.DROPS }, METRO_LV = { id: 'metro', title: 'Line Zero', startX: 40, drops: METRO.DROPS };
   const LEVEL_LISTS = { PLATS, STEPS, LAMPS, WINL, FEAT, VPARTS, HOUSEWIN, DOORS, ALLEYS, CARDOORS, CLUB_DOORS, OBJ_START, pickups, VEH };
-  let streetSnap = null, p9Data = null;
+  let streetSnap = null, p9Data = null, metroData = null, MR = null;   // MR: Line Zero's run (METRO.createMetro(G))
   function loadLevel(id) {
     if (LV.id === id) return;
     boards.length = 0; while (objs.length) removeObj(objs[0]);
-    if (!streetSnap) { streetSnap = { stat: stat.slice(), PROPS: PROPS.slice(), STAT_BG, GOAL, WALLM }; for (const k in LEVEL_LISTS) streetSnap[k] = LEVEL_LISTS[k].slice(); }
+    if (!streetSnap) { streetSnap = { stat: stat.slice(), PROPS: PROPS.slice(), STAT_BG, GOAL, WALLM, PUDDLE: PUDDLE.slice() }; for (const k in LEVEL_LISTS) streetSnap[k] = LEVEL_LISTS[k].slice(); }
     let d;
     if (id === 'pier9') {
       if (!p9Data) {
-        const pt = P9.paint({ W, H, PAL, PUDDLE, STREET, LAMP_GLASS, WIN_A, WIN_B, WIN_C, LAMP_IRON });
+        const pt = P9.paint({ W, H, PAL, PUDDLE: streetSnap.PUDDLE, STREET, LAMP_GLASS, WIN_A, WIN_B, WIN_C, LAMP_IRON });
         p9Data = { stat: pt.b, PROPS: pt.props, STAT_BG: pt.bg, GOAL: { x0: -999, x1: -998, y: -999 }, PLATS: P9.surfaces(), STEPS: [], LAMPS: pt.lamps, WINL: pt.winl, FEAT: [], VPARTS: [],
-          HOUSEWIN: pt.housewin, DOORS: pt.doors, ALLEYS: [], CARDOORS: pt.cdoors, CLUB_DOORS: P9.HALL_DOORS, OBJ_START: P9.OBJ_START, VEH: pt.veh,
+          HOUSEWIN: pt.housewin, DOORS: pt.doors, ALLEYS: [], CARDOORS: pt.cdoors, CLUB_DOORS: P9.HALL_DOORS, OBJ_START: P9.OBJ_START, VEH: pt.veh, PUDDLE: streetSnap.PUDDLE,
           pickups: P9.PICKUPS.map(k => ({ w: k.w, x: k.x, y: restY(k.w) + (k.yOff || 0), taken: false, rack: !!k.rack })) };
         p9Data.WALLM = pt.b.map((c, i) => c || pt.props[i] ? 1 : 0);   // (a Uint32Array of 0/1: the sky, the sea and the fog are 0)
       }
       d = p9Data; LV = PIER9_LV;
+    } else if (id === 'metro') {
+      if (!metroData) {
+        const pt = METRO.paint({ W, H, GROUND, PAL, LAMP_GLASS, WIN_A, WIN_B, WIN_C });
+        metroData = { stat: pt.b, PROPS: pt.props, STAT_BG: pt.bg, GOAL: { x0: -999, x1: -998, y: -999 }, PLATS: METRO.surfaces(), STEPS: METRO.steps(), LAMPS: [], WINL: pt.winl, FEAT: [], VPARTS: [],
+          HOUSEWIN: [], DOORS: [], ALLEYS: [], CARDOORS: [], CLUB_DOORS: METRO.CREW_DOORS, OBJ_START: METRO.OBJ_START, VEH: [], PUDDLE: pt.pud, WALLM: null, stairs: METRO.STAIR_RANGE,
+          pickups: METRO.PICKUPS.map(k => ({ w: k.w, x: k.x, y: restY(k.w), taken: false, rack: !!k.rack, hidden: k.hidden || null, hide0: k.hidden || null })) };
+      }
+      d = metroData; LV = METRO_LV;
     } else { d = streetSnap; LV = STREET_LV; }
     for (const k in LEVEL_LISTS) { LEVEL_LISTS[k].length = 0; LEVEL_LISTS[k].push(...d[k]); }
-    stat.set(d.stat); PROPS.set(d.PROPS); STAT_BG = d.STAT_BG; GOAL = d.GOAL; WALLM = d.WALLM || null;
+    stat.set(d.stat); PROPS.set(d.PROPS); STAT_BG = d.STAT_BG; GOAL = d.GOAL; WALLM = d.WALLM || null; PUDDLE.set(d.PUDDLE);
+    Object.assign(STAIR_R, d.stairs || { x0: STAIR_X0, x1: STAIR_X1 });
     SURF.length = 0; SURF.push(GROUND_S, ...PLATS, ...TRAMPS);
     for (const w of HOUSEWIN) { w.off = false; w.peek = false; w.t = 0; w.lv = 1; }
+    if (id === 'metro') { if (!MR) MR = METRO.createMetro(ENG); LVH = MR; } else LVH = {};
   }
+  // the engine for a level module (src/levels/metro/run.js): the sim's state and functions, read and called from there
+  const countdownEl = (() => { const el = document.createElement('div'); el.className = 'countdown'; el.hidden = true; el.innerHTML = '<span></span><div class="bar"><i></i></div>'; document.getElementById('bossbar')?.after(el); return el; })();
+  const ENG = {
+    get diffSel() { return diffSel; }, DIF, get simTime() { return simTime; }, simRand, emit, bus, get timeScale() { return timeScale; },
+    ctl, hero, P, enemies, enc, objs, eshots, particles, sparks, waves, quakes, bullets, flashes, pickups, ammoBoxes, thrown, tossed, input, flags, zoneAlive, rain, cam, charge, WINL,
+    LANE, GROUND, W, H, DT, DOOR_X, STREET_END, PLATS, SURF, GROUND_S, RUN, WALK, MOVES, EMOVES, WEAPONS, DEF, PAL,
+    spawnEnemy, hurtPlayer, damageEnemy, knockDown, killEnemy, toast, bark, setCkpt, playScene, shakeIt, dust, hitFx, slowMo, bossPhase, bStart, bSpecial, bossTell, bTell, bCd, bRand,
+    eStart, eRelease, eHop, climbStep, makeObj, removeObj, damageObj, floorBelow, heroTo, equip, fullCharge, makeDog, dogStep, puff, hitsPlayer, eWeapon, plot, line1, blendPlot,
+    get R9() { return R9; }, get R9T() { return R9T; }, gradeRun, rankHtml, rankName, styleM, runS, get kos() { return kos; },
+    get dog() { return dog; }, set dog(v) { dog = v; }, get hitStop() { return hitStop; }, set hitStop(v) { hitStop = v; }, get lockT() { return lockT; }, set lockT(v) { lockT = v; },
+    get killBy() { return killBy; }, set killBy(v) { killBy = v; }, get endPh() { return endPh; }, set endPh(v) { endPh = v; }, get fadeDir() { return fadeDir; }, set fadeDir(v) { fadeDir = v; },
+    get slamDone() { return slamDone; }, set bossBarK(v) { bossBarK = v; }, get ckBoss() { return ckBoss; }, set ckBoss(v) { ckBoss = v; }, bossDlg, set autoWalk(v) { autoWalk = v; },
+    reset: () => reset(),
+    placeHero(x, s) {   // on the ground at x, then up onto surface s (the mezzanine)
+      heroTo(x); const dy = s.y - 2 - ctl.y; ctl.y = s.y - 2; ctl.surf = s;
+      for (const p of P) { p.y += dy; p.py += dy; } for (const st of hair) for (const p of st) { p.y += dy; p.py += dy; } if (tails) for (const t of tails) for (const p of t) { p.y += dy; p.py += dy; }
+      cam.yf = ctl.y - 60;
+    },
+    barkHero: text => bark({ J: P, dead: false }, text), setMusic: (id, v) => gameAudio.playMusic(id, { volume: v }),
+    dom: { tut: tutEl, toast: toastEl, results: resultsEl, card: cardEl, countdown: countdownEl },
+  };
   // the Pier 9 run: waves along the quay, the shutter, the boss in the hall, the conveyor's tuna, the ending
   // the boss's arena: speedOn = the conveyor runs fast (the speed lever is down), fog = the freezer fog (on, t since on, k its strength 0..1,
   // offT since the hero cleared it), ice = the smashed-in ice patches, lev = how far each lever is pulled (drawn), crewNow = crew to send in now
-  const p9 = { w: {}, queue: [], shutter: 0, duck: 0, open: false, bossDlg: false, dlgDone: false, crewT: 0, obj: '', tuna: { st: 'off', t: 0, x: 0, dir: 1, a: 0, hit: null },
+  const p9 = { w: {}, queue: [], shutter: 0, duck: 0, open: false, crewT: 0, obj: '', tuna: { st: 'off', t: 0, x: 0, dir: 1, a: 0, hit: null },
     speedOn: false, fog: { on: false, t: 0, k: 0, offT: 0 }, ice: [], lev: { speed: 0, freezer: 0, hot: null }, crewNow: 0 };
   const P9C = { frost: C('#d8e8f0') };
   function iceAt(x) {   // slick floor: the hall's two fixed patches and the ones Marchetti smashes in
@@ -9159,9 +9320,11 @@ import * as P9 from './levels/pier9.js';
     return o;
   }
   const R9 = { buf, CW, cam, plot, plotV, line1, blendPlot: (x, y, r, g, b, a) => blendPlot(x, y, r, g, b, a), get t() { return simTime; } };
+  // the same, but what it paints covers the fighters behind it for the rim light too (a passing train in front of a man in a niche)
+  const R9T = { ...R9, get t() { return simTime; }, plot: (x, y, c) => { plot(x, y, c); const vx = Math.floor(x) - cam.x, vy = Math.floor(y) - cam.y; if (vx >= 0 && vy >= 0 && vx < cam.vw && vy < cam.vh) figArt.mask[vy * CW + vx] = 0; } };
   function p9Reset() {
     p9.w = {}; for (const w of P9.WAVES) p9.w[w.id] = { out: false, n: 0 };
-    p9.queue.length = 0; p9.shutter = 0; p9.duck = 0; p9.open = false; p9.bossDlg = false; p9.dlgDone = false; p9.crewT = 0; p9.obj = '';
+    p9.queue.length = 0; p9.shutter = 0; p9.duck = 0; p9.open = false; p9.crewT = 0; p9.obj = '';
     Object.assign(p9.tuna, { st: 'off', t: 0, hit: null }); hookPull = false; barkT = 0; sayEl.hidden = true;
     p9.speedOn = false; Object.assign(p9.fog, { on: false, t: 0, k: 0, offT: 0 }); p9.ice.length = 0; Object.assign(p9.lev, { speed: 0, freezer: 0, hot: null }); p9.crewNow = 0; p9.w3 = false;
     rain.k = rain.goal = 0.8; rain.drops.length = 0;
@@ -9244,7 +9407,7 @@ import * as P9 from './levels/pier9.js';
     enc.boss = spawnEnemy('boss', dx, 'boss', { boss: P9.MARCHETTI });
     enc.boss.intro = true; enc.boss.introX = dx - 70; enc.boss.face = -1;
     enc.introT = 0; bossBarK = 0; spawnFx.push({ kind: 'club', x: dx, t: 0 });
-    if (ckBoss) { ckBoss = false; enc.boss.x = enc.boss.introX; }   // a retry: no entrance walk (p9.dlgDone is set: no dialog)
+    if (ckBoss) { ckBoss = false; enc.boss.x = enc.boss.introX; }   // a retry: no entrance walk (bossDlg.done is set: no dialog)
     setCkpt('boss');
     emit('boss:intro', { boss: enc.boss, name: enc.boss.name });
     toastEl.hidden = true; toastT = 0; toastQ.length = 0;
@@ -9406,8 +9569,18 @@ import * as P9 from './levels/pier9.js';
     gameAudio.playMusic('docks_explore', { volume: 0.6 });
     toast('Pier 9', 'Dawn. Sleet. Find the collector.');
   }
-  function startTutorial() { if (isP9()) loadLevel('street'); if (flags.attract) endAttract(); else { hideMenu(); setDemo(false); reset(); startOpening(); } }
-  function quitToTitle() { hideMenu(); if (isP9()) loadLevel('street'); reset(); startAttract(); }
+  // Chapter 2: Line Zero. Its intro panels, then the level (Pier 9's results card leads here)
+  async function startChapter2() {
+    if (sceneOn) return;
+    leaveTitle(); setDemo(false); hideMenu(); resultsEl.hidden = true;
+    loadLevel('metro'); reset();
+    sceneOn = true;   // (the level waits behind the panels)
+    await playScene('panels', METRO.LEVEL.intro);
+    gameAudio.playMusic('docks_explore', { volume: 0.4 });
+    toast('Line Zero', 'Night. Under the city. Find the Rats who lit the fire.');
+  }
+  function startTutorial() { if (!isStreet()) loadLevel('street'); if (flags.attract) endAttract(); else { hideMenu(); setDemo(false); reset(); startOpening(); } }
+  function quitToTitle() { hideMenu(); if (!isStreet()) loadLevel('street'); reset(); startAttract(); }
   // ---- the menu: a console-style list down the left. It stays up on the title screen while the demo plays; in a game, Esc opens
   // it and pauses. Settings (view, run, camera) are remembered in this browser.
   let runAlways = true, menuShown = false, menuSel = 0, menuPauseTS = null;
@@ -9442,11 +9615,12 @@ import * as P9 from './levels/pier9.js';
     if (menuPage === 'chapter') return [
       { label: 'Tutorial: The Street', act: () => { menuPage = 'main'; startTutorial(); } },
       progress.ch1 ? { label: 'Prologue + Pier 9', act: () => { menuPage = 'main'; startChapter1(); } } : lockedItem('Prologue + Pier 9', 'Malaspina in the tutorial'),
+      progress.ch2 ? { label: 'Chapter 2: Line Zero', act: () => { menuPage = 'main'; startChapter2(); } } : lockedItem('Chapter 2: Line Zero', 'Marchetti on Pier 9'),
       { label: 'Back', act: () => { menuPage = 'main'; menuSel = 0; } },
     ];
     const items = [
       { label: flags.attract ? 'Start game' : 'Resume', act: () => flags.attract ? endAttract() : hideMenu() },
-      { label: 'Chapter', value: () => isP9() && !flags.attract ? 'Pier 9' : 'Choose', act: () => { menuPage = 'chapter'; menuSel = isP9() ? 1 : 0; } },
+      { label: 'Chapter', value: () => !isStreet() && !flags.attract ? LV.title : 'Choose', act: () => { menuPage = 'chapter'; menuSel = isP9() ? 1 : isMetro() ? 2 : 0; } },
       { label: 'Difficulty', value: () => DIFFS[diffSel].name + (flags.attract ? '' : ' · locked'), change: d => {   // set on the title menu only: a run keeps its difficulty (no Wicked permadeath dodge)
         if (!flags.attract) { toast('Difficulty is locked during a run', 'Quit to title to change it'); return; }
         diffSel = (diffSel + d + DIFFS.length) % DIFFS.length; charge.forEach((c, w) => { charge[w] = Math.min(c, fullCharge(w)); }); saveSettings(); } },
@@ -9511,7 +9685,7 @@ import * as P9 from './levels/pier9.js';
   const titleEl = document.getElementById('title');
   let titleFadeT = null;
   function startAttract() {
-    if (isP9()) { loadLevel('street'); reset(); }
+    if (!isStreet()) { loadLevel('street'); reset(); }
     flags.attract = true; gameAudio.playMusic('title'); showMenu(true); titleEl.hidden = false; titleEl.classList.remove('faded'); document.body?.classList.add('attract'); setDemo(true);
     clearTimeout(titleFadeT); titleFadeT = setTimeout(() => { if (flags.attract) titleEl.classList.add('faded'); }, 2500);   // the card fades out after 2.5 s; the demo plays on
   }
@@ -9595,7 +9769,7 @@ import * as P9 from './levels/pier9.js';
     if (jumpEnd && enc.boss && !enc.boss.dead && enc.introT < 0 && enc.boss.hp > 0) { enc.boss.hp = 1; enc.eHitKind = 1; damageEnemy(enc.boss, 60, 1, 300, 0.5, enc.boss.x, enc.boss.y - 20, false); enc.eHitKind = 0; }   // ?ending: the boss drops as the fight starts
     if (enc.introT >= 0 && !enc.boss) enc.introT = -1;   // (an entrance with no boss: never a lock)
     if (hookPull && (input.attack || input.dash || input.jump)) bossMash++;   // the hook's pull: each press of Q, W, Space or ↑ counts toward breaking free
-    if (enc.introT >= 0 || hookPull || gaffHold) { input.dir = 0; input.run = false; input.jump = false; input.jumpHeld = false; input.attack = null; input.fireHeld = false; input.dash = false; input.dashHeld = false; input.downHeld = false; }   // the boss entrance: no input
+    if (enc.introT >= 0 || hookPull || gaffHold || lockT > 0) { input.dir = 0; input.run = false; input.jump = false; input.jumpHeld = false; input.attack = null; input.fireHeld = false; input.dash = false; input.dashHeld = false; input.downHeld = false; }   // the boss entrance: no input
     for (let i = spawnFx.length - 1; i >= 0; i--) if ((spawnFx[i].t += wdt) > 0.45) spawnFx.splice(i, 1);
     if (grabIdx >= 0 && now - lastMove > 40) { pv.x *= 0.7; pv.y *= 0.7; }
     if (hitStop > 0) hitStop -= rdt; else acc += sdt;
@@ -9692,13 +9866,14 @@ import * as P9 from './levels/pier9.js';
       const last = kills.slice(-5);
       feedEl.innerHTML = last.map((k, i) => { const age = simTime - k.t, op = Math.min(1, (30 - age) / 6) * (i < last.length - 4 ? 0.55 : 1); return `<div class="kf" style="opacity:${Math.max(0, op).toFixed(2)}">${WICON[k.w] ? `<img src="${WICON[k.w]}" alt="">` : ''}<span><b>✕</b> ${k.name}</span></div>`; }).join('');
     }
-    bossBar.hidden = !(enc.boss && !enc.boss.dead);
+    const BB = enc.boss && !enc.boss.dead ? enc.boss : LVH.mini ? LVH.mini() : null;   // the boss bar: the level's boss, or its mini-boss (a small bar)
+    bossBar.hidden = !BB; bossBar.classList.toggle('mini', !!(BB && BB !== enc.boss));
     { const top = bossBar.hidden ? '8px' : '42px'; if (shown.tutTop !== top) { shown.tutTop = top; tutEl.style.top = top; } }   // the mission panel steps down under the boss bar
     objTick(rdt);
-    { const hide = isP9() ? !!endPh : objEl.hidden || !(obj.list || obj.peekT > 0); if (shown.tutHide !== hide) { shown.tutHide = hide; tutEl.hidden = hide; }
-      if (shown.tutP9 !== isP9()) { shown.tutP9 = isP9(); tutEl.classList.toggle('lessons', !shown.tutP9); } }   // the street's lesson list: a peek at a stage's start, or L (inside the club it goes: the boss bar and the card carry the fight)
+    { const hide = !isStreet() ? !!endPh : objEl.hidden || !(obj.list || obj.peekT > 0); if (shown.tutHide !== hide) { shown.tutHide = hide; tutEl.hidden = hide; }
+      if (shown.tutP9 !== !isStreet()) { shown.tutP9 = !isStreet(); tutEl.classList.toggle('lessons', !shown.tutP9); } }   // the street's lesson list: a peek at a stage's start, or L (inside the club it goes: the boss bar and the card carry the fight)
     fbTick(rdt);
-    if (enc.boss) { bossFill.style.width = (Math.max(0, enc.boss.hp / enc.boss.maxHp * 100) * bossBarK).toFixed(1) + '%'; show('bname', bossNameEl, enc.boss.name.toUpperCase()); }
+    if (BB) { bossFill.style.width = (Math.max(0, BB.hp / BB.maxHp * 100) * (BB === enc.boss ? bossBarK : 1)).toFixed(1) + '%'; show('bname', bossNameEl, BB.name.toUpperCase()); }
     const tgt = null;
     if (tgt && false) { show('tname', tNameEl, tgt.dead ? tgt.name + ' — down' : tgt.name); tFill.style.width = Math.max(0, tgt.hp / tgt.maxHp * 100).toFixed(0) + '%'; }
     if (!AUTOTEST && !MANUAL) requestAnimationFrame(frame);
@@ -9759,5 +9934,13 @@ import * as P9 from './levels/pier9.js';
       street: () => { leaveTitle(); setDemo(false); hideMenu(); loadLevel('street'); reset(); },   // back to the tutorial street
       t3mem: () => Three3D.renderer ? { ...Three3D.renderer.info.memory, programs: Three3D.renderer.info.programs.length } : null,   // the 3D view's GPU objects (a level switch must not leak them)
       hurtBoss: n => { if (enc.boss) { enc.boss.hp = Math.max(1, enc.boss.hp - n); } }, hurtHero: n => { hero.hp = Math.max(1, hero.hp - n); }, setDiff: i => { diffSel = i; }, kill: (n = 1e9) => { for (const e of enemies) if (!e.dead && e !== enc.boss && n-- > 0) killEnemy(e, 1, 200, 0.3); } }   // (kill(n): at most n);
+    // Line Zero (tests): start the chapter (its intro panels) or the level at once; skip to Tinder or to the junction; read its state
+    const mGo = () => { leaveTitle(); setDemo(false); hideMenu(); resultsEl.hidden = true; loadLevel('metro'); };
+    window.__metro = { chapter: () => startChapter2(), start: () => { mGo(); reset(); }, toTinder: () => { mGo(); MR.skipToTinder(); }, toBoss: () => { mGo(); MR.skipToBoss(); },
+      tp: x => heroTo(x), peek: () => ({ level: LV.id, scene: sceneOn, x: Math.round(ctl.x), y: Math.round(ctl.y), surf: ctl.surf === GROUND_S ? 'ground' : PLATS.indexOf(ctl.surf), mode: hero.mode, act: hero.act, hp: Math.round(hero.hp), wind: hero.wind, weapon: hero.weapon, club: flags.club, endPh, kills: runS.kills, kos, wasted: flags.wasted,
+        boss: enc.boss ? { hp: Math.round(enc.boss.hp), max: enc.boss.maxHp, ph: enc.boss.ph, sp: enc.boss.sp, act: enc.boss.act, x: Math.round(enc.boss.x), y: Math.round(enc.boss.y), dead: enc.boss.dead, intro: !!enc.boss.intro } : null, introT: +enc.introT.toFixed(2), lockT: +lockT.toFixed(2),
+        enemies: enemies.filter(e => !e.dead).map(e => [e.rat || e.kind || e.role, Math.round(e.x), Math.round(e.y), Math.round(e.hp), e.zone, e.down ? 'down' : e.act || e.sp || '', e.lane]), ...(MR ? MR.peek() : {}) }),
+      kill: n => window.__pier9.kill(n), setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; }, hurtBoss: n => window.__pier9.hurtBoss(n), hurtMini: n => { const m = MR && MR.mini(); if (m) m.hp = Math.max(1, m.hp - n); }, hurtHero: n => window.__pier9.hurtHero(n),
+      view3d: on => setMode3D(!!on), zoom: z => setZoom(String(z)), train: (key, o) => MR && MR.sendTrain(key, o || {}), equip: w => equip(w, fullCharge(w)), get MR() { return MR; }, get ENG() { return ENG; } };
   } else requestAnimationFrame(frame);
 })();

@@ -48,6 +48,15 @@ const TELL = {
   sweep: ['dodge_whoosh', { vol: 0.8, pitch: 0.5 }],
   lever: ['tuna_creak', { vol: 0.6, pitch: 0.6 }],
   hookPull: ['hook_clank', { vol: 0.8, pitch: 0.7 }],
+  // Line Zero: Tinder and Switch Varga
+  flare: ['fire_whoosh', { vol: 0.5, pitch: 1.3 }],
+  volley: ['fire_whoosh', { vol: 0.7 }],
+  kick: ['grunt_goon', { vol: 0.6, pitch: 1.1 }],
+  lash: ['chain_spin', { vol: 0.5, pitch: 1.6 }],
+  spikes: ['spike_throw', { vol: 0.6, pitch: 0.8 }],
+  slide: ['dodge_whoosh', { vol: 0.8, pitch: 0.7 }],
+  gantryDrop: ['tell_jslam', { vol: 0.8, pitch: 1.2 }],
+  taunt: ['grunt_goon', { vol: 0.5, pitch: 1.5 }],
 };
 
 // game sounds for events audio.js does not map itself (it maps hit, hurt, ko, kill, pickup, glass/object:break, music, voice)

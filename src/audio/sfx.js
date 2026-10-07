@@ -356,6 +356,53 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
       ring(v, { f: 880, ratios: [1, 2.01, 3], at: 0.05, d: 1.6, vol: 0.05 });
       send(v, 0.5);
     },
+    // ---- Line Zero (docs/levels/02-line-zero.md 9.5): trains, rails, fire, Nero, the Rats' whistles; procedural stand-ins until files exist
+    train_hum(v) {   // the rails sing before a train: a low hum that swells, a high whine on top
+      tone(v, { type: 'sawtooth', f0: 55, f1: 62, a: 1.2, d: 1.6, vol: 0.22, drive: 2, sweep: 2.8 });
+      tone(v, { f0: 880, f1: 1040, a: 1.0, d: 1.4, vol: 0.05, sweep: 2.4 });
+      noise(v, { buf: brown, filter: 'lowpass', f0: 160, f1: 260, a: 1.2, d: 1.5, vol: 0.6, lin: true });
+      send(v, 0.4);
+    },
+    train_horn(v) {   // two reeds a fifth apart (D and A), long, with a rough edge
+      for (const [f, at] of [[146.8, 0], [220, 0.02]]) tone(v, { type: 'sawtooth', f0: f, f1: f * 0.99, at, a: 0.08, d: 1.3, vol: 0.18, drive: 3, sweep: 1.4 });
+      noise(v, { filter: 'bandpass', f0: 600, q: 1.5, a: 0.08, d: 1.2, vol: 0.15, lin: true });
+      send(v, 0.6);
+    },
+    train_clatter(v) {   // the wheels over the rail joints: clickety-clack, wind
+      for (const at of [0, 0.09, 0.2, 0.29]) { noise(v, { filter: 'bandpass', f0: 1800, q: 3, at, d: 0.03, vol: 0.5, drive: 3 }); tone(v, { f0: 90, f1: 50, at, d: 0.06, vol: 0.5, drive: 2 }); }
+      noise(v, { buf: brown, filter: 'lowpass', f0: 500, d: 0.4, vol: 0.8 });
+      noise(v, { filter: 'highpass', f0: 3000, a: 0.1, d: 0.3, vol: 0.1, lin: true });
+    },
+    rat_whistle_long(v) { tone(v, { f0: 2100, f1: 2350, a: 0.04, d: 0.9, vol: 0.12, sweep: 0.6 }); tone(v, { f0: 2350, f1: 1900, at: 0.6, a: 0.01, d: 0.3, vol: 0.1 }); send(v, 0.5); },
+    rat_whistle_short(v) { for (const at of [0, 0.22]) tone(v, { f0: 2200, f1: 2600, at, a: 0.01, d: 0.12, vol: 0.12 }); send(v, 0.5); },
+    water_splash(v) { noise(v, { filter: 'bandpass', f0: 1200, f1: 500, q: 1, d: 0.3, vol: 0.8 }); for (let i = 0; i < 6; i++) noise(v, { filter: 'bandpass', f0: 1500 + rand() * 2500, q: 4, at: 0.03 + rand() * 0.25, d: 0.05, vol: 0.25 }); },
+    nero_bark(v) {   // a big dog: a short rough woof, then a second
+      for (const at of [0, 0.32]) { tone(v, { type: 'sawtooth', f0: 380, f1: 170, at, a: 0.01, d: 0.13, vol: 0.4, drive: 4 }); noise(v, { filter: 'bandpass', f0: 900, f1: 500, q: 2, at, d: 0.12, vol: 0.5 }); }
+      send(v, 0.3);
+    },
+    nero_whine(v) { tone(v, { type: 'triangle', f0: 900, f1: 1300, a: 0.15, d: 0.5, vol: 0.12, sweep: 0.4 }); tone(v, { type: 'triangle', f0: 1300, f1: 800, at: 0.5, a: 0.05, d: 0.4, vol: 0.1 }); },
+    nero_growl(v) { tone(v, { type: 'sawtooth', f0: 95, f1: 85, a: 0.1, d: 0.8, vol: 0.25, drive: 5 }); noise(v, { buf: brown, filter: 'bandpass', f0: 300, q: 2, a: 0.1, d: 0.8, vol: 0.5 }); },
+    nero_bite(v) { noise(v, { filter: 'bandpass', f0: 1600, q: 2, d: 0.05, vol: 0.7, drive: 3 }); tone(v, { type: 'sawtooth', f0: 160, f1: 120, at: 0.04, a: 0.03, d: 0.5, vol: 0.2, drive: 4 }); },
+    lever_clunk(v) { tone(v, { type: 'triangle', f0: 180, f1: 90, d: 0.15, vol: 0.9, drive: 4 }); noise(v, { filter: 'bandpass', f0: 2400, q: 3, d: 0.04, vol: 0.7, drive: 3 }); ring(v, { f: 900, at: 0.02, d: 0.5, vol: 0.1 }); send(v, 0.35); },
+    rail_shock(v) {   // the third rail bites: a crackle and a buzz
+      for (let i = 0; i < 10; i++) noise(v, { filter: 'highpass', f0: 2500 + rand() * 4000, at: rand() * 0.25, d: 0.015, vol: 0.5, drive: 4 });
+      tone(v, { type: 'square', f0: 100, f1: 100, d: 0.4, vol: 0.12, drive: 3 });
+    },
+    spike_throw(v) { noise(v, { filter: 'bandpass', f0: 1800, f1: 4000, q: 3, a: 0.02, d: 0.12, vol: 0.5 }); ring(v, { f: 3600, at: 0.02, d: 0.15, vol: 0.04 }); },
+    fire_bottle(v) { glass(v, 12, 0.3, 0.7); noise(v, { filter: 'lowpass', f0: 800, f1: 2400, at: 0.05, a: 0.1, d: 0.6, vol: 0.6, lin: true }); },
+    flare_shot(v) { noise(v, { filter: 'lowpass', f0: 3000, f1: 600, d: 0.15, vol: 0.8, drive: 3 }); noise(v, { filter: 'bandpass', f0: 3000, q: 1, at: 0.05, a: 0.05, d: 0.9, vol: 0.2, lin: true }); },
+    fire_ignite(v) { noise(v, { buf: brown, filter: 'lowpass', f0: 300, f1: 1800, a: 0.12, d: 0.9, vol: 1, drive: 2, sweep: 0.4 }); noise(v, { filter: 'bandpass', f0: 900, q: 0.8, a: 0.1, d: 1.0, vol: 0.35, lin: true }); send(v, 0.3); },
+    fire_whoosh(v) { noise(v, { filter: 'bandpass', f0: 300, f1: 1500, q: 1, a: 0.08, d: 0.3, vol: 0.6, lin: true }); },
+    douse_hiss(v) { noise(v, { filter: 'highpass', f0: 3000, f1: 1500, a: 0.02, d: 0.8, vol: 0.5, lin: true }); },
+    breaker_clunk(v) { tone(v, { type: 'square', f0: 120, f1: 60, d: 0.1, vol: 0.5, drive: 3 }); noise(v, { filter: 'bandpass', f0: 1500, q: 3, d: 0.03, vol: 0.6 }); },
+    tubes_on(v) { for (let i = 0; i < 4; i++) noise(v, { filter: 'highpass', f0: 4000, at: i * 0.11 + rand() * 0.05, d: 0.02, vol: 0.4 }); tone(v, { f0: 100, f1: 100, at: 0.4, a: 0.2, d: 1.2, vol: 0.05 }); },
+    lamp_click(v) { noise(v, { filter: 'bandpass', f0: 3000, q: 4, d: 0.015, vol: 0.6 }); tone(v, { type: 'square', f0: 900, f1: 700, d: 0.02, vol: 0.1 }); },
+    bell_ting(v) { ring(v, { f: 1980, ratios: [1, 2.76, 5.4], d: 1.6, vol: 0.12 }); send(v, 0.5); },
+    handcar_bell(v) { for (const at of [0, 0.18]) ring(v, { f: 1650, ratios: [1, 2.4, 3.9], at, d: 0.5, vol: 0.12 }); },
+    handcar_pump(v) { noise(v, { filter: 'bandpass', f0: 700, f1: 400, q: 2, d: 0.2, vol: 0.5 }); ring(v, { f: 600, at: 0.05, d: 0.3, vol: 0.05 }); },
+    handcar_derail(v) { tone(v, { type: 'triangle', f0: 160, f1: 50, d: 0.5, vol: 1, drive: 6 }); for (let i = 0; i < 8; i++) ring(v, { f: 500 + rand() * 1500, at: rand() * 0.4, d: 0.3, vol: 0.05 }); noise(v, { filter: 'highpass', f0: 2000, d: 0.6, vol: 0.4 }); send(v, 0.4); },
+    slowmo_in(v) { tone(v, { f0: 400, f1: 90, a: 0.05, d: 0.6, vol: 0.2, sweep: 0.5 }); noise(v, { filter: 'lowpass', f0: 2000, f1: 200, d: 0.6, vol: 0.3 }); },
+    slowmo_out(v) { tone(v, { f0: 90, f1: 400, a: 0.05, d: 0.35, vol: 0.18, sweep: 0.3 }); },
     ui_blip(v) {
       tone(v, { type: 'square', f0: 1200, f1: 900, d: 0.04, vol: 0.4 });
       tone(v, { f0: 300, f1: 200, d: 0.03, vol: 0.3 });
