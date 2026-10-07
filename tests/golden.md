@@ -4,7 +4,7 @@ Run with a static server (`tools/serve.py`, port 8765, no browser cache; or `pyt
 Two runs of the same URL must give the same hashes. A refactor step that keeps both hashes changed nothing.
 A step that changes behaviour on purpose records new hashes here, with the reason.
 
-## Current (main bf7d930: + the blood fixes, the boss set pieces, the early perfect dodge, 2026-10-07)
+## Current (main 14377d1: + no signs over characters, the block/parry tidy-up, 2026-10-07)
 
 | URL | state | buf | l3 | note |
 |---|---|---|---|---|
@@ -21,6 +21,12 @@ Each URL run twice in headless Chrome (`PORT=8765 sh tools/golden.sh`); each pai
   the '!' drawn over goons only).
 - The early perfect dodge (bf7d930) kept them too: the attract demo dodges close to contact, inside the old 0.1 s window,
   and the stretched i-frames never pass the old 0.3 s there.
+
+- No signs over characters (83f9364) and the dead block/parry code removed (14377d1) kept all four URLs' hashes (state, buf, l3),
+  two runs each in headless Chrome, each pair matched, 2D state = 3D state. The buf and l3 hashes see only the last frame: at frame
+  1200 / 1800 no goon is hurt in view, winding up a heavy, reloading, stunned or backing off, so no removed sign was on it. The new
+  poses (a stunned boss's sway, the Tallyman's reload, a hurt goon's fists up as he backs off: arms only) do not reach the hashed state.
+  The gbreak act, DEF.block/parry and the parry ring had no caller. Checked by hand with `?manual` in both views instead.
 
 Boss fights are tested with bots, not hashes: `PORT=8765 sh tools/bossbot.sh street|pier <diff 0-3> jab|varied [seed]`
 (`tests/bossbot.html`; run them one at a time: side-by-side headless runs can stall). No block, no parry: the varied bot
