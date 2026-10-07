@@ -236,10 +236,10 @@
   .card { position: absolute; left: 50%; top: 56%; transform: translateX(-50%); text-align: center; pointer-events: none; font-family: var(--display); white-space: nowrap; }
   .card[hidden] { display: none; }
   /* a speech bubble over a fighter's head (the opening line) */
-  .say { position: absolute; transform: translate(-50%, -100%); padding: 7px 13px; background: #f4efe6; color: #15101c; border: 3px solid #15101c; border-radius: 4px; z-index: 5;
+  #say.say { position: absolute; transform: translate(-50%, -100%); padding: 7px 13px; background: #f4efe6; color: #15101c; border: 3px solid #15101c; border-radius: 4px; z-index: 5;
     font: 700 clamp(14px, 2.2vw, 20px)/1.2 var(--mono); letter-spacing: .02em; white-space: nowrap; pointer-events: none; box-shadow: 0 2px 0 rgba(0,0,0,.5); }
-  .say::after { content: ''; position: absolute; left: 50%; bottom: -12px; margin-left: -7px; border: 7px solid transparent; border-top: 9px solid #15101c; }
-  .say[hidden] { display: none; }
+  #say.say::after { content: ''; position: absolute; left: 50%; bottom: -12px; margin-left: -7px; border: 7px solid transparent; border-top: 9px solid #15101c; }
+  #say.say[hidden] { display: none; }
   .card b { display: block; font: 500 24px/1.1 var(--display); letter-spacing: .1em; color: #ff3fa4; text-shadow: 0 0 2px #fff, 0 0 8px #ff3fa4, 0 0 20px #c0207a, 0 2px 0 #000; }
   .card small { display: block; margin-top: 5px; font: 500 12px/1 var(--mono); letter-spacing: .2em; text-transform: uppercase; color: #3ff0ff; text-shadow: 0 0 6px #3ff0ff, 0 1px 0 #000; }
   .devonly { display: none; }

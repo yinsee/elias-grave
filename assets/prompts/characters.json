@@ -1,23 +1,27 @@
 {
-  "elias": {
-    "desc": "Elias, a lean weary man around forty with shoulder-length straight dark hair, light stubble and hollow grieving eyes, in a black suit, white shirt and thin black tie",
-    "ref": "assets/art/characters/elias/ref.png"
-  },
-  "bell": {
-    "desc": "Augustin Bell, an old watchmaker around seventy with a short white beard, kind sharp eyes, a jeweller's loupe on his brow, a brown waistcoat over a white shirt with rolled sleeves, a cherry-wood pipe",
-    "ref": "assets/art/characters/bell/ref.png"
-  },
-  "nero": {
-    "desc": "Nero, a tan-and-black German shepherd dog with a red collar"
-  },
-  "hale": {
-    "desc": "Inspector Hale, a tired middle-aged detective in a grey trench coat and a hat brim pulled low"
-  },
-  "marchetti": {
-    "desc": "Salvatore Marchetti, a huge heavy-set fishmonger mob boss around fifty with a thick neck, slicked-back black hair, a broken nose and a gold fish-scale necklace, in a blood-stained rubber apron over a dirty undershirt and rubber boots",
-    "ref": "assets/art/characters/marchetti/ref.png"
-  },
-  "saltmen": {
-    "desc": "rough dock workers in yellow oilskin coats, yellow sou'wester rain hats, grey wool sweaters and black rubber boots"
-  }
+ "elias": {
+  "desc": "Elias, a lean weary man around forty with shoulder-length straight dark hair, light stubble and hollow grieving eyes, in a black suit, white shirt and thin black tie",
+  "ref": "assets/art/characters/elias/ref.png"
+ },
+ "bell": {
+  "desc": "Augustin Bell, an old watchmaker around seventy with a short white beard, kind sharp eyes, a jeweller's loupe on his brow, a brown waistcoat over a white shirt with rolled sleeves, a cherry-wood pipe",
+  "ref": "assets/art/characters/bell/ref.png"
+ },
+ "nero": {
+  "desc": "Nero, a tan-and-black German shepherd dog with a red collar"
+ },
+ "hale": {
+  "desc": "Inspector Hale, a tired middle-aged detective in a grey trench coat and a hat brim pulled low"
+ },
+ "marchetti": {
+  "desc": "Salvatore Marchetti, a huge heavy-set fishmonger mob boss around fifty with a thick neck, slicked-back black hair, a broken nose and a gold fish-scale necklace, in a blood-stained rubber apron over a dirty undershirt and rubber boots",
+  "ref": "assets/art/characters/marchetti/ref.png"
+ },
+ "saltmen": {
+  "desc": "rough dock workers in yellow oilskin coats, yellow sou'wester rain hats, grey wool sweaters and black rubber boots"
+ },
+ "malaspina": {
+  "desc": "Don Lucien Malaspina, a huge bald nightclub owner around fifty with a full thick black beard, heavy brows, a gold earring and gold rings, in a long dark fur coat over a purple silk shirt, holding a black cane with a silver head",
+  "ref": "assets/art/characters/malaspina/ref.png"
+ }
 }

@@ -1,0 +1,51 @@
+[
+ {
+  "out": "assets/art/characters/malaspina/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 31,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {malaspina}, three-quarter view, purple and magenta neon light of a nightclub, cigar smoke, a confident heavy stare"
+ },
+ {
+  "out": "assets/art-src/portraits/malaspina_amused.png",
+  "seed": 131,
+  "w": 832,
+  "h": 1024,
+  "face": "malaspina",
+  "post": {
+   "out": "assets/art/portraits/malaspina_amused.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Extreme close-up head-and-shoulders portrait of {malaspina}, amused wide grin, cigar in his teeth, face filling the frame, purple and magenta nightclub neon light, dark background"
+ },
+ {
+  "out": "assets/art-src/portraits/malaspina_smug.png",
+  "seed": 132,
+  "w": 832,
+  "h": 1024,
+  "face": "malaspina",
+  "post": {
+   "out": "assets/art/portraits/malaspina_smug.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Extreme close-up head-and-shoulders portrait of {malaspina}, smug half-smile, chin raised, hands folded on the cane, face filling the frame, purple and magenta nightclub neon light, dark background"
+ },
+ {
+  "out": "assets/art-src/portraits/malaspina_furious.png",
+  "seed": 133,
+  "w": 832,
+  "h": 1024,
+  "face": "malaspina",
+  "post": {
+   "out": "assets/art/portraits/malaspina_furious.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Extreme close-up head-and-shoulders portrait of {malaspina}, furious roaring face, veins on his temple, the fur coat thrown open, face filling the frame, purple and magenta nightclub neon light, dark background"
+ }
+]
