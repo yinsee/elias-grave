@@ -184,7 +184,7 @@ export const DASH = { v: 300, dur: 0.66, inv: 0.26, cd: 0.4, back: 160, backDur:
 export const DEF = {
   heavyT: 0.18, throwT: 0.3,
   step: { d: 36, t: 0.25, inv: 0.14, atk: 0.15 },
-  pd: { win: 0.1, slow: 0.3, slowT: 0.5, expose: 0.8 },
+  pd: { win: 0.1, slow: 0.3, slowT: 0.5, expose: 0.8, margin: 20, inv: 0.3, invMax: 0.5 },   // (a perfect dodge: from the start of a wind-up in reach + margin px; i-frames cover the blow, at most invMax s)
   parry: { win: 0.125, lock: 0.3, stag: 0.6, stop: 0.12 },
   block: { chip: 0.2, inv: 0.12, push: 70 },
   wake: 0.5, floor: 1.2, tech: [0.05, 0.9],

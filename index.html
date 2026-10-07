@@ -28,14 +28,14 @@
     <nav id="menu" class="menu" aria-label="Game menu"><ul id="menu-list"></ul></nav>
     <div id="controls-card" class="controls-card" hidden role="dialog" aria-label="Controls"><h3>CONTROLS</h3><dl>
       <dt>← →</dt><dd>move</dd><dt>Shift</dt><dd id="cc-run">walk (you run by default)</dd><dt>↑</dt><dd>jump · hold it at a ledge to climb</dd>
-      <dt>↓</dt><dd>squat · at a run: dodge roll · squat beside a crate or a bin to pick it up </dd><dt>Space</dt><dd>short dodge (with ← or → held: that way; in the air: dash) · just before a hit lands: perfect dodge (slow motion, he is open) · with ↓ held up on a roof: drop through it</dd>
+      <dt>↓</dt><dd>squat · at a run: dodge roll · squat beside a crate or a bin to pick it up </dd><dt>Space</dt><dd>short dodge (with ← or → held: that way; in the air: dash) · as a foe winds up to hit you: perfect dodge (slow motion, he is open) · with ↓ held up on a roof: drop through it</dd>
       <dt>Q</dt><dd>punch or swing · tap = light (3 landed jabs, then Q: the uppercut launcher), hold = heavy (near a goon) or throw what you hold (no goon in reach)</dd><dt>↓ + Q</dt><dd>throw what you hold</dd>
       <dt>W</dt><dd>kick · tap = light, hold = heavy</dd><dt>Finisher</dt><dd>when a goon beaten down to low health staggers, press Q: picked for you (your weapon's; fists: the punch, or with ↓ held, the ground slam)</dd>
       <dt>Grab</dt><dd>fists: walk into a goon who stumbles · W knee · Q elbow · ← or → + Q throw him that way · ↓ + Q lift and slam him into the floor (a beaten one: the slam finisher) · ← or → + W kick him away</dd>
       <dt>Focus</dt><dd>Sandman time starts by itself when the bar is full and 2+ goons are on you · in it, with a gun, Space dives</dd>
       <dt>Esc</dt><dd>menu (pauses): view, camera, restart</dd></dl><small>Enter or Esc to close</small></div>
     <div class="hud hud-hp"><span class="hud-label">HP</span><div class="bar"><i id="hp-fill"></i></div></div>
-    <div id="focus" class="hud hud-focus" title="Focus: fill it with varied hits, parries, perfect dodges and counters. Full, it starts Sandman time by itself"><span class="hud-label">FOCUS</span><div class="bar"><i id="focus-fill"></i></div></div>
+    <div id="focus" class="hud hud-focus" title="Focus: fill it with varied hits, perfect dodges and counters. Full, it starts Sandman time by itself"><span class="hud-label">FOCUS</span><div class="bar"><i id="focus-fill"></i></div></div>
     <div id="regen" class="regen" hidden title="Regen from a bandage"><svg viewBox="0 0 14 14" aria-hidden="true"><g transform="rotate(-45 7 7)"><rect x="0.5" y="4" width="13" height="6" rx="3" fill="#e8e2d4" stroke="#000" stroke-width="1"/><rect x="5" y="4" width="4" height="6" fill="#c9b49a"/><path d="M7 5.2v3.6M5.2 7h3.6" stroke="#c8323a" stroke-width="1.2"/></g></svg></div>
     <div id="bossbar" class="bossbar" hidden><span id="boss-name" class="hud-label">BOSS</span><div class="bar"><i id="boss-fill"></i></div></div>
     <div id="feed" class="feed" aria-live="polite"></div>

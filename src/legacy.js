@@ -2024,29 +2024,40 @@ import * as P9 from './levels/pier9.js';
     }
   }
   let lowHintT = -99;   // a low blow landed: say how to answer it (at most every 25 s)
-  function lowHint() { if (simTime - lowHintT < 25) return; lowHintT = simTime; toast('A low attack', 'Jump it, or dodge it: [Space] just before it lands exposes him', true); }
-  // perfect dodge: a dodge that starts within DEF.pd.win s of a blow's contact. The world drops to slow motion and the attacker is exposed
+  function lowHint() { if (simTime - lowHintT < 25) return; lowHintT = simTime; toast('A low attack', 'Jump it, or dodge it: [Space] as he winds up exposes him', true); }
+  // perfect dodge: a dodge that starts any time from the moment an attacker who targets him begins his wind-up (his tell) until the blow
+  // lands, while he is in that attacker's reach (+ DEF.pd.margin px) or on the path of a shot, a charge, the hook or a shockwave.
+  // The world drops to slow motion and the attacker is exposed. The i-frames stretch to cover the blow (at most DEF.pd.invMax s):
+  // a dodge much earlier than that can still be hit. pdTc: the threat's time to contact (sim s)
+  let pdTc = 0;
   function pdThreat() {
+    const D = DEF.pd, near = (e, r) => Math.abs(e.x - ctl.x) < r + D.margin && Math.abs(e.y - ctl.y) <= 16 && (ctl.x - e.x) * e.face > -4;   // in reach, and he faces the hero
     for (const e of enemies) {
-      if (e.dead || e.down || !e.act || e.struck || Math.abs(e.y - ctl.y) > 16 || Math.abs(e.x - ctl.x) > e.reach + 12 * e.s) continue;
-      const M = EMOVES[e.act]; if (M.win[0] >= 9) continue;   // (a shot or a throw: its bullet or knife is checked below)
-      const tc = (M.win[0] - e.actT) / (e.type === 'boss' && e.ph === 1 ? 0.85 : 1);   // time to contact (sim s)
-      if (tc <= DEF.pd.win && tc > -0.04) return e;
+      if (e.dead || e.down || !e.act || e.struck || e.clinch) continue;
+      const M = EMOVES[e.act], k = e.type === 'boss' && e.ph === 1 ? 0.85 : 1;
+      if (M.win[0] >= 9) {   // a shot or a throw in its wind-up: along its line
+        if (e.actT < 0 && near(e, 220)) { pdTc = -e.actT / k + Math.abs(e.x - ctl.x) / 300; return e; }
+        continue;
+      }
+      const tc = (M.win[0] - e.actT) / k;   // time to contact (sim s)
+      if (tc > -0.04 && near(e, e.reach + 12 * e.s)) { pdTc = tc; return e; }
     }
-    for (const b of eshots) { const d = (P[2].x - b.x) * Math.sign(b.vx); if (d > -2 && d / Math.max(1, Math.abs(b.vx)) < DEF.pd.win && Math.abs(P[2].y - b.y) < 26) return b; }
+    for (const b of eshots) { const d = (P[2].x - b.x) * Math.sign(b.vx); if (d > -2 && Math.abs(P[2].y - b.y) < 26) { pdTc = d / Math.max(1, Math.abs(b.vx)); if (pdTc < 0.6) return b; } }
     const B = enc.boss;
-    if (B && !B.dead && B.sp === 'charge' && B.spT > 0 && (ctl.x - B.x) * B.face > 0 && (ctl.x - B.x) * B.face / (B.chgV || 215) < DEF.pd.win) return B;
-    if (B && !B.dead && B.sp === 'hook' && B.hook && B.hook.st === 'fly') { const d = (ctl.x - B.hook.x) * B.face; if (d > -2 && d / P9.MARCHETTI.hook.v < DEF.pd.win) return B; }   // Marchetti's hook in flight
-    if (B && !B.dead && B.sp && B.pdAt != null && Math.abs(ctl.x - B.x) < B.pdR && B.pdAt - simTime <= DEF.pd.win && B.pdAt - simTime > -0.04) return B;   // a boss special's strike (grab, sweep, shove, tuna swing)
-    for (const q of quakes) if (!q.hit && (ctl.x - q.x) * q.dir > -2 && (ctl.x - q.x) * q.dir / QUAKE.v < DEF.pd.win) return q;
+    if (B && !B.dead && B.sp === 'charge' && (ctl.x - B.x) * B.face > 0 && (ctl.x - B.x) * B.face < 230 && Math.abs(B.y - ctl.y) < 16) { pdTc = Math.max(0, -B.spT) + (ctl.x - B.x) * B.face / (B.chgV || 215); return B; }   // the charge, from its tell
+    if (B && !B.dead && B.sp === 'hook' && !B.hook && (ctl.x - B.x) * B.face > 0 && (ctl.x - B.x) * B.face < P9.MARCHETTI.hook.range[diffSel]) { pdTc = -B.spT + (ctl.x - B.x) * B.face / P9.MARCHETTI.hook.v; return B; }   // the hook, from its tell
+    if (B && !B.dead && B.sp === 'hook' && B.hook && B.hook.st === 'fly') { const d = (ctl.x - B.hook.x) * B.face; if (d > -2) { pdTc = d / P9.MARCHETTI.hook.v; return B; } }   // and in flight
+    if (B && !B.dead && B.sp && B.pdAt != null && Math.abs(ctl.x - B.x) < B.pdR + D.margin && B.pdAt - simTime > -0.04) { pdTc = B.pdAt - simTime; return B; }   // a boss special's strike (grab, sweep, shove, tuna swing), from its tell
+    for (const q of quakes) if (!q.hit && (ctl.x - q.x) * q.dir > -2) { pdTc = (ctl.x - q.x) * q.dir / QUAKE.v; if (pdTc < 0.6) return q; }
     return null;
   }
   let slowT = 0, slowWhy = '';   // real seconds of slow motion left (a perfect dodge, the last kill of a wave, the boss kill), and why
   function slowMo(t, why) { if (slowT <= 0 && foc.t <= 0) emit('slowmo:start', { scale: DEF.pd.slow, reason: why }); slowT = Math.max(slowT, t); slowWhy = why; }
   function tryPerfect() {
     const t = pdThreat(); if (!t) return;
-    hero.invT = Math.max(hero.invT, 0.3);   // the blow goes through where he was
-    if (t.act !== undefined && t.J) { t.exposed = Math.max(t.exposed || 0, DEF.pd.expose); t.cdT = Math.max(t.cdT, 0.8); if (t.type === 'goon') eRelease(t); }
+    const D = DEF.pd, tc = Math.max(0, pdTc);
+    hero.invT = Math.max(hero.invT, D.inv, Math.min(D.invMax, tc + 0.08));   // the blow goes through where he was (an early dodge: the i-frames last until it lands, at most invMax)
+    if (t.act !== undefined && t.J) { t.exposed = Math.max(t.exposed || 0, D.expose + Math.min(tc, D.invMax)); t.cdT = Math.max(t.cdT, 0.8); if (t.type === 'goon') eRelease(t); }   // (exposed from the blow on)
     slowMo(DEF.pd.slowT, 'pdodge'); focGain(FOCUS.gain.pdodge); if (foc.t <= 0 && foc.m >= FOCUS.max) startFocus(); sparks.push({ x: P[1].x, y: P[1].y, t: 0.05 });
     for (let k = 0; k < 6; k++) particles.push({ x: P[2].x + (simRand() - 0.5) * 10, y: P[2].y - simRand() * 16, vx: -ctl.face * (30 + simRand() * 40), vy: -20 - simRand() * 30, life: 0.3, c: PAL.white });   // an afterimage of dust where he was
     emit('pdodge', { x: ctl.x, y: ctl.y, enemy: t.act !== undefined ? t : null }); emit('feat', 'pdodge');
@@ -4852,7 +4863,7 @@ import * as P9 from './levels/pier9.js';
       ['drop', 'Drop through a roof: hold [↓] and press [Space]'], ['dodge', 'Dodge: press [Space]. Hold [←] or [→] to pick the way'], ['squatroll', 'Long roll: press [↓] as you run']] },
     { x0: 520, title: '2 · Bare hands', tasks: [['lp', 'Jab: tap [Q]. Twice for both hands'], ['hp', 'Heavy punch: hold [Q]'], ['lk', 'Kick: tap [W]'], ['hk', 'Heavy kick: hold [W]'],
       ['slp', 'Low jab: hold [↓], tap [Q]'], ['slk', 'Low kick: hold [↓], tap [W]'], ['sweep', 'Leg sweep: hold [↓], hold [W]'], ['airkick', 'Flying kick: jump [↑], then tap [W]'],
-      ['pdodge', 'Perfect dodge: [Space] just before a hit lands'],
+      ['pdodge', 'Perfect dodge: press [Space] as a goon winds up to hit you'],
       ['counter', 'Counter: hit a goon as he winds up'],
       ['ender', 'String ender: land 3 jabs, then [Q] again'], ['grab', 'Grab: walk into a goon who stumbles'],
       ['knee', 'Knee: in a grab, tap [W]'], ['elbow', 'Elbow: in a grab, tap [Q]'], ['gthrow', 'Throw: in a grab, hold [←] or [→] and press [Q]'],
@@ -8769,7 +8780,7 @@ import * as P9 from './levels/pier9.js';
     if (flags.wasted) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) retry(); return; }   // the Wasted card: retry from the checkpoint (Wicked: a restart); Esc opens the menu above
     if (endPh === 'done' && !resultsEl.hidden) { if (!e.repeat && c === 'Enter') startChapter1(); else if (!e.repeat && c === 'KeyR') reset(); return; }   // Club cleared: Enter goes on with the story (prologue, then Pier 9), R plays the tutorial again
     if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) { if (isP9()) p9Outro(); else endFinish(); } return; }   // the ending: Esc or Enter jumps to the card
-    // the keys: arrows move (up jumps, down squats; down at a run rolls; away from an attacking goon blocks, a fresh press just before a hit parries), Q punches, W kicks (held by a beaten goon: the finisher), Space dodges, Shift walks (runs, with run off)
+    // the keys: arrows move (up jumps, down squats; down at a run rolls), Q punches, W kicks (held by a beaten goon: the finisher), Space dodges, Shift walks (runs, with run off)
     if (c === 'ArrowLeft') { keys.left = true; takeOver(); }
     else if (c === 'ArrowRight') { keys.right = true; takeOver(); }
     else if (c === 'ArrowDown') { takeOver(); input.downHeld = true; }
