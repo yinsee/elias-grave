@@ -3791,7 +3791,7 @@ import * as P9 from './levels/pier9.js';
   const finHP = e => e.hp <= Math.max(12, e.maxHp * FIN.hp);   // low enough for a finisher
   const finReady = e => !e.dead && !e.down && !e.clinch && !e.fin && !e.air && finHP(e) && (e.exposed > 0 || e.hurtT > 0 || simTime - (e.hitAt ?? -9) < FIN.open);   // (he shows it: the beaten sway)
   const grabbable = e => !e.dead && !e.down && !e.clinch && !e.fin && !e.air && (e.exposed > 0 || (e.hurtT > 0 && !e.hurtLight));   // (he shows it: the stumble)
-  function startSlam(fin) {   // ↓ + W in the clinch (fin: F + ↓ on a goon at finisher health, straight from the stance)
+  function startSlam(fin) {   // ↓ + Q in the clinch (fin: ↓ + Q by a beaten goon, straight from the stance)
     const G = ctl.grab; if (!G) return;
     G.fin = !!fin; queued = null; startAttack('gslam');
   }
@@ -3857,7 +3857,7 @@ import * as P9 from './levels/pier9.js';
   const finCam = { t: 0, x: 0, y: 0 };   // the camera's punch-in: time left (real s), the point it closes on
   const finKind = () => { const Wp = WEAPONS[hero.weapon]; return Wp.gun ? 'g' : Wp.id === 'katana' ? 'k' : Wp.id === 'axe' ? 'a' : 'f'; };
   function finFoe() {
-    if (hero.mode !== 'anim' || ctl.air || ctl.carry || ctl.grab || !(hero.act === null || hero.act === 'guard' || hero.act === 'land' || hero.act === 'settle' || hero.act === 'start' || hero.act === 'block' || hero.act === 'squat' || (MOVES[hero.act] && cancelOK()))) return null;
+    if (hero.mode !== 'anim' || ctl.air || ctl.carry || ctl.grab || !(hero.act === null || hero.act === 'guard' || hero.act === 'land' || hero.act === 'settle' || hero.act === 'start' || hero.act === 'squat' || (MOVES[hero.act] && cancelOK()))) return null;
     let best = null;
     for (const e of enemies) {
       if (e.type !== 'goon' || e.elite || !finReady(e) || Math.abs(e.y - ctl.y) > 8) continue;
@@ -3997,7 +3997,7 @@ import * as P9 from './levels/pier9.js';
     tryPerfect();
   }
   function tryDash(kind) {   // kind 'roll': the long roll (↓ at a run); else on the ground the short dodge, in the air the air dash
-    if (dashCd > 0 || hero.mode !== 'anim' || hero.act === 'dash' || hero.act === 'hero' || hero.act === 'rise' || hero.act === 'crouch' || hero.act === 'climb' || hero.act === 'gbreak' || hero.act === 'fin' || hero.act === 'sdive' || hero.act === 'gtoss') return false;
+    if (dashCd > 0 || hero.mode !== 'anim' || hero.act === 'dash' || hero.act === 'hero' || hero.act === 'rise' || hero.act === 'crouch' || hero.act === 'climb' || hero.act === 'fin' || hero.act === 'sdive' || hero.act === 'gtoss') return false;
     if (MOVES[hero.act] && !(ctl.air ? hero.actT > (MOVES[hero.act].win || [0, MOVES[hero.act].dur])[1] && hero.act !== 'aair' : cancelOK())) return false;
     if (ctl.grab) grabFree(20);   // a dodge out of the clinch lets him go
     const d = input.dir;
@@ -4060,7 +4060,7 @@ import * as P9 from './levels/pier9.js';
       if (air) { ctl.flipT = -1; ctl.spin = 0; startAttack(air); }
       return true;
     }
-    if (hero.act === 'crouch' || hero.act === 'hero' || hero.act === 'rise' || hero.act === 'gbreak' || hero.act === 'sdive') return false;
+    if (hero.act === 'crouch' || hero.act === 'hero' || hero.act === 'rise' || hero.act === 'sdive') return false;
     if (a === 'lk' && input.downHeld && !MOVES[hero.act]?.otg) { const f = otgFoe(); if (f) {   // ↓ + W by a goon on the floor: a stomp
       if (MOVES[hero.act]) { if (hero.actT < MOVES[hero.act].dur * 0.3) return false; queued = 'stomp'; return true; }
       ctl.face = Math.sign(f.pts[2].x - ctl.x) || ctl.face; startAttack('stomp'); return true; } }
@@ -4116,7 +4116,7 @@ import * as P9 from './levels/pier9.js';
     }
     if (hero.atkId !== hitAtk) { hitAtk = hero.atkId; atkHit = false; }
     dashCd -= dt; coyT -= dt; rollCd -= dt; if (ctl.duckT > 0) ctl.duckT -= dt;
-    const atk = !!MOVES[hero.act], locked = atk || hero.act === 'gbreak' || hero.act === 'rise' || hero.act === 'roll' || hero.act === 'hero' || hero.act === 'dash' || hero.act === 'climb' || hero.act === 'clinch' || hero.act === 'fin' || hero.act === 'sdive';
+    const atk = !!MOVES[hero.act], locked = atk || hero.act === 'rise' || hero.act === 'roll' || hero.act === 'hero' || hero.act === 'dash' || hero.act === 'climb' || hero.act === 'clinch' || hero.act === 'fin' || hero.act === 'sdive';
     if (hero.act === 'teeter' && (input.dir || ctl.air)) hero.act = null;
     const free = hero.act === null || hero.act === 'guard' || hero.act === 'land' || hero.act === 'settle' || hero.act === 'start' || hero.act === 'pivot' || hero.act === 'teeter';
     let tgt = 0;
@@ -4355,9 +4355,6 @@ import * as P9 from './levels/pier9.js';
       const br = Math.sin(simTime * 3.1);   // fighting stance breathes harder than idle
       ap = mod(GUARD, { ry: GUARD[1] + 0.3 * br, head: GUARD[3] - 0.03 * br, a0s: GUARD[8] + 0.05 * br, a1s: GUARD[10] + 0.05 * br });
       if (hero.actT > 1.4) hero.act = null;
-    } else if (hero.act === 'gbreak') {   // the guard smashed open: arms flung wide, rocked back, then the stance again
-      ap = lerpA(TRN.GBREAK, GUARD, smooth(clamp((hero.actT - 0.3) / 0.25, 0, 1)));
-      if (hero.actT >= 0.55) { hero.act = 'guard'; hero.actT = 0; }
     } else if (hero.act === 'rise') {
       ap = lerpA(RISE, g, smooth(Math.min(1, hero.actT / 0.4)));
       if (hero.actT >= 0.4) hero.act = null;
@@ -9667,7 +9664,7 @@ import * as P9 from './levels/pier9.js';
       : hero.mode === 'getup' || hero.act === 'rise' ? 'getup'
       : ctl.air || hero.act === 'crouch' || hero.act === 'land' ? 'jump'
       : hero.act === 'squat' ? 'squat'
-      : MOVES[hero.act] || hero.act === 'guard' || hero.act === 'gbreak' || hero.act === 'clinch' || hero.act === 'fin' || hero.act === 'sdive' ? 'fight'
+      : MOVES[hero.act] || hero.act === 'guard' || hero.act === 'clinch' || hero.act === 'fin' || hero.act === 'sdive' ? 'fight'
       : ctl.spd > WALK + 8 ? 'run' : ctl.spd > 2 ? 'walk' : 'idle';
     if (shown.state !== state) { shown.state = state; statusEl.dataset.state = state; statusEl.textContent = LABELS[state]; }
     show('speed', speedEl, ((hero.mode === 'anim' ? ctl.spd : headSpeed) / PX_PER_M).toFixed(1));

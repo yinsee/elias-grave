@@ -135,18 +135,12 @@ export function createAudio({ base = '', ctx = new (window.AudioContext || windo
       if (p.power <= 1 && (lightN++ & 1)) return;
       grunt('grunt_goon', p, { vol: p.power > 1 ? 0.8 : 0.55, pitch: p.isBoss ? 0.7 : 1, when: 0.02 });
     };
-    // the parry ring: a 'parry' event and a 'parry' feat for the same parry ring once
-    let parryT = -9;
-    const parryRing = (p) => { const t = ctx.currentTime; if (t - parryT < 0.08) return; parryT = t; sfx.play('parry_ring', { pan: pan(p) }); };
-    const featName = (f) => String(f && typeof f === 'object' ? f.name || f.feat || f.id || '' : f || '').toLowerCase().replace(/[^a-z]/g, '');
     const offs = [
       events.on('hit', (p = {}) => { hitSound(p); goonGrunt(p); }),
       events.on('hurt', (p = {}) => {
         sfx.play(p.heavy ? 'punch_heavy' : 'punch_light', { pan: pan(p), vol: 0.9 });
         grunt('grunt_hero', p, { vol: p.heavy ? 0.9 : 0.6, pitch: p.outcome === 'ko' ? 0.85 : 1, when: 0.02 });
       }),
-      events.on('parry', (p = {}) => parryRing(p)),
-      events.on('feat', (f) => { if (featName(f) === 'parry') parryRing(f && typeof f === 'object' ? f : null); }),
       events.on('ko', () => sfx.play('ko_thud')),
       events.on('kill', (p = {}) => {   // the kill confirm under the last blow, then the body hits the floor
         sfx.play('kill_confirm', { pan: pan(p), vol: p.isBoss ? 1 : 0.7, pitch: p.isBoss ? 0.75 : 1 });

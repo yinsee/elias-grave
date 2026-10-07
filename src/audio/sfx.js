@@ -331,13 +331,6 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
         noise(v, { buf: brown, filter: 'lowpass', f0: 160, at, a: 0.005, d: 0.1, vol: vol * 0.7 });
       }
     },
-    parry_ring(v) {   // steel on steel: a bright strike, a long inharmonic ring, a shimmer
-      noise(v, { filter: 'highpass', f0: 3500, d: 0.02, vol: 0.9, drive: 2 });
-      tone(v, { type: 'triangle', f0: 900, f1: 600, d: 0.05, vol: 0.5, drive: 3 });
-      ring(v, { f: 2350, ratios: [1, 1.34, 1.93, 2.61, 3.47], d: 1.2, vol: 0.3 });
-      ring(v, { f: 1180, ratios: [1, 2.02], at: 0.01, d: 0.8, vol: 0.12 });
-      send(v, 0.45);
-    },
     // the music director: a percussion layer for fights (played on the beat of the track) and a stinger when a fight is won
     perc_kick(v) {
       tone(v, { f0: 120, f1: 42, d: 0.22, vol: 1, drive: 3, sweep: 0.08 });

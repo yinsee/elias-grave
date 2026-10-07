@@ -53,10 +53,10 @@ export const SALT_LOOKS = {   // Saltmen outfits (src/sim/enemies/roster.js LOOK
 // variant -> base role (src/sim/enemies/roster.js ROLE) and look; `R` overrides the role's weapon data. type: the name the kill feed
 // shows; weapon: what he carries (drops). The rest are behaviour rows (docs/levels/01-pier9.md 4); each needs a different answer:
 //   props: lifts a crate, bin or barrel near him and throws it (near = the range he throws from) -> close in, or bat it back
-//   heavy: more overhead chops; low: share of his strings that open with a low stab -> jump it, dodge it or parry it
+//   heavy: more overhead chops; low: share of his strings that open with a low stab -> jump it or dodge it
 //   gaff: the gaff pull (range px, windup s, v = hook px/s, pull px/s, cd s, miss = recovery s after a miss, chop = follow-up dmg) -> dodge through it
 //   clip / reload: shots before a reload, the reload window (s); max = alive at once -> rush him while he reloads
-//   shield: blows from the front ring off (turn = s he needs to turn round) -> get behind him, sweep him, throw something, or parry his bash
+//   shield: blows from the front ring off (turn = s he needs to turn round) -> get behind him, sweep him, or throw something
 export const SALTMEN = {
   deckhand: { role: 'brawler', look: 'oilskin', type: 'Deckhand', weapon: null, hpK: 1.1, props: { near: [40, 110], seek: 70, cd: 6, aim: 0.45 } },
   pipeman: { role: 'pipe', look: 'waders', type: 'Pipeman', weapon: 'pipe', heavy: 0.4 },
@@ -71,13 +71,13 @@ export const SALTMEN = {
 };
 export const SALT_NAMES = ['Olsen', 'Kerr', 'Le Goff', 'Morvan', 'Tully', 'Brack', 'Haugen', 'Quinn', 'Pell', 'Skov', 'Dunne', 'Varg', 'Kell', 'Strand', 'Moan', 'Riou', 'Lind', 'Abbot', 'Hale', 'Kerrigan'];
 // Haak "the Bosun" (the elite of beat 7): his own stats by difficulty and his moves. His poise shrugs off light hits; his guard stops
-// every blow from the front but a combo ender (or a counter after a parry); he grabs a hero who turtles behind a block.
+// every blow from the front but a combo ender (or a counter after a perfect dodge); he grabs a hero who stands still in front of him.
 export const BOSUN = {
   name: 'Haak the Bosun', hp: [150, 175, 200, 230], poise: 18, speed: 26, dmg: 12, heavyDmg: 16, windup: 0.32, cd: [1.0, 1.8],
   combos: [['chop'], ['slash', 'chop'], ['hchop'], ['chop', 'hchop']],
   sweep: { windup: 0.5, r: 32, dmg: 14, rewrap: 1.0, cd: [5, 8] },   // the chain spins overhead, then sweeps all round: jump it, roll it or back off; 1 s to re-wrap it
   kick: { r: 30, v: 230, cd: [6, 9] },                               // a barrel at his feet, kicked rolling at the hero
-  grab: { windup: 0.3, reach: 16, hold: 0.5, dmg: 16, cd: 4 },       // a red tell (no block stops it): dodge it, or hit him in the wind-up
+  grab: { windup: 0.3, reach: 16, hold: 0.5, dmg: 16, cd: 4 },       // a red tell: dodge it, or hit him in the wind-up
   guard: 0.6,                                                         // s his guard stays up after a read
 };
 // waves: trigger x, spawn sources, the roster by difficulty (E, M, H, W); `then` follows when half of this wave is down;
@@ -125,7 +125,7 @@ export const MARCHETTI = {
   combos: [['chop'], ['chop', 'chop'], ['jab', 'chop'], ['chop', 'hchop']],
   // the hook: mash = presses to break free of the pull
   hook: { windup: 0.65, fogWindup: 0.8, range: [120, 150, 160, 175], v: 330, pull: 280, cd: [5, 8], mash: [3, 4, 5, 6] },
-  // the shoulder charge: knock-down, unblockable; a wall or a loose prop stuns him (stun s); on the ice he slides on 0.4 s more
+  // the shoulder charge: knock-down; a wall or a loose prop stuns him (stun s); on the ice he slides on 0.4 s more
   shoulder: { windup: 0.7, v: 190, maxT: 1.1, dmg: 22, stun: 1.6, cd: [6, 9] },
   // phase 2: a tuna off the rail (swing up close, lob from range); the ice smash (a quake, a new patch w px wide for life s, max by difficulty)
   tunaBat: { windup: 0.6, swing: 24, throw: 20, back: 35, swingRec: 0.8, throwRec: 0.5, cd: [5, 8] },

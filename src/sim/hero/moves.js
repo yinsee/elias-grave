@@ -167,26 +167,20 @@ TRN.DUCK = mod(IDLE, { rx: -2.5, ry: 4.2, lean: 0.55, head: 1.0, f0x: -6, f1x: 5
 TRN.BACK = mod(GUARD, { rx: -2.2, ry: 15.2, lean: -0.22, head: 0.18, f0x: -8, f1x: 1, a0s: 0.9, a0e: 2.0, a1s: 1.3, a1e: 1.6 });
 TRN.ADASH = mod(AIR, { lean: 0.5, head: -0.35, f0x: -8, f0y: 9, f1x: -3, f1y: 8, a0s: -1.5, a0e: 0.3, a1s: -1.1, a1e: 0.5 });
 
-// short dodge (Space): forward = a slip in under the blow; back = TRN.BACK. Block: forearms up at the face; parry: the front arm knocks the blow aside; gbreak: guard smashed open
+// short dodge (Space): forward = a slip in under the blow; back = TRN.BACK
 TRN.SLIP = mod(GUARD, { rx: 1.5, ry: 13.8, lean: 0.55, head: -0.3, f0x: -9, f1x: 5, a0s: 1.1, a0e: 2.3, a1s: 1.3, a1e: 2.0 });
-TRN.BLOCK = mod(GUARD, { rx: -0.8, ry: 15.0, lean: 0.12, head: 0.25, f0x: -7, f1x: 4.5, a0s: 1.35, a0e: 2.1, a1s: 1.6, a1e: 1.85 });
-TRN.PARRY = mod(GUARD, { rx: -1, ry: 15.2, lean: -0.05, head: 0.15, a0s: 1.2, a0e: 2.3, a1s: 2.3, a1e: 0.9 });
-TRN.GBREAK = mod(GUARD, { rx: -2.5, ry: 14.6, lean: -0.4, head: 0.4, f0x: -9, f1x: 2, a0s: 0.2, a0e: 0.8, a1s: 2.2, a1e: 0.4 });
 
 // dodge: v/dur = the long roll (↓ at a run), air/airDur = air dash; inv = time attacks miss
 export const DASH = { v: 300, dur: 0.66, inv: 0.26, cd: 0.4, back: 160, backDur: 0.26, air: 155, airDur: 0.2 };
 // combat tuning (shared by both views: all of it is sim)
 // heavyT: a held Q/W turns its light into the heavy; throwT: a hold that throws. step: the short dodge (d px in t s, inv = i-frames, atk = attack-cancel from).
 // pd: perfect dodge = a dodge started within win s of a hit's contact: slow-mo (x slow for slowT real s), the attacker exposed (counter window).
-// parry: a block tap within win s before contact (lock: no parry again for a press this soon after the last); the attacker reels stag s.
-// block: chip = share of a light hit that gets through. wake: i-frames after a get-up; floor: most time on the floor; tech: window (s on the floor) for a tech-roll.
+// wake: i-frames after a get-up; floor: most time on the floor; tech: window (s on the floor) for a tech-roll.
 // str: the hero's string (hits within gap s): rep = per repeat of the same move, lone = a heavy that opens, ender = a heavy after 2+ hits, ctr = a counter-hit
 export const DEF = {
   heavyT: 0.18, throwT: 0.3,
   step: { d: 36, t: 0.25, inv: 0.14, atk: 0.15 },
   pd: { win: 0.1, slow: 0.3, slowT: 0.5, expose: 0.8, margin: 20, inv: 0.3, invMax: 0.5 },   // (a perfect dodge: from the start of a wind-up in reach + margin px; i-frames cover the blow, at most invMax s)
-  parry: { win: 0.125, lock: 0.3, stag: 0.6, stop: 0.12 },
-  block: { chip: 0.2, inv: 0.12, push: 70 },
   wake: 0.5, floor: 1.2, tech: [0.05, 0.9],
   str: { gap: 0.9, rep: 0.65, lone: 0.6, ender: 1.2, ctr: 1.25 },
 };
@@ -223,7 +217,7 @@ Object.assign(MOVES, {
     K(0.18, { ry: 12.2, lean: 0.8, rx: 1.2, head: 0.35, f0x: -7, f1x: 6, a0s: 2.5, a0e: 0.9, a1s: 2.7, a1e: 0.7 }),   // loaded: bent forward, him on the shoulder
     K(0.3, { ry: 16.2, lean: -0.5, rx: -1.4, head: -0.55, f0x: -5, f1x: 8, a0s: 3.1, a0e: 0.3, a1s: 3.2, a1e: 0.2 }, GUARD, 'in'),   // over the top: up and back
     K(0.45, {}, GUARD, 'out')] },
-  // the ground slam (in the clinch, ↓ + W; or F + ↓ on a goon at finisher health): dip under him, press him overhead, drive him down into the floor
+  // the ground slam (in the clinch, ↓ + Q; or ↓ + Q on a beaten goon at finisher health): dip under him, press him overhead, drive him down into the floor
   // (win: the impact, SLAM.down[1]; it sets the chain point, so a stomp can follow)
   gslam: { dur: 0.82, win: [0.46, 0.5], limb: 6, power: 0, up: 0, clinch: true, keys: [
     K(0, {}, TRN.CLINCH), K(0.1, { ry: 12.8, lean: 0.3, rx: 0.6, head: 0.25, f0x: -7, f1x: 5, a0s: 1.0, a0e: 0.6, a1s: 1.1, a1e: 0.5 }, TRN.CLINCH),   // under him
@@ -272,9 +266,9 @@ export const DIVE = { v: 190, t: 0.55, h: 9, inv: 0.5, down: 0.3 };
 // fwd = px in front where he lands; dmg (no finisher); the shockwave floors the goons within r px (dy px up or down)
 export const SLAM = { up: [0.1, 0.3], down: [0.38, 0.46], lift: 38, fwd: 15, dmg: 22, r: 40, dy: 10, wave: 4 };   // wave: dmg to each goon the shockwave floors
 // focus (#6), the Sandman's meter: 0..max; Sandman time starts by itself at a full meter with 2+ goons in the fight (or a perfect dodge at a full
-// meter): dur s of world at slow x speed (the hero at full speed), drained as it runs (min: unused since F went). gain: per varied hit (rep: a repeat), ender, counter, juggle hit, knee, clinch throw,
+// meter): dur s of world at slow x speed (the hero at full speed), drained as it runs. gain: per varied hit (rep: a repeat), ender, counter, juggle hit, knee, clinch throw,
 // perfect dodge, kill, a bullet that lands, a stomp; none while it runs. fin: a finisher on a goon at <= hp of his max; stop = hit-stop (4 frames);
 // cam = the punch-in time (s). last/boss: the auto slow-motion (real s) on the last kill of a wave and on the boss kill
-export const FOCUS = { max: 100, min: 25, dur: 3, slow: 0.3, last: 0.6, boss: 1.2,
-  gain: { hit: 4, rep: 1, ender: 8, ctr: 10, jug: 5, knee: 3, gthrow: 8, parry: 0, pdodge: 20, kill: 4, shot: 0.6, otg: 3, slam: 10 } };
+export const FOCUS = { max: 100, dur: 3, slow: 0.3, last: 0.6, boss: 1.2,
+  gain: { hit: 4, rep: 1, ender: 8, ctr: 10, jug: 5, knee: 3, gthrow: 8, pdodge: 20, kill: 4, shot: 0.6, otg: 3, slam: 10 } };
 export const FIN = { hp: 0.3, reach: 34, stop: 4 / 60, cam: 0.7, open: 0.6 };   // open: s a goon at finisher health stays finisher-ready after a landed hit

@@ -7,8 +7,8 @@
 //   style.reset();              // a new run
 //   style.maxRank               // the best rank this run: -1 (none) .. 4 (S)
 //
-// It listens to 'hit', 'kill', 'hurt', 'feat' and 'parry'. A feat may be a string or { name }; the defence feats
-// (parry, perfect dodge, counter, tech-roll) score by name, so they count as soon as the sim emits them.
+// It listens to 'hit', 'kill', 'hurt' and 'feat'. A feat may be a string or { name }; the defence feats
+// (perfect dodge, counter, tech-roll) score by name, so they count as soon as the sim emits them.
 // It only reads event payloads and writes its own DOM: it never changes the game.
 
 export const RANKS = [
@@ -25,17 +25,17 @@ const DECAY = [5, 8, 13, 20, 28, 38];                   // points per second, by
 const GRACE = 2.5;                                       // s after a score before the meter drains
 // feats that score (a lesson key or a defence move), by a normalised name (lower case, letters only)
 const FEATS = {
-  parry: 70, perfectdodge: 70, pdodge: 70, perfect: 70, counter: 60, counterhit: 60, techroll: 30, tech: 30,
+  perfectdodge: 70, pdodge: 70, perfect: 70, counter: 60, counterhit: 60, techroll: 30, tech: 30,
   throwhit: 30, tosshit: 30, pockethit: 30, bash: 25, bounce: 6, bouncethree: 25, split: 10,
   // the Saltmen and the Bosun: each answer to a variant's trick
-  lowblock: 35, lowhop: 30, gaffslip: 50, reloadpunish: 40, shieldbreak: 50, flank: 25, guardbreak: 50,
+  lowhop: 30, gaffslip: 50, reloadpunish: 40, shieldbreak: 50, flank: 25, guardbreak: 50,
   propreturn: 45, propdrop: 25, propdodge: 25, chainhop: 40, grabslip: 45, cover: 30,
   // the bosses: each answer to a set piece (a lobbed tuna hit back, torn free of the hook, the freezer fog cleared)
   tunaback: 50, hookfree: 40, fogclear: 35,
   // combo depth and focus: enders, juggles, the clinch, the finishers (juggle, otg and bodyhit repeat: the DMC rule)
   finisher: 90, ender: 35, juggle: 25, grab: 15, gthrow: 40, otg: 25, sdive: 40, bodyhit: 30, slam: 60, gkick: 40, elbow: 20, knee: 15,
 };
-const RULED = new Set(['parry', 'counter', 'perfectdodge', 'juggle', 'otg', 'bodyhit', 'ender', 'elbow', 'knee']);   // these score less each time they repeat
+const RULED = new Set(['counter', 'perfectdodge', 'juggle', 'otg', 'bodyhit', 'ender', 'elbow', 'knee']);   // these score less each time they repeat
 const featName = (f) => String(f && typeof f === 'object' ? f.name || f.feat || f.id || '' : f || '').toLowerCase().replace(/3/g, 'three').replace(/[^a-z]/g, '');
 
 export const rankOf = (pts) => { let r = -1; for (let i = 0; i < RANKS.length; i++) if (pts >= RANKS[i].at) r = i; return r; };
@@ -47,7 +47,7 @@ export function createStyleMeter(bus, parent) {
   parent.appendChild(el);
   const letterEl = el.querySelector('.style-l'), nameEl = el.querySelector('.style-n'), fillEl = el.querySelector('.style-bar i');
 
-  let pts = 0, rank = -1, maxRank = -1, idle = 0, active = false, tickN = 0, parryTick = -1, shown = '', lastKillW = null;
+  let pts = 0, rank = -1, maxRank = -1, idle = 0, active = false, shown = '', lastKillW = null;
   const recent = [];
 
   function add(v) {
@@ -61,7 +61,6 @@ export function createStyleMeter(bus, parent) {
     return base * REPEAT[Math.min(n, REPEAT.length - 1)] + (n ? 0 : 5);
   }
   function feat(name) {
-    if (name === 'parry') { if (parryTick === tickN) return; parryTick = tickN; }   // a 'parry' event and a 'parry' feat: one parry
     const v = FEATS[name]; if (v) add(RULED.has(name) ? moveScore(name, v) : v);
   }
 
@@ -85,7 +84,6 @@ export function createStyleMeter(bus, parent) {
     el.classList.remove('hurt'); void el.offsetWidth; el.classList.add('hurt');
   });
   bus.on('feat', (f) => { if (active) feat(featName(f)); });
-  bus.on('parry', () => { if (active) feat('parry'); });
 
   function draw() {
     const r = rank, key = r < 0 ? '' : RANKS[r].id;
@@ -107,7 +105,6 @@ export function createStyleMeter(bus, parent) {
     get maxRank() { return maxRank; },
     get maxRankId() { return maxRank < 0 ? '-' : RANKS[maxRank].id; },
     tick(dt, on) {
-      tickN++;
       if (!on) { if (active || pts) { pts = 0; rank = -1; recent.length = 0; } active = false; draw(); return; }
       active = true;
       if ((idle += dt) > GRACE) pts = Math.max(0, pts - DECAY[rank + 1] * dt);
