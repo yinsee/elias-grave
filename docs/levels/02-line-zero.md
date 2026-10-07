@@ -720,3 +720,52 @@ Rule from the project memory: all of this is shared sim and painter code, so 2D 
 - `voice:tinder_intro`, `voice:tinder_doused`, `voice:tinder_defeat`.
 - `voice:rat_lightsout`, `voice:rat_sandman`, `voice:rat_train`, `voice:rat_freight`, `voice:rat_2310` (each with 2 to 3 takes).
 - `voice:hale_metro_outro`, `voice:elias_*` (short lines: "You lit it.", "Who paid?", "I know.", "Loud. Like you.").
+
+---
+
+## 10. As built (first pass, 2026-10-07)
+
+Code: `src/levels/metro/` (`data.js` map and numbers, `paint.js` art, `run.js` the run, `three.js` the 3D blocks), `src/bosses/tinder.js`, `src/bosses/switch.js`. The game calls the run's hooks (`LVH` in `src/legacy.js`; `isLv('metro')`).
+
+### 10.1 The folded map (world 2800 x 320, like Pier 9)
+
+| Section | x | What is there |
+|---|---|---|
+| `stairs` | 0-300 | Mezzanine (y 170, x 0-120, the start), a stair flight of 27 treads (x 120-228), grates at x 56, 262, the poster board stash N1 (x 288) |
+| `platform` | 300-1000 | Booth (roof y 236), green work lamp (x 420), breaker (x 560), relay hut (x 598-634, roof y 228), catwalk (y 170, x 640-862), flooded floor, oil slick (x 780-990), brazier (x 762), lantern (x 912) |
+| `tunnel` | 1000-1640 | Niches at x 1120, 1222 (boarded, N3: shotgun), 1320; cable catwalk (y 196, x 1048-1182); drains x 1270, 1372; the Choir toolbox N4 (x 1402: machine gun); track 2 and the far ledge (y 240, x 1462-1622) |
+| `yard` | 1640-2414 | Camp car A (roof y 204, x 1684-1904, job board, Bell's door bell, fire axe), car B (roof y 210), Tinder's arena 2104-2410 (fuel pool 2200-2290, waterfall x 2338), blast door x 2414 |
+| `junction` | 2436-2800 | The boss arena (the game's "club"): balcony y 190 x 2450-2532 (lever A x 2476), cabinets A (x 2538-2562) and B (x 2778-2798), gantry y 182 x 2642-2772, niches x 2600 and 2690 (the back lane), third rail 2610-2660 and 2712-2750, wet zone 2596-2764, lever B x 2770, portals x 2440 and 2796 |
+
+Checkpoints: the start, the tunnel (x 1004), w6 (the tunnel fight), the yard (x 1660), the junction (the boss door).
+
+### 10.2 The new verbs, on the existing keys
+
+| Verb | Keys | Notes |
+|---|---|---|
+| Step into a refuge niche | ↑ by a niche (on the floor) | ← or → (or an attack) steps out. In the tunnel a niche is safe from track 1. In the junction the niches are the back lane: safe from track 1, hit by track 2 |
+| Dive through a freight's gap | ↑ + Space (or Space in a jump) by a gap of the train on track 2 | A 60 px magnet; slow motion; with a gun he fires at up to 4 Rats on the far ledge; he lands on the far ledge |
+| Pull lever B (junction) | Q or W by it | The next train runs on track 1; on her handcar Switch bails and the car is smashed |
+| Hit the breaker | Q or W by it | After the lights-out wave; the tubes come back |
+| Light the slick | Hit the brazier (a blow, a shot or a thrown thing knocks it over); or hit the lantern with a bottle, a thrown weapon or a shot; a Firebug's bottle or a flare lights it too | |
+| Break a stash | Hit the board or the box (a shot works too) | Nero barks at it first |
+| "Nero, hold!" | (automatic) | When the hero has a goon in the clinch, Nero pins another one within 120 px for 3 s; cooldown 15/20/20/25 s. He pins Switch once a phase for 1.2 s when she is getting her breath back near him |
+
+No new key, no sign over anyone. Train warnings read from the world: Nero stops and whines (5 s), the rail hum and the portal's glow (3.5 s), the horn (2.5 s), the headlight (1.2 s); in the junction the signal head over the portals (amber = track 1, cyan = track 2) and a stripe on the track's floor.
+
+### 10.3 Asset names (stable: the panel and portrait generator uses these)
+
+- Panels (`assets/art/panels/metro/<id>.png`, 1024 x 576): `metro_intro_01`, `metro_intro_02`, `metro_intro_03`, `metro_intro_04`, `metro_outro_01`, `metro_outro_02`, `metro_outro_03`, `metro_outro_04`, `metro_outro_05` (script ids `panel:metro_intro_01` ...).
+- Portraits (`assets/art/portraits/<id>.png`, 512 x 512): `switch_manic`, `switch_proud`, `switch_wild`, `switch_beaten`, `tinder_grin` (and the existing `elias_cold`).
+- Cutscene scripts: `assets/cutscenes/metro_intro.json`, `tinder_intro.json`, `switch_intro.json`, `metro_outro.json`.
+- Voice ids: see `docs/audio.md` section 11.
+
+### 10.4 Not done in this pass
+
+- Trains are hazards only: no riding on car roofs; the yard's rail trolley is not there (its props are plain crates and barrels).
+- The camera does not lean toward a coming train; the music does not duck under a pass; the diegetic radio is not there.
+- Darkness: low ambient, the coat lamp as a pool ahead of him, eyes and cigarette embers on goons far from light; no true cone, no silhouettes.
+- The hidden ladder (N2) and the pushable step crates are not there (the relay hut is the step to the catwalk).
+- The Crawler's rise has no "only low attacks hit it" rule. Ratcatchers do not leave throwing knives. Story items (the door bell, the chip) are a toast and a line on the results card only.
+- Switch: no fake-out cue beyond the clunk, the flip and Nero's double bark; the gantry drop is the shared jump slam; she dodges trains by leaping to the nearest high place.
+- 3D: the trains and the handcar are models; everything else derives from the 2D painters.
