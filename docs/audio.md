@@ -99,9 +99,13 @@ Estimated tempo (librosa): title 118 / 136-144 bpm, docks explore 161 / 99 bpm, 
 
 ## 5. Sound effects
 
-20 procedural sounds, built from distorted low sine thumps, filtered white and brown noise, inharmonic metal partials and a shared room reverb, through a compressor. Each play has a small random detune (±3 %) and level change, so repeats do not sound identical. `pitch` scales every frequency and divides every duration (use 0.6-0.7 for slow motion).
+41 procedural sounds (`src/audio/sfx.js`), built from distorted low sine thumps, filtered white and brown noise, inharmonic metal partials and a shared room reverb, through a compressor. Each play has a small random detune (±3 %) and level change, so repeats do not sound identical. `pitch` scales every frequency and divides every duration (use 0.6-0.7 for slow motion).
 
-`punch_light punch_heavy kick_light kick_heavy blade_slash blade_hit shotgun (with pump) mg_burst ricochet glass_small glass_large crate_break body_fall footstep_wet dodge_whoosh pickup bandage ko_thud ground_slam ui_blip ui_confirm`
+- Hits: `punch_light punch_heavy kick_light kick_heavy blade_slash blade_hit bullet_flesh block` (a goon's guard takes it) `guard_catch kill_confirm`
+- Guns and the world: `shotgun` (with pump) `pistol mg_burst ricochet glass_small glass_large crate_break body_fall footstep_wet ground_slam ko_thud`
+- The bosses: `hook_clank boss_roar tell_charge tell_jslam chain_spin tuna_creak`
+- The hero and the UI: `dodge_whoosh pickup bandage ui_blip ui_confirm`
+- The feedback layer (section 10): `grunt_hero grunt_goon grunt_die heartbeat perc_kick perc_tom perc_snare perc_hat stinger_clear`
 
 The test bench "Analyse all" button renders each sound in an OfflineAudioContext and lists length, peak and RMS: no sound is silent or clips (peaks between -1 and -17 dBFS; footsteps are the quietest by design).
 
@@ -195,9 +199,8 @@ The director listened to the music and the voices and approved them: the manifes
 | Music director | `src/audio/director.js` | Two states on the level track. **explore**: a 1.7 kHz low-pass, normal level. **combat** (a goon with aggro within 320 px): the filter opens, the level goes up 1.45x, and a percussion layer (`perc_kick`, `perc_snare`, `perc_tom`, `perc_hat`) plays on the beat of the track. The fight ends 2.5 s after the last goon leaves him; when goons died in it and none stand near, `stinger_clear` plays and the track steps back under it. Boss fights, the title, cutscenes and endings: the layer is neutral (the boss music plays as it is). |
 | Beat clock | `findBeat(buf)` in `director.js` | An onset envelope of the decoded track (10 ms frames, full band + bass band), its autocorrelation over 60-180 bpm (weighted to 120) for the period, then the phase with the most onset. `docks_explore` reads as 130 bpm. The drums are scheduled 0.25 s ahead on that grid, per loop pass; none in slow motion. |
 | Grunts | `audio.js` `bind()` | `grunt_hero` on every `hurt`; `grunt_goon` on a clean heavy blow and on every other clean light one (one grunt per 0.16 s); `grunt_die` under each kill (lower for a boss). |
-| Parry | `audio.js` `bind()` | `parry_ring` on a `parry` event or a `feat` named parry (one ring for both). |
 | Heartbeat | `src/feedback/danger.js` | Below 25 % HP: `heartbeat` at 63-100 bpm and a red vignette (DOM, both views) that beats with it. |
 
-New sounds in `sfx.js`: `grunt_hero grunt_goon grunt_die heartbeat parry_ring perc_kick perc_tom perc_snare perc_hat stinger_clear`.
+New sounds in `sfx.js`: `grunt_hero grunt_goon grunt_die heartbeat perc_kick perc_tom perc_snare perc_hat stinger_clear`.
 The drums and the stinger go into the music chain (under the voice duck), so the volume setting and the voice ducking cover them.
 `gameAudio.runtime` gives the director the audio.js runtime; `music.now` (buffer, start time, loop) and `music.layer` (`lp`, `gain`, `perc`) are its hooks.

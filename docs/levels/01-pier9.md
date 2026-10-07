@@ -253,24 +253,24 @@ y280 __|door______________________________________________________|door_|__ice a
 ### 5.2 Stats
 
 ```js
-stats: { hp: 1050, s: 1.3, m: 7, speed: 24, reach: 26, dmg: 18, heavyDmg: 30, poise: 34,
+stats: { hp: [800, 1050, 1250, 1450], s: 1.3, m: 7, speed: 24, reach: 25, dmg: 12, heavyDmg: 22, poise: 34,
          windup: 0.4, cd: [0.8, 1.5] }
 ```
 
-HP is the Medium value; see scaling in 5.8.
+The code is `P9.MARCHETTI` in `src/levels/pier9.js` (HP by difficulty, see 5.8). Every tell is `t / A^0.25` (at least 0.18 s); his rest between moves is `cd / sqrt(A)`.
 
 ### 5.3 Moves (primitives)
 
 | Move id | Primitive | Wind-up | Telegraph (data) | Effect | Punish window |
 |---|---|---|---|---|---|
-| `cleaver` | `string({ combos: [['chop'], ['chop','chop'], ['jab','chop'], ['chop','hchop']] })` | 0.4 s (`hchop` 0.55) | `{ t: 0.4, pose: 'cleaverUp', cue: 'cleaver_scrape' }` | 18 / heavy 30, knock-down on `hchop` | 0.6 s after `hchop` (cleaver sticks in the floor; he wrenches it free) |
-| `hook` | `grab({ range: 150, proj: 'chainHook', pull: 'toBoss', follow: 'hchop' })` | 0.65 s | `{ t: 0.65, pose: 'hookSpin', mark: 'chainLine', floor: 'line to hero', cue: 'chain_whirr' }` | Hook flies in a straight line at hip height. On hit: pull the hero to 24 px, then a free `hchop` (30). Escape the follow-up: mash attack or dodge input in the 0.3 s after the pull lands (stagger him 0.4 s). | Missed hook: 1.2 s while he reels the chain in. The chain lies on the floor; hitting the chain during the reel yanks him 1 lane-step forward (stagger 0.5 s). |
-| `shoulder` | `charge({ windup: 0.7, v: 190, maxT: 1.1, wallStun: 1.6 })` | 0.7 s | `{ t: 0.7, pose: 'bullLow', light: 'neckGlint', cue: 'boots_stamp' }` | 22 dmg, knock-down. On ice he cannot stop: `maxT` +0.4 s and he slides past. | 1.6 s if he hits a wall, the podium or a barrel; 1.0 s if he hits a tuna. |
-| `tunaBat` (P2+) | `throwObject({ source: 'conveyor', kind: 'tuna', mode: 'swing' or 'throw' })` | 0.6 s | `{ t: 0.6, pose: 'reachUp', mark: 'tunaFlash', cue: 'hook_unclip' }` | Rips the nearest tuna off its hook. `swing`: a wide arc, 2 lanes, 24 dmg, knock-down. `throw`: lobbed arc, 20 dmg. The tuna stays on the floor as a heavy object (`tuna`, section 8) the hero can lift and throw back (26 dmg, stagger him). | 0.8 s after a swing; 0.5 s after a throw. |
-| `iceSmash` (P2+) | `groundSlam({ target: 'iceBin' or 'floor', quake: { v: 120, life: 0.8, dmg: 10 }, zone: 'ice', w: 80, life: 12 })` | 0.55 s | `{ t: 0.55, pose: 'cleaverHigh', floor: 'frostRing', cue: 'ice_crack' }` | A short quake (jump it) and a new ice patch, 80 px, 12 s. Max 2 extra patches at once. | 0.7 s |
+| `cleaver` | `string({ combos: [['chop'], ['chop','chop'], ['jab','chop'], ['chop','hchop']] })` | 0.4 s (`hchop` 0.55) | `{ t: 0.4, pose: 'cleaverUp', cue: 'cleaver_scrape' }` | 12 / heavy 22, knock-down on `hchop` | 0.8 s after `hchop` (cleaver sticks in the floor; he wrenches it free) |
+| `hook` | `grab({ range: 150, proj: 'chainHook', pull: 'toBoss', follow: 'hchop' })` | 0.65 s | `{ t: 0.65, pose: 'hookSpin', mark: 'chainLine', floor: 'line to hero', cue: 'chain_whirr' }` | Hook flies (330 px/s, cd 5-8 s) in a straight line at hip height. On hit: pull the hero in at 280 px/s to 24 px, then a free `hchop` (22). Escape: mash Q, W or Space during the pull (3 / 4 / 5 / 6 presses by difficulty); the hook tears loose and he reels 0.4 s. | Missed hook: 1.2 s while he reels the chain in (1.6 s if the hook clanks on a prop). The chain lies on the floor; a blow on it yanks him 12 px forward: 0.5 s stagger, 1.0 s open and off balance. |
+| `shoulder` | `charge({ windup: 0.7, v: 190, maxT: 1.1, wallStun: 1.6 })` | 0.7 s | `{ t: 0.7, pose: 'bullLow', light: 'neckGlint', cue: 'boots_stamp' }` | 22 dmg, knock-down (cd 6-9 s). On ice he cannot stop: `maxT` +0.4 s and he slides past. | 1.6 s stun if he hits a wall, a barrel or a crate; 0.9 s if the charge just runs out. |
+| `tunaBat` (P2+) | `throwObject({ source: 'conveyor', kind: 'tuna', mode: 'swing' or 'throw' })` | 0.6 s | `{ t: 0.6, pose: 'reachUp', mark: 'tunaFlash', cue: 'hook_unclip' }` | Rips the nearest tuna off its hook. `swing`: a wide arc, 2 lanes, 24 dmg, knock-down. `throw`: lobbed arc, 20 dmg. The tuna stays on the floor as a heavy object (`tuna`, section 8) the hero can lift and throw back (35 dmg, 0.7 s stagger). Cd 5-8 s. | 0.8 s after a swing; 0.5 s after a throw. |
+| `iceSmash` (P2+) | `groundSlam({ target: 'iceBin' or 'floor', quake: { v: 120, life: 0.8, dmg: 10 }, zone: 'ice', w: 80, life: 12 })` | 0.55 s | `{ t: 0.55, pose: 'cleaverHigh', floor: 'frostRing', cue: 'ice_crack' }` | A short quake, 10 dmg (jump it; the cleaver itself 18), and a new ice patch, 40 px, 12 s. Max 1 / 2 / 2 / 3 extra patches by difficulty. Cd 8-12 s. | 0.7 s |
 | `fogStalk` (P3) | `hazard('freezerFog')` + `charge` + `grab` from fog | see 5.5 | breath puff + necklace glint + boot crunch (panned) | He moves hidden in fog and attacks from it. | see 5.5 |
 | `roar` | `roar({ t: 1.2 })` | — | `{ t: 1.2, pose: 'roar', light: 'flicker', cue: 'marchetti_roar' }` | Phase shift; pushes the hero back 30 px (no damage). | Hero gets i-frames; no punish. |
-| `lever` | scripted walk to 3420 or 3430 | 1.5 s walk + 0.6 s pull | `{ t: 0.6, pose: 'leverPull', light: 'redLamp', cue: 'klaxon' }` | Changes the conveyor speed or floods fog. | His back is turned for the whole walk and pull: the biggest window in the fight (free combo, the pull is cancelled by a heavy hit or thrown object on Easy/Medium only). |
+| `lever` | scripted walk to the lever | a walk at 70 px/s + 0.8 s pull | `{ t: 0.6, pose: 'leverPull', light: 'redLamp', cue: 'klaxon' }` | Changes the conveyor speed or floods fog. | His back is turned for the whole walk and pull: the biggest window in the fight (free combo, the pull is cancelled by a heavy hit or thrown object on Easy/Medium only). |
 
 ### 5.4 The arena gimmick: the conveyor, the ice, the freezer fog
 
@@ -324,20 +324,22 @@ phases: [
 
 - **Phase 1, "The Scale" (100% to 65%).** He tests the hero with cleaver strings and the hook. The conveyor runs slowly. Lesson: the hook is the big threat; its miss is the big opening; tuna hit everyone.
 - **Phase 2, "Market Close" (65% to 35%).** Roar, then the speed lever (first back-turned punish). Fast conveyor with swaying tuna. He rips tuna off and swings them; he smashes the ice bin and the floor for new ice. Crew arrives. Lesson: turn his tuna and his ice against him.
-- **Phase 3, "Cold Storage" (35% to 0%).** Roar, then the freezer lever. The fog fills; he hunts from it. Crew stops (except Wicked). Lesson: read tells, clear the fog with vents and the lever, use the axes.
+- **Phase 3, "Cold Storage" (35% to 0%).** Roar, then the freezer lever. The fog fills (6 s); he hunts from it. Crew stops (Wicked: two filleters come in with the fog). Lesson: read tells, clear the fog with vents and the lever, use the axes.
 
 ### 5.6 Crew rules
 
 ```js
-crew: { roles: ['gaffer', 'filleter', 'deckhand', 'tallyman'], doors: [2980, 3400],
-        ph1: { delay: 20, every: 7, alive: [1, 1, 2, 2], roles: ['deckhand', 'filleter'] },
-        ph2: { every: 5, alive: [2, 2, 3, 4], roles: ['gaffer', 'filleter', 'deckhand'], perch: { tallyman: [0, 0, 1, 1] } },
-        ph3: { every: 0, onEnter: { wicked: ['filleter', 'filleter'] } },
-        max: [4, 6, 9, 12] }
+crew: { ph2: { every: 6 }, ph3Wicked: ['filleter', 'filleter'],
+        ph2Roles: ['gaffer', 'filleter', 'deckhand', 'pipeman'] }
+// with DIFFS[].crew (src/core/difficulty.js), the street boss's numbers: { n: 6, alive: 2 }, { n: 8, alive: 2 }, { n: 10, alive: 3 }, { n: 12, alive: 3 }
 ```
 
+- Phase 1: no crew.
+- Phase 2: one crewman through the hall doors every 6 s (the roles in turn) while fewer than `alive` stand, `n` in all.
+- Phase 3: none; on Wicked two filleters come in as the fog does (still inside `n`).
+
 - Crew uses the same tuna and ice rules: the conveyor hits them, and they slip.
-- Crew never attacks during a Marchetti `hook` pull (they hold for the chop: no stun-lock).
+- Crew never attacks during a Marchetti `hook` pull (they hold off: no stun-lock).
 - When Marchetti uses `lever`, alive crew rush the hero to cover his back (on Hard/Wicked only).
 - `secondWind: { afterKOs: 2, clearCrew: true }` (the existing rule): after the hero is knocked out twice, the crew clears and he gets a full bandage.
 
@@ -345,32 +347,34 @@ crew: { roles: ['gaffer', 'filleter', 'deckhand', 'tallyman'], doors: [2980, 340
 
 | Event | Window |
 |---|---|
-| Missed `hook` (he reels the chain) | 1.2 s, +0.5 s stagger if the hero hits the chain |
-| `shoulder` into wall / podium / barrel | 1.6 s stun |
-| `shoulder` into a tuna | 1.0 s + 40 dmg |
-| Swinging tuna hits him | 1.0 s stagger + 40 dmg |
-| `hchop` stuck in the floor | 0.6 s |
-| `tunaBat` swing recovery | 0.8 s |
-| `lever` walk and pull (phase entries, P3 fog re-pull) | about 2 s, back turned |
-| Thrown tuna hits him | 0.7 s stagger + 26 dmg |
+| Missed `hook` (he reels the chain) | 1.2 s (1.6 s after a clank); a blow on the chain: 1.0 s open, off balance |
+| Torn free of the `hook` (mash) | 0.4 s |
+| `shoulder` into a wall, a barrel or a crate | 1.6 s stun |
+| `shoulder` that runs out | 0.9 s |
+| Swinging tuna hits him | 1.0 s stun + 40 dmg |
+| `hchop` stuck in the floor | 0.8 s |
+| `tunaBat` recovery | 0.8 s after a swing, 0.5 s after a throw |
+| `iceSmash` recovery | 0.7 s |
+| `lever` walk and pull (phase entries, P3 fog re-pull 4 s after the hero clears it) | the walk + 0.8 s, back turned |
+| Thrown tuna hits him | 0.7 s stagger + 35 dmg |
 | He falls on ice from a heavy hit (P2+, 25% chance) | 1.5 s down; axe plunge allowed |
 
 ### 5.8 Difficulty scaling
 
-Telegraph time scales by `t / sqrt(A)` (framework rule). Additional per-difficulty values:
+Telegraph time scales by `t / A^0.25` (at least 0.18 s), his rest by `1 / sqrt(A)`. Additional per-difficulty values:
 
 | Value | Easy | Medium | Hard | Wicked |
 |---|---|---|---|---|
 | HP | 800 | 1050 | 1250 | 1450 |
 | Hook range | 120 | 150 | 160 | 175 |
-| Hook pull follow-up escape window | 0.5 s | 0.3 s | 0.2 s | 0.15 s |
+| Hook pull: presses to tear free | 3 | 4 | 5 | 6 |
 | Conveyor speed P1 / P2 | 30 / 55 | 40 / 70 | 45 / 80 | 50 / 90 px/s |
 | Tuna hazard dmg (hero) | 8 | 14 | 18 | 24 |
 | Extra ice patches max | 1 | 2 | 2 | 3 |
 | Fog density (dense zone) | 0.6 | 0.85 | 0.9 | 0.95 |
 | Clear bubble radius | 90 | 60 | 50 | 40 |
 | Lever pull cancellable by a hit | Yes | Yes | No | No |
-| Crew alive (P1/P2) | 1/2 | 1/2 | 2/3 | 2/4 |
+| Crew (P2: alive at once / in all) | 2 / 6 | 2 / 8 | 3 / 10 | 3 / 12 |
 
 ### 5.9 Defeat sequence
 
