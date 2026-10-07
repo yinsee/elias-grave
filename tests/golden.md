@@ -4,7 +4,30 @@ Run with a static server (`tools/serve.py`, port 8765, no browser cache; or `pyt
 Two runs of the same URL must give the same hashes. A refactor step that keeps both hashes changed nothing.
 A step that changes behaviour on purpose records new hashes here, with the reason.
 
-## Current (main db738f4: + combo depth and focus, the slam, the Q/W controls, reinforcements, 2026-10-07)
+## Current (main bf7d930: + the blood fixes, the boss set pieces, the early perfect dodge, 2026-10-07)
+
+| URL | state | buf | l3 | note |
+|---|---|---|---|---|
+| `index.html?autotest=demo&frames=1200` | `c4892f44` | `e1b927a6` | | 2D (attract demo, seed 1, 960x540 view) |
+| `index.html?autotest=boss&frames=1800` | `d21e863f` | `fb321a08` | | 2D (skipToBoss + demo, seed 1) |
+| `index.html?autotest=demo&frames=1200&view3d` | `c4892f44` | `bd8fc5f8` | `1438e83d` | 3D view: the same state hash as 2D |
+| `index.html?autotest=boss&frames=1800&view3d` | `d21e863f` | `d75f280a` | `1aef668c` | 3D view: the same state hash as 2D |
+
+Each URL run twice in headless Chrome (`PORT=8765 sh tools/golden.sh`); each pair matched, and the 3D state hashes equal the 2D ones.
+- Main at fb19376 (the street blood fixes merged; never recorded here) already gives these four hashes: checked on a worktree of
+  fb19376. The blood fixes are the cause of the change from the db738f4 table below (see "Street blood" for why).
+- The boss set pieces merge (10b2262) kept them: the attract demo never reaches a boss, the boss autotest leaves the club roof
+  before Malaspina spawns, and the goons' rules did not change (the boss-only jab-spam read, armor, body push and hug check,
+  the '!' drawn over goons only).
+- The early perfect dodge (bf7d930) kept them too: the attract demo dodges close to contact, inside the old 0.1 s window,
+  and the stretched i-frames never pass the old 0.3 s there.
+
+Boss fights are tested with bots, not hashes: `PORT=8765 sh tools/bossbot.sh street|pier <diff 0-3> jab|varied [seed]`
+(`tests/bossbot.html`; run them one at a time: side-by-side headless runs can stall). No block, no parry: the varied bot
+perfect-dodges, jumps, grabs and finishes crewmen. Tests with `?manual`: `__sim` also holds `EMOVES`, `MOVES`, `MAL`, `p9`,
+`eshots`, `pickups`, `bossMash`, `sceneOn`, `simTime`, `kos`, `runT`.
+
+### main db738f4: + combo depth and focus, the slam, the Q/W controls, reinforcements (2026-10-07)
 
 | URL | state | buf | l3 | note |
 |---|---|---|---|---|
