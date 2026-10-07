@@ -137,7 +137,9 @@ More goons on a higher difficulty come as reinforcement waves, not as bigger fir
   reinforcement wave walks in from a door, an alley, a car or off the screen, on both sides, never on top of the hero, with a
   "Reinforcements" toast. The stage's kill lesson and its gate wait for the last wave. Easy has none (it teaches).
 - Pier 9: on Hard and Wicked, w1, w2b and w3 each call one reinforcement wave (`then`) at half down; the Bosun waits for w3 and w3b.
-- The street boss's crew: `crew.n` goons in all, at most `crew.alive` at once. Marchetti's crew was already scaled (`MARCHETTI.crew`).
+- The boss crews (Malaspina and Marchetti): `crew.n` goons in all, at most `crew.alive` at once from phase 2 (Easy, Medium 2; Hard,
+  Wicked 3). The phases set when they come: Malaspina's phase 1 sends one at a time after 15 s; Marchetti's phase 1 sends none, and his
+  phase 3 (the fog) sends none (Wicked: two filleters as it starts).
 - The swing cap and the spacing rules (`DIFFS` `swing`, `gap`, `sepStep`) keep the bigger fights readable. The drop caps hold: they
   count what lies on the ground, not the kills (more kills only feed the pity counter).
 

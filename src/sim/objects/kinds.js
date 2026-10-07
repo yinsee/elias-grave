@@ -16,9 +16,11 @@ export const KINDS = {
   can: { r: 2, m: 0.3, e: 0.4, roll: true, pocket: true, hp: 40 },
   bottle: { r: 2.5, m: 0.4, e: 0.2, roll: true, pocket: true, hp: 40 },
   knife: { r: 2.5, m: 0.2, e: 0.1, roll: false, pocket: true, hp: 60 },
+  // Pier 9: a frozen tuna Marchetti tore off the conveyor (r = half its height; it lies on its side, 22 px long)
+  tuna: { r: 4, m: 4, e: 0.1, roll: false, hp: 260 },
 };
 // what can be lifted and carried; what a pocket throw does; what breaks when pushed too far or knocked hard
-export const LIFTABLE = new Set(['crate', 'bin', 'bag', 'chair', 'cone', 'barrel', 'bigcrate']);
+export const LIFTABLE = new Set(['crate', 'bin', 'bag', 'chair', 'cone', 'barrel', 'bigcrate', 'tuna']);
 export const TOSS = { can: { dmg: 10, power: 120, v: 230, up: 70, spin: 22 }, bottle: { dmg: 14, power: 150, v: 220, up: 80, spin: 18 }, knife: { dmg: 20, power: 170, v: 320, up: 20, spin: 0 } };
 export const FLOOR_BREAK = new Set(['crate', 'bigcrate', 'stack', 'bin', 'cone', 'chair', 'barrel', 'bag', 'can', 'bottle', 'knife', 'ball']), PUSH_BREAK = 64;   // (every object)
 // small things a walk or a run kicks along: they skitter and roll on (no PUSH_BREAK); a hard knock or a goon still breaks them

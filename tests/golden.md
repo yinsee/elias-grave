@@ -144,6 +144,12 @@ They were play-tested with `?manual` (`window.__sim` holds the live sim state fo
 The play-test fixes for audio, visuals and UI (2026-10-06: hit sounds by move and outcome, the Pier 9 wall mask for blood, the 3D belt and hair, the title logo, key labels, fonts) kept all four URLs' hashes (state, buf, l3), two runs each.
 The blood wall mask is null on the street, the 3D belt and hair changes touch only the Pier 9 boss and the hero's 3D hair (the 3D hashes did not see a change), and the rest is audio, HTML and CSS.
 
+The boss rework (2026-10-06: Malaspina's cane, coat and phase 2, Marchetti's three phases, `boss:tell`, the boss bots) kept all four
+URLs' hashes (state, buf, l3), two runs each in headless Chrome (`sh tools/golden.sh`): the attract demo never reaches a boss, and the
+boss autotest leaves the club roof before Malaspina spawns. The 2D and 3D state hashes are still equal.
+The fights are tested with bots instead: `sh tools/bossbot.sh street|pier <diff 0-3> jab|varied [seed]` runs `tests/bossbot.html`
+headless (a static server on port 8779, or `PORT=`) and prints the fight length, the HP left and the defence counts.
+
 Combat tests with `?manual`: `window.__sim` also holds `blk` (parry window), `hstr` (the hero's string), `DEF` (timings), `input`,
 `slowT`, `ckpt`, `ragT`, `setDiff(i)` (also refills the second winds) and `retry()`; `__peek()` shows `wind` and `wasted`.
 Dispatch KeyboardEvents (Q, W, E, Space, arrows) with frames stepped between down and up.

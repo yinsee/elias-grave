@@ -30,6 +30,8 @@ const FEATS = {
   // the Saltmen and the Bosun: each answer to a variant's trick
   lowblock: 35, lowhop: 30, gaffslip: 50, reloadpunish: 40, shieldbreak: 50, flank: 25, guardbreak: 50,
   propreturn: 45, propdrop: 25, propdodge: 25, chainhop: 40, grabslip: 45, cover: 30,
+  // the bosses: each answer to a set piece (a lobbed tuna hit back, torn free of the hook, the freezer fog cleared)
+  tunaback: 50, hookfree: 40, fogclear: 35,
   // combo depth and focus: enders, juggles, the clinch, the finishers (juggle, otg and bodyhit repeat: the DMC rule)
   finisher: 90, ender: 35, juggle: 25, grab: 15, gthrow: 40, otg: 25, sdive: 40, bodyhit: 30, slam: 60, gkick: 40, elbow: 20, knee: 15,
 };

@@ -26,13 +26,28 @@ function sfxOpts(p, o = {}) {
   return { ...o, pan: x == null ? 0 : Math.max(-1, Math.min(1, panOf(x))) };
 }
 
-// boss tells: move -> [sound, options]
+// boss tells ('boss:tell' {move}, and the conveyor's 'boss:telegraph' 'tuna'): move -> [sound, options]. Each boss move has a sound
+// with its pose and its white flash (there are no signs over him)
 const TELL = {
   roar: ['boss_roar', { vol: 0.9 }],
   charge: ['tell_charge', { vol: 0.9 }],
+  shoulder: ['tell_charge', { vol: 0.9, pitch: 0.85 }],
   jslam: ['tell_jslam', { vol: 0.9 }],
+  slam: ['tell_jslam', { vol: 0.7, pitch: 1.2 }],
   hook: ['chain_spin', { vol: 0.8 }],
   tuna: ['tuna_creak', { vol: 0.8 }],
+  tunaBat: ['tuna_creak', { vol: 0.7, pitch: 1.3 }],
+  iceSmash: ['tell_jslam', { vol: 0.75, pitch: 0.8 }],
+  jab: ['grunt_goon', { vol: 0.45, pitch: 0.8 }],
+  lunge: ['grunt_goon', { vol: 0.6, pitch: 0.7 }],
+  cleaver: ['grunt_goon', { vol: 0.5, pitch: 0.65 }],
+  overhead: ['grunt_goon', { vol: 0.8, pitch: 0.55 }],
+  cleaverHeavy: ['grunt_goon', { vol: 0.8, pitch: 0.5 }],
+  grab: ['grunt_goon', { vol: 0.75, pitch: 0.6 }],
+  shove: ['grunt_goon', { vol: 0.6, pitch: 0.9 }],
+  sweep: ['dodge_whoosh', { vol: 0.8, pitch: 0.5 }],
+  lever: ['tuna_creak', { vol: 0.6, pitch: 0.6 }],
+  hookPull: ['hook_clank', { vol: 0.8, pitch: 0.7 }],
 };
 
 // game sounds for events audio.js does not map itself (it maps hit, hurt, ko, kill, pickup, glass/object:break, music, voice)
@@ -56,6 +71,7 @@ function bindGame(a) {
       const s = TELL[p.move];
       if (s) play(s[0], p, s[1]); else play('ui_blip', p, { vol: 0.5, pitch: 0.7 });
     }),
+    bus.on('boss:tell', (p) => { const s = TELL[p.move]; if (s) play(s[0], p, s[1]); }),   // a boss move's tell (tunaBack: the hit carries it)
     bus.on('hook:clank', (p) => play('hook_clank', p)),   // Marchetti's hook stops on a prop
     bus.on('slam', (p) => play('ground_slam', p, { vol: p.fin ? 1 : 0.85 })),   // the clinch's ground slam
     bus.on('run:over', () => play('ui_confirm', null, { vol: 0.6 })),
