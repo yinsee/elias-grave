@@ -4,16 +4,20 @@ Run with a static server (`tools/serve.py`, port 8765, no browser cache; or `pyt
 Two runs of the same URL must give the same hashes. A refactor step that keeps both hashes changed nothing.
 A step that changes behaviour on purpose records new hashes here, with the reason.
 
-## Current (main 14377d1: + no signs over characters, the block/parry tidy-up, 2026-10-07)
+## Current (main 9186e57 + the instant turn in an attack, 2026-10-09)
 
 | URL | state | buf | l3 | note |
 |---|---|---|---|---|
-| `index.html?autotest=demo&frames=1200` | `c4892f44` | `e1b927a6` | | 2D (attract demo, seed 1, 960x540 view) |
+| `index.html?autotest=demo&frames=1200` | `f251a100` | `234a451e` | | 2D (attract demo, seed 1, 960x540 view) |
 | `index.html?autotest=boss&frames=1800` | `d21e863f` | `fb321a08` | | 2D (skipToBoss + demo, seed 1) |
-| `index.html?autotest=demo&frames=1200&view3d` | `c4892f44` | `bd8fc5f8` | `1438e83d` | 3D view: the same state hash as 2D |
+| `index.html?autotest=demo&frames=1200&view3d` | `f251a100` | `31eeae79` | `49596c37` | 3D view: the same state hash as 2D |
 | `index.html?autotest=boss&frames=1800&view3d` | `d21e863f` | `d75f280a` | `1aef668c` | 3D view: the same state hash as 2D |
 
 Each URL run twice in headless Chrome (`PORT=8765 sh tools/golden.sh`); each pair matched, and the 3D state hashes equal the 2D ones.
+- The instant turn in an attack (2026-10-09: ←/→ against the face turns the hero at once in a ground attack, and every ground
+  attack, a chained or a low one too, starts the way the stick points) changed the two demo URLs on purpose: the attract demo's bot
+  holds a direction while a swing plays, so the hero now turns there. Before: demo state `c4892f44`, buf `e1b927a6` (2D),
+  `bd8fc5f8` / l3 `1438e83d` (3D). The boss URLs kept their hashes. Two runs each, each pair matched, 2D state = 3D state.
 - Main at fb19376 (the street blood fixes merged; never recorded here) already gives these four hashes: checked on a worktree of
   fb19376. The blood fixes are the cause of the change from the db738f4 table below (see "Street blood" for why).
 - The boss set pieces merge (10b2262) kept them: the attract demo never reaches a boss, the boss autotest leaves the club roof

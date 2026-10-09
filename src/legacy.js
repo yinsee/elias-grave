@@ -3956,6 +3956,7 @@ import { metro3d } from './levels/metro/three.js';
     }
     else if (a === 'lk') a += kickLeg;
     else if (a === 'hk') { kickLeg ^= 1; a += kickLeg; }
+    if (!ctl.grab && !ctl.air && a !== 'stomp' && input.dir === -ctl.face) { ctl.face = input.dir; ctl.spd = 0; }   // every ground attack (a chained one, a low one) goes the way the stick points
     hero.act = a; hero.actT = 0; hitDone = false; hero.atkId++; ctl.slam = false;
     emit('swing', { move: a, weapon: hero.weapon, w: Wp.id, blade: !!Wp.melee, heavy: /^(hp|hk|kw|kh|aw|ah|shp|sweep|lpl|stomp)/.test(a), x: ctl.x, y: ctl.y, dir: ctl.face });
     emit('feat', a.replace(/[0-9]$/, ''));
@@ -4114,8 +4115,7 @@ import { metro3d } from './levels/metro/three.js';
     const m = MOVES[hero.act], low = input.downHeld && (hero.act === 'squat' || LOW_RE.test(hero.act || ''));   // attacks from a squat stay low, and so does a chain of them
     if (m) { if (hero.actT < m.dur * 0.3) return false; queued = low ? lowOf(a, Wp) : a; return true; }
     if (low) { startAttack(lowOf(a, Wp)); return true; }
-    if (input.dir === -ctl.face) { ctl.face = input.dir; ctl.spd = 0; }   // attack the way the stick points: turn on the spot
-    startAttack(a); return true;
+    startAttack(a); return true;   // (startAttack turns him the way the stick points)
   }
   // a step into the blow: grounded heavy strikes slide the fighter forward over the last moment before contact
   function lunge(m, dt) {
@@ -4164,6 +4164,7 @@ import { metro3d } from './levels/metro/three.js';
     dashCd -= dt; coyT -= dt; rollCd -= dt; if (ctl.duckT > 0) ctl.duckT -= dt;
     const atk = !!MOVES[hero.act], locked = atk || hero.act === 'rise' || hero.act === 'roll' || hero.act === 'hero' || hero.act === 'dash' || hero.act === 'climb' || hero.act === 'clinch' || hero.act === 'fin' || hero.act === 'sdive';
     if (hero.act === 'teeter' && (input.dir || ctl.air)) hero.act = null;
+    if (atk && !ctl.air && !ctl.grab && hero.act !== 'stomp' && input.dir === -ctl.face) { ctl.face = input.dir; ctl.spd = 0; }   // mid-swing: ←/→ turns him at once, the swing goes on
     const free = hero.act === null || hero.act === 'guard' || hero.act === 'land' || hero.act === 'settle' || hero.act === 'start' || hero.act === 'pivot' || hero.act === 'teeter';
     let tgt = 0;
     if (!ctl.air && !locked && input.dir !== 0) {
