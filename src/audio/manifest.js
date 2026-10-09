@@ -30,6 +30,15 @@ export const MUSIC_CUES = {
   'music:switch': 'boss_marchetti',           // TODO: 152 bpm punk-industrial, train-rhythm drums
   'music:switch_p3': 'boss_marchetti',        // TODO: the countdown riser
   'music:metro_outro': 'prologue',            // TODO: solo trumpet, rain, a far train
+  // House Always Wins (docs/levels/03-house-always-wins.md 9.4): no files yet; the nearest existing tracks stand in
+  'music:casino': 'docks_explore',            // TODO: slow lounge jazz (upright bass, brushed drums, a tired piano)
+  'music:casino_fight': 'docks_explore',      // TODO: baritone sax and toms
+  'music:casino_terrace': 'prologue',         // TODO: rain and a muted trumpet from a radio
+  'music:cooler': 'boss_marchetti',           // TODO: a short heavy loop (bass and kick)
+  'music:brask_hall': 'boss_marchetti',       // TODO: tango with harpsichord
+  'music:brask_wheel': 'boss_marchetti',      // TODO: tango, bandoneon, ball-clatter percussion
+  'music:brask_allin': 'boss_marchetti',      // TODO: strings join, tempo up
+  'music:casino_end': 'prologue',             // TODO: solo piano over rain
 };
 
 export function musicUrl(id, { loop = true, seed } = {}) {
