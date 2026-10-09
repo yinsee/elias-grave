@@ -750,3 +750,69 @@ The architecture plan names some of these (`world/panes.js`, `world/water.js`, m
 - Teague: `helmet_clang`, `helmet_crack`, `helmet_flood`, `lead_boot_stomp`, `anchor_swing`, `anchor_chain_out`
 - Cutscene: `match_strike`, `coupe_engine_idle`, `windscreen_shot`, `nero_bark`
 - Voice lines (`audio/voice/`): every line id in section 6, plus faction barks (`undertow_sandman_1..4`).
+
+---
+
+## 10. As built (first pass, 2026-10-09)
+
+Code: `src/levels/aquarium/` (`data.js` map and numbers, `paint.js` art, `run.js` the run, `three.js` the 3D blocks, `index.js`),
+`src/bosses/teague.js` (mini-boss), `src/bosses/kalt.js` (boss). The game calls the run's hooks (`LVH` in `src/legacy.js`; `isAqua()`).
+Chapter 4 (`startChapter4()`) is locked in the menu until `progress.ch4` (the lock names Count Brask in the casino); beating Kalt
+unlocks `ch5`.
+
+### 10.1 The folded map (world 2800 x 320, like Pier 9 and Line Zero)
+
+| Section | x | What is there |
+|---|---|---|
+| `lobby` | 0-466 | Whale skeleton (sways on a storm boom), skylight (rain, lightning), snack kiosk (cans, bottles), katana in a glass case on a bench (x 70), turnstiles, payphone (x 232), gift shop: shelves, two glass cases (x 316-362), the small reef tank (x 380-450, cracks, never breaks), counter (y 250, x 396-456), staff door x 466 |
+| `reef` | 466-1062 | Wall tanks reef1-4 (x 484-858; they crack and leak, `hpMin` 10), gantry (y 168, x 560-846), ladder x 548, crate steps (x 846-892), a dead guard with the machine gun (x 742), the big reef tank (x 904-1044, two divers inside), ammo, the fire axe (x 1048) |
+| `jelly` | 1062-1460 | The moon-jelly cylinder (x 1240-1280, floor to ceiling), balconies (y 218: x 1080-1160 with the shotgun, x 1360-1440), four wall jelly columns, doors at 1064 and 1456 (locked during the fight) |
+| `pumps` | 1460-1886 | Sea gate (x 1474), filter tanks (y 226: x 1500-1550, 1580-1630), pipe rack (y 184, x 1650-1772), gantry (y 136, x 1760-1886) and the hatch over the steel shutter (x 1884), junction box (x 1702, y 240), porthole |
+| `dock` | 1886-2414 | Dive locker on the mezzanine (y 136, x 1886-2010: bandage, ammo, katana, tanks, the manifest at x 1984), sea channel (x 2140-2232, deep water on the floor), moored boat (deck y 262), hoist (rail y 108, x 2070-2330, control box x 2050), crate stack, watertight door (x 2414) |
+| `tunnel` (the club) | 2436-2800 | Glass tunnel: roof panes t1-t5 (y 192-204, 68 px each), entry bulkhead (crew), service shaft ladder x 2786 (locked in phase 1), the Bell & Sons clock (3:17, x 2766); over the tank (surface y 112): catwalks at y 96: A 2440-2520, B 2540-2620 and C 2640-2720 (on chains), D 2740-2800; tank ladders x 2450, 2680, 2756; the feeding crane (rail y 24) and its bait cage |
+
+Checkpoints: the start, the reef gallery (r1), the rotunda (j1), the pump hall, the dock (the locker), Teague, the tunnel (boss).
+
+### 10.2 The Undertow (data.js `UNDERTOW`), each with its own answer
+
+| Variant | Base | Rule | Answer |
+|---|---|---|---|
+| Smuggler (and the boat-hook man, +10 reach) | machete | his swing rides through light hits; on a wet floor he slips (40 % when he runs or starts a swing there: a 1.2 s fall) | heavies, or fight him on the wet |
+| Diver | knife | fast; no water slow-down; in water knee-deep or more he dives at an ankle (a bubble trail, 0.6 s), then drags (8 dmg; mash Q / W to kick free) | stay out of deep water; hit him in the trail |
+| Harpooner | pistol (`R.gun`) | perches on a gantry or balcony; one shot (a glint, a rising bolt), then a 2.4 s reload on one knee; a hit reels the hero a step in; a miss cracks the glass, or sticks and leaves a bolt to pocket (a one-use throw); comes down after 3 shots, 8 s or a hit | dodge the glint, rush the reload |
+| Hauler | brawler (the deckhand's props) | lifts a crate, barrel or cash crate and throws it | hit him while he carries it, or clear the props |
+
+### 10.3 Mechanics (all in shared sim code: both views read the same state)
+
+- **Glass** (`S.panes`): hp, crack stages at 66 / 33 %, `hpMin` locks, leaks (a spray and a wet zone under a stage-2 pane), bursts (shards; `onBreak: 'flood'`: a burst wave along the floor that floors anyone not in the air, rolling or up high; floor water that drains). Heavy blows crack wall tanks; any blow cracks cases, columns and the cylinder; bullets hit the cylinder and cases in their path and a wall pane at the end of their flight; thrown things and bodies break glass.
+- **Water**: depth bands (knee x0.62, waist x0.45, chest x0.34 of the run speed), a breath meter under water (18/12/12/9 s, then 6 dmg/s; the HUD bar under the boss bar), wet floors (a run slides on), floor floods, the pump hall's three surges (to y 250, 200, 128), the channel, the tunnel's flood stages (272 / 262 / 250) and the flood-out.
+- **The bloom**: armed when j2 is out, the cylinder at stage 2 and 3 goons within 160 px ("The glass is ready."); one shot, throw or heavy blow bursts it in slow motion (1.8 s): a 300 px wave (25 dmg; the hero is safe on a balcony, rolling, in the air or 120 px away), jellyfish in the air, then on the floor (a step stings: 4 and a 0.3 s stop; a blow kicks one at the goons: 6 dmg). Fallback after 40 s: the harpooner's shot bursts it.
+- **Ladders**: ↑ by one climbs it (the reef gantry, the shaft, the tank ladders).
+- **Junction box**: when the pump water reaches it, it buzzes 1.5 s, then shocks everyone in the water within 120 px (10 dmg, 0.6 s).
+- **Hoist**: a heavy blow on its box drops the pallet (40 dmg under it), back after 6 s. **Storm**: a boom every 8-14 s (the whale sways, lightning in the lobby, a surge wets the dock by the channel).
+- **Teague**: the anchor string (26), the anchor throw (out and back, 20 each, the line marked on the floor), the lead stomp (a 90 px quake; on a wet floor he slips: 1.4 s), the dunk by the channel (2 s at 6 dmg/s, mash to break). The faceplate (80 hp) soaks head blows, shots and throws; other blows from the front do half; low blows land in full; broken: double damage, low poise. Divers out of the channel (0/1/2/2 alive).
+- **Kalt** (700/840/940/1040): phase 1 harpoon (a hit reels him in for two stabs; mashing or a blade cuts the line: a 1 s stumble), knife strings, the lunge (sticks in the bulkhead; slips on the wet), pinCrack every 6-9 s (a drip circle on the floor, 50 to the pane over him, its spray hurts); her misses crack the roof down range; burst panes drop a water column (12 dmg) and a diver (Medium up), and the tunnel floods by stage. Flood-out at 60 % or 3 burst panes: she reels up through a hole, the roof bursts pane by pane, the tunnel fills, the hatch opens ("Climb."). Phase 2 on the catwalks: the harpoon across the gaps, the knife, the zip line (20 through his catwalk), chum (a slick on a catwalk, a frenzy in the water), chainShot (the section drops into the tank, winched back after 5 s), dive (a bubble trail, she bursts up under his edge: 24, then clings; any blow knocks her back into the water). In the tank he treads water at y 128 (slow); a shark fins in (2.2/1.5/1.2/1.0 s) and bites (14/22/26/30), then throws him onto a catwalk. Phase 3 at 30 %: a taunt, the crew leaves, a shot catwalk falls for good, a decoy trail (Hard up), the bait cage drops once (30), her blood in the water draws the sharks to her. Crew: smugglers through the bulkhead in phase 1 (1/1/2/2 alive), divers up the ladders in phase 2 (1/2/2/3), a harpooner on cwA from Hard.
+- **Ending**: the deep plunge (an arc from the catwalk into the tank, slow motion), the freeze frame (`kalt_freeze`), `kalt_defeat`, `aquarium_outro`, the results card (the manifest is the clue line).
+
+### 10.4 Asset names (stable)
+
+- Panels (`assets/art/panels/aquarium/`): `aquarium_intro_01..05`, `aquarium_manifest`, `aquarium_kalt_freeze`, `aquarium_outro_01..05`.
+- Portraits: `kalt_bored`, `kalt_amused`, `kalt_sharp`, `kalt_hurt`, `kalt_bitter`, `elias_cold` (exists), `elias_wet`.
+- Scripts: `assets/cutscenes/aquarium_intro.json`, `kalt_intro.json`, `kalt_freeze.json`, `kalt_defeat.json`, `aquarium_outro.json`, `aquarium_manifest.json`. The in-level lines (6.2) are `data.js` `LINES` (a caption with the speaker's tag; a `vo` event with the line id).
+- Music cues (stand-ins in `src/audio/manifest.js`): `music:aquarium`, `music:aquarium_combat`, `music:aquarium_flood`, `music:aquarium_teague`, `music:kalt`, `music:aquarium_outro`.
+- Procedural sfx (new in `src/audio/sfx.js`, stand-ins for 9.5): `glass_tink glass_crack glass_creak glass_case_break glass_burst_small glass_burst_large water_wave_rush water_splash_body water_leak_spray water_rise_loop bubbles_rise breath_gasp harpoon_fire harpoon_hit_flesh harpoon_hit_glass harpoon_hit_wall harpoon_reel reel_whine line_cut shark_pass_low shark_fin_cut shark_bite shark_ram_glass storm_boom building_creak alarm_bell pa_click sea_gate_open junction_spark chain_snap chain_creak catwalk_tilt cage_release hatch_unlock helmet_clang helmet_crack helmet_flood lead_boot_stomp anchor_chain_out jelly_squish jelly_sting bucket_slosh door_open door_slam ladder_step aquarium_stinger_slowmo payphone_ring match_strike windscreen_shot`.
+- Missing audio files: every track of 9.4, every sfx file of 9.5, every voice id in the scripts and `LINES`.
+
+### 10.5 Test hooks
+
+`index.html?manual`: `window.__aquarium` (`chapter`, `start`, `skipTo(x)`, `toTeague`, `toBoss`, `tp`, `peek`, `kill`, `setDiff`, `hurtBoss`, `hurtMini`, `hurtHero`, `heal`, `equip`, `view3d`, `zoom`, `progress`, `AR`), and `tests/aquabot.js` (`go`, `clr`, `jumpTo`, `up`, `toKalt`).
+
+### 10.6 Cut or folded (not done in this pass)
+
+- No real swimming: deep water is wading with a breath meter; in the tank (phases 2-3) the hero treads water on a surface at y 128 and climbs out by a jump to a catwalk edge or a ladder. No under-water render or audio filter (a see-through body of water is drawn over the scene).
+- The catwalk tilt is a drop: a shot section hangs from one chain and its deck is gone for 5 s (no slide force); a fallen section does not float.
+- The new props are the engine's kinds (plush shark = bag, snow globe = bottle, register = crate, diving tank = barrel, cash crate = big crate); a harpoon bolt pickup is a pocket knife. No floating barrels, no pushable crate on the pipe rack, no boat bob, no hoist ride (the pallet is a hazard only), no cargo net.
+- No ladder in the pump hall and no window drop in the dive locker (the mezzanine edge is the drop).
+- Teague's dunk does not push the head under (a hold and the breath bubbles).
+- Kalt: no aimUp pose (the pin crack uses the aim pose and a drip circle on the floor); no finisher prompt (the plunge plays at once); no camera path through the tank; one shark size.
+- No per-section camera bounds (it follows as everywhere); no 0.8 zoom on the bloom. No clue counter beyond the results card line.
