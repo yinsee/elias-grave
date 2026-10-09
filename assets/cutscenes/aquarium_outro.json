@@ -1,0 +1,42 @@
+{
+  "id": "aquarium_outro",
+  "title": "The Leviathan",
+  "music": "music:aquarium_outro",
+  "musicLoop": false,
+  "_todo": "Panel art: assets/art/panels/aquarium/aquarium_outro_0N.png (being generated). Voice lines aquarium_outro_01, 02, 04, 05 and mags_aquarium_outro do not exist yet.",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:aquarium_outro_01", "tint": "cold", "minTime": 1.5,
+        "shot": "The flooded tunnel, blue-green. Kalt floats face-down among broken glass and drifting jellyfish. Above, through the broken roof, the hero climbs out onto a catwalk, soaked.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "aquarium_outro_01", "text": "The sea took her back. It always collects." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:aquarium_outro_02", "minTime": 1.2, "sound": "payphone_ring",
+        "sfx": { "text": "RRRING. RRRING.", "at": [70, 30] },
+        "shot": "The dark lobby. A payphone on the wall rings. Wet footprints pass it. The whale skeleton above.",
+        "lines": [
+          { "type": "vo", "pos": "bottom", "voice": "aquarium_outro_02", "text": "A phone rang behind me. For once, I let it ring." }
+        ] },
+      { "image": "panel:aquarium_outro_03", "rain": true, "minTime": 1.2,
+        "shot": "Exterior. Mags's coupe speeds along the sea wall in the storm. A red laser dot slides across the windscreen.",
+        "lines": [
+          { "type": "say", "speaker": "Mags", "pos": "bottom", "align": "left", "voice": "mags_aquarium_outro", "text": "We're clear, we're..." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:aquarium_outro_04", "rain": true, "minTime": 1.2, "sound": "windscreen_shot",
+        "sfx": { "text": "KRAK!", "at": [30, 25] },
+        "shot": "Close-up. Shattered windscreen, a bullet hole. Mags slumps, holding her bloody shoulder. Nero barks wildly in the back seat.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "aquarium_outro_04", "text": "They didn't aim at me. They aimed at what I had left." }
+        ] },
+      { "image": "panel:aquarium_outro_05", "rain": true, "minTime": 1.5,
+        "shot": "The hero drives with one hand, holding Mags with the other. A red neon cross ahead: St. Cecilia Hospital.",
+        "lines": [
+          { "type": "vo", "pos": "bottom", "voice": "aquarium_outro_05", "text": "St. Cecilia. Patron saint of music. Of course it belonged to the Choir." }
+        ] }
+    ] }
+  ]
+}

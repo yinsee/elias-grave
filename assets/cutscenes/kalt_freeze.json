@@ -1,0 +1,13 @@
+{
+  "id": "kalt_freeze",
+  "title": "Deep Plunge",
+  "musicEnd": "keep",
+  "_todo": "Panel art: assets/art/panels/aquarium/aquarium_kalt_freeze.png (being generated). The boss finisher's freeze frame (the story bible's rule).",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:aquarium_kalt_freeze", "tint": "cold", "minTime": 1.2, "sound": "glass_burst_large",
+        "shot": "Freeze frame under water: Elias above, hair floating, a fist driven down; Kalt below him among glass shards and moon jellies, falling through the burst tunnel roof; a red emergency lamp behind.",
+        "lines": [] }
+    ] }
+  ]
+}

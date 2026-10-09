@@ -21,6 +21,8 @@ import { playDialog } from './cutscene/dialog.js';
 import * as P9 from './levels/pier9.js';
 import * as METRO from './levels/metro/index.js';
 import { metro3d } from './levels/metro/three.js';
+import * as AQUA from './levels/aquarium/index.js';
+import { aqua3d } from './levels/aquarium/three.js';
 
 (() => {
   'use strict';
@@ -87,7 +89,7 @@ import { metro3d } from './levels/metro/three.js';
   let LV = { id: 'street', title: 'The Street', startX: 60, drops: STREET_DROPS };
   // the level being played: isLv(id). The street is the tutorial (this file's own painter and data); every other level is a module
   // (src/levels/*) whose run hooks are LVH (Pier 9's run still lives in this file: its isP9() branches)
-  const isLv = id => LV.id === id, isP9 = () => isLv('pier9'), isMetro = () => isLv('metro'), isStreet = () => isLv('street');
+  const isLv = id => LV.id === id, isP9 = () => isLv('pier9'), isMetro = () => isLv('metro'), isAqua = () => isLv('aquarium'), isStreet = () => isLv('street');
   let LVH = {};   // the level run's hooks (Line Zero: src/levels/metro/run.js); {} for the street and Pier 9
   const KIOSK_X = GOAL.x1 - 70;   // the left wall of the rooftop kiosk: the club's side door is in it, facing the roof   // the flat roof of the club building; the club door is in the kiosk at its right end
   const PLATS = [
@@ -622,7 +624,7 @@ import { metro3d } from './levels/metro/three.js';
     }
   }
   function drawBackdrop() {
-    if (isMetro()) {   // Line Zero: underground, no sky; the static layer is the whole world (the junction too), then the live parts on the wall
+    if (isMetro() || isAqua()) {   // Line Zero, the Leviathan: indoors, no sky; the static layer is the whole world (the junction, the shark tunnel too), then the live parts on the wall
       buf.fill(0xff0b0c10);
       for (let vy = 0; vy < cam.vh; vy++) {
         const wy = vy + cam.y; if (wy < 0 || wy >= H) continue;
@@ -1778,7 +1780,7 @@ import { metro3d } from './levels/metro/three.js';
   };
   let hudTarget = null, hudTargetT = 0;
   const BODY_MAX = 99;
-  const LOOK_X = { ...LOOK, ...P9.SALT_LOOKS, ...METRO.RAT_LOOKS };   // the street's outfits, Pier 9's Saltmen, Line Zero's Tunnel Rats
+  const LOOK_X = { ...LOOK, ...P9.SALT_LOOKS, ...METRO.RAT_LOOKS, ...AQUA.AQUA_LOOKS };   // the street's outfits, Pier 9's Saltmen, Line Zero's Tunnel Rats
   // opts (Pier 9): { role, look, R: role overrides } for a Saltman; { boss: P9.MARCHETTI } for a level boss. The street passes none.
   function spawnEnemy(type, x, zone, opts) {
     const T = ETYPE[type];
@@ -2106,6 +2108,7 @@ import { metro3d } from './levels/metro/three.js';
     if (enc.eHitKind) e.hitAt = simTime;   // (a goon at finisher health stays finisher-ready FIN.open s after the hero's hit lands)
     if (e === enc.boss) dmg = Math.max(1, Math.round(dmg * (enc.eHitKind === 2 ? 0.8 : 0.75)));   // the boss shrugs off part of every hit (guns no worse than fists)
     if (e.dmgK && e.dmgK !== 1) dmg = Math.round(dmg * e.dmgK);   // (Tinder doused: he takes more)
+    if (LVH.preHit) { const d2 = LVH.preHit(e, dmg, dirx, x, y, blade); if (d2 == null) return; dmg = d2; }   // a level's own armour (Teague's faceplate; Kalt under the water): null = soaked up
     // the hero's melee: string scaling; a counter-hit = he struck the goon mid wind-up or swing, or while exposed (after a perfect dodge)
     const mel = enc.eHitKind === 1 && !!hitCtx, M0 = e.act && EMOVES[e.act];
     let ctr = false, ender = false, base = null;
@@ -2246,7 +2249,7 @@ import { metro3d } from './levels/metro/three.js';
     if (e === enc.boss) {
       enc.bossBeaten = true; enc.arena = null; emit('feat', 'boss'); crowdReact(e.x, 0, 'big'); slowMo(FOCUS.boss, 'boss');
       emit('boss:defeated', { boss: e, x: e.x });
-      if (!flags.demo && !flags.attract) unlock(isP9() ? 'ch2' : isMetro() ? 'ch3' : 'ch1');   // a real win opens the next chapter
+      if (!flags.demo && !flags.attract) unlock(isP9() ? 'ch2' : isMetro() ? 'ch3' : isAqua() ? 'ch5' : 'ch1');   // a real win opens the next chapter
       for (const g of enemies) if (!g.dead && g.zone === 'arena') killEnemy(g, Math.sign(g.x - e.x) || 1, 200, 0.5);
     }
   }
@@ -2689,7 +2692,7 @@ import { metro3d } from './levels/metro/three.js';
       e.combo = CMB[0]; e.ci = 0; eStart(e, 'jab', e.windup); return;
     }
     if (e.cdT <= 0 && enc.eShotN < (DIF().A >= 4 ? 2 : 1) && adx > 28 && adx < 175 && hero.mode === 'anim') {
-      enc.eShotN++; e.combo = null; e.ci = 0; eStart(e, e.R.w === 'pistol' ? 'shoot' : 'throw', e.R.aim);
+      enc.eShotN++; e.combo = null; e.ci = 0; eStart(e, e.R.w === 'pistol' || e.R.gun ? 'shoot' : 'throw', e.R.aim);
     }
   }
   // a throwing knife arcs to where the player stood at release; a pistol shot flies straight at the height locked during the aim
@@ -3352,6 +3355,12 @@ import { metro3d } from './levels/metro/three.js';
     } else if (w === 'flaregun') {   // a Flare Rat's brass flare pistol: a fat short barrel
       seg(g.x, g.y, g.tx, g.ty, 1.9 * s, O); seg(g.x, g.y, g.tx, g.ty, 1.1 * s, c(C('#b8902a')));
       if (e.muz > 0) for (let d = 1; d <= 3; d++) plot(Math.floor(g.tx + g.dx * d), Math.floor(g.ty + g.dy * d), d < 2 ? PAL.white : C('#ff4040'));
+    } else if (w === 'harpoon') {   // a pneumatic harpoon gun: a long dark barrel, the bolt's barb at the muzzle when it is loaded
+      seg(g.x - g.dx * 3 * s, g.y - g.dy * 3 * s, g.tx, g.ty, 1.6 * s, O); seg(g.x - g.dx * 3 * s, g.y - g.dy * 3 * s, g.tx, g.ty, 0.8 * s, c(ECOL.gun)); disc(snap(g.x - g.dx * 1.5 * s), snap(g.y - g.dy * 1.5 * s + 1), 1.2 * s, c(C('#7a6a3a')));
+      if (!(e.reloadT > 0)) { plot(Math.floor(g.tx + g.dx * 2), Math.floor(g.ty + g.dy * 2), c(ECOL.steel)); plot(Math.floor(g.tx + g.dx * 3), Math.floor(g.ty + g.dy * 3), PAL.white); }
+      if (e.act === 'shoot' && e.actT < 0 && Math.floor(simTime * 14) % 2) plot(Math.floor(g.tx + g.dx * 4), Math.floor(g.ty + g.dy * 4), PAL.white);   // the glint on the aim
+    } else if (w === 'anchor') {   // Teague's short anchor on its chain: links from the fist, the flukes at the end
+      if (!(e.sp === 'tuna' && e.spT >= 0)) { line1(g.x, g.y, g.tx, g.ty, c(ECOL.iron)); const fx = g.tx - g.dy * e.face * 3 * s, fy = g.ty + g.dx * e.face * 3 * s, bx = g.tx + g.dy * e.face * 3 * s, by = g.ty - g.dx * e.face * 3 * s; line1(fx, fy, bx, by, c(ECOL.steel)); seg(g.tx - g.dx * 3 * s, g.ty - g.dy * 3 * s, g.tx, g.ty, 1.1 * s, c(ECOL.steelD)); }
     } else { seg(g.x, g.y, g.tx, g.ty, 1.2 * s, O); line1(g.x, g.y, g.tx, g.ty, c(ECOL.steel)); }   // knife
   }
   // [read] the rim flash on a melee wind-up (enemy.rimT): white = a normal blow, red = a heavy, cyan = low (jump it)
@@ -3490,7 +3499,7 @@ import { metro3d } from './levels/metro/three.js';
     for (const e of enemies) if (e.dead && inL(e)) drawEnemy(e);
     for (const e of enemies) if (!e.dead && inL(e)) drawEnemy(e);
   }
-  function drawGate() { if (enc.arena && !isMetro()) for (let y = GROUND - 44; y < GROUND; y += 3) { plot(2429, y, BLOOD[2]); plot(2429, y + 1, BLOOD[1]); } }   // the gate is shut
+  function drawGate() { if (enc.arena && !isMetro() && !isAqua()) for (let y = GROUND - 44; y < GROUND; y += 3) { plot(2429, y, BLOOD[2]); plot(2429, y + 1, BLOOD[1]); } }   // the gate is shut
   function drawEShots(knives = true) {
     for (const b of eshots) {   // enemy shots: red tracers, spinning knives
       if (b.mk && LVH.drawShot) { LVH.drawShot(b); continue; }   // a level's own shots (both views: the 3D front layer draws them too)
@@ -4964,7 +4973,7 @@ import { metro3d } from './levels/metro/three.js';
   });
   bus.on('ko', p => { const n = hero.wind; if (!p.perma && (n > 0 || flags.demo)) toast('K.O.', n > 1 ? `Second wind · ${n - 1} left` : 'Second wind · that was the last one'); });
   bus.on('kill', p => { if (!p.isBoss) { kills.push({ name: p.enemy.name, w: p.weapon, t: simTime }); feedDirty = true; } });
-  bus.on('boss:defeated', () => isP9() ? toast('Marchetti is down', 'The collector has been collected.') : isMetro() ? toast('Switch is down', 'The 23:10 is coming.') : toast('Boss defeated', 'Club Noir is yours. The street is yours.'));
+  bus.on('boss:defeated', () => isP9() ? toast('Marchetti is down', 'The collector has been collected.') : isMetro() ? toast('Switch is down', 'The 23:10 is coming.') : isAqua() ? toast('Kalt is down', 'The sea takes her back.') : toast('Boss defeated', 'Club Noir is yours. The street is yours.'));
   bus.on('boss:intro', () => !isStreet() ? gameAudio.playMusic('boss_marchetti', { volume: 0.85 }) : gameAudio.playMusic('docks_explore', { volume: 0.85 }));   // the street: the same track, up (Line Zero: Marchetti's track until 'switch' exists)
   bus.on('run:over', p => { if (p.result === 'wasted') gameAudio.stopMusic(2); });
   bus.on('boss:phase', p => { if (isStreet() && p.phase === 2) toast('The coat comes off', 'He is faster. Jump the low cane sweep and the shockwaves; dodge the charge, then punish.'); });   // (Pier 9: its lever pulls tell the story)
@@ -5138,7 +5147,7 @@ import { metro3d } from './levels/metro/three.js';
     if (hero.mode !== 'rag') runS.down = false;
     if (hero.mode === 'getup' && runS.prevMode !== 'getup' && runS.koUp) { runS.koUp = false; secondWind(); }
     runS.prevMode = hero.mode;
-    if (enc.bossBeaten && endPh === null && !flags.wasted) { endPh = isP9() ? 'p9wait' : isMetro() ? 'mwait' : 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card (not after a Wicked K.O.)
+    if (enc.bossBeaten && endPh === null && !flags.wasted) { endPh = isP9() ? 'p9wait' : isMetro() || isAqua() ? 'mwait' : 'wait'; endT = 0; }   // the boss is down: the ending plays, then the card (not after a Wicked K.O.)
     if (enc.bossBeaten && runS.endT < 0 && endPh === 'done' && !flags.wasted && isStreet()) runS.endT = 0.4;   // (Pier 9 shows its own card after the outro)
     if (runS.endT > 0 && (runS.endT -= rdt) <= 0) { runS.endT = 0; showResults(); }   // (once: a negative endT would arm it again)
   }
@@ -5972,7 +5981,7 @@ import { metro3d } from './levels/metro/three.js';
     if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     cam.xf = CLUB_X; cam.yf = GROUND - 120; cam.v.x = cam.v.y = cam.v.z = 0;
     rain.drops.length = 0; rain.splash.length = 0;
-    emit('section:enter', isP9() ? { from: 'bay', to: 'hall' } : isMetro() ? { from: 'yard', to: 'junction' } : { from: 'street', to: 'club' });
+    emit('section:enter', isP9() ? { from: 'bay', to: 'hall' } : isMetro() ? { from: 'yard', to: 'junction' } : isAqua() ? { from: 'dock', to: 'tunnel' } : { from: 'street', to: 'club' });
   }
   let malDlg = false, malDlgDone = false;   // the street boss's entrance dialog: started, closed
   function clubTick(rdt) {
@@ -5988,7 +5997,7 @@ import { metro3d } from './levels/metro/three.js';
       }
       if (enc.introT >= 0) {   // the entrance, 1.7 s: spot and walk, the name card at 0.5 s, the boss bar fills from 0.7 s, then the fight
         if (!menuShown) enc.introT += rdt;   // (the pause menu stops the entrance's clock too)
-        const LB = isP9() ? { name: P9.MARCHETTI.name, title: P9.MARCHETTI.title, dlg: 'marchetti_intro' } : isMetro() ? { name: METRO.SWITCH.name, title: METRO.SWITCH.title, dlg: METRO.LEVEL.bossDialog } : null;   // a level boss: its card and its dialog
+        const LB = isP9() ? { name: P9.MARCHETTI.name, title: P9.MARCHETTI.title, dlg: 'marchetti_intro' } : isMetro() ? { name: METRO.SWITCH.name, title: METRO.SWITCH.title, dlg: METRO.LEVEL.bossDialog } : isAqua() ? { name: AQUA.KALT.name, title: AQUA.KALT.title, dlg: AQUA.LEVEL.bossDialog } : null;   // a level boss: its card and its dialog
         if (enc.introT > 0.5 && cardT <= 0 && cardEl.hidden && !(LB ? bossDlg.on : malDlg)) { cardEl.innerHTML = LB ? `<b>${LB.name}</b><small>${LB.title}</small>` : `<b>${BOSS_NAME}</b><small>Owner of Club Noir</small>`; cardEl.hidden = false; cardT = 3.2; toastEl.hidden = true; toastT = 0; }
         // a level boss (Pier 9, Line Zero): at the mark (at most 4.5 s), the portrait dialog plays, and the fight starts when it closes
         if (LB && !bossDlg.on && !menuShown && enc.boss && (Math.abs(enc.boss.x - enc.boss.introX) <= 3 || enc.introT > 4.5)) {
@@ -6033,6 +6042,11 @@ import { metro3d } from './levels/metro/three.js';
   }
   function drawDoor() {
     if (!flags.club) return;
+    if (isAqua()) {   // the tunnel side of the watertight door: it swings shut behind him
+      const k = clamp((clubT - 0.45) / 0.3, 0, 1), w = Math.round(14 * k);
+      for (let y = GROUND - 84; y < GROUND; y++) for (let x = DOOR_X - 14; x < DOOR_X; x++) plot(x, y, x === DOOR_X - 14 ? PAL.out : x >= DOOR_X - w ? (y % 14 === 0 ? C('#3a3e46') : C('#5a5e66')) : C('#06080c'));
+      return;
+    }
     if (isMetro()) {   // the junction side of the blast door: it drops shut behind him
       const k = clamp((clubT - 0.45) / 0.3, 0, 1), y1 = GROUND - 84 + Math.round(84 * k);
       for (let y = GROUND - 84; y < GROUND; y++) for (let x = DOOR_X - 10; x < DOOR_X; x++) plot(x, y, y < y1 ? (((x + y) >> 3) % 2 ? C('#d8b020') : C('#1a1a1a')) : x === DOOR_X - 10 ? PAL.out : C('#060608'));
@@ -7065,6 +7079,8 @@ import { metro3d } from './levels/metro/three.js';
     if (id === 'flare') return t3all([t3rod(0, L - 1, 0.55, C('#c02a2a'), 6), t3rod(L - 1, L, 0.45, C('#fff0d0'), 6)]);   // Tinder's road flare
     if (id === 'wrench') return t3all([t3rod(0, L, 0.7, ECOL.iron, 6), t3box(L - 1.2, -1.6, -0.5, L + 0.4, 1.6, 0.5, ECOL.steel, 0.25)]);
     if (id === 'flaregun') return t3all([t3box(0, -0.8, -0.6, L + 1, 0.9, 0.6, C('#b8902a'), 0.3), t3box(-0.3, -3, -0.45, 1.4, -0.6, 0.45, C('#6a4a2a'), 0.3)]);
+    if (id === 'harpoon') return t3all([t3rod(-3, L, 0.6, ECOL.gun, 8), t3rod(-2.5, -0.5, 1.1, C('#7a6a3a'), 8, -1), t3rod(L, L + 2.5, 0.3, ECOL.steel, 6)]);   // the harpoon gun: a long barrel, the air tank, the bolt's tip
+    if (id === 'anchor') return t3all([...Array.from({ length: 5 }, (_, k) => t3box(k * L / 6, -0.4, -0.4, k * L / 6 + L / 7, 0.4, 0.4, k % 2 ? ECOL.iron : ECOL.steel, 0.2)), t3box(L - 3, -0.6, -0.6, L, 0.6, 0.6, ECOL.steelD, 0.2), t3box(L - 0.6, -3.2, -0.5, L + 0.6, 3.2, 0.5, ECOL.steel, 0.2)]);   // Teague's anchor on its chain
     return t3all([t3rod(0, 1.8, 0.5, ECOL.grip, 6), t3box(1.8, -0.5, -0.12, L, 0.4, 0.12, ECOL.steel, 0.25)]);   // a knife
   }
   // ----- the vehicles, modelled from the 2D side profile (VPARTS): a lofted body with a rounded shoulder, a narrower glasshouse
@@ -7354,7 +7370,7 @@ import { metro3d } from './levels/metro/three.js';
         if (y >= GOAL.y - 1 && y <= GOAL.y + 4 && x >= GOAL.x0 - 1 && x <= GOAL.x1 + 1) zone[i] = zGoal;
         else if (x >= STAIR_X0 - 3 && x <= STAIR_X1 + 3 && y > GOAL.y + 4) { const s = flightAt(x, y); zone[i] = s && s.step ? zFl[s.k % 2] : zStairs; }
       }
-      if (p9) this.p9Zones(zone, LIFT, mkZone); else if (isMetro()) this.mZones(zone, LIFT, mkZone);
+      if (p9) this.p9Zones(zone, LIFT, mkZone); else if (isMetro() || isAqua()) this.mZones(zone, LIFT, mkZone);
       const stack = [];
       for (let y = 0; y < GROUND; y++) for (let x = 0; x < W; x++) {   // the other props: one block per connected group
         const i0 = y * W + x; if (!LIFT[i0] || zone[i0] >= 0) continue;
@@ -7367,7 +7383,7 @@ import { metro3d } from './levels/metro/three.js';
         }
         let k = custom ? -1 : PLATS.findIndex((s, n) => n < ZD.length && s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 && s.y <= Z.y1);
         if (k < 0 && !custom && Z.x1 - Z.x0 > 14 && Z.y1 > GROUND - 45) k = PLATS.findIndex((s, n) => n < ZD.length && s.x0 - 40 <= Z.x1 && s.x1 + 40 >= Z.x0);   // a pickup's cab beside its bed
-        if (Z.x1 - Z.x0 <= 14 && Z.y1 - Z.y0 >= 40 && !isMetro()) { Z.z0 = -12; Z.z1 = -8; }   // a street lamp: a tall thin post at the kerb
+        if (Z.x1 - Z.x0 <= 14 && Z.y1 - Z.y0 >= 40 && !isMetro() && !isAqua()) { Z.z0 = -12; Z.z1 = -8; }   // a street lamp: a tall thin post at the kerb
         else if (k >= 0) { Z.z0 = ZF; Z.z1 = ZF + ZD[k]; }
         else { Z.z0 = ZF; Z.z1 = ZF + 8; }
         for (const s of PLATS) if (s !== GOAL && s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 - 1 && s.y <= Z.y1) this.frontZ.set(s, Math.max(this.frontZ.get(s) ?? -99, Z.z1));   // every ledge on this block
@@ -7739,7 +7755,7 @@ import { metro3d } from './levels/metro/three.js';
 
     // ----- Line Zero (src/levels/metro/three.js): its named blocks; the trains and the handcar as models clipped at the portals -----
     mZones(zone, LIFT, mkZone) {
-      for (const B of metro3d.blocks(T3)) {
+      for (const B of (isAqua() ? aqua3d : metro3d).blocks(T3)) {
         const id = mkZone(B.z0, B.z1), Z = this.zones[id];
         for (let y = Math.max(0, B.y0); y <= Math.min(GROUND - 1, B.y1); y++) for (let x = Math.max(0, B.x0); x <= Math.min(W - 1, B.x1); x++) {
           const i = y * W + x; if (!PROPS[i] || !stat[i] || zone[i] >= 0) continue;
@@ -8509,6 +8525,7 @@ import { metro3d } from './levels/metro/three.js';
       for (const b of eshots) if (b.k === 't') this.tunaModel(b.x, b.y, Math.atan2(b.vy, b.vx), this.ease(b, this.laneZ[LANE.FIGHT]), 20);   // Marchetti's lobbed tuna
       for (const b of eshots) if (b.k === 'k') { const m = this.model(this.knifeGeo); m.position.set(b.x, -b.y, this.ease(b, this.laneZ[b.lane ?? LANE.FIGHT])); m.rotation.set(0, 0, -(b.t * 22)); }
       this.p9Models(); this.mModels();
+      if (LVH.sprites3d) for (const q of LVH.sprites3d(T3)) this.sprite(q.size, q.x, q.y, q.draw, q.d, q.z, q.slot);   // a level's moving models (the Leviathan: the hanging catwalks, the hoist's pallet, the bait cage)
       for (let i = this.nM; i < this.mpool.length; i++) this.mpool[i].visible = false;
       if (this.gpool) for (let i = this.nG; i < this.gpool.length; i++) this.gpool[i].visible = false;
     },
@@ -8572,12 +8589,12 @@ import { metro3d } from './levels/metro/three.js';
     updateLayers() {
       const { ZF } = T3;
       if (flags.club && isStreet()) this.layer(this.lClub, () => { drawClub(); drawDancers(); }, { glow: true, z: ZF - 0.6 }); else this.lClub.mesh.visible = false;   // (the hall's wall is a mesh: p9Build)
-      this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); if (LVH.drawWorld) LVH.drawWorld(); }, { glow: true, z: flags.club && !isMetro() ? ZF - 0.3 : ZF + 0.3 });
+      this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); if (LVH.drawWorld) LVH.drawWorld(); }, { glow: true, z: flags.club && !isMetro() && !isAqua() ? ZF - 0.3 : ZF + 0.3 });
       this.layer(this.lSign, drawSign, { glow: true, z: ZF + 5.05 });
       this.layer(this.lBlade, drawStairSign, { glow: true, z: ZF + 4.05 });
       if (!flags.club && cam.x < STAIR_X1 + 160 && cam.x + cam.vw > STAIR_X0 - 160) this.layer(this.lRail, drawStairRails, { z: ZF + T3.STAIR + 0.4 }); else this.lRail.mesh.visible = false;
-      this.lFloor.mesh.visible = flags.club && !isMetro();
-      if (flags.club && !isMetro()) {   // drawClubFloor in camera-sized strips across the sheet
+      this.lFloor.mesh.visible = flags.club && !isMetro() && !isAqua();
+      if (flags.club && !isMetro() && !isAqua()) {   // drawClubFloor in camera-sized strips across the sheet
         const F = this.lFloor, S = STREET + 1, step = 256;
         for (let ox = 0; ox < F.w; ox += step) {
           withView({ x: F.x0 + ox, y: GROUND, vw: step, vh: S }, isP9() ? () => P9.drawHallFloor(R9, p9.ice) : drawClubFloor);
@@ -8631,7 +8648,7 @@ import { metro3d } from './levels/metro/three.js';
     },
     // the far scene, exactly as the 2D view draws it (sky, moon, clouds, far town, or the club's back wall and crowd), lit the same way
     updateBackground() {
-      if (isMetro()) { this.scene.background = this.voidBg || (this.voidBg = t3rgb(C('#0b0c10'))); return; }   // Line Zero: underground, no sky
+      if (isMetro() || isAqua()) { this.scene.background = this.voidBg || (this.voidBg = t3rgb(C('#0b0c10'))); return; }   // Line Zero, the Leviathan: indoors, no sky
       if (flags.club) { this.scene.background = isP9() ? this.hallBg || (this.hallBg = t3rgb(C('#101218'))) : this.clubBg || (this.clubBg = t3rgb(C('#0d0913'))); return; }   // the club's wall is a layer in the world (updateLayers); the hall's is a mesh (p9Build)
       this.scene.background = this.bgTex;
       buf.fill(0);
@@ -8902,7 +8919,7 @@ import { metro3d } from './levels/metro/three.js';
     if (!isStreet() && endPh === 'done' && !flags.wasted) { if (c === 'Enter' && !e.repeat && !resultsEl.hidden) { if (isP9() && progress.ch2) startChapter2(); else quitToTitle(); } return; }   // Pier 9 cleared: on to Line Zero; Line Zero: back to the menu   // Pier 9 cleared: Enter goes back to the menu
     if (flags.wasted) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) retry(); return; }   // the Wasted card: retry from the checkpoint (Wicked: a restart); Esc opens the menu above
     if (endPh === 'done' && !resultsEl.hidden) { if (!e.repeat && c === 'Enter') startChapter1(); else if (!e.repeat && c === 'KeyR') reset(); return; }   // Club cleared: Enter goes on with the story (prologue, then Pier 9), R plays the tutorial again
-    if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) { if (isP9()) p9Outro(); else if (isMetro()) LVH.outro(); else endFinish(); } return; }   // the ending: Esc or Enter jumps to the card
+    if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) { if (isP9()) p9Outro(); else if (isMetro() || isAqua()) LVH.outro(); else endFinish(); } return; }   // the ending: Esc or Enter jumps to the card
     // the keys: arrows move (up jumps, down squats; down at a run rolls), Q punches (by a beaten goon: the finisher), W kicks, Space dodges, Shift walks (runs, with run off)
     if (c === 'ArrowLeft') { keys.left = true; takeOver(); }
     else if (c === 'ArrowRight') { keys.right = true; takeOver(); }
@@ -9236,9 +9253,9 @@ import { metro3d } from './levels/metro/three.js';
   // ---------- levels: the tutorial street, Pier 9 (src/levels/pier9.js), Line Zero (src/levels/metro/) ----------
   // loadLevel swaps the level lists in place (surfaces, lamps, doors, props, pickups, the static layer). The street's own lists are
   // kept in a snapshot the first time it is left, so going back restores them exactly. The caller then calls reset().
-  const STREET_LV = LV, PIER9_LV = { id: 'pier9', title: 'Pier 9', startX: 60, drops: P9.DROPS }, METRO_LV = { id: 'metro', title: 'Line Zero', startX: 40, drops: METRO.DROPS };
+  const STREET_LV = LV, PIER9_LV = { id: 'pier9', title: 'Pier 9', startX: 60, drops: P9.DROPS }, METRO_LV = { id: 'metro', title: 'Line Zero', startX: 40, drops: METRO.DROPS }, AQUA_LV = { id: 'aquarium', title: 'The Leviathan', startX: 40, drops: AQUA.DROPS };
   const LEVEL_LISTS = { PLATS, STEPS, LAMPS, WINL, FEAT, VPARTS, HOUSEWIN, DOORS, ALLEYS, CARDOORS, CLUB_DOORS, OBJ_START, pickups, VEH };
-  let streetSnap = null, p9Data = null, metroData = null, MR = null;   // MR: Line Zero's run (METRO.createMetro(G))
+  let streetSnap = null, p9Data = null, metroData = null, MR = null, aquaData = null, AR = null;   // AR: the Leviathan's run (AQUA.createAquarium(G))   // MR: Line Zero's run (METRO.createMetro(G))
   function loadLevel(id) {
     if (LV.id === id) return;
     boards.length = 0; while (objs.length) removeObj(objs[0]);
@@ -9261,13 +9278,21 @@ import { metro3d } from './levels/metro/three.js';
           pickups: METRO.PICKUPS.map(k => ({ w: k.w, x: k.x, y: restY(k.w), taken: false, rack: !!k.rack, hidden: k.hidden || null, hide0: k.hidden || null })) };
       }
       d = metroData; LV = METRO_LV;
+    } else if (id === 'aquarium') {
+      if (!aquaData) {
+        const pt = AQUA.paint({ W, H, GROUND, PAL });
+        aquaData = { stat: pt.b, PROPS: pt.props, STAT_BG: pt.bg, GOAL: { x0: -999, x1: -998, y: -999 }, PLATS: AQUA.surfaces(), STEPS: [], LAMPS: [], WINL: pt.winl, FEAT: [], VPARTS: [],
+          HOUSEWIN: [], DOORS: [], ALLEYS: [], CARDOORS: [], CLUB_DOORS: [AQUA.ENTRY, 2790], OBJ_START: AQUA.OBJ_START, VEH: [], PUDDLE: pt.pud, WALLM: null, stairs: { x0: -999, x1: -998 },
+          pickups: AQUA.PICKUPS.map(k => ({ w: k.w, x: k.x, y: restY(k.w), taken: false, rack: !!k.rack, hidden: k.hidden || null, hide0: k.hidden || null })) };
+      }
+      d = aquaData; LV = AQUA_LV;
     } else { d = streetSnap; LV = STREET_LV; }
     for (const k in LEVEL_LISTS) { LEVEL_LISTS[k].length = 0; LEVEL_LISTS[k].push(...d[k]); }
     stat.set(d.stat); PROPS.set(d.PROPS); STAT_BG = d.STAT_BG; GOAL = d.GOAL; WALLM = d.WALLM || null; PUDDLE.set(d.PUDDLE);
     Object.assign(STAIR_R, d.stairs || { x0: STAIR_X0, x1: STAIR_X1 });
     SURF.length = 0; SURF.push(GROUND_S, ...PLATS, ...TRAMPS);
     for (const w of HOUSEWIN) { w.off = false; w.peek = false; w.t = 0; w.lv = 1; }
-    if (id === 'metro') { if (!MR) MR = METRO.createMetro(ENG); LVH = MR; } else LVH = {};
+    if (id === 'metro') { if (!MR) MR = METRO.createMetro(ENG); LVH = MR; } else if (id === 'aquarium') { if (!AR) AR = AQUA.createAquarium(ENG); LVH = AR; } else LVH = {};
   }
   // the engine for a level module (src/levels/metro/run.js): the sim's state and functions, read and called from there
   const countdownEl = (() => { const el = document.createElement('div'); el.className = 'countdown'; el.hidden = true; el.innerHTML = '<span></span><div class="bar"><i></i></div>'; document.getElementById('bossbar')?.after(el); return el; })();
@@ -9580,6 +9605,16 @@ import { metro3d } from './levels/metro/three.js';
     gameAudio.playMusic('docks_explore', { volume: 0.4 });
     toast('Line Zero', 'Night. Under the city. Find the Rats who lit the fire.');
   }
+  // Chapter 4: The Leviathan. Its intro panels, then the level (Level 3's results card leads here)
+  async function startChapter4() {
+    if (sceneOn) return;
+    leaveTitle(); setDemo(false); hideMenu(); resultsEl.hidden = true;
+    loadLevel('aquarium'); reset();
+    sceneOn = true;   // (the level waits behind the panels)
+    await playScene('panels', AQUA.LEVEL.intro);
+    gameAudio.playMusic('docks_explore', { volume: 0.4 });
+    toast('The Leviathan', 'After midnight. The aquarium is closed. Find the name behind the fire order.');
+  }
   function startTutorial() { if (!isStreet()) loadLevel('street'); if (flags.attract) endAttract(); else { hideMenu(); setDemo(false); reset(); startOpening(); } }
   function quitToTitle() { hideMenu(); if (!isStreet()) loadLevel('street'); reset(); startAttract(); }
   // ---- the menu: a console-style list down the left. It stays up on the title screen while the demo plays; in a game, Esc opens
@@ -9617,11 +9652,12 @@ import { metro3d } from './levels/metro/three.js';
       { label: 'Tutorial: The Street', act: () => { menuPage = 'main'; startTutorial(); } },
       progress.ch1 ? { label: 'Prologue + Pier 9', act: () => { menuPage = 'main'; startChapter1(); } } : lockedItem('Prologue + Pier 9', 'Malaspina in the tutorial'),
       progress.ch2 ? { label: 'Chapter 2: Line Zero', act: () => { menuPage = 'main'; startChapter2(); } } : lockedItem('Chapter 2: Line Zero', 'Marchetti on Pier 9'),
+      progress.ch4 ? { label: 'Chapter 4: Leviathan', act: () => { menuPage = 'main'; startChapter4(); } } : lockedItem('Chapter 4: Leviathan', 'Count Brask in the casino'),
       { label: 'Back', act: () => { menuPage = 'main'; menuSel = 0; } },
     ];
     const items = [
       { label: flags.attract ? 'Start game' : 'Resume', act: () => flags.attract ? endAttract() : hideMenu() },
-      { label: 'Chapter', value: () => !isStreet() && !flags.attract ? LV.title : 'Choose', act: () => { menuPage = 'chapter'; menuSel = isP9() ? 1 : isMetro() ? 2 : 0; } },
+      { label: 'Chapter', value: () => !isStreet() && !flags.attract ? LV.title : 'Choose', act: () => { menuPage = 'chapter'; menuSel = isP9() ? 1 : isMetro() ? 2 : isAqua() ? 3 : 0; } },
       { label: 'Difficulty', value: () => DIFFS[diffSel].name + (flags.attract ? '' : ' · locked'), change: d => {   // set on the title menu only: a run keeps its difficulty (no Wicked permadeath dodge)
         if (!flags.attract) { toast('Difficulty is locked during a run', 'Quit to title to change it'); return; }
         diffSel = (diffSel + d + DIFFS.length) % DIFFS.length; charge.forEach((c, w) => { charge[w] = Math.min(c, fullCharge(w)); }); saveSettings(); } },
@@ -9943,5 +9979,11 @@ import { metro3d } from './levels/metro/three.js';
         enemies: enemies.filter(e => !e.dead).map(e => [e.rat || e.kind || e.role, Math.round(e.x), Math.round(e.y), Math.round(e.hp), e.zone, e.down ? 'down' : e.act || e.sp || '', e.lane]), ...(MR ? MR.peek() : {}) }),
       kill: n => window.__pier9.kill(n), setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; }, hurtBoss: n => window.__pier9.hurtBoss(n), hurtMini: n => { const m = MR && MR.mini(); if (m) m.hp = Math.max(1, m.hp - n); }, hurtHero: n => window.__pier9.hurtHero(n),
       view3d: on => setMode3D(!!on), zoom: z => setZoom(String(z)), train: (key, o) => MR && MR.sendTrain(key, o || {}), equip: w => equip(w, fullCharge(w)), get MR() { return MR; }, get ENG() { return ENG; } };
+    // The Leviathan (tests): start the chapter (its intro panels) or the level at once; skip to a place, to Teague or to the shark tunnel; read its state
+    const aGo = () => { leaveTitle(); setDemo(false); hideMenu(); resultsEl.hidden = true; loadLevel('aquarium'); };
+    window.__aquarium = { chapter: () => startChapter4(), start: () => { aGo(); reset(); }, toTeague: () => { aGo(); AR.skipToTeague(); }, toBoss: () => { aGo(); AR.skipToBoss(); }, skipTo: x => { aGo(); AR.skipTo(x); },
+      tp: x => heroTo(x), peek: () => ({ ...window.__metro.peek(), ...(AR && isAqua() ? AR.peek() : {}) }), kill: n => window.__pier9.kill(n), setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; },
+      hurtBoss: n => window.__pier9.hurtBoss(n), hurtMini: n => { const m = AR && AR.mini(); if (m) m.hp = Math.max(1, m.hp - n); }, hurtHero: n => window.__pier9.hurtHero(n), heal: () => { hero.hp = 100; },
+      view3d: on => setMode3D(!!on), zoom: z => setZoom(String(z)), equip: w => equip(w, fullCharge(w)), progress: () => ({ ...progress }), get AR() { return AR; }, get ENG() { return ENG; } };
   } else requestAnimationFrame(frame);
 })();

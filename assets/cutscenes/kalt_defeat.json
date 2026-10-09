@@ -1,0 +1,13 @@
+{
+  "id": "kalt_defeat",
+  "title": "Kalt",
+  "music": "music:aquarium_outro",
+  "_todo": "Portraits kalt_hurt, kalt_bitter, elias_wet (being generated). Voice lines kalt_defeat_01..02 and elias_aquarium_03 do not exist yet.",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_wet" },
+  "right": { "id": "kalt", "name": "NERISSA KALT", "role": "Baritone · the Undertow", "portrait": "portrait:kalt_hurt" },
+  "lines": [
+    { "speaker": "kalt", "mood": "hurt", "voice": "kalt_defeat_01", "text": "Brask only paid for the matches. The Board gave the fire order." },
+    { "speaker": "elias", "mood": "wet", "voice": "elias_aquarium_03", "text": "Who on the Board?" },
+    { "speaker": "kalt", "mood": "bitter", "voice": "kalt_defeat_02", "text": "The ones who never get wet. Look up, Sandman. Look all the way up." }
+  ]
+}

@@ -1,0 +1,42 @@
+{
+  "id": "aquarium_intro",
+  "title": "The Leviathan",
+  "music": "music:aquarium",
+  "musicLoop": true,
+  "musicEnd": "keep",
+  "_todo": "Panel art: assets/art/panels/aquarium/aquarium_intro_0N.png (being generated). Voice lines aquarium_intro_01..05 and aquarium_intro_03a do not exist yet (docs/levels/04-leviathan.md 9.5). Re-check bubble and caption positions against the final art.",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:aquarium_intro_01", "rain": true, "tint": "cold", "minTime": 1.5, "sound": "storm_boom",
+        "shot": "Exterior, night. The sea wall. The aquarium's whale-shaped facade, dark; the sign THE LEVIATHAN - VALMORA CITY AQUARIUM with half its neon dead. Storm waves smash over the wall in white spray. Mags's old green coupe, headlights off, wipers moving.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "aquarium_intro_01", "text": "The Leviathan. Kids come here by day. Contraband by night." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:aquarium_intro_02", "rain": true, "minTime": 1.2, "sound": "match_strike",
+        "shot": "Interior of the car, close. Mags lights a cigarette; the match lights both faces. Rain runs down the windscreen. Nero's head between the seats from the back.",
+        "lines": [
+          { "type": "say", "speaker": "Mags", "pos": "bottom", "align": "left", "voice": "aquarium_intro_02", "text": "I'll keep the engine warm. Don't make me come in after you." }
+        ] },
+      { "image": "panel:aquarium_intro_03", "rain": true, "minTime": 1.2,
+        "shot": "Medium. Elias at the staff door, the lock already broken. He looks back once at the car. Nero's nose at the car's window.",
+        "lines": [
+          { "type": "say", "speaker": "Elias", "pos": "top", "align": "right", "voice": "aquarium_intro_03a", "text": "Stay." },
+          { "type": "vo", "pos": "bottom", "voice": "aquarium_intro_03", "text": "The dog obeyed. He always does when it matters." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:aquarium_intro_04", "tint": "cold", "minTime": 1.2, "sound": "shark_pass_low",
+        "shot": "Wide. The hero in the blue glass tunnel. A shark passes overhead, its shadow sliding across his face.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "aquarium_intro_04", "text": "Glass between me and the teeth. Same as every night of my life." }
+        ] },
+      { "image": "panel:aquarium_intro_05", "minTime": 1.2,
+        "shot": "Medium. Divers in black wetsuits load crates onto a boat at a basement dock. One raises a harpoon gun toward the camera.",
+        "lines": [
+          { "type": "say", "speaker": "Diver", "pos": "bottom", "align": "right", "voice": "aquarium_intro_05", "text": "Intruder in the tunnel!" }
+        ] }
+    ] }
+  ]
+}
