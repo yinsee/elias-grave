@@ -39,6 +39,10 @@ Each URL run twice in headless Chrome (`PORT=8765 sh tools/golden.sh`); each pai
   Line Zero itself is tested with `?manual` and `window.__metro` (`start`, `chapter`, `toTinder`, `toBoss`, `tp`, `peek`, `kill`,
   `setDiff`, `train`, `equip`, `view3d`) and the helpers in `tests/metrobot.js` (`await import('/tests/metrobot.js')`: `K`, `bot`, `run`, `skipScene`, `toFight`).
 
+- The Leviathan (Level 4, branch of 0628cb3): all four URLs keep these hashes (state, buf, l3; one run each in headless Chrome,
+  2D state = 3D state). The new shared hooks (`LVH.preHit`, `LVH.sprites3d`, `R.gun`, the harpoon and anchor weapon draws) do not
+  run on the street; `isAqua()` branches are off there. The level is tested with `?manual`, `window.__aquarium` and `tests/aquabot.js`.
+
 Boss fights are tested with bots, not hashes: `PORT=8765 sh tools/bossbot.sh street|pier <diff 0-3> jab|varied [seed]`
 (`tests/bossbot.html`; run them one at a time: side-by-side headless runs can stall). No block, no parry: the varied bot
 perfect-dodges, jumps, grabs and finishes crewmen. Tests with `?manual`: `__sim` also holds `EMOVES`, `MOVES`, `MAL`, `p9`,
