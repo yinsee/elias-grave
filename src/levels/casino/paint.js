@@ -193,7 +193,7 @@ export function paint(api) {
     for (const px of [x0 + 60, x1 - 4]) for (let yy = y + 10; yy < GROUND; yy++) { put(px, yy, CC.marbleD); put(px + 1, yy, CC.marbleV); put(px + 2, yy, O); } }
   { const S = D.STAIR;
     for (let i = 0; i < S.n; i++) { const x0 = S.x0 + i * S.step, ty = GROUND - (i + 1) * S.step; for (let x = x0; x <= x0 + S.step - 1; x++) { put(x, ty, CC.redL); put(x, ty + 1, CC.red); put(x, ty + 2, shade(CC.red, 0.7)); put(x, ty + 3, shade(CC.red, 0.6)); } for (let y = ty + 1; y < ty + S.step; y++) put(x0 + S.step - 1, y, shade(CC.red, 0.55)); }
-    for (let x = S.x0; x < S.x0 + S.n * S.step; x++) { const sy = GROUND - (x - S.x0) - 1; for (let k = 1; k < 5; k++) put(x, sy + k, k === 4 ? O : CC.marbleD); put(x, sy - 12, CC.gold); }   // the stringer, the banister
+    for (let x = S.x0; x < S.x0 + S.n * S.step; x++) { const i = Math.floor((x - S.x0) / S.step), ty = GROUND - (i + 1) * S.step; for (let y = ty + 4; y < GROUND; y++) put(x, y, y === ty + 4 ? CC.goldD : (x - S.x0) % 24 === 0 ? CC.goldD : y > GROUND - 3 ? C('#2a1014') : (x + y) % 13 === 0 ? C('#4a1218') : C('#3a0e14')); put(x, ty - 12, CC.gold); if ((x - S.x0) % 12 === 0) for (let y = ty - 11; y < ty; y++) put(x, y, CC.goldD); }   // the stair's marble flank under the treads, the banister and its balusters
   }
   for (const dx of [1766, 2130]) rect(dx - 7, GROUND - 52, dx + 7, GROUND - 1, (x, y) => Math.abs(x - dx) === 7 || y === GROUND - 52 ? CC.goldD : C('#2a1a14'));
   // the hall: the entry door frame; the salon: the hub and its spindle

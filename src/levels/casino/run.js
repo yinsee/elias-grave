@@ -896,7 +896,7 @@ export function createCasino(G) {
     if (sec.id === 'lobby') { const k = 0.7 + 0.3 * S.mirrors.filter(m => !m.hall && m.hp > 0).length / D.LOBBY_MIRRORS.length; amb = amb.map(v => v * k); }
     const near = (x, r) => x > cam.x - r && x < cam.x + cam.vw + r;
     const add = (x, y, r, R, Gg, B, glow = 0, pri = 1) => { if (near(x, r)) ls.push([x - cam.x, y - cam.y, r * r, R, Gg, B, glow, pri]); };
-    for (const c of S.chands) if (c.st === 'hang' && (c.id !== 'salon' || G.flags.club)) add(c.x, c.y + 6, c.id === 'great' ? 150 : c.id === 'salon' ? 120 : 100, 1.1, 0.88, 0.6, 20, 3);
+    for (const c of S.chands) if (c.st === 'hang' && (c.id !== 'salon' || G.flags.club)) add(c.x, c.y + 6, c.id === 'great' ? 130 : c.id === 'salon' ? 120 : 100, c.id === 'great' ? 0.8 : 1.1, c.id === 'great' ? 0.64 : 0.88, c.id === 'great' ? 0.44 : 0.6, 20, 3);
     for (const [wx, wy, wr] of G.WINL) add(wx, wy, wr * 2, 0.35, 0.3, 0.55, 0, 1);
     for (const hx of D.HOODS) add(hx, 96, 90, 0.85, 1.0, 0.95, 10, 2);
     add((D.RANGE.x0 + D.RANGE.x1) / 2, D.RANGE.top - 4, S.flare > 0 ? 120 : 50, 1.5, 0.7, 0.25, 10, 3);
@@ -905,7 +905,7 @@ export function createCasino(G) {
     if (S.coupe > 0) add(1240, 214, 40, 1.2, 1.2, 0.9, 10, 2);
     for (const lx of [1360, 1460, 1560, 1680]) add(lx, 128, 80, 0.7, 0.95, 0.7, 0, 1);
     if (S.alarm && !S.coolerDone) { const a = G.simTime * 6; add(D.ALARM.x + Math.cos(a) * 60, D.ALARM.y + 40, 90, 1.6, 0.2, 0.2, 0, 4); }
-    for (const sx of [1790, 1880, 1990, 2090]) add(sx, 150, 60, 1.0, 0.8, 0.5, 8, 1);   // the lobby's sconces
+    for (const sx of [1790, 1880, 1990, 2090]) add(sx, 150, 50, 0.6, 0.48, 0.3, 6, 1);   // the lobby's sconces
     for (const m of S.mirrors) if (m.hall && m.hp > 0) add((m.x0 + m.x1) / 2, m.y0 + 4, 50, 0.6, 0.7, 0.9, 0, 2);
     if (G.flags.club) {
       for (let x = D.WHEEL.x0; x <= D.WHEEL.x1; x += 90) add(x, 236, 70, 1.0, 0.85, 0.5, 6, 2);

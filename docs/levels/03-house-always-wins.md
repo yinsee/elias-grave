@@ -697,3 +697,76 @@ Character reference images needed: `brask/ref.png` (white tuxedo, monocle, silve
 ### 9.6 Voice (`assets/audio/voice/`, optional)
 
 `croupier_faites_vos_jeux`, `croupier_rouge`, `croupier_noir`, `croupier_rien_ne_va_plus`, `croupier_zero`, `pa_security_discreet`, `brask_intro_01`-`05`, `brask_wrong_card`, `brask_changes_tables`, `brask_all_in`, `brask_not_my_ball`, `cooler_intro_01`, `dealer_terrace_01`-`03`.
+
+---
+
+## 10. As built (first pass, 2026-10-09)
+
+Code: `src/levels/casino/` (`data.js` map and numbers, `paint.js` art, `run.js` the run, `three.js` the 3D blocks, `index.js`), `src/bosses/cooler.js`, `src/bosses/brask.js`. The game calls the run's hooks (`LVH` in `src/legacy.js`; `isLv('casino')`, `isCasino()`). Chapter 3 is `startChapter3()`: locked until `progress.ch3` (Switch's win); Line Zero's results card leads here (Enter); Brask's win unlocks `ch4`. The results card is graded as `ch4` (par 660 s, 44 kills).
+
+### 10.1 The folded map (world 2800 x 320, like Pier 9 and Line Zero)
+
+| Section | x | What is there |
+|---|---|---|
+| `floor` | 0-740 | Bar (top y 250, x 20-120), mezzanine (y 196, x 140-470, one-way), roulette tables 230 and 362, card tables 200, 336, 512, 556, craps table (y 254, x 580-660: the dive pad, the dealer's drawer), slot row (tops y 212, x 640-730), cashier cage (676-736), chandeliers c1 286 and c2 420 (chains anchored on the mezzanine rail), c3 612; the katana in a glass case at 452 |
+| `kitchen` | 740-1100 | Counters A (780-860) and B (950-1030, y 248), the pass shelf (890-970, y 196, one-way), the gas range (878-934, top y 264), the cooking-oil barrel (1046), swinging doors at 744 and 1094 |
+| `terrace` | 1100-1300 | Outdoors in the rain: the river and the far bank, the awning (1150-1250, y 214, a bottle cache on top), the dealer (1206), the café table (1262: a bandage, an ammo box), the fire axe in its glass case (1284), the service door (1298, locked) |
+| `vault` | 1300-1760 | Guard locker (1318-1336, y 240: the step up), the cage catwalk (1340-1474, y 196; its end is the hatch into the booth), the cashier booth (1440-1516: bulletproof panes on its front), the inner gate (1520), the Cooler's counting room (1526-1748), the round vault door (1752), the weapon locker (1716) |
+| `lobby` | 1760-2140 | Nine back-wall mirrors, the grand stair (1808-1900, 23 treads up to the right), the gallery (1900-2122, y 184, one-way), mirror pillars 1880, 1980, 2076, the great chandelier (2010; its rope tied on the gallery rail at 2112), a card table 1932 |
+| `hall` | 2140-2414 | Boss phase 1. Eight mirrors `hm1`-`hm8`, swivel mirrors `hs1` 2204 and `hs2` 2350, the Bell & Sons clock at 3:17 (2287); the street's end wall (2414) is the far mirror wall |
+| `roulette` | 2436-2800 (the club) | Boss phases 2-3. The wheel floor (2446-2794: 37 pockets of 16 px scrolling with the spin), the hub (2600-2640, y 248) and its spindle, the balconies (y 190) at 2452-2492 and 2748-2790, the salon chandelier (2620; its chain anchor on the spindle top, y 222), the croupier at the wheel |
+
+Every room's door stays shut until its waves are down (the terrace's service door: until the dealer gives the key card; the vault door: until the Cooler is down). Spawns off the view never land behind a shut door.
+Checkpoints: the start, the kitchens (w4a), the terrace, the counting house, the counting room (the Cooler), the Salon Privé, the hall of mirrors, the roulette salon (the boss).
+
+### 10.2 The House (data `HOUSE`, `HOUSE_LOOKS`)
+
+| Variant | Base | Its own rule (the answer) |
+|---|---|---|
+| Floor Man (`tux`) | brawler, hp x1.2 | A polite raised hand (his guard up) before his first blow; the shove (no damage) toward the range or a table when the hero is cornered (fight in the open; hit him in the wind-up) |
+| Croupier | knife, quicker wind-up | The deal-in: one card (4) from 40-80 px, then the knife (jump or duck the card) |
+| Rake | pipe, reach 30 | 45 % of his swings are the low rake sweep: it floors the hero (jump or roll it); never climbs |
+| Card Sharp (`sharp`) | thrower | Keeps to a ledge; cards (5): one, a fan of 3 on Hard and Wicked; comes down after 3 throws, 8 s, a hit, or when the hero climbs up |
+| Pit Boss | pistol, hp 55 | Takes cover behind the nearest table (he flips it) or pillar and fires from there; alive 8 s, his radio brings the room's next wave 30 % sooner; inside the booth he fires through the slot; his death drops an ammo box |
+| Kitchen Hand (`cook`) | machete | Will not step onto the range (knock him onto it) |
+
+Reinforcements: `w1r`, `w8r` (Hard and Wicked, at half the wave); the plan's rosters by difficulty; Pit Bosses at most 2 (3 on Wicked) at once; wave caps (`alive`).
+
+### 10.3 Set pieces and the verbs (all on the existing keys)
+
+| Set piece | How |
+|---|---|
+| Card tables | A blow flips one; flipped, it stops bullets and cards (both ways) until broken (60) |
+| Chandeliers | Shoot the chain's anchor, throw something at it, or hit it from the rail (the mezzanine, the gallery, the hub): the shadow (0.5 s; the great one 1.2 s), then the crush (40; the great one 60 and three mirrors; two goons under it: slow motion; the salon one: 12 % of Brask's health and a 3 s stun) |
+| The craps dive | With a gun, jump or roll off the craps table: 0.3x for 1.8 s, 40 chips and 20 cards in the air, the gun fires by itself at the nearest goons ahead (a 25 degree cone); recharge 8 s; a "Dive." toast on Easy and Medium |
+| The gas range | Standing on it, or knocked down on it: burning. The oil barrel thrown or knocked onto it: a 1.5 s flare (20) |
+| Glass cases | The katana, the axe (and the shotgun in the drawer): a blow or a shot opens them |
+| The cashier booth | Bulletproof panes (100 each, 3 crack stages; the hero's shots stop on them); a cash crate rammed into them cracks them and stuns the Pit Bosses inside; the catwalk's end drops him in behind the glass; once the room is down the booth's side door is open |
+| Mirrors | Back-wall mirrors show a reflection of every fighter (ghost figures); a heavy blow, or a light one with no one in front, cracks them (40); bullets and cards too. Pillars and swivel mirrors are cover; broken ones leave shards (a body floored on them takes 4 more) and stagger who stands by |
+| The slot row, the roulette tables | A heavy blow breaks a machine (jackpot bells, coins) or spills the chips |
+| The terrace | Walk in with the room quiet: the dealer's dialog (`casino_terrace`), the key card, the coupé's headlights across the river |
+
+### 10.4 The Cooler and the Count
+
+- **The Cooler** (`src/bosses/cooler.js`): strings, the charge (into the vault door or the gate: 1.6 s stunned, the door rings), the grab (a jab in the wind-up breaks it; caught: thrown through a counting crate, 16; a miss: 0.9 s open), phase 2 at half: the cold streak (6 s his guard stops light blows from the front, the gloves turn blue; 4 s normal). A Floor Man every 10 s on Hard and Wicked.
+- **Brask, phase 1** (the hall): he runs as the room's mini-boss with the full boss bar (`bigBar`), the name card and the `brask_intro` dialog at his mark. Cane strings, the card fan (a monocle glint), the cane hook (crook turned down: roll it; caught: the knee, then a throw), the shuffle (every mirror ripples), the decoys (one per free mirror, 2/3/4/5, never more than mirrors - 1). A decoy dies to any hit (glass, no blood: the engine's `noBlood` flag), cracks its mirror, and on Hard and Wicked the real one throws a free card ("Wrong card, Grave."). A broken mirror takes its decoy. Tells: only the real Count has a reflection and a floor shadow, and only he bleeds. The sidestep after 3 hits in a row (4 on Easy). The phase ends at 65 % or 2 mirrors left: the decoys shatter, he backs to the far mirror wall, smashes it (slow motion) and steps through; the hero follows (a fade into the salon).
+- **Brask, phases 2-3** (the salon, `enc.boss` with the hall's health): the drift (14/20/24/28 px/s; 24/36/42/48 in phase 3; the bulbs chase the other way and the wheel groans 1 s before a reversal every 12 s, 8 s in phase 3; one who walks against it leans into it); the croupier's calls (the pockets of a colour glow, then shock: 10 and a 0.6 s stun, the Count and the goons too; the green zero never; phase 3: red then black) or the ball (along the rim, then across the floor against the spin: 14 and a knock-down; it stuns him 2 s); the hub (he likes it: cards from up there); Rakes over the rim lips (phase 2), Pit Bosses on the balconies (phase 3, a Card Sharp on Wicked); phase 3: the all-in charge (into the hub or a rim lip: 1.8 s stunned), the card rain (12 marks), the salon chandelier. Blood on the wheel turns with it.
+- **The end**: the crew flees, the wheel slows, the ball skips to the zero, the croupier: "Zéro. La maison gagne." Then `casino_outro` and the results card.
+
+### 10.5 Asset names (stable)
+
+- Panels (`assets/art/panels/casino/<id>.png`): `casino_intro_01`-`05`, `casino_outro_01`-`04`.
+- Portraits: `brask_smug`, `brask_amused`, `brask_smiling` (dialog), `cooler_bored`, `dealer_scared`, `elias_cold`, `elias_silent` (planned; a placeholder shows until it exists). `brask_furious` and `brask_beaten` are not used by a script yet (the phase 3 and ball barks are speech bubbles).
+- Cutscene scripts: `assets/cutscenes/casino_intro.json`, `cooler_intro.json`, `casino_terrace.json`, `brask_intro.json`, `casino_outro.json`.
+- Music cues (`src/audio/manifest.js`, no files yet; stand-ins): `music:casino`, `casino_fight`, `casino_terrace`, `cooler`, `brask_hall`, `brask_wheel`, `brask_allin`, `casino_end`.
+- SFX: procedural stand-ins in `src/audio/sfx.js`: `card_fwip`, `card_riffle`, `chip_spill`, `table_flip`, `slot_break`, `mirror_crack`, `mirror_shatter`, `mirror_ripple`, `chandelier_snap`, `chandelier_whistle`, `chandelier_crash`, `monocle_ting`, `cane_whoosh`, `roulette_rumble`, `roulette_groan`, `roulette_ball_clatter`, `roulette_ball_roll`, `roulette_ball_settle`, `pocket_hum`, `pocket_zap`, `gas_whoomph`, `bills_burst`, `vault_door_bell`, `vault_roll`, `alarm_bell`, `pa_chime`. Missing: `crystal_tinkle`, `cane_spin`, `champagne_pop`, `glass_case_break`, `pot_clang`, `trolley_roll`, `cash_cart_roll`, `money_counter_whirr`, `crowd_scream_posh`, `crowd_run_heels`, `rain_awning`, `river_lap`, and all voice lines (9.6).
+- Test hooks (`?manual`): `window.__casino` (`chapter`, `start`, `toCooler`, `toHall`, `toBoss`, `peek`, `kill`, `hurtBoss`, `hurtMini`, `setDiff`, `view3d`, `equip`, `unlock`, `CR`, `ENG`).
+
+### 10.6 Not done in this pass (cut or folded)
+
+- **The akimbo pistols** (a new hero weapon) are folded: the dealer's drawer holds a shotgun, and the dive works with any gun; Pit Bosses drop shotguns by the drop table, and an ammo box. No aim snapping outside the dive.
+- No new object kinds: cash carts and counting tables are the engine's crates, chip stacks are particles (not pocketable), champagne is the bottle. The flippable tables, pillars and cases are the level's own set dressing (not liftable).
+- The wheel drifts the whole floor one way (the plan's two lanes drifting opposite ways are folded: the hero fights in one lane); the spindle's cross-handles are paint, not ledges.
+- Decoys are not see-through on Easy; the reflection is a ghost figure drawn in the glass; the hall's edge lights dim with the ambient as mirrors break.
+- The lobby's camera hold on the mirrors (1.5 s) is not there; the terrace scene is the portrait dialog, not an in-engine timeline; the PA line is a toast; the guests in the crowd panic are painted extras.
+- In 3D everything comes from the shared painters on the wall and floor layers; there are no 3D-only models (the wheel is the club's floor layer).
