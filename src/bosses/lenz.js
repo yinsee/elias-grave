@@ -89,8 +89,8 @@ export function lenzBeat(M, e, n) {
         break;
       case 'vault':
         if (k === 1) M.vaultSwing(e, 2 * bt);
-        if (k === 2) { G.bStart(e, 'slash', 0.03, 'vault', L.vault.dmg); M.tock(e); }
-        if (k === 3) endMove(M, e, P * 1.5);
+        if (k === 3) { G.bStart(e, 'slash', 0.03, 'vault', L.vault.dmg); M.tock(e); }   // he lands behind you as the beam passes
+        if (k === 4) endMove(M, e, P * 1.5);
         break;
       case 'cadenza':
         if (k === 1) M.bell(e);
@@ -115,9 +115,13 @@ export function lenzBeat(M, e, n) {
   if (e.ph === 1 && hpK < L.ph2.below) { M.lenzPhase(e, 2); return; }
   if (e.ph === 2 && hpK < L.ph3.below) { M.lenzPhase(e, 3); return; }
   if (e.ph === 3 && hpK < L.rubato.below && !e.rubatoDone) { e.rubatoDone = true; e.mv = { name: 'rubato', k: 0 }; M.rubato(e); return; }
-  if (M.hazardNear(e)) { M.duck(e); return; }   // a gantry or a tunnel portal crosses him this bar: he ducks it
+  if (M.gantryWarned()) {   // a gantry reaches the arena on the next beat 1: from phase 2 he rides it (the vault); before that he ducks it
+    if (e.ph >= 2 && adx < 140) { e.face = dir; e.mv = { name: 'vault', k: 0 }; G.bossTell(e, 'vault', 2 * bt); M.say('vault', 'He vaults the gantry', 'Roll toward him on beat 2: under the swing', true); return; }
+    M.duck(e); return;
+  }
+  if (M.hazardNear(e)) { M.duck(e); return; }   // a tunnel portal crosses him this bar: he ducks it
   const W = { ...L.moves[e.ph] };
-  if (!M.gantryWarned()) delete W.vault;
+  delete W.vault;
   if (adx > 120) { delete W.waltz; delete W.bow; }
   if (adx > 70) delete W.waltz;
   if (adx < 40) delete W.caseThrow;
@@ -135,7 +139,6 @@ export function lenzBeat(M, e, n) {
     case 'bow': e.bow = true; e.guardT = 2 * bt; G.bossTell(e, 'bow', 2 * bt); M.sfx('bell_ting', e.x, 0.4, 2.2); break;
     case 'caseThrow': G.bStart(e, 'throw', 2 * bt, 'caseThrow'); e.caseThrow = true; break;
     case 'pizz': G.bossTell(e, 'pizzicato', 3 * bt); M.say('pizz', 'Pizzicato', 'Steel pegs, one a beat: high, low, high. Crouch, jump, crouch.', true); break;
-    case 'vault': G.bossTell(e, 'vault', 2 * bt); M.say('vault', 'He vaults the gantry', 'Roll toward him on beat 2: under the swing', true); break;
     case 'cadenza': G.bossTell(e, 'cadenza', 3 * bt); M.say('cadenza', 'Cadenza', 'Six fast cuts after the bell. Back off, or roll through. He is open after.', true); break;
     case 'taunt': G.bossTell(e, 'taunt', 3 * bt); break;
   }
