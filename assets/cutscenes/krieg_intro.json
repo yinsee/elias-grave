@@ -1,0 +1,15 @@
+{
+  "id": "krieg_intro",
+  "title": "Dr. Krieg",
+  "music": "music:krieg",
+  "_todo": "Portraits krieg_calm, krieg_amused, krieg_delighted and elias_furious (being generated); elias_cold exists. Voice lines krieg_intro_01..03, elias_wont, elias_prep do not exist yet.",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_cold" },
+  "right": { "id": "krieg", "name": "DR. ANSELM KRIEG", "role": "Baritone · the Choir's surgeon", "portrait": "portrait:krieg_calm" },
+  "lines": [
+    { "speaker": "krieg", "mood": "calm", "voice": "krieg_intro_01", "text": "Gunshot to the shoulder. She'll live, if I let her." },
+    { "speaker": "elias", "mood": "furious", "voice": "elias_wont", "text": "You won't." },
+    { "speaker": "krieg", "mood": "amused", "voice": "krieg_intro_02", "text": "I have the order. Signed in a hand you would know. Your Maestro is closer than you think." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_prep", "text": "Prep yourself." },
+    { "speaker": "krieg", "mood": "delighted", "voice": "krieg_intro_03", "text": "Ah. The patient wants to operate." }
+  ]
+}

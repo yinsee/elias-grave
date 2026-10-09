@@ -692,3 +692,106 @@ export default defineLevel({
 - Krieg: `defib_charge`, `defib_clear`, `defib_shock`, `water_arc`, `glove_snap`, `lightning_strike`, `hair_crackle`.
 - Hero: `torch_click`, `sedated_heartbeat`, `adrenaline_inject`, `shaft_land`.
 - Voice: `voice:krieg_intro_01..03`, `voice:krieg_pa_d1..d3`, `voice:krieg_pa_porter`, `voice:krieg_p2`, `voice:krieg_p3`, `voice:krieg_codeblue`, `voice:krieg_stalk_01..03`, `voice:krieg_dying`, `voice:hale_call`, `voice:mags_murmur`, `voice:mags_outro`, `voice:elias_guard`, `voice:elias_wont`, `voice:elias_prep`, `voice:elias_notforlong`.
+
+---
+
+## 10. As built (first pass, 2026-10-09)
+
+Code: `src/levels/hospital/` (`data.js` map and numbers, `paint.js` art, `run.js` the run, `three.js` the 3D blocks, `index.js`),
+`src/bosses/porter.js`, `src/bosses/krieg.js`. The game calls the run's hooks (`LVH` in `src/legacy.js`; `isHosp()`).
+Chapter 5 in the menu: locked until `progress.ch5` ("Beat Kalt at the aquarium"); Krieg's defeat unlocks `ch6`.
+
+### 10.1 The folded map (world 2800 x 320)
+
+Walls part the floors (the camera stays inside the floor the hero is on); stair doors (↑ by one) join them.
+
+| Section | x | What is there |
+|---|---|---|
+| `ward` (3F) | 0-396 | Stair door x 18, payphone x 58, windows x 100 and 330, Room 314 (posts x 120 and 258), Mags's bed x 150-200, the monitor x 136, Nero x 214, the vent x 205 (y 150), nurse station x 292-352 (top y 250, the torch), the open east door x 386 |
+| `iso` (3F) | 396-1004 | Sheets x 424 and 498, walkway y 196 x 432-540 (cabinet step x 540-562), fishbowl panes x 574-750 (back lane), the gurney x 790, Ward 5's glass x 874 (room 880-962), stair door x 972, the dead lift x 990 |
+| `morgue` (B1) | 1008-1484 | Stair door x 1022, the shaft landing x 1056, drawer wall x 1068-1188 (drawers at 1084, 1128, 1172), autopsy tables, puddles, the axe case x 1246, cold room door x 1268, the Porter's arena x 1278-1478, the generator, the lever x 1468 |
+| `er` + `bay` (G) | 1492-2062 | Stair door x 1504, triage desk (top y 248), curtain bays x 1680-1764, the security office (glass door x 1774, the machine gun), sliding doors x 1818, the bay (rain): canopy, the neon cross, the ambulance x 1960-2034 (roof y 236), the trauma lift x 2050 |
+| `theatre` (4F) | 2070-2414 | Lift exit x 2088, the Bell & Sons clock (3:17) x 2098, the scrub cabinet step, the gallery y 196 x 2132-2236 with its glass x 2238, beds A and B, the operating table x 2300-2340 (top y 250), the lamp x 2320, the breaker box x 2400, the roof stair door x 2412 |
+| `roof` (the game's "club") | 2436-2800 | The stair hut x 2440-2494 (roof y 228), the helipad, puddles x 2500-2540, 2610-2670, 2716-2752 (live), beds C and D (the wind rolls them), the mast and its dais x 2762-2784 (top y 268), the windsock |
+
+Travel: ward → wing (walk the east door) → D2 bark (stair door x 972 to the ward) → back (ward stair door) → the dead lift (↑: pry, drop) →
+morgue → the Porter → the lever → D3 bark (stair door x 1022) → the payphone (Hale) → ward stair door → ER → bay → trauma lift (↑) →
+theatre → Krieg phases 1-2 → he runs for the stair door x 2412 → the roof (phase 3).
+
+Checkpoints: `h:d1` (the torch), `h:d2` (the bark at Ward 5), `h:d3` (the bark at the generator), `h:er`, `h:theatre`, `boss` (the roof).
+A defend lost (Mags at 0 hearts): a flatline, a fade, a retry from that defend's checkpoint.
+
+### 10.2 The new verbs, on the existing keys
+
+| Verb | Keys | Notes |
+|---|---|---|
+| Use a stair door, the trauma lift, the payphone | ↑ by it | A 0.6 s fade; red EXIT signs mark the stair doors |
+| Pry the dead lift and drop down the shaft | ↑ by it (after D2) | A second of prying, then a fall into the morgue |
+| Pull the generator lever, throw the breaker back | ↑ by it, a blow (Q or W) or a shot | The breaker: phase 2 only; the lamp for 8/6/5/4 s, then a 15/20/25/30 s wait |
+| Ride the gurney | Attack (or fire) while standing on it | It rolls into Ward 5's glass: the pane bursts, slow motion, a gun fires by itself at the three inside (unlimited shells) |
+| Break free of a strap | Mash Q, W or Space | 3/4/5/6 presses |
+| Shake off sedation | Each dodge tap trims 0.3 s; adrenaline clears it | Move speed 0.8 / 0.65 / 0.55; Hard and Wicked: 3 stacks stagger 1 s |
+| Kick an oxygen tank back | Walk into it or hit it | Hit or shot, a tank hisses 1 s, then blows (60 px); it stuns a boss 2 s |
+
+No new key, no sign over anyone. Tells read from the world: the white glint before every blow (the last 0.35 s of a wind-up),
+eyes in the dark, penlights (Syringe Nurses) and headlamps (Anaesthetists, Krieg), the vent's rattle and dust, a sheet's bulge, a drawer
+sliding out, the door opening, the monitor (it turns red and beeps faster during an injection; a flat line when Mags is lost), the floor
+ring before the defib, the yellow arrow on a bed's path, the glowing puddles before Code Blue, the windsock before a gust, the ring and
+crackle before a lightning strike. Toasts explain each mechanic once.
+
+### 10.3 The Orderlies (data: `ORDERLIES` in `data.js`)
+
+| Variant | Base | What it does | The answer |
+|---|---|---|---|
+| Orderly | brawler | Kicks a wheelchair at you from range (0.5 s grip) | Step out of its line or jump it |
+| Restrainer | brawler, HP +20 %, speed -10 % | Strap reach (0.6 s), then a 1.5 s hold | Dodge the reach, hit him in it; held: mash |
+| Syringe Nurse | knife, damage -30 % | Each hit adds a sedation stack; carries a penlight | Keep out of reach; adrenaline; dodge taps |
+| Scalpel Intern | thrower | Scalpels in pairs from high places; drops 2 scalpels | Climb to him; he comes down after 3 throws or 8 s |
+| Bone Surgeon | machete, HP +10 % | A 0.5 s rev, then a grind (2 more ticks of 7); a miss jams the saw 1.2 s | Dodge the rev, punish the jam |
+| Anaesthetist | pistol | Darts (3, then a 2 s reload), +1 sedation each; darts crack glass, beds and the table block them | Rush him in the reload; take cover |
+| Security | pistol | Runs at 30 % health when he is the last one | Chase him or let him go |
+
+Caps: sedation sources 2/2/3/3 alive; Bone Surgeons 1/1/2/2. Throwers take the ledge sources. Ambushes never open within 60 px of the hero.
+
+### 10.4 Bosses
+
+- **The Porter** (`src/bosses/porter.js`): tank string (the third swing floors you), the gurney charge (jump it; into a wall he is
+  stunned 1.6 s), the tank throw (a hissing tank: get clear or kick it back). HP 220/260/300/340, poise 20. The cold room door opens at
+  half his health. No ground stomp on Wicked (not built).
+- **Dr. Krieg** (`src/bosses/krieg.js`): phase 1 saw strings (grind; a miss into a bed, the table or a wall jams it 1.6 s), darts (2-4),
+  scalpels, the bed shove, the defib (a ring, 1.4 s open); blackouts every 15-20 s (his headlamp stays on). Phase 2 at 60 %: he pulls
+  the breaker (full dark, his lamp off, lightning through the clerestory), the stalk (the torch on him in the wind-up staggers him).
+  At 30 % he runs for the stair; the hero follows through the door to the roof, where Krieg is the game's boss (`enc.boss`) with the
+  same health: wind gusts, lightning strikes (a strike in his own zone stuns him 2.5 s), Code Blue (every puddle shocks), dart fans,
+  the defib (it fills a puddle he stands in). Crew: theatre Orderlies from the scrub door and an Intern on the gallery; on the roof an
+  Intern on the hut roof, none under 15 %. Two knock-downs in the fight clear the crew and drop a bandage.
+  In the theatre Krieg uses the boss bar at full size (`bigBar`), though he is the level's mini-boss slot there.
+
+### 10.5 Asset names (stable: the panel and portrait generator uses these)
+
+- Panels: `hospital_intro_01`..`04`, `hospital_outro_01`..`05` (`assets/art/panels/hospital/`).
+- Portraits: `krieg_calm`, `krieg_amused`, `krieg_delighted`, `krieg_hurt`, `elias_furious`, `elias_cold`, `hale_hat`.
+- Cutscene scripts: `assets/cutscenes/hospital_intro.json`, `krieg_intro.json`, `hale_call.json`, `krieg_to_roof.json`, `hospital_outro.json`.
+- Music named in the scripts (not made yet): `music:hospital_dark`, `music:krieg`, `music:hospital_breather`. In-level stand-ins:
+  `docks_explore` (calm) and `boss_marchetti` (defends, the Porter, Krieg).
+- SFX stand-ins added to `src/audio/sfx.js` (procedural): `thunder`, `power_down`, `generator_cough`, `saw_rev`, `saw_grind`,
+  `dart_fire`, `defib_shock`, `flatline`. Every other name in 9.5 is missing; shared sounds stand in (`nero_bark`, `glass_large`, ...).
+- Voice ids in the scripts: `hospital_intro_01..03`, `elias_guard`, `krieg_intro_01..03`, `elias_wont`, `elias_prep`, `hale_call`,
+  `elias_notforlong`, `krieg_p3`, `hospital_outro_01`, `_02`, `_04`, `_05`, `mags_outro` (none exist yet).
+
+### 10.6 Test hooks (`?manual`)
+
+`window.__hospital`: `chapter()`, `start()`, `skip('iso'|'gurney'|'morgue'|'porter'|'er'|'theatre'|'roof')`, `toBoss()`, `peek()`,
+`tp(x)`, `kill(n)`, `setDiff(i)`, `hurtBoss(n)`, `hurtMini(n)`, `hurtHero(n)`, `view3d(on)`, `zoom(z)`, `equip(w)`, `retry()`, `HR`, `ENG`.
+
+### 10.7 Not done in this pass
+
+- Defend: no "Nero, hold!" command beyond his automatic pin; no world marker over the stair door in 3D (the HUD meter and the bark
+  carry it); the Room 314 glass wall is not a breakable pane; pickups in the ward refill once (after D3), not per defend.
+- Sedation slows movement only (no attack recovery or roll cooldown change); the vignette stands in for blur and muted audio.
+- No noise from shards, no extinguisher cloud, no IV stands; wheelchairs are chairs, oxygen tanks are barrels, tins are cans.
+- The fishbowl Orderlies come out as their panes break (silhouettes show in light); the gurney ride is short (the folded corridor).
+- Krieg: no ride on a shoved bed, no 3-hit tip-over cover beyond the low frame, no dart deflection by an axe swing only (any blade
+  swing deflects), no torch-in-the-face flinch outside the stalk, no slump against the mast in the ending (a line and the outro).
+- The roof's backdrop is painted on the wall layer; in 3D the sky is the void colour behind it.
+- Level 4's results card does not lead to Chapter 5 yet (Level 4 is not in this branch).

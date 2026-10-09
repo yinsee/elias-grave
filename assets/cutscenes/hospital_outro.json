@@ -1,0 +1,43 @@
+{
+  "id": "hospital_outro",
+  "title": "St. Cecilia",
+  "music": "music:hospital_breather",
+  "musicLoop": false,
+  "_todo": "Panel art: assets/art/panels/hospital/hospital_outro_0N.png (being generated). Music hospital_breather and voice lines hospital_outro_01, _02, _04, _05 and mags_outro do not exist yet.",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:hospital_outro_01", "rain": true, "tint": "cold", "minTime": 1.5,
+        "shot": "The rooftop helipad in the storm. Krieg sits against the landing-light mast; his defibrillator paddles spark in a puddle. Lightning behind.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "hospital_outro_01", "text": "The doctor finally had a patient he couldn't save." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:hospital_outro_02", "rain": true, "minTime": 1.4,
+        "shot": "Close-up. Krieg's phone on wet concrete: 'Silence the bartender. — A.V.' Beside it, a red-sealed envelope: Winter Gala, Royal Conservatory.",
+        "lines": [
+          { "type": "vo", "pos": "bottom", "voice": "hospital_outro_02", "text": "A.V. Augusta Vane. The police commissioner." }
+        ] },
+      { "image": "panel:hospital_outro_03", "minTime": 1.4,
+        "shot": "Room 314 at dawn, grey light, the storm passing. Mags awake and weak; Nero rests his head on her bed.",
+        "lines": [
+          { "type": "say", "speaker": "Mags", "pos": "bottom", "voice": "mags_outro", "text": "I saw her men at the club. Taking Malaspina's money. That's why." }
+        ] }
+    ] },
+    { "layout": "full", "panels": [
+      { "image": "panel:hospital_outro_04", "minTime": 1.5,
+        "shot": "Elias at the window, back to camera. Police HQ glows across the river.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "hospital_outro_04", "text": "The law owned the guns. Now it owned a debt to me." }
+        ] }
+    ] },
+    { "layout": "full", "panels": [
+      { "image": "panel:hospital_outro_05", "minTime": 1.5,
+        "sfx": { "text": "RRRING", "at": [70, 20] },
+        "shot": "The ward payphone rings in the empty corridor, its receiver shaking on the hook.",
+        "lines": [
+          { "type": "vo", "pos": "bottom", "voice": "hospital_outro_05", "text": "Hale. Always on time." }
+        ] }
+    ] }
+  ]
+}
