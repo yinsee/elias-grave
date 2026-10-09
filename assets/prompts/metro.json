@@ -1,0 +1,189 @@
+[
+ {
+  "out": "assets/art/characters/switch/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 41,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {switch}, three-quarter view, upper body, standing in a dark underground metro tunnel, cyan signal lamp light and amber work lamp light, a manic laughing grin"
+ },
+ {
+  "out": "assets/art/characters/tinder/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 42,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {tinder}, three-quarter view, upper body, in a dark underground train yard, his face lit orange from below by the flare, a nervous crooked grin"
+ },
+ {
+  "out": "assets/art/characters/hale/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 43,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {hale}, a lined tired face with a grey moustache and heavy-lidded eyes, three-quarter view, upper body, standing under a streetlamp in the rain, cigarette smoke"
+ },
+ {
+  "out": "assets/art-src/panels/metro/metro_intro_01.png",
+  "seed": 801,
+  "post": {
+   "out": "assets/art/panels/metro/metro_intro_01.png"
+  },
+  "prompt": "Bird's-eye view looking straight down into a deep broken stairwell of an abandoned metro station that descends into pitch black darkness. Far below, {elias} and {nero} are small figures walking down the cracked cream-tiled steps, seen from above. A single thin shaft of cold white light with falling rain drops pours down through an iron street grate into the stairwell. On the side wall hangs a torn faded old poster that is only a painted picture of a smiling family inside a metro car",
+  "face": "elias"
+ },
+ {
+  "out": "assets/art-src/panels/metro/metro_intro_02.png",
+  "seed": 802,
+  "post": {
+   "out": "assets/art/panels/metro/metro_intro_02.png"
+  },
+  "prompt": "Wide shot of a dead underground metro platform lit by a single green work lamp on a tripod stand. On the cracked green-grey tiled wall behind it, a flat crude red spray-paint graffiti of a rat silhouette wearing a crown, with paint drips, painted on the tiles. In the foreground the track bed is flooded with black still water with an oily rainbow sheen. Old benches, debris, dark tunnel mouths at both ends, nobody there"
+ },
+ {
+  "out": "assets/art-src/panels/metro/metro_intro_03.png",
+  "seed": 803,
+  "post": {
+   "out": "assets/art/panels/metro/metro_intro_03.png"
+  },
+  "prompt": "Close-up of {nero} crouched low and growling, ears pinned flat back, teeth bared, staring into a pitch-black arched brick metro tunnel mouth. A man's hand in a black suit sleeve and white shirt cuff lies flat and calm on the fur of the dog's back, holding him. Dim green light from the side, wet tiles"
+ },
+ {
+  "out": "assets/art-src/panels/metro/metro_intro_04.png",
+  "seed": 704,
+  "post": {
+   "out": "assets/art/panels/metro/metro_intro_04.png"
+  },
+  "prompt": "Medium shot into a pitch-black brick metro tunnel. A dozen pairs of glowing eyes and the orange tips of lit cigarettes float in the darkness. A steel throwing knife flies out of the dark straight toward the camera, motion blur, menace"
+ },
+ {
+  "out": "assets/art-src/panels/metro/metro_outro_01.png",
+  "seed": 811,
+  "post": {
+   "out": "assets/art/panels/metro/metro_outro_01.png"
+  },
+  "prompt": "Dramatic action shot in a dark metro tunnel. Behind them, the blinding white headlights of a huge freight locomotive fill the background, rushing closer, sparks spraying from its wheels. {switch} lies limp on her back across the steel rails, beaten and bruised, eyes half closed. {elias} bends over her on the left, his black coat whipping in the wind, gripping the collar of her red coat with both fists and dragging her off the tracks",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/metro/metro_outro_02.png",
+  "seed": 712,
+  "post": {
+   "out": "assets/art/panels/metro/metro_outro_02.png"
+  },
+  "prompt": "Extreme close-up of a woman's trembling open palm, a red coat sleeve at the wrist, dirty bruised fingers, holding a single gold casino chip with a red rim and an engraved crown emblem, lit by a passing amber train lamp, dark background, sparks"
+ },
+ {
+  "out": "assets/art-src/panels/metro/metro_outro_03.png",
+  "seed": 713,
+  "post": {
+   "out": "assets/art/panels/metro/metro_outro_03.png"
+  },
+  "prompt": "Low angle shot inside a cramped railway signal box at night, rows of iron levers, a dirty window with a cyan signal light outside. {elias} holds an old brass and walnut mantel clock in both hands and looks at it quietly. The clock's hour hand points just past three and its minute hand points to seventeen past. A wooden shelf behind him",
+  "face": "elias"
+ },
+ {
+  "out": "assets/art-src/panels/metro/metro_outro_04.png",
+  "seed": 714,
+  "post": {
+   "out": "assets/art/panels/metro/metro_outro_04.png"
+  },
+  "prompt": "Exterior, night, neon rain. {elias} climbs up out of an open iron vent grate in a wet city street, {nero} leaping out behind him. Across a dark river in the background stands a grand ornate casino palace glowing gold and red with domes and lights, reflected in the water. Wet cobbles, steam rising from the grate",
+  "face": "elias"
+ },
+ {
+  "out": "assets/art-src/panels/metro/metro_outro_05.png",
+  "seed": 715,
+  "post": {
+   "out": "assets/art/panels/metro/metro_outro_05.png"
+  },
+  "prompt": "Split comic panel. On the left, at a street corner by a steaming vent grate at night in the rain, {elias} holds the receiver of an old wall payphone to his ear. On the right, a separate inset panel shows {hale} inside a glass phone booth, speaking into the phone, hat brim low over his eyes, lit by a single streetlamp",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/portraits/switch_manic.png",
+  "seed": 921,
+  "w": 832,
+  "h": 1024,
+  "face": "switch",
+  "post": {
+   "out": "assets/art/portraits/switch_manic.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. Switch, a wiry adult punk woman around twenty-eight with realistic proportions, short cropped platinum-blonde hair shaved at the sides, a pale sharp freckled face, the high collar of a bright clean red railway coat, brass welding goggles pushed up on her forehead, laughing wildly with her mouth wide open, manic eyes, cyan signal lamp light and amber work lamp light, dark tunnel background"
+ },
+ {
+  "out": "assets/art-src/portraits/switch_proud.png",
+  "seed": 922,
+  "w": 832,
+  "h": 1024,
+  "face": "switch",
+  "post": {
+   "out": "assets/art/portraits/switch_proud.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. Switch, a wiry adult punk woman around twenty-eight with realistic proportions, short cropped platinum-blonde hair shaved at the sides, a pale sharp freckled face, the high collar of a bright clean red railway coat, brass welding goggles on her forehead, a proud cocky grin, chin raised, a steel chain swinging in a blur beside her face, cyan signal lamp light and amber work lamp light, dark tunnel background"
+ },
+ {
+  "out": "assets/art-src/portraits/switch_wild.png",
+  "seed": 923,
+  "w": 832,
+  "h": 1024,
+  "face": "switch",
+  "post": {
+   "out": "assets/art/portraits/switch_wild.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. Switch, a wiry adult punk woman around twenty-eight with realistic proportions, short cropped platinum-blonde hair shaved at the sides, a pale sharp freckled face, the high collar of a bright clean red railway coat, brass welding goggles on her forehead, eyes wide and crazed, teeth bared, her fist gripping the handle of a big iron railway lever beside her face, cyan signal lamp light and amber work lamp light, dark tunnel background"
+ },
+ {
+  "out": "assets/art-src/portraits/switch_beaten.png",
+  "seed": 1024,
+  "w": 832,
+  "h": 1024,
+  "face": "switch",
+  "post": {
+   "out": "assets/art/portraits/switch_beaten.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. Switch, a wiry adult punk woman around twenty-eight with realistic proportions, short cropped platinum-blonde hair shaved at the sides, a pale sharp freckled face, the torn dirty high collar of a bright red railway coat. She is badly beaten after a fight: a black eye, a swollen bruised purple cheekbone, a split lower lip with blood running down her chin, a cut on her eyebrow, sweaty messy hair, no goggles, exhausted half-closed eyes and a weak bitter sneer. Harsh white train headlight from the side, dark background"
+ },
+ {
+  "out": "assets/art-src/portraits/tinder_grin.png",
+  "seed": 931,
+  "w": 832,
+  "h": 1024,
+  "face": "tinder",
+  "post": {
+   "out": "assets/art/portraits/tinder_grin.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. Tinder, a thin bony adult man around thirty-five with a gaunt soot-smeared face, a shiny burn scar on his left cheek, patchy stubble, greasy dark hair, the scorched straps of a brown leather welder's apron, round black welder's goggles on his forehead, a twitchy wide crazed grin showing yellow teeth, a burning road flare held up beside his face, orange fire light from below, dark background"
+ },
+ {
+  "out": "assets/art-src/portraits/tinder_angry.png",
+  "seed": 932,
+  "w": 832,
+  "h": 1024,
+  "face": "tinder",
+  "post": {
+   "out": "assets/art/portraits/tinder_angry.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. Tinder, a thin bony adult man around thirty-five with a gaunt soot-smeared face, a shiny burn scar on his left cheek, patchy stubble, greasy dark hair, the scorched straps of a brown leather welder's apron, round black welder's goggles on his forehead, panicked and furious, shouting, eyes bulging, soaking wet dripping hair, a dead smoking flare in his fist, cold blue light, dark background"
+ }
+]

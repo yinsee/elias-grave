@@ -11,7 +11,8 @@
   "desc": "Nero, a tan-and-black German shepherd dog with a red collar"
  },
  "hale": {
-  "desc": "Inspector Hale, a tired middle-aged detective in a grey trench coat and a hat brim pulled low"
+  "desc": "Inspector Hale, a tired middle-aged detective in a grey trench coat and a hat brim pulled low",
+  "ref": "assets/art/characters/hale/ref.png"
  },
  "marchetti": {
   "desc": "Salvatore Marchetti, a huge heavy-set fishmonger mob boss around fifty with a thick neck, slicked-back black hair, a broken nose and a gold fish-scale necklace, in a blood-stained rubber apron over a dirty undershirt and rubber boots",
@@ -23,5 +24,16 @@
  "malaspina": {
   "desc": "Don Lucien Malaspina, a huge bald nightclub owner around fifty with a full thick black beard, heavy brows, a gold earring and gold rings, in a long dark fur coat over a purple silk shirt, holding a black cane with a silver head",
   "ref": "assets/art/characters/malaspina/ref.png"
+ },
+ "switch": {
+  "desc": "Switch, a wiry young punk woman around twenty-eight with short cropped platinum-blonde hair shaved at the sides, a pale sharp face with freckles and a manic gap-toothed grin, brass welding goggles pushed up on her forehead, a long clean bright red railway work coat with brass buttons, a leather bandolier of rusty iron rail spikes across her chest, a steel chain whip with a hook wound around one forearm, black cargo trousers and heavy black boots",
+  "ref": "assets/art/characters/switch/ref.png"
+ },
+ "tinder": {
+  "desc": "Tinder, a thin bony man around thirty-five with a gaunt soot-smeared face, a shiny burn scar on his left cheek, patchy stubble, greasy dark hair, round black welder's goggles on his forehead, a scorched brown leather welder's apron over a filthy grey undershirt, a bandolier of glass bottles with rag wicks across his chest, holding a burning road flare",
+  "ref": "assets/art/characters/tinder/ref.png"
+ },
+ "rats": {
+  "desc": "young street punks in layered dark hoodies and patched work jackets, rain-soaked beanies, scarves pulled over their mouths, patched jeans, pale soot-smeared skin"
  }
 }

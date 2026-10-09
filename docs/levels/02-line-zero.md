@@ -720,3 +720,24 @@ Rule from the project memory: all of this is shared sim and painter code, so 2D 
 - `voice:tinder_intro`, `voice:tinder_doused`, `voice:tinder_defeat`.
 - `voice:rat_lightsout`, `voice:rat_sandman`, `voice:rat_train`, `voice:rat_freight`, `voice:rat_2310` (each with 2 to 3 takes).
 - `voice:hale_metro_outro`, `voice:elias_*` (short lines: "You lit it.", "Who paid?", "I know.", "Loud. Like you.").
+
+---
+
+## 11. Cutscene art files
+
+Generated with `tools/comfy.py --batch assets/prompts/metro.json` (Z-Image + pixel LoRA; Elias's face swapped from `assets/art/characters/elias/ref.png` on every panel where his face shows). Sources at full size are in `assets/art-src/`; the game uses the re-pixelated files below.
+
+**Panels** (`assets/art/panels/metro/`, 1280 x 720, from a 320 px pixel grid):
+
+- `metro_intro_01.png`, `metro_intro_02.png`, `metro_intro_03.png`, `metro_intro_04.png`
+- `metro_outro_01.png`, `metro_outro_02.png`, `metro_outro_03.png`, `metro_outro_04.png`, `metro_outro_05.png`
+
+**Portraits** (`assets/art/portraits/`, from a 208 px pixel grid):
+
+- `switch_manic.png`, `switch_proud.png`, `switch_wild.png`, `switch_beaten.png`
+- `tinder_grin.png`, `tinder_angry.png` (`tinder_angry`: doused and panicking)
+- `elias_cold.png` (from Level 1)
+
+**Character references** (comic style, used for face swaps): `assets/art/characters/switch/ref.png`, `assets/art/characters/tinder/ref.png`, `assets/art/characters/hale/ref.png`.
+
+The panels carry no lettering: the poster, the Orfeo chip text and the Bell & Sons clock face are left for captions in-engine.
