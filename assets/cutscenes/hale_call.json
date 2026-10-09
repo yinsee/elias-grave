@@ -1,0 +1,11 @@
+{
+  "id": "hale_call",
+  "title": "The payphone",
+  "_todo": "Portrait hale_hat (shared, phone booth) is being generated; elias_cold exists. Voice lines hale_call and elias_notforlong do not exist yet.",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_cold" },
+  "right": { "id": "hale", "name": "INSPECTOR HALE", "role": "On the payphone", "portrait": "portrait:hale_hat" },
+  "lines": [
+    { "speaker": "hale", "mood": "hat", "voice": "hale_call", "text": "Krieg operates on four. The trauma lift from the bay goes straight up. Every coat in that building is his tonight." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_notforlong", "text": "Not for long." }
+  ]
+}

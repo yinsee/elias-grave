@@ -1,0 +1,37 @@
+{
+  "id": "hospital_intro",
+  "title": "St. Cecilia",
+  "music": "music:hospital_dark",
+  "musicLoop": true,
+  "musicEnd": "keep",
+  "_todo": "Panel art: assets/art/panels/hospital/hospital_intro_0N.png (being generated). Music hospital_dark and voice lines hospital_intro_01..03, elias_guard do not exist yet (docs/levels/05-st-cecilia.md 9.4, 9.5).",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:hospital_intro_01", "rain": true, "tint": "cold", "minTime": 1.5,
+        "shot": "ER entrance, rain and the red neon cross. Elias carries Mags through sliding glass doors; her blood on his white shirt. A nurse pushes a gurney toward them. Nero runs alongside.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "hospital_intro_01", "text": "I paid in Choir gold. In this hospital, gold buys a bed and no questions." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:hospital_intro_02", "minTime": 1.2,
+        "shot": "Room 314, green monitor light. Mags lies unconscious, her shoulder bandaged. Nero sits at the bedside, alert. Elias puts his hand on the dog's head.",
+        "lines": [
+          { "type": "say", "speaker": "Elias", "pos": "bottom", "voice": "elias_guard", "text": "Guard." }
+        ] },
+      { "image": "panel:hospital_intro_03", "minTime": 1.2,
+        "shot": "Corridor, flickering lights. Men in white coats walk toward camera in a line. One unwraps a scalpel from cloth. A tuning fork pin glints on a lapel (red tint).",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "hospital_intro_02", "text": "Choir rule: gold buys care. But someone had paid more." }
+        ] }
+    ] },
+    { "layout": "full", "panels": [
+      { "image": "panel:hospital_intro_04", "minTime": 1.5,
+        "sfx": { "text": "KRA-KOOM", "at": [70, 18] },
+        "shot": "Lightning flash. The power dies. Black panel; only Elias's eyes and a scalpel's edge catch the light.",
+        "lines": [
+          { "type": "vo", "pos": "bottom", "voice": "hospital_intro_03", "text": "Lights out. My kind of medicine." }
+        ] }
+    ] }
+  ]
+}

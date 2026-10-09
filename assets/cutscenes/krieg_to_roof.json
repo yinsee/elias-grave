@@ -1,0 +1,10 @@
+{
+  "id": "krieg_to_roof",
+  "title": "The helipad",
+  "_todo": "Portrait krieg_hurt (phase 3, gown torn, rain) is being generated; elias_cold exists. Voice line krieg_p3 does not exist yet.",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_cold" },
+  "right": { "id": "krieg", "name": "DR. ANSELM KRIEG", "role": "Baritone · the Choir's surgeon", "portrait": "portrait:krieg_hurt" },
+  "lines": [
+    { "speaker": "krieg", "mood": "hurt", "voice": "krieg_p3", "text": "Let's get some air." }
+  ]
+}
