@@ -21,6 +21,7 @@ import { playDialog } from './cutscene/dialog.js';
 import * as P9 from './levels/pier9.js';
 import * as METRO from './levels/metro/index.js';
 import { metro3d } from './levels/metro/three.js';
+import * as HOSP from './levels/hospital/index.js';
 
 (() => {
   'use strict';
@@ -88,6 +89,8 @@ import { metro3d } from './levels/metro/three.js';
   // the level being played: isLv(id). The street is the tutorial (this file's own painter and data); every other level is a module
   // (src/levels/*) whose run hooks are LVH (Pier 9's run still lives in this file: its isP9() branches)
   const isLv = id => LV.id === id, isP9 = () => isLv('pier9'), isMetro = () => isLv('metro'), isStreet = () => isLv('street');
+  const isHosp = () => isLv('hospital'), ownWorld = () => isMetro() || isHosp();   // St. Cecilia (src/levels/hospital/); ownWorld: the static layer is the whole world, the club's part too
+  const L3D = () => isMetro() ? metro3d : isHosp() ? HOSP.hospital3d : null;   // a level module's named 3D blocks
   let LVH = {};   // the level run's hooks (Line Zero: src/levels/metro/run.js); {} for the street and Pier 9
   const KIOSK_X = GOAL.x1 - 70;   // the left wall of the rooftop kiosk: the club's side door is in it, facing the roof   // the flat roof of the club building; the club door is in the kiosk at its right end
   const PLATS = [
@@ -205,7 +208,7 @@ import { metro3d } from './levels/metro/three.js';
   const NEON_P = C('#ff3fa4'), NEON_C = C('#3ff0ff'), NEON_V = C('#b45cff'), NEON_Y = C('#ffe14f'), SPARK = C('#fff8f0');
   const LAMP_IRON = C('#2b2a36'), LAMP_GLASS = C('#ffd77a'), WIN_A = C('#f2bf55'), WIN_B = C('#d9913a'), WIN_C = C('#ffe3a0');
   const FWIN_A = C('#b8893c'), FWIN_B = C('#9a6428'), FWIN_C = C('#c4a060');   // far-city windows: one step darker than the near ones
-  const EMIT = new Set([LAMP_GLASS, WIN_A, WIN_B, WIN_C, FWIN_A, FWIN_B, FWIN_C, NEON_P, NEON_C, NEON_V, NEON_Y, SPARK]);   // these glow: the lighting pass leaves them bright
+  const EMIT = new Set([LAMP_GLASS, WIN_A, WIN_B, WIN_C, FWIN_A, FWIN_B, FWIN_C, NEON_P, NEON_C, NEON_V, NEON_Y, SPARK, HOSP.HC.exit, HOSP.HC.mon]);   // these glow: the lighting pass leaves them bright
   const STREET = 14;   // rows of wet street below the curb that reflect the scene
   const PUDDLE = (() => {   // puddle mask over the street band: flat ellipses, wider at the back row
     const m = new Uint8Array((STREET + 1) * W), r = rng(23);
@@ -622,7 +625,7 @@ import { metro3d } from './levels/metro/three.js';
     }
   }
   function drawBackdrop() {
-    if (isMetro()) {   // Line Zero: underground, no sky; the static layer is the whole world (the junction too), then the live parts on the wall
+    if (ownWorld()) {   // Line Zero, St. Cecilia: the static layer is the whole world (the junction, the roof too), then the live parts on the wall
       buf.fill(0xff0b0c10);
       for (let vy = 0; vy < cam.vh; vy++) {
         const wy = vy + cam.y; if (wy < 0 || wy >= H) continue;
@@ -1778,7 +1781,7 @@ import { metro3d } from './levels/metro/three.js';
   };
   let hudTarget = null, hudTargetT = 0;
   const BODY_MAX = 99;
-  const LOOK_X = { ...LOOK, ...P9.SALT_LOOKS, ...METRO.RAT_LOOKS };   // the street's outfits, Pier 9's Saltmen, Line Zero's Tunnel Rats
+  const LOOK_X = { ...LOOK, ...P9.SALT_LOOKS, ...METRO.RAT_LOOKS, ...HOSP.LOOKS };   // the street's outfits, Pier 9's Saltmen, Line Zero's Tunnel Rats
   // opts (Pier 9): { role, look, R: role overrides } for a Saltman; { boss: P9.MARCHETTI } for a level boss. The street passes none.
   function spawnEnemy(type, x, zone, opts) {
     const T = ETYPE[type];
@@ -2246,7 +2249,7 @@ import { metro3d } from './levels/metro/three.js';
     if (e === enc.boss) {
       enc.bossBeaten = true; enc.arena = null; emit('feat', 'boss'); crowdReact(e.x, 0, 'big'); slowMo(FOCUS.boss, 'boss');
       emit('boss:defeated', { boss: e, x: e.x });
-      if (!flags.demo && !flags.attract) unlock(isP9() ? 'ch2' : isMetro() ? 'ch3' : 'ch1');   // a real win opens the next chapter
+      if (!flags.demo && !flags.attract) unlock(isP9() ? 'ch2' : isMetro() ? 'ch3' : isHosp() ? 'ch6' : 'ch1');   // a real win opens the next chapter
       for (const g of enemies) if (!g.dead && g.zone === 'arena') killEnemy(g, Math.sign(g.x - e.x) || 1, 200, 0.5);
     }
   }
@@ -3490,7 +3493,7 @@ import { metro3d } from './levels/metro/three.js';
     for (const e of enemies) if (e.dead && inL(e)) drawEnemy(e);
     for (const e of enemies) if (!e.dead && inL(e)) drawEnemy(e);
   }
-  function drawGate() { if (enc.arena && !isMetro()) for (let y = GROUND - 44; y < GROUND; y += 3) { plot(2429, y, BLOOD[2]); plot(2429, y + 1, BLOOD[1]); } }   // the gate is shut
+  function drawGate() { if (enc.arena && !ownWorld()) for (let y = GROUND - 44; y < GROUND; y += 3) { plot(2429, y, BLOOD[2]); plot(2429, y + 1, BLOOD[1]); } }   // the gate is shut
   function drawEShots(knives = true) {
     for (const b of eshots) {   // enemy shots: red tracers, spinning knives
       if (b.mk && LVH.drawShot) { LVH.drawShot(b); continue; }   // a level's own shots (both views: the 3D front layer draws them too)
@@ -4964,7 +4967,7 @@ import { metro3d } from './levels/metro/three.js';
   });
   bus.on('ko', p => { const n = hero.wind; if (!p.perma && (n > 0 || flags.demo)) toast('K.O.', n > 1 ? `Second wind · ${n - 1} left` : 'Second wind · that was the last one'); });
   bus.on('kill', p => { if (!p.isBoss) { kills.push({ name: p.enemy.name, w: p.weapon, t: simTime }); feedDirty = true; } });
-  bus.on('boss:defeated', () => isP9() ? toast('Marchetti is down', 'The collector has been collected.') : isMetro() ? toast('Switch is down', 'The 23:10 is coming.') : toast('Boss defeated', 'Club Noir is yours. The street is yours.'));
+  bus.on('boss:defeated', () => isP9() ? toast('Marchetti is down', 'The collector has been collected.') : isMetro() ? toast('Switch is down', 'The 23:10 is coming.') : isHosp() ? toast('Krieg is down', 'The storm breaks over the helipad.') : toast('Boss defeated', 'Club Noir is yours. The street is yours.'));
   bus.on('boss:intro', () => !isStreet() ? gameAudio.playMusic('boss_marchetti', { volume: 0.85 }) : gameAudio.playMusic('docks_explore', { volume: 0.85 }));   // the street: the same track, up (Line Zero: Marchetti's track until 'switch' exists)
   bus.on('run:over', p => { if (p.result === 'wasted') gameAudio.stopMusic(2); });
   bus.on('boss:phase', p => { if (isStreet() && p.phase === 2) toast('The coat comes off', 'He is faster. Jump the low cane sweep and the shockwaves; dodge the charge, then punish.'); });   // (Pier 9: its lever pulls tell the story)
@@ -5972,7 +5975,7 @@ import { metro3d } from './levels/metro/three.js';
     if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     cam.xf = CLUB_X; cam.yf = GROUND - 120; cam.v.x = cam.v.y = cam.v.z = 0;
     rain.drops.length = 0; rain.splash.length = 0;
-    emit('section:enter', isP9() ? { from: 'bay', to: 'hall' } : isMetro() ? { from: 'yard', to: 'junction' } : { from: 'street', to: 'club' });
+    emit('section:enter', isP9() ? { from: 'bay', to: 'hall' } : isMetro() ? { from: 'yard', to: 'junction' } : isHosp() ? { from: 'theatre', to: 'roof' } : { from: 'street', to: 'club' });
   }
   let malDlg = false, malDlgDone = false;   // the street boss's entrance dialog: started, closed
   function clubTick(rdt) {
@@ -6033,6 +6036,7 @@ import { metro3d } from './levels/metro/three.js';
   }
   function drawDoor() {
     if (!flags.club) return;
+    if (LVH.drawDoor) { LVH.drawDoor(clubT); return; }   // a level's own door into its club part (St. Cecilia: the roof's stair hut)
     if (isMetro()) {   // the junction side of the blast door: it drops shut behind him
       const k = clamp((clubT - 0.45) / 0.3, 0, 1), y1 = GROUND - 84 + Math.round(84 * k);
       for (let y = GROUND - 84; y < GROUND; y++) for (let x = DOOR_X - 10; x < DOOR_X; x++) plot(x, y, y < y1 ? (((x + y) >> 3) % 2 ? C('#d8b020') : C('#1a1a1a')) : x === DOOR_X - 10 ? PAL.out : C('#060608'));
@@ -6059,7 +6063,7 @@ import { metro3d } from './levels/metro/three.js';
   };
   const SIGN = { x0: 2176, x1: 2330, y0: GOAL.y - 100, y1: GOAL.y - 60 };   // 2.7 m clear above the roof: the hero walks under it
   function drawSign() {
-    if (isP9()) return;
+    if (isP9() || isHosp()) return;   // (the street's club sign and fire escape: not in St. Cecilia)
     if (flags.club || cam.x > SIGN.x1 + 40 || cam.x + cam.vw < SIGN.x0 - 40) return;
     const t = simTime, { x0, x1, y0, y1 } = SIGN;
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) plot(x, y, x === x0 || x === x1 || y === y0 || y === y1 ? PAL.out : x === x0 + 1 || x === x1 - 1 || y === y0 + 1 || y === y1 - 1 ? C('#3a3a48') : C('#160d1c'));
@@ -6090,7 +6094,7 @@ import { metro3d } from './levels/metro/three.js';
   // at the foot of the fire escape: a blade sign (a neon cocktail over NOIR) hangs off the corner of the club, and three chevrons on the wall climb toward the roof
   const BLADE = { x0: 2163, x1: 2179, y0: 116, y1: 194 }, CHEV_X = STAIR_X0 + 10;
   function drawStairSign() {
-    if (isP9()) return;
+    if (isP9() || isHosp()) return;   // (the street's club sign and fire escape: not in St. Cecilia)
     if (flags.club || cam.x > STAIR_X0 + 60 || cam.x + cam.vw < BLADE.x0 - 20) return;
     const t = simTime, { x0, x1, y0, y1 } = BLADE, iron = C('#2a2a34'), ironL = C('#4a4a58');
     // two iron arms hold the blade off the wall
@@ -6137,7 +6141,7 @@ import { metro3d } from './levels/metro/three.js';
     flush(); return out;
   })();
   function drawStairRails() {
-    if (isP9()) return;
+    if (isP9() || isHosp()) return;   // (the street's club sign and fire escape: not in St. Cecilia)
     if (flags.club || cam.x > STAIR_X1 + 20 || cam.x + cam.vw < STAIR_X0 - 20) return;
     const top = C('#7c7c96'), post = C('#34343f');
     for (const [ax, ay, bx, by, run] of RAILSEG) {
@@ -6634,7 +6638,8 @@ import { metro3d } from './levels/metro/three.js';
     if (punch) { tx = finCam.x; ty = finCam.y; }
     let cx = smoothDamp(cx0, tx, cam.v, 'x', punch ? 0.08 : 0.32, rdt), cy = smoothDamp(cy0, ty, cam.v, 'y', punch ? 0.08 : 0.4, rdt);
     cam.xf = cx - cam.vw / 2; cam.yf = cy - cam.vh / 2;
-    const lo = flags.club ? CLUB_X : 0, hi = flags.club ? W - cam.vw : Math.min(W, CLUB_X) - cam.vw;
+    let lo = flags.club ? CLUB_X : 0, hi = flags.club ? W - cam.vw : Math.min(W, CLUB_X) - cam.vw;
+    if (LVH.camBounds) { const b = LVH.camBounds(); lo = Math.max(lo, b[0]); hi = Math.max(lo, Math.min(hi, b[1] - cam.vw)); }   // a level's walled floors (St. Cecilia)
     if (cam.xf < lo || cam.xf > hi) { cam.xf = clamp(cam.xf, lo, hi); cam.v.x *= 0.5; }
     if (cam.vh >= H) { cam.yf = H - cam.vh; cam.v.y = 0; }
     else if (cam.yf < 0 || cam.yf > H - cam.vh) { cam.yf = clamp(cam.yf, 0, H - cam.vh); cam.v.y *= 0.5; }
@@ -7354,7 +7359,7 @@ import { metro3d } from './levels/metro/three.js';
         if (y >= GOAL.y - 1 && y <= GOAL.y + 4 && x >= GOAL.x0 - 1 && x <= GOAL.x1 + 1) zone[i] = zGoal;
         else if (x >= STAIR_X0 - 3 && x <= STAIR_X1 + 3 && y > GOAL.y + 4) { const s = flightAt(x, y); zone[i] = s && s.step ? zFl[s.k % 2] : zStairs; }
       }
-      if (p9) this.p9Zones(zone, LIFT, mkZone); else if (isMetro()) this.mZones(zone, LIFT, mkZone);
+      if (p9) this.p9Zones(zone, LIFT, mkZone); else if (L3D()) this.mZones(zone, LIFT, mkZone);
       const stack = [];
       for (let y = 0; y < GROUND; y++) for (let x = 0; x < W; x++) {   // the other props: one block per connected group
         const i0 = y * W + x; if (!LIFT[i0] || zone[i0] >= 0) continue;
@@ -7367,7 +7372,7 @@ import { metro3d } from './levels/metro/three.js';
         }
         let k = custom ? -1 : PLATS.findIndex((s, n) => n < ZD.length && s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 && s.y <= Z.y1);
         if (k < 0 && !custom && Z.x1 - Z.x0 > 14 && Z.y1 > GROUND - 45) k = PLATS.findIndex((s, n) => n < ZD.length && s.x0 - 40 <= Z.x1 && s.x1 + 40 >= Z.x0);   // a pickup's cab beside its bed
-        if (Z.x1 - Z.x0 <= 14 && Z.y1 - Z.y0 >= 40 && !isMetro()) { Z.z0 = -12; Z.z1 = -8; }   // a street lamp: a tall thin post at the kerb
+        if (Z.x1 - Z.x0 <= 14 && Z.y1 - Z.y0 >= 40 && !ownWorld()) { Z.z0 = -12; Z.z1 = -8; }   // a street lamp: a tall thin post at the kerb
         else if (k >= 0) { Z.z0 = ZF; Z.z1 = ZF + ZD[k]; }
         else { Z.z0 = ZF; Z.z1 = ZF + 8; }
         for (const s of PLATS) if (s !== GOAL && s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 - 1 && s.y <= Z.y1) this.frontZ.set(s, Math.max(this.frontZ.get(s) ?? -99, Z.z1));   // every ledge on this block
@@ -7739,7 +7744,7 @@ import { metro3d } from './levels/metro/three.js';
 
     // ----- Line Zero (src/levels/metro/three.js): its named blocks; the trains and the handcar as models clipped at the portals -----
     mZones(zone, LIFT, mkZone) {
-      for (const B of metro3d.blocks(T3)) {
+      for (const B of L3D().blocks(T3)) {
         const id = mkZone(B.z0, B.z1), Z = this.zones[id];
         for (let y = Math.max(0, B.y0); y <= Math.min(GROUND - 1, B.y1); y++) for (let x = Math.max(0, B.x0); x <= Math.min(W - 1, B.x1); x++) {
           const i = y * W + x; if (!PROPS[i] || !stat[i] || zone[i] >= 0) continue;
@@ -7750,6 +7755,7 @@ import { metro3d } from './levels/metro/three.js';
       }
     },
     mModels() {
+      if (LVH.models3d) for (const m of LVH.models3d()) this.sprite(m.size, m.ox, m.oy, m.draw, m.d, m.z, m.key);   // a level's movers (St. Cecilia: the beds, the gurneys)
       if (!isMetro() || !MR) { if (this.tpool) for (const m of this.tpool) m.visible = false; return; }
       if (!this.trainMat) {   // the cars' own material: clipped at the section's portals (a car half out of the tunnel mouth shows only its inside half)
         this.renderer.localClippingEnabled = true;
@@ -8572,12 +8578,12 @@ import { metro3d } from './levels/metro/three.js';
     updateLayers() {
       const { ZF } = T3;
       if (flags.club && isStreet()) this.layer(this.lClub, () => { drawClub(); drawDancers(); }, { glow: true, z: ZF - 0.6 }); else this.lClub.mesh.visible = false;   // (the hall's wall is a mesh: p9Build)
-      this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); if (LVH.drawWorld) LVH.drawWorld(); }, { glow: true, z: flags.club && !isMetro() ? ZF - 0.3 : ZF + 0.3 });
+      this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); if (LVH.drawWorld) LVH.drawWorld(); }, { glow: true, z: flags.club && !ownWorld() ? ZF - 0.3 : ZF + 0.3 });
       this.layer(this.lSign, drawSign, { glow: true, z: ZF + 5.05 });
       this.layer(this.lBlade, drawStairSign, { glow: true, z: ZF + 4.05 });
       if (!flags.club && cam.x < STAIR_X1 + 160 && cam.x + cam.vw > STAIR_X0 - 160) this.layer(this.lRail, drawStairRails, { z: ZF + T3.STAIR + 0.4 }); else this.lRail.mesh.visible = false;
-      this.lFloor.mesh.visible = flags.club && !isMetro();
-      if (flags.club && !isMetro()) {   // drawClubFloor in camera-sized strips across the sheet
+      this.lFloor.mesh.visible = flags.club && !ownWorld();
+      if (flags.club && !ownWorld()) {   // drawClubFloor in camera-sized strips across the sheet
         const F = this.lFloor, S = STREET + 1, step = 256;
         for (let ox = 0; ox < F.w; ox += step) {
           withView({ x: F.x0 + ox, y: GROUND, vw: step, vh: S }, isP9() ? () => P9.drawHallFloor(R9, p9.ice) : drawClubFloor);
@@ -8631,7 +8637,7 @@ import { metro3d } from './levels/metro/three.js';
     },
     // the far scene, exactly as the 2D view draws it (sky, moon, clouds, far town, or the club's back wall and crowd), lit the same way
     updateBackground() {
-      if (isMetro()) { this.scene.background = this.voidBg || (this.voidBg = t3rgb(C('#0b0c10'))); return; }   // Line Zero: underground, no sky
+      if (ownWorld()) { this.scene.background = this.voidBg || (this.voidBg = t3rgb(C('#0b0c10'))); return; }   // Line Zero: underground, no sky; St. Cecilia: its sky is in the static layer
       if (flags.club) { this.scene.background = isP9() ? this.hallBg || (this.hallBg = t3rgb(C('#101218'))) : this.clubBg || (this.clubBg = t3rgb(C('#0d0913'))); return; }   // the club's wall is a layer in the world (updateLayers); the hall's is a mesh (p9Build)
       this.scene.background = this.bgTex;
       buf.fill(0);
@@ -8902,7 +8908,7 @@ import { metro3d } from './levels/metro/three.js';
     if (!isStreet() && endPh === 'done' && !flags.wasted) { if (c === 'Enter' && !e.repeat && !resultsEl.hidden) { if (isP9() && progress.ch2) startChapter2(); else quitToTitle(); } return; }   // Pier 9 cleared: on to Line Zero; Line Zero: back to the menu   // Pier 9 cleared: Enter goes back to the menu
     if (flags.wasted) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) retry(); return; }   // the Wasted card: retry from the checkpoint (Wicked: a restart); Esc opens the menu above
     if (endPh === 'done' && !resultsEl.hidden) { if (!e.repeat && c === 'Enter') startChapter1(); else if (!e.repeat && c === 'KeyR') reset(); return; }   // Club cleared: Enter goes on with the story (prologue, then Pier 9), R plays the tutorial again
-    if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) { if (isP9()) p9Outro(); else if (isMetro()) LVH.outro(); else endFinish(); } return; }   // the ending: Esc or Enter jumps to the card
+    if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) { if (isP9()) p9Outro(); else if (LVH.outro) LVH.outro(); else endFinish(); } return; }   // the ending: Esc or Enter jumps to the card
     // the keys: arrows move (up jumps, down squats; down at a run rolls), Q punches (by a beaten goon: the finisher), W kicks, Space dodges, Shift walks (runs, with run off)
     if (c === 'ArrowLeft') { keys.left = true; takeOver(); }
     else if (c === 'ArrowRight') { keys.right = true; takeOver(); }
@@ -9237,8 +9243,10 @@ import { metro3d } from './levels/metro/three.js';
   // loadLevel swaps the level lists in place (surfaces, lamps, doors, props, pickups, the static layer). The street's own lists are
   // kept in a snapshot the first time it is left, so going back restores them exactly. The caller then calls reset().
   const STREET_LV = LV, PIER9_LV = { id: 'pier9', title: 'Pier 9', startX: 60, drops: P9.DROPS }, METRO_LV = { id: 'metro', title: 'Line Zero', startX: 40, drops: METRO.DROPS };
+  const HOSP_LV = { id: 'hospital', title: 'St. Cecilia', startX: 250, drops: HOSP.DROPS };
   const LEVEL_LISTS = { PLATS, STEPS, LAMPS, WINL, FEAT, VPARTS, HOUSEWIN, DOORS, ALLEYS, CARDOORS, CLUB_DOORS, OBJ_START, pickups, VEH };
   let streetSnap = null, p9Data = null, metroData = null, MR = null;   // MR: Line Zero's run (METRO.createMetro(G))
+  let hospData = null, HR = null;   // HR: St. Cecilia's run (HOSP.createHospital(G))
   function loadLevel(id) {
     if (LV.id === id) return;
     boards.length = 0; while (objs.length) removeObj(objs[0]);
@@ -9261,13 +9269,21 @@ import { metro3d } from './levels/metro/three.js';
           pickups: METRO.PICKUPS.map(k => ({ w: k.w, x: k.x, y: restY(k.w), taken: false, rack: !!k.rack, hidden: k.hidden || null, hide0: k.hidden || null })) };
       }
       d = metroData; LV = METRO_LV;
+    } else if (id === 'hospital') {
+      if (!hospData) {
+        const pt = HOSP.paint({ W, H, GROUND, PAL, LAMP_GLASS, WIN_A, WIN_B, WIN_C, FWIN_A, FWIN_B, NEON_C, NEON_Y, SPARK });
+        hospData = { stat: pt.b, PROPS: pt.props, STAT_BG: pt.bg, GOAL: { x0: -999, x1: -998, y: -999 }, PLATS: HOSP.surfaces(), STEPS: [], LAMPS: [], WINL: pt.winl, FEAT: [], VPARTS: [],
+          HOUSEWIN: [], DOORS: [], ALLEYS: [], CARDOORS: [], CLUB_DOORS: [2470, 2780], OBJ_START: HOSP.OBJ_START, VEH: [], PUDDLE: pt.pud, WALLM: null, stairs: { x0: -999, x1: -998 },
+          pickups: HOSP.PICKUPS.map(k => ({ w: k.w, x: k.x, y: restY(k.w), taken: false, rack: !!k.rack, hidden: k.hidden || null, hide0: k.hidden || null })) };
+      }
+      d = hospData; LV = HOSP_LV;
     } else { d = streetSnap; LV = STREET_LV; }
     for (const k in LEVEL_LISTS) { LEVEL_LISTS[k].length = 0; LEVEL_LISTS[k].push(...d[k]); }
     stat.set(d.stat); PROPS.set(d.PROPS); STAT_BG = d.STAT_BG; GOAL = d.GOAL; WALLM = d.WALLM || null; PUDDLE.set(d.PUDDLE);
     Object.assign(STAIR_R, d.stairs || { x0: STAIR_X0, x1: STAIR_X1 });
     SURF.length = 0; SURF.push(GROUND_S, ...PLATS, ...TRAMPS);
     for (const w of HOUSEWIN) { w.off = false; w.peek = false; w.t = 0; w.lv = 1; }
-    if (id === 'metro') { if (!MR) MR = METRO.createMetro(ENG); LVH = MR; } else LVH = {};
+    if (id === 'metro') { if (!MR) MR = METRO.createMetro(ENG); LVH = MR; } else if (id === 'hospital') { if (!HR) HR = HOSP.createHospital(ENG); LVH = HR; } else LVH = {};
   }
   // the engine for a level module (src/levels/metro/run.js): the sim's state and functions, read and called from there
   const countdownEl = (() => { const el = document.createElement('div'); el.className = 'countdown'; el.hidden = true; el.innerHTML = '<span></span><div class="bar"><i></i></div>'; document.getElementById('bossbar')?.after(el); return el; })();
@@ -9281,7 +9297,7 @@ import { metro3d } from './levels/metro/three.js';
     get dog() { return dog; }, set dog(v) { dog = v; }, get hitStop() { return hitStop; }, set hitStop(v) { hitStop = v; }, get lockT() { return lockT; }, set lockT(v) { lockT = v; },
     get killBy() { return killBy; }, set killBy(v) { killBy = v; }, get endPh() { return endPh; }, set endPh(v) { endPh = v; }, get fadeDir() { return fadeDir; }, set fadeDir(v) { fadeDir = v; },
     get slamDone() { return slamDone; }, set bossBarK(v) { bossBarK = v; }, get ckBoss() { return ckBoss; }, set ckBoss(v) { ckBoss = v; }, bossDlg, set autoWalk(v) { autoWalk = v; },
-    reset: () => reset(),
+    reset: () => reset(), retry: () => retry(),
     placeHero(x, s) {   // on the ground at x, then up onto surface s (the mezzanine)
       heroTo(x); const dy = s.y - 2 - ctl.y; ctl.y = s.y - 2; ctl.surf = s;
       for (const p of P) { p.y += dy; p.py += dy; } for (const st of hair) for (const p of st) { p.y += dy; p.py += dy; } if (tails) for (const t of tails) for (const p of t) { p.y += dy; p.py += dy; }
@@ -9580,6 +9596,16 @@ import { metro3d } from './levels/metro/three.js';
     gameAudio.playMusic('docks_explore', { volume: 0.4 });
     toast('Line Zero', 'Night. Under the city. Find the Rats who lit the fire.');
   }
+  // Chapter 5: St. Cecilia. Its intro panels, then the level (Level 4's results card leads here)
+  async function startChapter5() {
+    if (sceneOn) return;
+    leaveTitle(); setDemo(false); hideMenu(); resultsEl.hidden = true;
+    loadLevel('hospital'); reset();
+    sceneOn = true;   // (the level waits behind the panels)
+    await playScene('panels', HOSP.LEVEL.intro);
+    gameAudio.playMusic('docks_explore', { volume: 0.4 });
+    toast('St. Cecilia', '04:10. A storm. Mags in Room 314, Nero at her bed.');
+  }
   function startTutorial() { if (!isStreet()) loadLevel('street'); if (flags.attract) endAttract(); else { hideMenu(); setDemo(false); reset(); startOpening(); } }
   function quitToTitle() { hideMenu(); if (!isStreet()) loadLevel('street'); reset(); startAttract(); }
   // ---- the menu: a console-style list down the left. It stays up on the title screen while the demo plays; in a game, Esc opens
@@ -9617,11 +9643,12 @@ import { metro3d } from './levels/metro/three.js';
       { label: 'Tutorial: The Street', act: () => { menuPage = 'main'; startTutorial(); } },
       progress.ch1 ? { label: 'Prologue + Pier 9', act: () => { menuPage = 'main'; startChapter1(); } } : lockedItem('Prologue + Pier 9', 'Malaspina in the tutorial'),
       progress.ch2 ? { label: 'Chapter 2: Line Zero', act: () => { menuPage = 'main'; startChapter2(); } } : lockedItem('Chapter 2: Line Zero', 'Marchetti on Pier 9'),
+      progress.ch5 ? { label: 'Chapter 5: St. Cecilia', act: () => { menuPage = 'main'; startChapter5(); } } : lockedItem('Chapter 5: St. Cecilia', 'Kalt at the aquarium'),
       { label: 'Back', act: () => { menuPage = 'main'; menuSel = 0; } },
     ];
     const items = [
       { label: flags.attract ? 'Start game' : 'Resume', act: () => flags.attract ? endAttract() : hideMenu() },
-      { label: 'Chapter', value: () => !isStreet() && !flags.attract ? LV.title : 'Choose', act: () => { menuPage = 'chapter'; menuSel = isP9() ? 1 : isMetro() ? 2 : 0; } },
+      { label: 'Chapter', value: () => !isStreet() && !flags.attract ? LV.title : 'Choose', act: () => { menuPage = 'chapter'; menuSel = isP9() ? 1 : isMetro() ? 2 : isHosp() ? 3 : 0; } },
       { label: 'Difficulty', value: () => DIFFS[diffSel].name + (flags.attract ? '' : ' · locked'), change: d => {   // set on the title menu only: a run keeps its difficulty (no Wicked permadeath dodge)
         if (!flags.attract) { toast('Difficulty is locked during a run', 'Quit to title to change it'); return; }
         diffSel = (diffSel + d + DIFFS.length) % DIFFS.length; charge.forEach((c, w) => { charge[w] = Math.min(c, fullCharge(w)); }); saveSettings(); } },
@@ -9769,7 +9796,8 @@ import { metro3d } from './levels/metro/three.js';
     if (endPh && endPh !== 'done') endTick(rdt);
     if (jumpEnd && enc.boss && !enc.boss.dead && enc.introT < 0 && enc.boss.hp > 0) { enc.boss.hp = 1; enc.eHitKind = 1; damageEnemy(enc.boss, 60, 1, 300, 0.5, enc.boss.x, enc.boss.y - 20, false); enc.eHitKind = 0; }   // ?ending: the boss drops as the fight starts
     if (enc.introT >= 0 && !enc.boss) enc.introT = -1;   // (an entrance with no boss: never a lock)
-    if (hookPull && (input.attack || input.dash || input.jump)) bossMash++;   // the hook's pull: each press of Q, W, Space or ↑ counts toward breaking free
+    if (hookPull && (input.attack || input.dash || input.jump)) bossMash++;
+    if (gaffHold && LVH.mash && (input.attack || input.dash || input.jump)) LVH.mash();   // a level's hold that a mash breaks (St. Cecilia: the Restrainer's strap)   // the hook's pull: each press of Q, W, Space or ↑ counts toward breaking free
     if (enc.introT >= 0 || hookPull || gaffHold || lockT > 0) { input.dir = 0; input.run = false; input.jump = false; input.jumpHeld = false; input.attack = null; input.fireHeld = false; input.dash = false; input.dashHeld = false; input.downHeld = false; }   // the boss entrance: no input
     for (let i = spawnFx.length - 1; i >= 0; i--) if ((spawnFx[i].t += wdt) > 0.45) spawnFx.splice(i, 1);
     if (grabIdx >= 0 && now - lastMove > 40) { pv.x *= 0.7; pv.y *= 0.7; }
@@ -9868,7 +9896,7 @@ import { metro3d } from './levels/metro/three.js';
       feedEl.innerHTML = last.map((k, i) => { const age = simTime - k.t, op = Math.min(1, (30 - age) / 6) * (i < last.length - 4 ? 0.55 : 1); return `<div class="kf" style="opacity:${Math.max(0, op).toFixed(2)}">${WICON[k.w] ? `<img src="${WICON[k.w]}" alt="">` : ''}<span><b>✕</b> ${k.name}</span></div>`; }).join('');
     }
     const BB = enc.boss && !enc.boss.dead ? enc.boss : LVH.mini ? LVH.mini() : null;   // the boss bar: the level's boss, or its mini-boss (a small bar)
-    bossBar.hidden = !BB; bossBar.classList.toggle('mini', !!(BB && BB !== enc.boss));
+    bossBar.hidden = !BB; bossBar.classList.toggle('mini', !!(BB && BB !== enc.boss && !BB.bigBar));
     { const top = bossBar.hidden ? '8px' : '42px'; if (shown.tutTop !== top) { shown.tutTop = top; tutEl.style.top = top; } }   // the mission panel steps down under the boss bar
     objTick(rdt);
     { const hide = !isStreet() ? !!endPh : objEl.hidden || !(obj.list || obj.peekT > 0); if (shown.tutHide !== hide) { shown.tutHide = hide; tutEl.hidden = hide; }
@@ -9943,5 +9971,13 @@ import { metro3d } from './levels/metro/three.js';
         enemies: enemies.filter(e => !e.dead).map(e => [e.rat || e.kind || e.role, Math.round(e.x), Math.round(e.y), Math.round(e.hp), e.zone, e.down ? 'down' : e.act || e.sp || '', e.lane]), ...(MR ? MR.peek() : {}) }),
       kill: n => window.__pier9.kill(n), setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; }, hurtBoss: n => window.__pier9.hurtBoss(n), hurtMini: n => { const m = MR && MR.mini(); if (m) m.hp = Math.max(1, m.hp - n); }, hurtHero: n => window.__pier9.hurtHero(n),
       view3d: on => setMode3D(!!on), zoom: z => setZoom(String(z)), train: (key, o) => MR && MR.sendTrain(key, o || {}), equip: w => equip(w, fullCharge(w)), get MR() { return MR; }, get ENG() { return ENG; } };
+    // St. Cecilia (tests): start the chapter (its intro panels) or the level at once; skip to a beat; read its state
+    const hGo = () => { leaveTitle(); setDemo(false); hideMenu(); resultsEl.hidden = true; loadLevel('hospital'); };
+    window.__hospital = { chapter: () => startChapter5(), start: () => { hGo(); reset(); }, skip: where => { hGo(); HR.skipTo(where); }, toBoss: () => { hGo(); HR.skipToBoss(); },
+      tp: x => heroTo(x), peek: () => ({ level: LV.id, scene: sceneOn, x: Math.round(ctl.x), y: Math.round(ctl.y), surf: ctl.surf === GROUND_S ? 'ground' : PLATS.indexOf(ctl.surf), mode: hero.mode, act: hero.act, hp: Math.round(hero.hp), wind: hero.wind, weapon: hero.weapon, club: flags.club, endPh, kills: runS.kills, kos, wasted: flags.wasted, lockT: +lockT.toFixed(2),
+        boss: enc.boss ? { hp: Math.round(enc.boss.hp), max: enc.boss.maxHp, ph: enc.boss.ph, sp: enc.boss.sp, act: enc.boss.act, x: Math.round(enc.boss.x), dead: enc.boss.dead } : null, ckpt: ckpt ? ckpt.kind : null,
+        enemies: enemies.filter(e => !e.dead).map(e => [e.hv || e.kind || e.role, Math.round(e.x), Math.round(e.y), Math.round(e.hp), e.zone, e.down ? 'down' : e.act || e.sp || '', e.caged ? 'caged' : '']), ...(HR ? HR.peek() : {}) }),
+      kill: n => window.__pier9.kill(n), setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; }, hurtBoss: n => window.__pier9.hurtBoss(n), hurtMini: n => { const m = HR && HR.mini(); if (m) m.hp = Math.max(1, m.hp - n); }, hurtHero: n => window.__pier9.hurtHero(n),
+      view3d: on => setMode3D(!!on), zoom: z => setZoom(String(z)), equip: w => equip(w, fullCharge(w)), retry: () => retry(), get HR() { return HR; }, get ENG() { return ENG; } };
   } else requestAnimationFrame(frame);
 })();

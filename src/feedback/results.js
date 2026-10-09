@@ -42,3 +42,4 @@ export function rankHtml(r) {
 }
 
 export const rankName = (i) => (i < 0 ? '-' : `${RANKS[i].id} · ${RANKS[i].name}`);
+CHAPTERS.ch6 = { par: 660, kills: 55 };   // St. Cecilia (src/levels/hospital/)
