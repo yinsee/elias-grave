@@ -157,9 +157,9 @@ export function createMetro(G) {
     const cs = carsOf(tr), dmg = D.TRAIN_DMG[dif()], [c0, c1] = tr.clip, lane2 = tr.track === 2;
     const visible = cs.filter(c => c.x1 > c0 && c.x0 < c1);
     if (!visible.length) return;
-    // the hero: on the floor of this track (track 2: only in a niche, in the junction's back lane)
+    // the hero: on the floor of this track (track 2: only in a niche, in the junction's back lane); up on a ledge or a roof he is in the back lane, clear of track 1
     if (!tr.harmless && !tr.hit.has('hero') && (hero.mode === 'anim' || hero.mode === 'getup') && hero.invT <= 0 && ctl.x > c0 && ctl.x < c1) {
-      const onTrack = lane2 ? ctl.niche && S.junction : !ctl.niche && !(S.dive);
+      const onTrack = lane2 ? ctl.niche && S.junction : !ctl.niche && !(S.dive) && ctl.lane !== G.LANE.PLAT;
       const car = onTrack && inCar(visible, ctl.x);
       if (car && ctl.y + 2 > GROUND - car.h + 2) {
         tr.hit.add('hero'); ctl.niche = false;
@@ -172,7 +172,7 @@ export function createMetro(G) {
       if (tr.hit.has(e)) continue;
       const J = e.dead ? e.pts : e.J; if (!J) continue;
       const x = e.dead ? J[2].x : e.x; if (x < c0 || x > c1) continue;
-      const onTrack = lane2 ? !!e.niche && S.junction : !e.niche;
+      const onTrack = lane2 ? !!e.niche && S.junction : !e.niche && e.lane !== G.LANE.PLAT;
       const car = onTrack && inCar(visible, x); if (!car) continue;
       const feet = e.dead ? J[2].y + 4 : e.y + 2; if (feet < GROUND - car.h + 2) continue;
       if (e.dead) { for (const p of J) { p.px -= tr.dir * 160 * dt; } continue; }   // a body is swept along
@@ -187,7 +187,7 @@ export function createMetro(G) {
       G.emit('feat', 'trainKill'); G.shakeIt(0.15, 2);
     }
     if (!lane2) for (const o of G.objs) {   // props on the track are smashed or flung
-      if (o.carried || tr.hit.has(o) || o.y < GROUND - 30 || o.x < c0 || o.x > c1 || !inCar(visible, o.x)) continue;
+      if (o.carried || tr.hit.has(o) || o.lane === G.LANE.PLAT || o.y < GROUND - 30 || o.x < c0 || o.x > c1 || !inCar(visible, o.x)) continue;
       tr.hit.add(o); o.vx = tr.dir * 40; o.vy = -60; G.damageObj(o, 9999, tr.dir);   // (smashed to pieces where it stood: nothing is flung at a man in a niche)
     }
   }
