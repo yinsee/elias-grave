@@ -26,6 +26,8 @@ export function brandtThink(M, e, dt, px, dx, adx, level, aggro) {
   const G = M.G, dir = Math.sign(dx) || 1;
   e.tx = null; e.run = 1;
   if (e.stunT > 0) e.stunT -= dt;
+  if (e.reloadT > 0) e.reloadT -= dt;
+  if (e.hold) { e.vx = 0; e.face = dir; return; }   // the intro: planting the tower shield
   e.cdT -= dt; e.chgCd -= dt; e.slotCd -= dt; e.holdCd -= dt;
   if (e.shieldOff > 0 && (e.shieldOff -= dt) <= 0) { e.shield = true; G.emit('sfx', { name: 'hook_clank', x: e.x, vol: 0.7, pitch: 0.7 }); }
   if (e.recT > 0) { e.recT -= dt; return; }
