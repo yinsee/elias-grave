@@ -81,7 +81,7 @@ export const GEAR_ARENA = { x0: 1868, x1: 2132, bell: [2000, 40], ladder: 2130, 
 export const PEND = { pivot: [2290, -10], len: 250, amp: 34, period: [4.2, 4.2, 3.8, 3.4], r: 22, dmg: 30, bossDmg: 60, bossStun: 2.0, fast: 0.75, fastT: 8 };
 export const PEND_ARENA = { x0: 2168, x1: 2416, bell: [2290, 30], dial: 2420 };
 export const BALCONIES = [{ x0: 2170, x1: 2224, y: hy(66) }, { x0: 2356, x1: 2410, y: hy(66) }];
-export const FACE = { cx: 2730, cy: 150, r: 80, cornice: [2450, 2720], void: [2722, 2800], hatch: 2470, bell: [2730, 30] };
+export const FACE = { cx: 2730, cy: 200, r: 80, cornice: [2450, 2720], void: [2722, 2800], hatch: 2470, bell: [2730, 30] };
 export const FACE_ARENA = { x0: 2446, x1: 2796 };
 // the numeral ledges (one-way, 26 wide) on the face's left half (the right half hangs over the drop: I only)
 export const NUMERALS = [['IX', 9], ['VIII', 8], ['VII', 7], ['X', 10], ['XI', 11], ['I', 1]].map(([id, h]) => {
