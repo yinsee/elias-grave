@@ -501,3 +501,505 @@ export function createTrain(G) {
       if (go) { A_.done = true; G.slowMo(D.SLOW.aisle, 'aisle'); sfx('slowmo_in', ctl.x, 0.9); G.emit('feat', 'aisle'); if (dif() === 0) G.toast('ROLL', 'Space: roll down the aisle under their fire', true); }
     }
   }
+
+  // ---------------- doors (↑ by one): the hatch, the gangway doors, compartment 3, the window, the dome's door, the ladders, the brake ----------------
+  const DOORS = [
+    { id: 'hatch', x: D.HATCH, ok: () => allDown('r1'), no: 'The hatch is bolted from below while they hold the roof.', go: () => teleport(326, arriveBaggage) },
+    { id: 'bagDoor', x: D.BAG_DOOR, ok: () => allDown('b1') && allDown('b2'), no: 'The gangway door is locked. Clear the car.', go: () => teleport(584, arriveDining) },
+    { id: 'dinDoor', x: D.DIN_DOOR, ok: () => allDown('d1') && allDown('d2'), no: 'The galley door is jammed while they fight.', go: () => teleport(906, arriveSleepers) },
+    { id: 'comp3', x: D.NERO_COMP, ok: () => !S.comp3 && S.grp === 3, go: () => openComp3() },
+    { id: 'endWin', x: D.END_WIN, ok: () => ['s1', 's2', 's3'].every(allDown), no: 'The gangway door is chained from the far side. Clear the corridor first.', go: () => teleport(1170, arriveRoofMid) },
+    { id: 'domeDoor', x: D.DOME_DOOR, ok: () => S.keyTaken, no: 'The vault car door is locked. Someone here has the key.', go: () => teleport(2064, arriveVault) },
+    { id: 'ladder', x: D.VAULT_LADDER, ok: () => S.ledger, no: 'First, the ledger in the safe.', go: () => { G.fadeDir = 1; sfx('ladder_step', ctl.x, 0.8); } },
+  ];
+  M.up = () => {
+    if (hero.mode !== 'anim' || ctl.air || S.fade || S.leap || S.fall || G.flags.club || S.end) return false;
+    const dd = DOORS.find(d => Math.abs(ctl.x - d.x) < 11 && grpAt(d.x) === S.grp);
+    if (!dd) return false;
+    if (!dd.ok()) { if (dd.no && (S.noT || 0) < G.simTime) { S.noT = G.simTime + 3; G.toast(dd.no, '', true); } return false; }
+    dd.go(); return true;
+  };
+  function openComp3() {
+    S.comp3 = true; S.doors.push({ x: D.NERO_COMP, t: 0 }); sfx('door_open', D.NERO_COMP, 0.7);
+    G.ammoBoxes.push({ band: true, x: D.NERO_COMP + 6, y: GROUND - 6, vx: 0, vy: 0, life: 1e6, placed: true });
+    S.coin = true; G.toast('Compartment 3', 'A bandage, and a gold Choir coin', true); G.emit('feat', 'coin');
+  }
+  function arriveBaggage() {
+    S.sec = 'baggage'; S.lurchT = 30; startWave('b1'); neroAt(340, 'sit');
+    later(() => { G.toast('Nero', 'He jumped in through the side door at the station. He follows you inside the cars.', true); sfx('nero_bark', 340, 0.9); }, 0.8);
+    setObjective('The baggage car', 'Clear the car · the gangway door →');
+  }
+  function arriveDining() {
+    S.sec = 'dining'; S.lurchT = 25; if (!G.flags.demo) G.setCkpt('t:dining', 0); neroAt(570, 'walk');
+    startWave('d1'); setObjective('The dining car', 'The diners are not diners');
+  }
+  function arriveSleepers() {
+    S.sec = 'sleepers'; S.lurchT = 28; neroAt(896, 'walk'); startWave('s1'); startWave('s2');
+    setObjective('The sleeper corridor', 'A Gunner at the far end. Use the open compartments.');
+  }
+  function arriveRoofMid() {
+    S.sec = 'roof_mid'; G.dog = null; S.nero.st = 'wait'; if (!G.flags.demo) G.setCkpt('t:roof', 0); startWave('rm1');
+    G.toast('The Vargas Dam', 'The roof in the gale. 120 m down to the spillway.', true); setObjective('The roof', 'Fight back toward the Board\'s cars');
+  }
+  function arriveDome() {
+    S.sec = 'dome'; S.speed = 520; if (!G.flags.demo) G.setCkpt('t:dome', 0);
+    G.slowMo(D.SLOW.landing, 'landing'); sfx('crate_break', ctl.x, 1, 0.6); sfx('glass_large', ctl.x, 1, 0.8); G.shakeIt(0.35, 3);
+    for (let k = 0; k < 14; k++) G.particles.push({ x: ctl.x + (G.simRand() - 0.5) * 20, y: GROUND - 8, vx: (G.simRand() - 0.5) * 140, vy: -50 - G.simRand() * 80, life: 0.6, c: k % 2 ? 0xff6a4a30 : 0xfff0e0c8 });
+    spawnGrau(); setObjective('The glass dome', 'Head Usher Grau');
+    if (!G.flags.demo) later(() => G.playScene('dialog', 'grau_intro').then(() => startGrau()), 0.7); else later(startGrau, 0.5);
+  }
+  function arriveVault() {
+    S.sec = 'vault'; S.speed = 520; neroAt(2070, 'walk'); S.nero.st = 'safe';
+    if (!G.flags.demo) G.setCkpt('boss', 0);
+    G.toast('The vault car', 'Quiet. Through the roof: tick... tick... tock.', true); setObjective('The vault', 'Take the ledger from the safe · the ladder up');
+  }
+
+  // ---------------- Nero: he follows inside the cars, waits at the roofs, lies by the safe, growls at the gramophone ----------------
+  function neroAt(x, st) { if (!G.dog) G.dog = G.makeDog(x, 1); G.dog.x = x; G.dog.st = st === 'walk' ? 'stand' : st; S.nero.st = 'follow'; }
+  function neroStep(dt) {
+    const d = G.dog; if (!d) return;
+    if (G.flags.club || secOf(S.grp).out) { G.dog = null; return; }
+    let tx = ctl.x - ctl.face * 26;
+    if (S.nero.st === 'safe') tx = D.SAFE.x + 18;
+    if (S.nero.st === 'growl') tx = D.GRAMO.x - 40;
+    const g = D.GROUPS[S.grp]; tx = clamp(tx, g[0] + 10, g[1] - 10);
+    const dx = tx - d.x;
+    if (Math.abs(dx) > 6) { d.st = 'walk'; d.face = Math.sign(dx); const want = clamp(dx * 3, -150, 150); d.vx += (want - d.vx) * (1 - Math.exp(-7 * dt)); d.x += d.vx * dt; }
+    else { d.vx = 0; d.st = S.nero.st === 'safe' ? 'sit' : 'stand'; d.face = S.nero.st === 'growl' ? 1 : Math.sign(ctl.x - d.x) || 1; }
+    d.wag = S.nero.st === 'growl' ? 0 : S.grp === 6 ? 0.2 : 0.8;
+    if (S.nero.st === 'growl' && (S.growlT = (S.growlT || 0) - dt) <= 0) { S.growlT = 2.2; sfx('nero_growl', d.x, 0.8); d.headDip = 2; }
+    G.dogStep(d, dt);
+  }
+
+  // ---------------- the decouple: Kern's voice, the coupling pin, the stub drops back; the leap ----------------
+  function startDecouple() {
+    S.stub.st = 'move'; S.stub.t = 0;
+    G.toast('JUDGE KERN (speaker)', '"Cut it! Cut us loose!"', false); sfx('pa_click', ctl.x, 0.8);
+    later(() => { sfx('hook_clank', D.CARB.x1 + 10, 1, 0.6); sfx('chain_snap', D.CARB.x1 + 10, 1); G.shakeIt(0.3, 2); }, 0.6);
+    startWave('cut'); setObjective('The coupling', 'They cut the Board\'s cars loose: jump the gap!');
+    say('leap', 'Jump the gap', 'Run and jump (↑) from the edge. In the air your gun still fires.', false);
+  }
+  function resetStub() { S.stub = { gap: D.STUB.gap0, st: 'move', t: 0 }; }
+  function stubStep(dt) {
+    const St = S.stub; if (St.st !== 'move') return;
+    const d = dif(), T = D.STUB.t[d], g0 = St.gap; St.t += dt;
+    St.gap = D.STUB.gap0 + (D.STUB.gapMax[d] - D.STUB.gap0) * clamp(St.t / T, 0, 1);
+    const dx = St.gap - g0; if (!dx) return;
+    // riders: everyone on the stub moves with it
+    for (const e of G.enemies) if (!e.dead && e.x >= stubX() - dx - 2 && e.y > GROUND - 40) e.x += dx;
+    for (const o of G.objs) if (!o.carried && o.x >= stubX() - dx - 2) o.x += dx;
+    if (hero.mode === 'anim' && ctl.x >= stubX() - dx - 2 && !S.leap) { ctl.x += dx; S.prevX = ctl.x; }
+  }
+  function leapStep(dt) {
+    const L = S.leap;
+    if (!L) {
+      // he leaves the edge in a jump while the gap is open: the slow-motion leap carries him onto the stub
+      if (S.grp === 4 && S.stub.st === 'move' && !S.onStub && ctl.air && hero.mode === 'anim' && ctl.x > D.CARB.x1 - 30 && ctl.x < stubX() && S.stub.gap >= 40 && (ctl.face > 0)) {
+        S.leap = { t: 0, x0: ctl.x, y0: ctl.y, tx: stubX() + 16, T: 0.75 };
+        G.slowMo(D.SLOW.leap, 'leap'); sfx('slowmo_in', ctl.x, 0.9); G.emit('feat', 'leap'); hero.invT = Math.max(hero.invT, 0.9);
+      }
+      return;
+    }
+    L.t += dt; const k = Math.min(1, L.t / L.T); L.tx = Math.max(L.tx, stubX() + 16);
+    ctl.x = L.x0 + (L.tx - L.x0) * k; ctl.y = L.y0 + (GROUND - 2 - L.y0) * k - Math.sin(Math.PI * k) * 26; ctl.air = true; ctl.vu = 0; S.prevX = ctl.x;
+    if (k >= 1) { S.leap = null; ctl.air = false; ctl.y = GROUND - 2; ctl.surf = G.GROUND_S; ctl.spd = 0; G.dust(ctl.x, GROUND - 1, 6); sfx('slowmo_out', ctl.x, 0.8); S.onStub = true; S.stubT = 0; G.hitStop = Math.max(G.hitStop, 0.1); }
+  }
+  function stubFight(dt) {
+    if (!S.onStub || S.crack) return;
+    S.stubT += dt;
+    if ((allDown('cut') && S.stubT > 1) || S.stubT > 8) {
+      S.crack = 1; sfx('glass_creak', ctl.x, 1); G.toast('The dome glass', 'It creaks under his feet...', true);
+      later(() => sfx('glass_creak', ctl.x, 1, 0.8), 0.6);
+      later(() => { sfx('glass_large', ctl.x, 1); for (const e of G.enemies) if (!e.dead && e.zone === 'cut') { G.killBy = 5; G.killEnemy(e, 1, 200, 0.3); G.killBy = null; e.swept = 0.1; } teleport(1800, arriveDome, true); }, 1.2);
+    }
+  }
+
+  // ---------------- Grau (mini-boss), his crew, the Board, the key ----------------
+  function spawnGrau() {
+    if (S.grau && !S.grau.dead) return;
+    const e = G.spawnEnemy('boss', 1950, 'grau', { boss: { ...GRAU, hp: GRAU.hp } });
+    Object.assign(e, { alert: true, face: -1, hold: true, swCd: 2.5, gdCd: 5, bashCd: 6, volCd: 2, glCd: 4, guard: 0, ph: 1, grp: 5, bigBar: false });
+    S.grau = e;
+  }
+  function startGrau() { const e = S.grau; if (!e || e.dead) return; e.hold = false; e.cdT = 0.8; G.enc.arena = { x0: D.GRAU_ARENA.x0, x1: D.GRAU_ARENA.x1 }; S.crewT = 6; G.setMusic('boss_marchetti', 0.7); say('grau', 'Head Usher Grau', 'His drum gun sweeps low to high (roll through it; punish the reload). Break his case guard with a heavy blow.', true); }
+  M.mini = () => S.grau && !S.grau.dead && !S.grau.hold ? S.grau : null;
+  function grauStep(dt) {
+    const e = S.grau; if (!e) return;
+    for (let i = S.gunWarn.length - 1; i >= 0; i--) if ((S.gunWarn[i].t -= dt) <= 0 || S.gunWarn[i].e.dead) S.gunWarn.splice(i, 1);
+    if (!e.dead && !e.hold) {   // the crew: an Usher from the rear door every 8 s, alive by difficulty
+      const C = D.GRAU_CREW, n = G.enemies.filter(g => !g.dead && g.zone === 'gcrew' && !g.kneel).length;
+      if ((S.crewT -= dt) <= 0) { S.crewT = C.every; if (n < C.alive[dif()] && S.crewN < C.max && Math.abs(ctl.x - D.DOME_DOOR) > 50) { S.crewN++; S.queue.push({ v: 'usher', wave: 'gcrew', src: { kind: 'door', x: D.DOME_DOOR - 8 }, t: 0 }); S.w.gcrew.out = true; } }
+    }
+    if (e.dead && !S.grauDone) {
+      S.grauDone = true; G.enc.arena = null; G.slowMo(1.2, 'boss'); G.bark(e, GRAU.lines.defeat); S.board = 'scream'; sfx('grunt_die', 1990, 0.6, 1.6);
+      for (const g of G.enemies) if (!g.dead && g.zone === 'gcrew') { g.kneel = true; g.act = null; g.zone = null; }
+      S.queue = S.queue.filter(q => q.wave !== 'gcrew');
+      G.setMusic('docks_explore', 0.25);
+      later(() => { S.board = 'talk'; if (!G.flags.demo) G.playScene('dialog', 'board_surrender').then(boardDone); else boardDone(); }, 2.2);
+    }
+  }
+  function boardDone() {
+    S.board = 'done'; S.keyOut = true; sfx('bell_ting', D.KEY.x, 0.7, 0.8);
+    G.toast('The vault key', 'Aldane slides a brass key across the bar', true); setObjective('The glass dome', 'Take the key · the vault car door →');
+  }
+  function itemStep() {
+    if (hero.mode !== 'anim') return;
+    if (S.keyOut && !S.keyTaken && Math.abs(ctl.x - D.KEY.x) < 18) { S.keyTaken = true; sfx('pickup', D.KEY.x, 0.8); G.toast('The vault key', 'The rear door opens', true); S.doors.push({ x: D.DOME_DOOR, t: 0 }); }
+    if (S.grp === 6 && !S.ledger && Math.abs(ctl.x - D.LEDGER.x) < 12) { S.ledger = true; sfx('pickup', D.LEDGER.x, 0.9); G.emit('feat', 'ledger'); G.toast('The Silent Night ledger', 'Names, dates, sums. The last page is torn out.', false); setObjective('The vault', 'The ladder up to the roof ↑'); }
+    if (S.grp === 0 && !S.coalSaid && ctl.x < 60) S.coalSaid = true;
+  }
+
+  // ---------------- Viktor Lenz on the roof: the beat clock, hazards on the bar lines, the stragglers, the phases ----------------
+  const BC = () => S.bc;
+  M.beatLen = () => 60 / BC().bpm;
+  function startBoss() {
+    S.bossOn = true; S.grp = 8; S.sec = 'roof_boss'; S.speed = D.TRAIN.bossSpeed[0]; G.dog = null;
+    const enc = G.enc;
+    enc.arena = { x0: D.ARENA.x0, x1: D.ARENA.x1 }; enc.spawnT = 99; enc.arenaSpawned = 0;
+    const e = G.spawnEnemy('boss', 2700, 'boss', { boss: LENZ });
+    Object.assign(e, { alert: true, face: -1, hold: true, ph: 1, mv: null, bow: false, grp: 8 });
+    enc.boss = e; enc.introT = -1; G.bossBarK = 1; S.lenz = e;
+    const again = G.ckBoss;
+    if (G.ckBoss) { G.ckBoss = false; G.bossDlg.on = G.bossDlg.done = true; }
+    // a death in phase 3 on Easy or Medium: back at phase 3 with him at 30 %
+    if (S.ph3Ck) { e.hp = Math.round(e.maxHp * LENZ.ph3.below); e.ph = 3; S.plate = false; S.lgap = 60; S.bc.bpm = LENZ.bpm[2]; S.speed = D.TRAIN.bossSpeed[2]; e.x = 2700; }
+    G.setCkpt('boss', S.ph3Ck ? 3 : 0, true);
+    S.bc = { bpm: LENZ.bpm[e.ph - 1], t: 0, n: 2, bar: -1, silent: 0 }; S.nextG = 6; S.nextT = 11; S.bcrewBar = 3;
+    G.setMusic('boss_marchetti', 0.85);
+    const go = () => { e.hold = false; e.cdT = 0.6; S.bc.t = 0; S.bc.n = 2; say('lenzTip', 'Viktor Lenz', 'He moves on the metronome: tick, tick, TOCK. He strikes on the TOCK. Count, and answer on 3.', false); };
+    if (!again && !G.flags.demo) G.playScene('dialog', 'lenz_intro').then(go); else go();
+  }
+  function bossStep(dt) {
+    const e = S.lenz; if (!e) return;
+    if (e.dead) { S.bc.silent = 99; return; }
+    if (e.hold) return;
+    const bc = BC(), bt = 60 / bc.bpm;
+    // the metronome: tick, tick, TOCK
+    bc.t += dt;
+    if (bc.t >= bt) {
+      bc.t -= bt; bc.n = (bc.n + 1) % 3; if (bc.n === 0) bc.bar++;
+      if (bc.silent > 0) { if (bc.n === 0) bc.silent--; }
+      else { sfx(bc.n === 2 ? 'perc_tom' : 'perc_hat', D.LANTERN.x, bc.n === 2 ? 0.9 : 0.6, bc.n === 2 ? 1.3 : 1.6); if (bc.n === 2) sfx('bell_ting', D.LANTERN.x, 0.25, 2.4); }
+      S.pend = (S.pend || 0) + 1;
+      onBar(bc.n);
+      lenzBeat(M, e, bc.n);
+      // the conducted kill: on beat 3 he cuts down any Usher in his reach (it costs him that bar's attack)
+      if (bc.n === 2 && !e.mv && !e.act && !e.sp) for (const g of G.enemies) if (!g.dead && g.zone === 'lcrew' && Math.abs(g.x - e.x) < 36) { G.bStart(e, 'slash', 0.02, 'conduct', 0); G.killBy = 5; G.enc.eHitKind = 0; G.killEnemy(g, Math.sign(g.x - e.x) || 1, 300, 0.4); G.killBy = null; G.emit('feat', 'conducted'); break; }
+    }
+    // the lunge's thrust and the dash glide
+    if (e.dashT > 0) { e.dashT -= dt; const lim = M.lenzLimit(e); e.x = clamp(e.x + e.face * e.dashV * dt, lim[0], lim[1]); }
+    // phase 3: the last car breathes on the beat; he stays on it
+    if (!S.plate) {
+      const r = LENZ_GAP(), barT = (bc.bar + (bc.n + bc.t / bt) / 3), k = 0.5 - 0.5 * Math.cos(Math.PI * barT);   // narrowest on odd bars' beat 1, widest on even bars'
+      const g0 = S.lgap; S.lgap = r[0] + (r[1] - r[0]) * k;
+      if (g0 < r[1] - 2 && S.lgap >= r[1] - 2) { sfx('chain_snap', D.VROOF.x1 + S.lgap / 2, 0.8, 0.7); G.shakeIt(0.2, 2); S.chainT = 0.3; }
+      if (S.chainT > 0) S.chainT -= dt;
+      if (e.ph >= 3) { const lim = M.lenzLimit(e); if (e.sp !== 'lvault') e.x = clamp(e.x, lim[0], lim[1]); }
+    }
+    // the case: thrown back at him by the hero, a 1 s stun
+    const o = S.caseObj;
+    if (o && G.objs.includes(o) && o.thrown > 0 && Math.abs(o.x - e.x) < 12 && Math.abs(o.y - (e.y - 20)) < 24 && !o.stunned) { o.stunned = true; e.stunT = e.recT = LENZ.caseThrow.stun; e.mv = null; e.act = null; G.emit('boss:stun', { boss: e, x: e.x, t: 1, by: 'case' }); G.emit('feat', 'casereturn'); }
+    // the stragglers (phase 2): every 4 bars an Usher climbs a ladder; scared, they shoot at whoever is near
+    if (e.ph === 2) {
+      const C = D.LENZ_CREW, n = G.enemies.filter(g => !g.dead && g.zone === 'lcrew').length;
+      if (bc.bar >= S.bcrewBar && bc.n === 0 && n < C.alive[dif()] && S.bcrewN < C.max) { S.bcrewBar = bc.bar + C.bars; S.bcrewN++; S.w.lcrew.out = true; S.queue.push({ v: 'roofUsher', wave: 'lcrew', src: { kind: 'ladder', x: D.BOSS_LADDERS[S.bcrewN % 2] }, t: 0, waitN: 99 }); }
+    }
+    if (S.rim > 0) S.rim -= dt;
+    if (S.glint) { S.glint.t -= dt; if (S.glint.t <= 0) S.glint = null; }
+  }
+  const LENZ_GAP = () => D.LAST.gap[dif()];
+  // hazards on the grid: a gantry every 8 / 6 / 4 bars, a tunnel every - / 12 / 10 bars (2 bars long); the warning one bar before;
+  // lightning (phase 3: on beat 1 of every second bar)
+  function onBar(n) {
+    const e = S.lenz, bc = BC(); if (n !== 0 || !e) return;
+    const ph = e.ph, gEvery = [8, 6, 4][ph - 1], tEvery = [0, 12, 10][ph - 1], bt = 60 / bc.bpm;
+    S.warnG = bc.bar === S.nextG - 1; S.warnT = tEvery && bc.bar === S.nextT - 1;
+    if (S.warnG) warn('gantry', 3 * bt);
+    if (S.warnT) warn('tunnel', 3 * bt);
+    if (bc.bar === S.nextG) { sendSweep('gantry'); S.nextG = bc.bar + gEvery; if (S.nextG === S.nextT) S.nextG++; }
+    if (tEvery && bc.bar === S.nextT) { sendSweep('tunnel', 6 * bt); S.nextT = bc.bar + tEvery; if (S.nextT === S.nextG) S.nextT++; }
+    if (!tEvery && S.nextT <= bc.bar) S.nextT = bc.bar + 99;
+    if (ph === 3 && bc.bar % 2 === 0) { S.flash = 1; later(() => sfx('thunder', ctl.x, 0.9), 0.3); }
+  }
+  M.gantryWarned = () => !!S.warnG;
+  M.hazardNear = () => !!S.warnT || S.sweeps.some(sw => sw.kind === 'tunnel');
+  M.duck = e => { e.sp = 'lduck'; e.spT = 0; e.duckT = 4 * M.beatLen(); e.mv = null; };
+  M.lenzLimit = e => {
+    const x0 = e.ph >= 3 && !S.plate ? D.VROOF.x1 + S.lgap + 10 : D.ARENA.x0 + 8;
+    return [x0, D.PLATFORM.x0 - 4];
+  };
+  M.glint = e => { S.glint = { e, t: 0.25 }; };
+  M.tock = (e, soft) => { e.tellF = 0.07; S.rim = 0.15; if (!soft) sfx('blade_slash', e.x, 0.6, 1.4); };
+  M.bell = e => { sfx('bell_ting', D.LANTERN.x, 1, 1.2); later(() => sfx('bell_ting', D.LANTERN.x, 1, 1.2), 0.18); };
+  M.caseInHand = () => !S.caseUsed;
+  function throwCase(e) {
+    S.caseUsed = true; const h = e.J[6], o = G.makeObj('bag', h.x, h.y - 4), px = G.P[2].x, T = clamp(Math.abs(px - h.x) / 170, 0.3, 0.7);
+    o.vx = (px - h.x) / T; o.vy = -120; o.av = e.face * 6; o.safeT = 0.25; o.ethrown = 1.2; o.thrower = e; o.hitIds = new Set([e]); o.dodged = false; o.violin = true;
+    S.caseObj = o; sfx('dodge_whoosh', e.x, 0.8, 0.9);
+    say('case', 'The violin case', 'It lies on the roof now: pick it up and throw it back at him (a 1 s stun)', true);
+  }
+  M.peg = (e, h, dmg) => {
+    if (e.dead || !e.J) return;
+    const x = e.J[6].x + e.face * 4, y = h === 'high' ? GROUND - 30 : GROUND - 5;
+    G.eshots.push({ k: 'b', x, y, px: x, py: y, vx: (Math.sign(ctl.x - e.x) || e.face) * 260, vy: 0, life: 1.2, dmg, t: 0, by: e, peg: true });
+    sfx('spike_throw', e.x, 0.6, 1.8);
+  };
+  M.vaultSwing = (e, t) => {
+    const side = Math.sign(e.x - ctl.x) || 1, lim = M.lenzLimit(e);
+    e.sp = 'lvault'; e.spT = 0; e.vT = t; e.vx0 = e.x; e.vx1 = clamp(ctl.x - side * 26, lim[0], lim[1]); e.mv && (e.mv.k = 1);
+    sfx('dodge_whoosh', e.x, 0.9, 0.7);
+  };
+  M.cadenzaBeat = (e, bt) => { G.bStart(e, 'slash', 0.02, 'cadenza', LENZ.cadenza.dmg); later(() => { if (!e.dead && !(e.stunT > 0)) G.bStart(e, 'slash', 0.02, 'cadenza', LENZ.cadenza.dmg); }, bt / 2); };
+  M.rubato = e => { S.bc.silent = 1; G.bossTell(e, 'rubato', 3 * M.beatLen()); say('rubato', 'Silence', 'The metronome stops. The rest is the tell: roll in it.', false); };
+  M.rubatoGo = e => later(() => { if (e.dead) return; e.sp = 'lrubato'; e.spT = 0; e.hitP = false; e.face = Math.sign(ctl.x - e.x) || e.face; sfx('dodge_whoosh', e.x, 1, 0.7); }, M.beatLen() * 0.5);
+  M.rubatoEnd = e => { S.bc.silent = 0; G.bark(e, LENZ.lines.rest); };
+  M.lenzPhase = (e, ph) => {
+    const lines = { 2: LENZ.lines.allegro, 3: LENZ.lines.presto };
+    G.bossPhase(e, ph, lines[ph]); e.mv = null;
+    S.bc.bpm = LENZ.bpm[ph - 1]; S.speed = D.TRAIN.bossSpeed[ph - 1];
+    if (ph === 2) say('ph2', 'Scherzo', 'Faster. Tunnels now, and Ushers climb up: their stray shots can hit him too.', true);
+    if (ph === 3) {   // the pin kick: he leaps onto the last car, kicks the pin; the gangway plate falls; only the chain holds
+      for (const g of G.enemies) if (!g.dead && g.zone === 'lcrew') { G.killBy = 5; G.killEnemy(g, 1, 200, 0.3); G.killBy = null; }
+      S.queue = S.queue.filter(q => q.wave !== 'lcrew');
+      later(() => {
+        e.sp = 'lvault'; e.spT = 0; e.vT = 0.45; e.vx0 = e.x; e.vx1 = D.VROOF.x1 + 90;
+        later(() => { S.plate = false; S.lgap = 30; sfx('chain_snap', D.PLATE.x0, 1); sfx('hook_clank', D.PLATE.x0, 1, 0.5); G.shakeIt(0.4, 3); for (let k = 0; k < 12; k++) G.sparks.push({ x: D.PLATE.x0 + G.simRand() * 30, y: GROUND - 2, t: 0 }); G.toast('The pin', 'Only the safety chain holds the cars. Cross on the narrow beats.', false); }, 0.5);
+      }, 1.1);
+      if (dif() < 2 && !G.flags.demo) { S.ph3Ck = true; G.setCkpt('boss', 3, true); }
+    }
+  };
+
+  // ---------------- the beats (per frame) ----------------
+  function beats(dt) {
+    const px = ctl.x;
+    if (!S.landed) {   // the drop from the footbridge onto the baggage car's roof: a beat of slow motion
+      S.landed = true; const dy = 70; ctl.y -= dy; ctl.air = true; ctl.vu = 0; for (const p of G.P) { p.y -= dy; p.py -= dy; }
+      G.slowMo(0.5, 'landing'); later(() => startWave('r1'), 1.2);
+      later(() => G.toast('The Meridian Express', 'The Board leaves with the ledgers. Fight back to the last car.', true), 0.6);
+    }
+    if (S.grp === 0 && allDown('r1') && !S.hatchSaid && S.w.r1.out) { S.hatchSaid = true; G.toast('The roof hatch', '↑ by it: down into the baggage car', true); setObjective('The roof', 'The hatch ↓ into the baggage car'); }
+    // baggage: the second wave from the gangway door when the first is half down
+    if (S.w.b1.out && !S.w.b2.out && alive('b1') <= Math.ceil(S.w.b1.n / 2) && !queued('b1')) startWave('b2');
+    if (S.grp === 1 && allDown('b1') && allDown('b2') && !S.bagSaid) { S.bagSaid = true; sfx('door_open', D.BAG_DOOR, 0.7); G.toast('Clear', 'The gangway door → the dining car (↑)', true); setObjective('The baggage car', 'The gangway door →'); }
+    // dining: the diners stand when he is 40 px in; the galley's Stewards at 60 %
+    if (S.grp === 2 && S.w.d1.out && !S.seated && px >= 604) { S.seated = true; for (const e of G.enemies) if (e.seated) { e.seated = false; e.cdT = 0.5 + G.simRand() * 0.4; } S.aisle = { t: 0, done: false }; sfx('pistol', 640, 0.5, 0.5); }
+    if (S.w.d1.out && !S.w.d2.out && S.seated && alive('d1') <= Math.floor(S.w.d1.n * 0.4) && !queued('d1')) startWave('d2');
+    if (S.grp === 2 && allDown('d1') && allDown('d2') && !S.dinSaid) { S.dinSaid = true; G.toast('Clear', 'The galley door → the sleepers (↑)', true); setObjective('The dining car', 'The galley door →'); }
+    // sleepers: a second Gunner (Wicked) after the first falls
+    if (S.w.s1.out && allDown('s1') && !S.w.s3.out) startWave('s3');
+    if (S.grp === 3 && ['s1', 's2', 's3'].every(allDown) && !S.slpSaid) { S.slpSaid = true; G.toast('The gangway is chained', 'The end window: ↑ to climb onto the roof', true); setObjective('The sleepers', 'The end window ↑ (the roof)'); }
+    if (S.grp === 3 && !S.comp3 && Math.abs(px - D.NERO_COMP) < 60 && !S.scratchSaid) { S.scratchSaid = true; G.toast('Nero scratches at compartment 3', '↑ by its door to open it', true); }
+    // the roof over the dam: reinforcements; the decouple when the roof is clear and he nears the Board's cars
+    if (S.w.rm1.out && !S.w.rm2.out && alive('rm1') <= Math.ceil(S.w.rm1.n / 2) && !queued('rm1')) startWave('rm2');
+    if (S.grp === 4 && S.stub.st === 'idle' && allDown('rm1') && allDown('rm2') && px >= D.DECOUPLE_AT - 40) startDecouple();
+    stubFight(dt);
+  }
+
+  // ---------------- per frame (the UI clock) ----------------
+  M.tick = rdt => {
+    const dt = rdt * G.timeScale;
+    fadeTick(rdt);
+    if (G.endPh) return;
+    if (G.flags.club && !S.bossOn) startBoss();
+    timerStep(dt);
+    beats(dt);
+    if (S.dark > 0) S.dark -= dt;
+    // the objective while fighting
+    if (G.flags.club && S.lenz && !S.lenz.dead) setObjective('The last car\'s roof', `Silence ${LENZ.name}`);
+    else if (S.grau && !S.grau.dead && !S.grau.hold) setObjective('The glass dome', `Beat ${GRAU.name}`);
+  };
+  function timerStep(dt) { for (let i = timers.length - 1; i >= 0; i--) if ((timers[i].t -= dt) <= 0) { const f = timers[i].fn; timers.splice(i, 1); f(); } }
+
+  // ---------------- the fixed step ----------------
+  M.step = dt => {
+    if (G.flags.club) S.grp = 8;
+    else if (!S.fade && Math.abs(ctl.x - S.prevX) > 30) { S.grp = grpAt(ctl.x); }
+    for (let i = S.queue.length - 1; i >= 0; i--) { const q = S.queue[i]; if ((q.t -= dt) <= 0) { S.queue.splice(i, 1); spawnOne(q); } }
+    for (const dd of S.doors) dd.t += dt; while (S.doors.length && S.doors[0].t > 0.8) S.doors.shift();
+    trainStep(dt); sweepStep(dt); fallStep(dt); leapStep(dt); stubStep(dt); ejectStep(dt); coverStep(); glassStep(dt); dinStep(dt);
+    lootStep(); itemStep(); neroStep(dt); grauStep(dt); bossStep(dt); weatherFlash(dt); endStep(dt);
+    wallsStep();
+  };
+  // the car ends: nobody walks through them (the doors are the way)
+  function wallsStep() {
+    const g = D.GROUPS[S.grp], lo = g[0] + 8, hi = g[1] - 8;
+    if (!S.fade && !S.fall && hero.mode === 'anim' && (ctl.x < lo || ctl.x > hi)) { ctl.x = clamp(ctl.x, lo, hi); ctl.spd = 0; }
+    if (S.grp === 0 && ctl.x < D.TENDER + 8) ctl.x = D.TENDER + 8;
+    for (const e of G.enemies) {
+      if (e.dead || e.type !== 'goon' || e.grp == null) continue;
+      const gg = D.GROUPS[e.grp]; e.x = clamp(e.x, gg[0] + 8, gg[1] - 8); e.ppx = e.x;
+    }
+    S.prevX = ctl.x;
+  }
+
+  // ---------------- lighting, lightning, weather ----------------
+  function weatherFlash(dt) {
+    if (S.flash > 0) S.flash = Math.max(0, S.flash - dt / (D.LIGHTNING.flash + D.LIGHTNING.glow));
+    const sec = secOf(S.grp); if (!sec.flash || (S.grp === 8 && S.lenz && S.lenz.ph === 3)) return;
+    if ((S.flashT -= dt) <= 0) { S.flashT = G.bRand(sec.flash); S.flash = 1; const d = G.bRand(D.LIGHTNING.thunder); later(() => sfx('thunder', ctl.x + 200, 0.8, 1), d); }
+  }
+  const inTun = () => M.inTunnel(ctl.x);
+  M.lights = () => {
+    const cam = G.cam, sec = secOf(S.grp), ls = [];
+    let amb = sec.amb.slice();
+    const dark = S.dark > 0 || (sec.out && inTun());
+    if (dark) amb = amb.map(v => v * 0.22);
+    if (S.end && S.end.stop) amb = amb.map(v => v * 0.9);
+    const fl = S.flash > 0 ? Math.min(1, S.flash * 1.4) : 0;
+    if (fl > 0 && !dark) { const k = sec.out ? 0.9 : sec.glass ? 0.6 : 0.3; amb = amb.map(v => v + fl * k); }
+    const near = (x, r) => x > cam.x - r && x < cam.x + cam.vw + r;
+    const add = (x, y, r, R, Gg, B, glow = 0, pri = 1) => { if (near(x, r)) ls.push([x - cam.x, y - cam.y, r * r, R, Gg, B, glow, pri]); };
+    const lamps = S.dark <= 0;
+    if (S.grp === 0) add(12, 250, 70, 1.4, 0.6, 0.15, 10, 2 + Math.sin(G.R9.t * 13) * 0.3);   // the firebox's glow
+    if (S.grp === 1 && lamps) { add(360, 196, 70, 1.0, 0.9, 0.7, 6, 2); add(470 + Math.sin(G.R9.t * 2) * 6, 200, 90, 1.0, 0.9, 0.7, 10, 2); add(530, 196, 60, 1.0, 0.9, 0.7, 6, 2); }
+    if (S.grp === 2 && lamps) { for (const c of S.chand) if (c.st === 'up') add(c.x + c.sw, c.y + 6, 80, 1.3, 1.0, 0.6, 18, 3); for (const t of D.TABLES) add((t.x0 + t.x1) / 2, D.TABLE_TOP - 10, 30, 1.0, 0.7, 0.4, 4, 2); add(850, 200, 50, 1.0, 0.9, 0.8, 6, 2); }
+    if (S.grp === 3 && lamps) { for (const c of D.COMPS) add(c, 200, 30, 0.4, 0.5, 0.9, 4, 1); if (S.comp3) add(D.NERO_COMP, 250, 30, 1.0, 0.7, 0.4, 4, 2); }
+    if (S.grp === 5) { add(1996, 230, 60, 1.2, 0.2, 0.2, 10, 3); add(1900, 240, 90, 0.5, 0.55, 0.7, 0, 1); }
+    if (S.grp === 6) add(2124, 210, 60, 0.5, 1.1, 0.6, 10, 3);
+    if (S.grp === 7) { add(2330, 210, 130, 1.3, 0.95, 0.55, 18, 3); add(2260, 200, 60, 1.0, 0.8, 0.5, 6, 2); }
+    if (S.grp === 8) add(D.LANTERN.x, D.LANTERN.y - 4, 50, 1.3, 0.95, 0.5, 14, 3);
+    for (const e of G.enemies) if (!e.dead && e.J && e.muz > 0) add(e.J[6].x + e.face * 6, e.J[6].y, 60, 1.6, 1.2, 0.6, 10, 6);   // muzzle flashes (the dark tunnel)
+    for (const w of S.gunWarn) if (!w.e.dead && w.e.J) add(w.e.J[6].x + w.e.face * 8, w.e.J[6].y, 26, 1.5, 0.15, 0.1, 8, 5);   // the red glow at the muzzle
+    if (S.rim > 0 && S.lenz && S.lenz.J) add(S.lenz.x, S.lenz.y - 26, 40, 1.4, 1.4, 1.4, 6, 6);   // the TOCK: a white rim light
+    if (S.steam > 0) add(D.STEAM.x - 20, D.STEAM.y, 40, 0.8, 0.8, 0.8, 0, 2);
+    add(G.P[2].x, G.P[2].y - 12, 40, 0.3, 0.3, 0.34, 0, 2);
+    ls.sort((a, b) => b[7] - a[7]);
+    if (ls.length > 15) ls.length = 15;
+    for (const q of ls) q.length = 7;
+    return [amb[0], amb[1], amb[2], ls];
+  };
+  // rain: outdoors in the view (slanted by the speed and the wind), and in the dome under broken panes
+  M.weather = dt => {
+    const rain = G.rain, cam = G.cam, sec = secOf(S.grp);
+    rain.flash = 0;
+    let spans = [];
+    if (sec.out && !inTun()) spans = [[cam.x - 40, cam.x + cam.vw + 40]];
+    else if (S.grp === 5) for (const p of S.panes) if (p.broken && p.kind === 'roof') spans.push([p.x0, p.x1]);
+    const total = spans.reduce((n, s) => n + s[1] - s[0], 0), want = Math.round(total * (sec.out ? 0.55 : 0.6));
+    const slant = (S.speed / D.TRAIN.speed) * (S.wind.gust > 0 ? 240 : 140);
+    while (rain.drops.length < want) { const s = spans[Math.floor(G.simRand() * spans.length)]; rain.drops.push({ x: s[0] + G.simRand() * (s[1] - s[0]), y: cam.y - G.simRand() * cam.vh, v: 300 + G.simRand() * 90, s }); }
+    if (rain.drops.length > want) rain.drops.length = want;
+    for (const d of rain.drops) {
+      d.x += slant * dt; d.y += d.v * dt;
+      const fl = sec.out ? GROUND : GROUND;
+      if (d.y >= fl || d.y > cam.y + cam.vh + 10 || d.x > (d.s ? d.s[1] + 30 : 1e9)) {
+        if (d.y >= fl) rain.splash.push({ x: d.x, y: fl - 1, t: 0 });
+        const s = spans[Math.floor(G.simRand() * spans.length)] || [cam.x, cam.x + 10]; d.s = s; d.x = s[0] - (sec.out ? 40 : 0) + G.simRand() * (s[1] - s[0]); d.y = sec.out ? cam.y - G.simRand() * 30 : 150; d.v = 300 + G.simRand() * 90;
+      }
+    }
+    for (let i = rain.splash.length - 1; i >= 0; i--) if ((rain.splash[i].t += dt) > 0.12) rain.splash.splice(i, 1);
+    rain.rip.length = 0;
+  };
+  M.drawRain = () => {
+    const rain = G.rain, bp = G.blendPlot, sl = -0.45 * (S.speed / D.TRAIN.speed);
+    for (const d of rain.drops) { const x = d.x, y = Math.floor(d.y); for (let k = 0; k < 5; k++) bp(Math.floor(x + sl * k), y - k, 180, 200, 230, k ? 0.26 : 0.5); }
+    for (const s of rain.splash) { const k = s.t / 0.12, a = 0.45 * (1 - k); bp(Math.floor(s.x - 1 - k * 2), Math.floor(s.y - 1 - k), 190, 210, 235, a); bp(Math.floor(s.x + 1 + k * 2), Math.floor(s.y - 1 - k), 190, 210, 235, a); }
+    return true;
+  };
+
+  // ---------------- drawing (both views; the stub and the last car are drawn live on the wall layer) ----------------
+  const R = () => G.R9;
+  M.drawWorld = () => A.drawWorld(R(), S, M);
+  M.drawDoor = () => {};
+  M.drawFx = () => A.drawFx(R(), S, M);
+  M.camBounds = () => D.GROUPS[G.flags.club ? 8 : S.grp];
+
+  // ---------------- the ending: the metronome winds down, panels 1-2, the brake, the last car, the gramophone, panels 3-5, the card ----------------
+  function endStep(dt) {
+    const E = S.end; if (!E) return;
+    if (E.ph === 'brake') {   // the brake: the scroll falls to 0 over 6 s, sparks, a squeal
+      E.t += dt; S.speed = Math.max(0, D.TRAIN.bossSpeed[2] * (1 - E.t / D.TRAIN.brake));
+      if (G.simRand() < dt * 30 && S.speed > 0) G.sparks.push({ x: D.ARENA.x0 + G.simRand() * 340, y: GROUND + 2, t: 0 });
+      if (S.speed <= 0 && !E.stop) { E.stop = true; sfx('douse_hiss', D.BRAKE, 1, 0.6); }
+    }
+  }
+  M.endTick = rdt => {
+    const E = S.end || (S.end = { ph: 'wait', t: 0 }), I = G.input;
+    E.t += rdt;
+    for (const k of ['jump', 'jumpHeld', 'attack', 'fireHeld', 'dash', 'dashHeld', 'downHeld']) I[k] = k === 'attack' ? null : false;
+    I.dir = 0; I.run = false;
+    const walkTo = x => { const d = x - ctl.x; if (Math.abs(d) > 3) { I.dir = Math.sign(d); return false; } ctl.spd = 0; return true; };
+    if (E.ph === 'wait') {   // the metronome slows and stops
+      if (E.t < 3) { const iv = 0.4 + E.t * 0.35; if ((E.tk = (E.tk || 0) - rdt) <= 0) { E.tk = iv; sfx('perc_hat', D.LANTERN.x, 0.6 * (1 - E.t / 3), 1.6 - E.t * 0.15); } }
+      if (E.t > 1.2 && !E.said) { E.said = true; G.toast(LENZ.name, `"${LENZ.lines.dying}"`, true); }
+      if (E.t > 3.2) { E.ph = 'scene1'; E.t = 0; if (G.flags.demo) { E.ph = 'toBrake'; return; } G.endPh = 'tscene'; G.playScene('panels', 'train_outro').then(() => { G.endPh = 'wait'; E.ph = 'toBrake'; E.t = 0; G.toast('The brake', 'He climbs down to the rear platform', true); }); }
+    } else if (E.ph === 'toBrake') {
+      if (walkTo(D.BRAKE) || E.t > 8) { E.ph = 'brake'; E.t = 0; ctl.face = 1; hero.act = null; sfx('lever_clunk', D.BRAKE, 1, 0.6); sfx('saw_grind', D.BRAKE, 0.8, 0.4); G.emit('feat', 'brake'); }
+    } else if (E.ph === 'brake') {
+      if (E.stop && E.t > D.TRAIN.brake + 1.2) { E.ph = 'door'; E.t = 0; S.doorOpen = true; sfx('door_open', D.REAR_DOOR, 0.8, 0.7); G.toast('Silence', 'Rain on the roof. The last car\'s door clicks open by itself.', true); }
+    } else if (E.ph === 'door') {
+      if (walkTo(D.REAR_DOOR) || E.t > 5) { E.ph = 'fade'; E.t = 0; E.black = true; }
+    } else if (E.ph === 'fade') {
+      if (fadeEl) fadeEl.style.opacity = Math.min(1, E.t / 0.4).toFixed(2);
+      if (E.t > 0.45) { G.flags.club = false; G.enc.arena = null; G.heroTo(D.WORK_IN); S.grp = 7; S.prevX = ctl.x; G.rain.drops.length = 0; neroAt(D.WORK_IN - 20, 'walk'); S.nero.st = 'growl'; E.ph = 'in'; E.t = 0; sfx('nero_growl', D.WORK_IN, 0.9); setObjective('The last car', 'Every clock: 3:17'); }
+    } else if (E.ph === 'in') {
+      if (fadeEl) fadeEl.style.opacity = Math.max(0, 1 - E.t / 0.6).toFixed(2);
+      if (E.t > 0.6) E.black = false;
+      if ((E.t > 0.8 && walkTo(D.GRAMO.trip + 2)) || E.t > 9) { E.ph = 'needle'; E.t = 0; sfx('glass_tink', D.GRAMO.x, 0.8, 0.5); S.needle = true; }
+    } else if (E.ph === 'needle') {
+      if (E.t > 1.4) M.outro();
+    }
+  };
+  M.outro = async () => {
+    if (S.end && S.end.ph === 'outro') return;
+    if (!S.end) S.end = { ph: 'wait', t: 0 };
+    S.end.ph = 'outro'; G.endPh = 'tscene'; G.dom.toast.hidden = true;
+    if (!G.flags.demo) await G.playScene('panels', 'train_reveal');
+    G.endPh = 'done';
+    G.emit('run:over', { result: 'cleared' });
+    const t = Math.round(G.runS.t), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
+    const r = G.gradeRun('ch8', { t: G.runS.t, kills: G.runS.kills, maxRank: G.styleM.maxRank, dmg: G.runS.dmg, kos: G.kos }, !G.flags.demo);
+    G.dom.results.innerHTML = `<h2>The Last Train cleared</h2><dl><dt>Difficulty</dt><dd>${G.DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${G.runS.kills}</dd>`
+      + `<dt>Top style</dt><dd>${G.rankName(G.styleM.maxRank)}</dd><dt>Damage taken</dt><dd>${Math.round(G.runS.dmg)}</dd><dt>Knock-outs</dt><dd>${G.kos}</dd>`
+      + `<dt>In his pocket</dt><dd>The Silent Night ledger (the last page torn out)${S.coin ? ' · a gold Choir coin' : ''} · a gramophone record: "Midnight. The Spire."</dd></dl>${G.rankHtml(r)}<small>Enter: back to the menu</small>`;
+    G.dom.results.hidden = false; G.dom.toast.hidden = true;
+  };
+
+  // ---------------- checkpoints, retries, skips (tests) ----------------
+  const ORDER = ['t:dining', 't:roof', 't:dome', 'boss'];
+  function markDone(ids) { for (const id of ids) S.w[id] = { out: true, n: 0 }; }
+  function restoreTo(lv) {   // everything before checkpoint lv is behind him
+    S.landed = true;
+    markDone(['r1', 'b1', 'b2']);
+    if (lv < 1) return;
+    markDone(['d1', 'd2', 's1', 's2', 's3']); S.seated = true; S.comp3 = true;
+    if (lv < 2) return;
+    markDone(['rm1', 'rm2', 'cut']); S.stub = { gap: 100, st: 'done', t: 9 }; S.onStub = true; S.crack = 1;
+    if (lv < 3) return;
+    S.grauDone = true; S.grau = { dead: true }; S.board = 'done'; S.keyOut = S.keyTaken = true; S.ledger = true; S.speed = 520;
+  }
+  M.retry = C => {
+    const lv = ORDER.indexOf(C.kind); if (lv < 0) return null;
+    restoreTo(lv);
+    if (lv === 0) { S.grp = 2; later(arriveDining, 0.01); return 584; }
+    if (lv === 1) { S.grp = 4; later(arriveRoofMid, 0.01); return 1170; }
+    if (lv === 2) { S.grp = 5; later(() => { S.sec = 'dome'; S.speed = 520; spawnGrau(); startGrau(); }, 0.01); return 1800; }
+    if (C.i === 3) S.ph3Ck = true;
+    return null;   // the roof: the game puts him through the hatch (enterClub); the boss comes on the next frame
+  };
+  M.ckptName = C => ({ 't:dining': 'the dining car', 't:roof': 'the roof', 't:dome': 'the glass dome', boss: C.i === 3 ? 'Presto' : 'the vault' })[C.kind] || 'the start';
+  M.skipTo = where => {   // tests: jump to a beat with what came before done
+    G.reset();
+    const go = (x, g, fn) => { G.heroTo(x); S.grp = g; S.prevX = x; if (fn) fn(); };
+    if (where === 'baggage') { S.landed = true; markDone(['r1']); go(326, 1, arriveBaggage); return; }
+    if (where === 'dining') { restoreTo(0); go(584, 2, arriveDining); return; }
+    if (where === 'sleepers') { restoreTo(1); S.w.s1 = S.w.s2 = S.w.s3 = { out: false, n: 0 }; S.comp3 = false; go(906, 3, arriveSleepers); return; }
+    if (where === 'roof') { restoreTo(1); go(1170, 4, arriveRoofMid); return; }
+    if (where === 'cut') { restoreTo(1); markDone(['rm1', 'rm2']); go(D.DECOUPLE_AT - 20, 4, () => { S.sec = 'roof_mid'; S.secT = 60; }); return; }
+    if (where === 'dome') { restoreTo(2); go(1800, 5, arriveDome); return; }
+    if (where === 'vault') { restoreTo(3); go(2064, 6, arriveVault); return; }
+    if (where === 'boss') { restoreTo(3); go(D.VAULT_LADDER - 4, 6, () => { S.sec = 'vault'; }); G.fadeDir = 1; return; }
+  };
+  M.skipToBoss = () => M.skipTo('boss');
+  M.peek = () => ({
+    section: secOf(S.grp).id, grp: S.grp, waves: Object.fromEntries(Object.entries(S.w).map(([k, v]) => [k, [v.out, alive(k)]])), queue: S.queue.length,
+    speed: Math.round(S.speed), sweeps: S.sweeps.map(s => [s.kind, Math.round(s.x)]), warns: S.warns.map(w => w.kind), dark: +S.dark.toFixed(1), stub: { gap: Math.round(S.stub.gap), st: S.stub.st }, onStub: S.onStub, leap: !!S.leap, fall: !!S.fall,
+    chand: S.chand.map(c => c.st), steam: +S.steam.toFixed(1), panes: S.panes.filter(p => p.broken).map(p => p.id), shards: S.shards.length, rings: S.rings.length,
+    grau: S.grau && S.grau.J ? { hp: Math.round(S.grau.hp), ph: S.grau.ph, sp: S.grau.sp, guard: +(S.grau.guard || 0).toFixed(1), dead: S.grau.dead, hold: S.grau.hold } : null,
+    board: S.board, key: [S.keyOut, S.keyTaken], ledger: S.ledger, coin: S.coin, low: heroLow(), top: Math.round(heroTop()),
+    lenz: S.lenz ? { hp: Math.round(S.lenz.hp), ph: S.lenz.ph, mv: S.lenz.mv ? S.lenz.mv.name + S.lenz.mv.k : null, sp: S.lenz.sp, act: S.lenz.act, bow: S.lenz.bow, x: Math.round(S.lenz.x), hold: S.lenz.hold } : null,
+    beat: { bpm: S.bc.bpm, n: S.bc.n, bar: S.bc.bar, silent: S.bc.silent }, plate: S.plate, lgap: Math.round(S.lgap), end: S.end ? S.end.ph : null, nero: G.dog ? Math.round(G.dog.x) : null, fade: !!S.fade,
+  });
+  M.LENZ = LENZ; M.GRAU = GRAU;
+  return M;
+}
