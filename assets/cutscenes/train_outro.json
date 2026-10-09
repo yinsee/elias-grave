@@ -1,0 +1,49 @@
+{
+  "id": "train_outro",
+  "title": "The Last Train",
+  "music": "music:train_outro",
+  "musicLoop": false,
+  "_todo": "Panels 1-2 of the end (docs 6.5); panels 3-5 are train_reveal (they play when the needle drops). Panel art assets/art/panels/train/train_outro_0N.png. Voice lines lenz_dying, train_outro_02 do not exist yet.",
+  "pages": [
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:train_outro_01",
+          "shot": "Train roof, rain. Lenz lies by the roof lantern, his sabre broken, smiling up at the hero. The metronome beside him has stopped.",
+          "lines": [
+            {
+              "type": "say",
+              "speaker": "Lenz",
+              "pos": "bottom",
+              "text": "He said you'd still drop your left guard. He taught you that.",
+              "voice": "lenz_dying"
+            }
+          ],
+          "minTime": 1.5,
+          "rain": true,
+          "tint": "cold"
+        }
+      ]
+    },
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:train_outro_02",
+          "shot": "Wide, high angle. The front of the train disappears into a tunnel, its tail lamps going out. On the valley road beside the stopped dome car, a row of black cars waits with headlights on. Men in black tie lead the Board into the rain. One of them tips his hat toward the roof.",
+          "lines": [
+            {
+              "type": "vo",
+              "pos": "top",
+              "text": "The Choir collects. I had only been the collector.",
+              "voice": "train_outro_02"
+            }
+          ],
+          "minTime": 1.5,
+          "rain": true
+        }
+      ]
+    }
+  ]
+}

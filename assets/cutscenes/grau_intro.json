@@ -1,0 +1,38 @@
+{
+  "id": "grau_intro",
+  "title": "Head Usher Grau",
+  "music": "music:train",
+  "_todo": "Portraits grau_stern, grau_furious (the art agent); elias_cold exists. Voice lines grau_intro_01, _02, elias_member do not exist yet.",
+  "left": {
+    "id": "elias",
+    "name": "ELIAS GRAVE",
+    "role": "The Sandman",
+    "portrait": "portrait:elias_cold"
+  },
+  "right": {
+    "id": "grau",
+    "name": "ANTON GRAU",
+    "role": "Head Usher · the Board's guard",
+    "portrait": "portrait:grau_stern"
+  },
+  "lines": [
+    {
+      "speaker": "grau",
+      "mood": "stern",
+      "voice": "grau_intro_01",
+      "text": "This car is private, Sandman. Members only."
+    },
+    {
+      "speaker": "elias",
+      "mood": "cold",
+      "voice": "elias_member",
+      "text": "I was a member."
+    },
+    {
+      "speaker": "grau",
+      "mood": "furious",
+      "voice": "grau_intro_02",
+      "text": "Ushers! Seat him!"
+    }
+  ]
+}

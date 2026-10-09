@@ -1,0 +1,50 @@
+{
+  "id": "lenz_intro",
+  "title": "Viktor Lenz",
+  "music": "music:lenz",
+  "_todo": "Portraits lenz_serene, lenz_amused, lenz_smiling (the art agent); elias_cold exists. Voice lines lenz_intro_01..03, elias_move, elias_maestro do not exist yet.",
+  "left": {
+    "id": "elias",
+    "name": "ELIAS GRAVE",
+    "role": "The Sandman",
+    "portrait": "portrait:elias_cold"
+  },
+  "right": {
+    "id": "lenz",
+    "name": "VIKTOR LENZ",
+    "role": "First Violin · the Conductor's blade",
+    "portrait": "portrait:lenz_serene"
+  },
+  "lines": [
+    {
+      "speaker": "lenz",
+      "mood": "serene",
+      "voice": "lenz_intro_01",
+      "text": "The Sandman. My predecessor. I have studied your work. Elegant, but sentimental."
+    },
+    {
+      "speaker": "elias",
+      "mood": "cold",
+      "voice": "elias_move",
+      "text": "Move."
+    },
+    {
+      "speaker": "lenz",
+      "mood": "amused",
+      "voice": "lenz_intro_02",
+      "text": "First Violin plays on the beat. One, two, three. Count with me."
+    },
+    {
+      "speaker": "elias",
+      "mood": "cold",
+      "voice": "elias_maestro",
+      "text": "Who's the Maestro?"
+    },
+    {
+      "speaker": "lenz",
+      "mood": "smiling",
+      "voice": "lenz_intro_03",
+      "text": "You'll meet him at the end of the piece. If you keep tempo."
+    }
+  ]
+}
