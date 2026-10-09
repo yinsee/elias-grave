@@ -513,7 +513,7 @@ export function createCasino(G) {
     if (S.ripple > 0) { S.ripple -= dt; for (const m of S.mirrors) if (m.hall) m.ripple = Math.max(0, S.ripple); }
     // the intro: he walks to his mark among the mirrors, the card, the dialog, then the fight
     if (B && B.intro && !S.introDone) {
-      S.introT = (S.introT || 0) + dt;
+      S.introT = (S.introT || 0) + dt; B.hp = B.maxHp;   // (untouchable on his way to his mark)
       if (S.introT > 0.5 && !S.cardShown) { S.cardShown = true; G.dom.card.innerHTML = `<b>${BRASK.name}</b><small>${BRASK.title}</small>`; G.dom.card.hidden = false; S.cardT = 3; }
       if (!S.dlgOn && (Math.abs(B.x - B.introX) <= 3 || S.introT > 4)) {
         S.dlgOn = true; G.dom.card.hidden = true;
@@ -557,7 +557,7 @@ export function createCasino(G) {
     say('mirrorTip', 'The hall of mirrors', 'Only the real Count has a reflection, a shadow, and blood', true);
   }
   const SILVER = C('#c8ccd4');
-  function silver(e) { e.pal.hair = SILVER; }   // (a boss's hair is dark by default: the Count's is silver)
+  function silver(e) { e.pal.hair = SILVER; e.team = 'brask'; }   // (a boss's hair is dark by default: the Count's is silver)
   M.decoyN = () => Math.min(BRASK.decoys.n[dif()], Math.max(0, M.mirrorsLeft() - 1));
   M.decoysLeft = () => S.decoys.filter(live).length;
   M.paneOf = e => e.pane || null;
@@ -792,7 +792,8 @@ export function createCasino(G) {
   function sidestepStep() {
     const B = S.brask; if (!live(B) || B.intro || S.shift) return;
     if (B.ssHp == null) B.ssHp = B.hp;
-    if (B.hp < B.ssHp) { const heavyHit = (G.MOVES[hero.act] && G.MOVES[hero.act].power >= 250) || hero.act === 'sweep'; B.ssN = heavyHit ? 0 : (G.simTime - (B.ssT || -9) < 1.2 ? (B.ssN || 0) + 1 : 1); B.ssT = G.simTime; }
+    if (B.hp < B.ssHp && G.MOVES[hero.act] && hero.atkId !== B.ssLast) { B.ssLast = hero.atkId; const heavyHit = G.MOVES[hero.act].power >= 250 || hero.act === 'sweep'; B.ssN = heavyHit ? 0 : (G.simTime - (B.ssT || -9) < 1.2 ? (B.ssN || 0) + 1 : 1); B.ssT = G.simTime; }   // (the hero's blows only, one per swing)
+    else if (B.hp < B.ssHp) B.ssN = 0;   // (a thrown thing, a shot, a hazard: the rhythm is broken)
     B.ssHp = B.hp;
     if (G.simTime - (B.ssT || -9) > 1.6) B.ssN = 0;
     const pm = G.MOVES[hero.act];

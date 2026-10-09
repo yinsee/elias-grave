@@ -2736,7 +2736,7 @@ import { casino3d } from './levels/casino/three.js';
       }
       // [read] bodies are cover: a goon in the line of fire takes the shot or the knife (never the one who threw it)
       if (!dead) for (const e of enemies) {
-        if (e.dead || e.down || !e.J || e === b.by) continue;
+        if (e.dead || e.down || !e.J || e === b.by || (e.team && b.by && b.by.team === e.team)) continue;   // (team: the Count and his glass decoys never block each other's cards)
         const [ax, ay, bx, by] = capsule(e.J), rr = 4 * e.s + 1;
         if (segDist(ax, ay, bx, by, b.x, b.y) < rr || segDist(ax, ay, bx, by, (b.x + b.px) / 2, (b.y + b.py) / 2) < rr) {
           const d = Math.sign(b.vx) || 1;

@@ -226,8 +226,10 @@ export function paint(api) {
 const CAGE_X = () => D.CAGE.x0;
 
 // ---- a little figure of plotted lines (the dealer on the terrace, the croupier at the wheel): head, body, arms, legs ----
-export function figure(R, x, y, f, pose, col) {   // pose: 'stand' | 'hands' (hands up) | 'run' | 'spin' (a hand out on the wheel)
-  const { plot, line1 } = R, O = CC.out, t = R.t;
+export function figure(R, x0, y0, f, pose, col, k = 1.5) {   // pose: 'stand' | 'hands' (hands up) | 'run' | 'spin' (a hand out on the wheel); k: its scale
+  const O = CC.out, t = R.t, x = 0, y = 0;
+  const plot = (px, py, c) => { const X = Math.round(x0 + px * k), Y = Math.round(y0 + py * k); for (let a = 0; a < Math.ceil(k); a++) for (let b = 0; b < Math.ceil(k); b++) R.plot(X + a, Y - b, c); };
+  const line1 = (ax, ay, bx, by, c) => { const n = Math.max(1, Math.ceil(Math.hypot(bx - ax, by - ay))); for (let i = 0; i <= n; i++) plot(ax + (bx - ax) * i / n, ay + (by - ay) * i / n, c); };
   const leg = pose === 'run' ? Math.sin(t * 14) * 3 : 0;
   line1(x, y - 10, x - 1 - leg, y, col.pants); line1(x + 1, y - 10, x + 2 + leg, y, col.pants);
   for (let yy = y - 20; yy <= y - 10; yy++) { plot(x, yy, col.top); plot(x + 1, yy, col.top); plot(x - 1, yy, yy % 3 ? col.top : O); }
@@ -364,10 +366,11 @@ export function drawWorld(R, S, G) {
   if (vis(D.LOCKER_X - 10, D.LOCKER_X + 10) && S.lockerOpen) for (let y = GROUND - 45; y < GROUND - 1; y++) plot(D.LOCKER_X + 10, y, C('#4a5a50'));
   // the cashier glass: two panes with three crack stages; the firing slot between them
   if (vis(D.BOOTH.x0 - 4, D.BOOTH.x0 + 4)) for (const p of S.panes) {
-    for (let y = p.y0; y <= p.y1; y++) for (let x = D.BOOTH.x0; x <= D.BOOTH.x0 + 2; x++) {
+    for (let y = p.y0; y <= p.y1; y++) for (let x = D.BOOTH.x0; x <= D.BOOTH.x0 + 5; x++) {
+      if (p.hp > 0 && (x === D.BOOTH.x0 || x === D.BOOTH.x0 + 5)) { plot(x, y, CC.steelD); continue; }   // the frame
       if (p.hp <= 0) { if (noise2(x, y) < 0.12) plot(x, y, CC.glassL); continue; }
       const st = p.hp > 66 ? 0 : p.hp > 33 ? 1 : 2;
-      plot(x, y, (st >= 1 && (y * 7 + x * 3) % (st === 2 ? 4 : 9) === 0) ? C('#f0f8ff') : (y % 9 === 0 ? CC.glassL : CC.glass));
+      plot(x, y, (st >= 1 && (y * 7 + x * 3) % (st === 2 ? 4 : 9) === 0) ? C('#f0f8ff') : ((y + x * 2) % 13 < 2 ? CC.glassL : CC.glass));
     }
     if (p.flash > 0) for (let y = p.y0; y <= p.y1; y += 2) plot(D.BOOTH.x0 + 1, y, C('#ffffff'));
   }
