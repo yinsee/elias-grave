@@ -30,6 +30,13 @@ export const MUSIC_CUES = {
   'music:switch': 'boss_marchetti',           // TODO: 152 bpm punk-industrial, train-rhythm drums
   'music:switch_p3': 'boss_marchetti',        // TODO: the countdown riser
   'music:metro_outro': 'prologue',            // TODO: solo trumpet, rain, a far train
+  // The Leviathan (docs/levels/04-leviathan.md 9.4): no files yet; the nearest existing tracks stand in
+  'music:aquarium': 'docks_explore',          // TODO: cello drone, sonar ping, whale-song pad
+  'music:aquarium_combat': 'docks_explore',   // TODO: muffled kick and toms
+  'music:aquarium_flood': 'docks_explore',    // TODO: the rising pad, the alarm bell motif
+  'music:aquarium_teague': 'boss_marchetti',  // TODO: heavy, slow, chain-rattle percussion
+  'music:kalt': 'boss_marchetti',             // TODO: kalt_p1..p3: low strings and a fog-horn brass
+  'music:aquarium_outro': 'prologue',         // TODO: piano and rain, cut short by the gunshot
 };
 
 export function musicUrl(id, { loop = true, seed } = {}) {

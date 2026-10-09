@@ -1,0 +1,15 @@
+{
+  "id": "kalt_intro",
+  "title": "Kalt",
+  "music": "music:kalt",
+  "_todo": "Portraits kalt_bored, kalt_amused, kalt_sharp (being generated); elias_cold exists. Voice lines kalt_intro_01..03 and elias_aquarium_01..02 do not exist yet.",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_cold" },
+  "right": { "id": "kalt", "name": "NERISSA KALT", "role": "Baritone · the Undertow", "portrait": "portrait:kalt_bored" },
+  "lines": [
+    { "speaker": "kalt", "mood": "bored", "voice": "kalt_intro_01", "text": "You followed the money. Most men drown first." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_aquarium_01", "text": "The Board." },
+    { "speaker": "kalt", "mood": "amused", "voice": "kalt_intro_02", "text": "The Board doesn't sign orders. It nods. Somebody always understands the nod." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_aquarium_02", "text": "I understand." },
+    { "speaker": "kalt", "mood": "sharp", "voice": "kalt_intro_03", "text": "Then understand this. Glass breaks. You'll break first." }
+  ]
+}

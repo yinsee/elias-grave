@@ -57,6 +57,20 @@ const TELL = {
   slide: ['dodge_whoosh', { vol: 0.8, pitch: 0.7 }],
   gantryDrop: ['tell_jslam', { vol: 0.8, pitch: 1.2 }],
   taunt: ['grunt_goon', { vol: 0.5, pitch: 1.5 }],
+  // The Leviathan: Teague and Kalt
+  anchorSwing: ['chain_spin', { vol: 0.7, pitch: 0.6 }],
+  anchorThrow: ['chain_spin', { vol: 0.9, pitch: 0.5 }],
+  leadStomp: ['tell_jslam', { vol: 0.8, pitch: 0.7 }],
+  dunk: ['grunt_goon', { vol: 0.8, pitch: 0.45 }],
+  harpoon: ['harpoon_reel', { vol: 0.5, pitch: 1.4 }],
+  pinCrack: ['glass_creak', { vol: 0.9 }],
+  chainShot: ['chain_creak', { vol: 0.9 }],
+  knife: ['blade_slash', { vol: 0.3, pitch: 1.4 }],
+  zipLine: ['reel_whine', { vol: 0.7 }],
+  chum: ['bucket_slosh', { vol: 0.7 }],
+  dive: ['bubbles_rise', { vol: 0.9 }],
+  reelStab: ['blade_slash', { vol: 0.5 }],
+  cage: ['cage_release', { vol: 0.8 }],
 };
 
 // game sounds for events audio.js does not map itself (it maps hit, hurt, ko, kill, pickup, glass/object:break, music, voice)

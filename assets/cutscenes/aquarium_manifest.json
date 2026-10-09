@@ -1,0 +1,16 @@
+{
+  "id": "aquarium_manifest",
+  "title": "The manifest",
+  "musicEnd": "keep",
+  "_todo": "Panel art: assets/art/panels/aquarium/aquarium_manifest.png (being generated). Voice line elias_manifest does not exist yet.",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:aquarium_manifest", "minTime": 1.5,
+        "shot": "Close-up of a waterproof manifest under a dive lamp. A red wax seal with a tuning fork. Typed: Cargo 0412. Bell & Sons, Horloger: ACCOUNT CLOSED. Authorised: the Board. Meridian Holdings.",
+        "lines": [
+          { "type": "vo", "pos": "top", "text": "Cargo 0412. Bell & Sons, Horloger: ACCOUNT CLOSED. Authorised: the Board. Meridian Holdings." },
+          { "type": "vo", "pos": "bottom", "voice": "elias_manifest", "text": "Not the Baritones. The Board. The ones who never sign." }
+        ] }
+    ] }
+  ]
+}
