@@ -392,6 +392,7 @@ export function createMetro(G) {
   }
 
   // ---------------- the Rats' own rules: lurk, rise, perch, refuge, shove, shots ----------------
+  const PERCH = { spikes: 3, time: 8, melee: 1.5, dmg: 8 };   // a goon on a ledge: a thrower's throws before he comes down and s up there at most; a melee goon's s; spike damage
   function ratStep(dt) {
     const T3 = S.trains.find(t => t.track === 2 && t.t > -3);
     for (const e of G.enemies) {
@@ -407,11 +408,16 @@ export function createMetro(G) {
       }
       if (e.perchS) {   // a Ratcatcher keeps to his catwalk; when the hero climbs up to him, he jumps down
         const s = e.perchS;
-        if (ctl.surf === s && hero.mode === 'anim' && !ctl.air) { e.perchS = null; e.dropTo = ctl.x < (s.x0 + s.x1) / 2 ? s.x1 + 8 : s.x0 - 8; }
+        e.perchT = (e.perchT || 0) + dt;
+        // he jumps down to fight: when the hero climbs up to him, after PERCH.spikes throws or PERCH.time s up there, or when anything hits him
+        // (a thrown weapon knocks him off): a catwalk thrower never pins the hero down for good
+        if ((ctl.surf === s && hero.mode === 'anim' && !ctl.air) || (e.spikesN || 0) >= PERCH.spikes || e.perchT > (e.R.ranged ? PERCH.time : PERCH.melee) || e.hurtT > 0 || e.down) {
+          e.perchS = null; e.dropTo = ctl.x < (s.x0 + s.x1) / 2 ? s.x1 + 8 : s.x0 - 8;
+        }
         else if (!e.down && !e.air && Math.abs(e.y + 2 - s.y) < 3) e.x = clamp(e.x, s.x0 + 4, s.x1 - 4);
         if (e.far && T3 && !e.R.ranged) { e.tx = null; e.vx = 0; e.cdT = Math.max(e.cdT, 0.3); }
       }
-      if (e.dropTo != null) { if (e.down || (!e.air && e.y > GROUND - 6)) e.dropTo = null; else if (!e.act) { e.x += Math.sign(e.dropTo - e.x) * 50 * dt; e.face = Math.sign(e.dropTo - e.x) || e.face; } }
+      if (e.dropTo != null) { if (e.down || (!e.air && e.y > GROUND - 6)) e.dropTo = null; else { e.cdT = Math.max(e.cdT, 0.3); if (!e.act) { e.x += Math.sign(e.dropTo - e.x) * 80 * dt; e.face = Math.sign(e.dropTo - e.x) || e.face; } } }   // (no attack while he climbs down)
       if (e.refuge) {   // a goon running for a niche as a train comes; it stays there while the train passes
         const n = e.refuge, busy = S.trains.some(t => t.track === 1 && t.t > -3.5 && carsOf(t).some(c => c.x1 > t.clip[0] - 600 && c.x0 < t.clip[1] + 600));
         if (!busy) { e.refuge = null; e.niche = false; }
@@ -431,7 +437,7 @@ export function createMetro(G) {
   M.fire = e => {
     const R = e.S; if (!R || !R.proj) return false;
     const h = e.J[6], px = G.P[2].x, dir = e.face;
-    if (R.proj === 'spike') { throwSpikeRaw(e, h.x, h.y, (G.P[1].y + 2 - h.y) / Math.max(20, Math.abs(px - h.x)) * 300, 14); sfx('spike_throw', e.x, 0.6); return true; }
+    if (R.proj === 'spike') { e.spikesN = (e.spikesN || 0) + 1; throwSpikeRaw(e, h.x, h.y, (G.P[1].y + 2 - h.y) / Math.max(20, Math.abs(px - h.x)) * 300, PERCH.dmg); sfx('spike_throw', e.x, 0.6); return true; }
     if (R.proj === 'firebottle') { M.throwBottle(e, h.x, h.y - 2, px + (G.simRand() - 0.5) * 16, 0); return true; }
     if (R.proj === 'flare') {   // a slow arcing flare: 10 dmg and a burn; where it lands it burns and lights the dark
       const T = clamp(Math.abs(px - h.x) / 130, 0.45, 1.1), g = 260, ty = G.P[1].y + 4;

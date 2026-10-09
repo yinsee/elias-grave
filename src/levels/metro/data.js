@@ -132,7 +132,7 @@ export const RAT_LOOKS = {
 //   lurk: in a dark place it waits still (eyes glint) until the hero is within `near` px or turns his back -> watch Nero, light it, turn to it
 //   shove: during a train warning it shoves the hero toward the track (a 0.4 s wind-up) -> dodge or hit it in the wind-up
 //   knockK: its heavy hits throw the hero further
-//   proj: what it throws ('spike' flat and fast 14 dmg, 'firebottle' an arc that leaves fire, 'flare' a slow arc that burns and lights)
+//   proj: what it throws ('spike' flat and fast 8 dmg, 'firebottle' an arc that leaves fire, 'flare' a slow arc that burns and lights)
 //   perch: it keeps to raised surfaces and jumps down when the hero climbs up -> climb to it, or hit it off
 //   rise: it rises out of a drain (s) and opens with a low slash -> watch the drain, jump the slash
 //   clip / reload: shots before a reload, the reload window (s) -> rush it while it reloads
