@@ -11,7 +11,7 @@
   "desc": "Nero, a tan-and-black German shepherd dog with a red collar"
  },
  "hale": {
-  "desc": "Inspector Hale, a tired middle-aged detective in a grey trench coat and a hat brim pulled low",
+  "desc": "Inspector Hale, a tired middle-aged detective with a lined face, a grey moustache and heavy-lidded eyes, in a grey trench coat and a grey fedora hat with the brim pulled low",
   "ref": "assets/art/characters/hale/ref.png"
  },
  "marchetti": {
@@ -35,5 +35,20 @@
  },
  "rats": {
   "desc": "young street punks in layered dark hoodies and patched work jackets, rain-soaked beanies, scarves pulled over their mouths, patched jeans, pale soot-smeared skin"
+ },
+ "brask": {
+  "desc": "Count Teodor Brask, a tall thin aristocrat around sixty with slicked-back silver hair, a thin silver moustache, a sharp hawk nose and a narrow face, a round monocle on a thin gold chain over his right eye, in an immaculate white tuxedo jacket with a black bow tie and a red carnation, white gloves, a black cane with a silver crook handle",
+  "ref": "assets/art/characters/brask/ref.png"
+ },
+ "cooler": {
+  "desc": "Bruno the Cooler, a huge muscular bouncer around forty-five with a shaved head, a thick neck, a flat broken nose, small cold grey eyes and a heavy jaw, in a tight black tuxedo straining at the shoulders, gold knuckle-dusters on both fists",
+  "ref": "assets/art/characters/cooler/ref.png"
+ },
+ "mags": {
+  "desc": "Mags, a tough woman bartender around thirty-five with shoulder-length wavy copper-red hair, a few freckles, sharp green eyes and red lipstick, in a worn black leather jacket over a dark green top",
+  "ref": "assets/art/characters/mags/ref.png"
+ },
+ "house": {
+  "desc": "casino security men in black tuxedos with white shirts, black bow ties and coiled earpieces"
  }
 }
