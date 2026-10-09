@@ -1,0 +1,41 @@
+{
+  "id": "casino_intro",
+  "title": "House Always Wins",
+  "music": "music:casino",
+  "musicLoop": true,
+  "musicEnd": "keep",
+  "_todo": "Panel art: assets/art/panels/casino/casino_intro_0N.png (being generated, docs/levels/03-house-always-wins.md 9.1). Voice lines casino_intro_01..05 do not exist yet.",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:casino_intro_01", "rain": true, "tint": "cold", "minTime": 1.5,
+        "shot": "Wide. The Grand Casino Orfeo on the river, gold lights blurred by rain. A doorman in a red coat holds an umbrella. Elias walks past it, soaked.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "casino_intro_01", "text": "The Orfeo. Where the Choir washes its money in champagne." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:casino_intro_02", "minTime": 1.2,
+        "shot": "Medium. Elias puts a gold Choir coin in the doorman's white glove. The doorman's face goes pale under the umbrella.",
+        "lines": [
+          { "type": "say", "speaker": "Doorman", "pos": "bottom", "voice": "casino_intro_02", "text": "A Choir coin... Sir, the Count is not receiving." }
+        ] },
+      { "image": "panel:casino_intro_03", "minTime": 1.2,
+        "shot": "Over the shoulder. The gaming floor: chandeliers, roulette tables, rich guests in evening dress. Four security men in tuxedos touch their earpieces at the same moment.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "casino_intro_03", "text": "Every eye in the room counted me. None of them counted fast enough." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:casino_intro_04", "minTime": 1.2,
+        "shot": "Close-up. Elias sets the scorched tuning fork on a roulette table, on red 17. The croupier's rake freezes in mid-pull.",
+        "lines": [
+          { "type": "say", "speaker": "Elias", "pos": "bottom", "voice": "casino_intro_04", "text": "Get the Count." }
+        ] },
+      { "image": "panel:casino_intro_05", "minTime": 1.2,
+        "shot": "Insert. A dark office lit by a wall of security monitors. A white-gloved hand turns a monocle on its chain. On one screen, Elias at the table.",
+        "lines": [
+          { "type": "say", "speaker": "Brask", "pos": "bottom", "align": "right", "voice": "casino_intro_05", "text": "Let him play. The house always wins." }
+        ] }
+    ] }
+  ]
+}

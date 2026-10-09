@@ -1,0 +1,11 @@
+{
+  "id": "cooler_intro",
+  "title": "The Cooler",
+  "_todo": "Portrait cooler_bored (being generated); elias_cold exists. Voice lines cooler_intro_01 and elias_casino_01 do not exist yet.",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_cold" },
+  "right": { "id": "cooler", "name": "BRUNO \"THE COOLER\" OSTRAVA", "role": "Floor boss · the Orfeo", "portrait": "portrait:cooler_bored" },
+  "lines": [
+    { "speaker": "cooler", "mood": "bored", "voice": "cooler_intro_01", "text": "Count says you're bad luck. I'm worse." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_casino_01", "text": "Prove it." }
+  ]
+}
