@@ -204,3 +204,13 @@ The director listened to the music and the voices and approved them: the manifes
 New sounds in `sfx.js`: `grunt_hero grunt_goon grunt_die heartbeat perc_kick perc_tom perc_snare perc_hat stinger_clear`.
 The drums and the stinger go into the music chain (under the voice duck), so the volume setting and the voice ducking cover them.
 `gameAudio.runtime` gives the director the audio.js runtime; `music.now` (buffer, start time, loop) and `music.layer` (`lp`, `gain`, `perc`) are its hooks.
+
+## 11. Line Zero (Level 2, 2026-10-07)
+
+No Level 2 audio files exist yet. The game plays stand-ins so that nothing is silent:
+
+- **Music cues** (`src/audio/manifest.js`): `music:metro`, `music:metro_fight` → `docks_explore`; `music:metro_radio`, `music:metro_outro` → `prologue`; `music:tinder`, `music:switch`, `music:switch_p3` → `boss_marchetti`. To make: the seven tracks of `docs/levels/02-line-zero.md` 9.4.
+- **Procedural sfx** (new in `sfx.js`): `train_hum train_horn train_clatter rat_whistle_long rat_whistle_short water_splash nero_bark nero_whine nero_growl nero_bite lever_clunk rail_shock spike_throw fire_bottle flare_shot fire_ignite fire_whoosh douse_hiss breaker_clunk tubes_on lamp_click bell_ting handcar_bell handcar_pump handcar_derail slowmo_in slowmo_out`. They stand in for the files listed in 9.5.
+- **Boss tells** (`game.js` TELL): `flare volley kick` (Tinder), `lash spikes slide gantryDrop taunt` (Switch); `hook` and `lever` reuse Marchetti's sounds.
+- **Voice ids** the scripts reference (no files yet, a 404 is logged as a warning and the caption shows): `metro_intro_01..03`, `rat_lightsout`, `switch_intro_01..03`, `elias_metro_01..03`, `tinder_intro`, `metro_outro_01`, `switch_outro_02`, `metro_outro_03`, `metro_outro_04`, `hale_metro_outro`. Bubble lines in the level (Rats, Tinder doused and beaten, Switch's barks) are text only.
+- Not done: the music duck under a passing train, the diegetic radio in the Rats' camp, a train pass loop (the clatter repeats every 0.33 s instead).

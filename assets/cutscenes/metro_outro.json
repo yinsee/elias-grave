@@ -1,0 +1,43 @@
+{
+  "id": "metro_outro",
+  "title": "Line Zero",
+  "music": "music:metro_outro",
+  "musicLoop": false,
+  "_todo": "Panel art: assets/art/panels/metro/metro_outro_0N.png (being generated). Voice lines metro_outro_01, switch_outro_02, metro_outro_03, metro_outro_04, hale_metro_outro do not exist yet.",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:metro_outro_01", "minTime": 1.5,
+        "shot": "Freight headlights fill the frame from behind. Switch lies across the rails, beaten. Elias pulls her clear by the collar at the last second. Sparks, wind in his coat.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "metro_outro_01", "text": "I didn't save her. I needed her to talk." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:metro_outro_02", "minTime": 1.2,
+        "shot": "Close-up. A gold casino chip in her shaking palm, lit by a passing car's lamp: ORFEO - Reserved: the Count.",
+        "lines": [
+          { "type": "say", "speaker": "Switch", "pos": "bottom", "voice": "switch_outro_02", "text": "Paid in chips. Count Brask's chips. Now let me go." }
+        ] },
+      { "image": "panel:metro_outro_03", "minTime": 1.2,
+        "shot": "Low angle in the signal box. Elias picks up the fallen clock. Bell & Sons, hands stopped at 3:17. He puts it back on the shelf.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "metro_outro_03", "text": "Every clock Bell made stopped at the same minute. I told myself it was the fire." }
+        ] }
+    ] },
+    { "layout": "full", "panels": [
+      { "image": "panel:metro_outro_04", "rain": true, "minTime": 1.5,
+        "shot": "Exterior, night. Elias rises out of a vent grate into neon rain, Nero jumping out behind him. Across the river the Grand Casino Orfeo glows gold and red.",
+        "lines": [
+          { "type": "vo", "pos": "bottom", "voice": "metro_outro_04", "text": "The Orfeo. The house always wins. Tonight it would lose." }
+        ] }
+    ] },
+    { "layout": "full", "panels": [
+      { "image": "panel:metro_outro_05", "rain": true, "minTime": 1.5,
+        "sfx": { "text": "RRRING", "at": [70, 20] },
+        "shot": "A payphone on the corner by the grate rings. Elias picks it up. Cut-in: Inspector Hale in a phone booth, hat brim low.",
+        "lines": [
+          { "type": "say", "speaker": "Hale", "pos": "bottom", "voice": "hale_metro_outro", "text": "Brask doesn't see walk-ins. Bring a Choir coin. And Grave... keep your head down." }
+        ] }
+    ] }
+  ]
+}

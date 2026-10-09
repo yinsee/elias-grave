@@ -22,6 +22,14 @@ export const MUSIC_CUES = {
   'music:docks_boss_p1': 'boss_marchetti',
   'music:docks_boss_p2': 'boss_marchetti',    // TODO: own stem
   'music:docks_boss_p3': 'boss_marchetti',    // TODO: own stem
+  // Line Zero (docs/levels/02-line-zero.md 9.4): no files yet; the nearest existing tracks stand in
+  'music:metro': 'docks_explore',             // TODO: D minor drone, drips, a far trumpet
+  'music:metro_fight': 'docks_explore',       // TODO
+  'music:metro_radio': 'prologue',            // TODO: a French jazz ballad on a crackly radio
+  'music:tinder': 'boss_marchetti',           // TODO
+  'music:switch': 'boss_marchetti',           // TODO: 152 bpm punk-industrial, train-rhythm drums
+  'music:switch_p3': 'boss_marchetti',        // TODO: the countdown riser
+  'music:metro_outro': 'prologue',            // TODO: solo trumpet, rain, a far train
 };
 
 export function musicUrl(id, { loop = true, seed } = {}) {

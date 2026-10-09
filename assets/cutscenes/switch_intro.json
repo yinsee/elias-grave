@@ -1,0 +1,15 @@
+{
+  "id": "switch_intro",
+  "title": "Switch",
+  "music": "music:switch",
+  "_todo": "Portraits switch_manic, switch_proud, switch_wild (being generated); elias_cold exists. Voice lines switch_intro_01..03 and elias_metro_01..02 do not exist yet.",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_cold" },
+  "right": { "id": "switch", "name": "ILSA \"SWITCH\" VARGA", "role": "Tenor · the Tunnels", "portrait": "portrait:switch_manic" },
+  "lines": [
+    { "speaker": "switch", "mood": "manic", "voice": "switch_intro_01", "text": "You came all this way for an old clockmaker? Sweet." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_metro_01", "text": "You lit it." },
+    { "speaker": "switch", "mood": "proud", "voice": "switch_intro_02", "text": "Best fire of my life. The clocks went off like fireworks." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_metro_02", "text": "Who paid?" },
+    { "speaker": "switch", "mood": "wild", "voice": "switch_intro_03", "text": "Beat the 23:10 freight, then ask me!" }
+  ]
+}

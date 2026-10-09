@@ -1,0 +1,11 @@
+{
+  "id": "tinder_intro",
+  "title": "Tinder",
+  "_todo": "Portrait tinder_grin (being generated); elias_cold exists. Voice lines tinder_intro and elias_metro_03 do not exist yet.",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_cold" },
+  "right": { "id": "tinder", "name": "MATTIAS \"TINDER\" ROOK", "role": "Bomb-maker · the Tunnel Rats", "portrait": "portrait:tinder_grin" },
+  "lines": [
+    { "speaker": "tinder", "mood": "grin", "voice": "tinder_intro", "text": "The clock man's boy! He ticked so loud when he burned." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_metro_03", "text": "Loud. Like you." }
+  ]
+}

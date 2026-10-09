@@ -28,6 +28,13 @@ Each URL run twice in headless Chrome (`PORT=8765 sh tools/golden.sh`); each pai
   poses (a stunned boss's sway, the Tallyman's reload, a hurt goon's fists up as he backs off: arms only) do not reach the hashed state.
   The gbreak act, DEF.block/parry and the parry ring had no caller. Checked by hand with `?manual` in both views instead.
 
+- Line Zero (Level 2, branch of 36ba9f8, commits d2febef..): all four URLs keep these hashes (state, buf, l3; checked twice for
+  the 2D boss and the 3D pair, the 2D demo once after a cold-launch timeout). The street path is untouched: the level hooks (LVH)
+  are empty there, `isP9()` branches that meant "the street" became `isStreet()`, and the shared changes (a boss's own hook data,
+  `e.dmgK`, a shot passing the surface it was thrown from, `lockT`, the boss dialog flags) do not run in these demos.
+  Line Zero itself is tested with `?manual` and `window.__metro` (`start`, `chapter`, `toTinder`, `toBoss`, `tp`, `peek`, `kill`,
+  `setDiff`, `train`, `equip`, `view3d`) and the helpers in `tests/metrobot.js` (`await import('/tests/metrobot.js')`: `K`, `bot`, `run`, `skipScene`, `toFight`).
+
 Boss fights are tested with bots, not hashes: `PORT=8765 sh tools/bossbot.sh street|pier <diff 0-3> jab|varied [seed]`
 (`tests/bossbot.html`; run them one at a time: side-by-side headless runs can stall). No block, no parry: the varied bot
 perfect-dodges, jumps, grabs and finishes crewmen. Tests with `?manual`: `__sim` also holds `EMOVES`, `MOVES`, `MAL`, `p9`,

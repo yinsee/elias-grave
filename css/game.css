@@ -189,6 +189,15 @@
   .bossbar[hidden] { display: none; }   /* display: flex above would otherwise beat the hidden attribute */
   .bossbar .bar { height: 10px; }
   .bossbar .bar i { background: var(--ko); }
+  .bossbar.mini { width: min(28%, 220px); font-size: 13px; }   /* a mini-boss (Line Zero's Tinder): a smaller bar */
+  .bossbar.mini .bar { height: 7px; }
+  .countdown { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); width: min(32%, 260px); display: flex; flex-direction: column; gap: 3px; align-items: center; font: 500 12px/1 var(--mono, monospace); color: #ffd8a0; letter-spacing: .08em; pointer-events: none; text-shadow: 0 1px 0 #000, 0 0 3px #000; }
+  .countdown[hidden] { display: none; }
+  .countdown .bar { width: 100%; height: 5px; }
+  .countdown .bar i { display: block; height: 100%; background: #ffb040; }
+  .countdown.low { color: #ff8070; }
+  .countdown.low .bar i { background: #ff4a3a; }
+  .attract .countdown { display: none !important; }
   canvas { display: block; width: 100%; image-rendering: pixelated; image-rendering: crisp-edges; touch-action: none; cursor: default; }
   .dev canvas { cursor: crosshair; }
   .dev canvas.can-grab { cursor: grab; }
