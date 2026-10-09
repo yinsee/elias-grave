@@ -3355,6 +3355,15 @@ import * as HOSP from './levels/hospital/index.js';
     } else if (w === 'flaregun') {   // a Flare Rat's brass flare pistol: a fat short barrel
       seg(g.x, g.y, g.tx, g.ty, 1.9 * s, O); seg(g.x, g.y, g.tx, g.ty, 1.1 * s, c(C('#b8902a')));
       if (e.muz > 0) for (let d = 1; d <= 3; d++) plot(Math.floor(g.tx + g.dx * d), Math.floor(g.ty + g.dy * d), d < 2 ? PAL.white : C('#ff4040'));
+    } else if (w === 'syringe') {   // St. Cecilia: a glowing yellow syringe, the needle past the tip
+      seg(g.x, g.y, g.tx, g.ty, 1.3 * s, O); line1(g.x, g.y, g.tx, g.ty, c(C('#e8d040')));
+      line1(g.tx, g.ty, g.tx + g.dx * 3 * s, g.ty + g.dy * 3 * s, c(ECOL.steel));
+    } else if (w === 'bonesaw') {   // a battery bone saw: a deep blade with teeth
+      seg(g.x, g.y, g.tx, g.ty, 2.1 * s, O); seg(g.x + g.dx * 2 * s, g.y + g.dy * 2 * s, g.tx, g.ty, 1.4 * s, c(ECOL.steelD));
+      for (let k = 3; k < 9; k += 2) plot(Math.floor(g.x + g.dx * k * s + g.dy * e.face * 1.6 * s), Math.floor(g.y + g.dy * k * s - g.dx * e.face * 1.6 * s), c(ECOL.steel));
+      seg(g.x, g.y, g.x + g.dx * 2 * s, g.y + g.dy * 2 * s, 1.3 * s, c(C('#c8a020')));
+    } else if (w === 'tank') {   // the Porter's steel oxygen tank, swung as a club
+      seg(g.x, g.y, g.tx, g.ty, 2.8 * s, O); seg(g.x, g.y, g.tx, g.ty, 2.0 * s, c(C('#3a7a4a'))); plot(Math.floor(g.tx), Math.floor(g.ty), c(ECOL.steel));
     } else { seg(g.x, g.y, g.tx, g.ty, 1.2 * s, O); line1(g.x, g.y, g.tx, g.ty, c(ECOL.steel)); }   // knife
   }
   // [read] the rim flash on a melee wind-up (enemy.rimT): white = a normal blow, red = a heavy, cyan = low (jump it)
@@ -7069,6 +7078,9 @@ import * as HOSP from './levels/hospital/index.js';
     if (id === 'chain') return t3all([...Array.from({ length: 7 }, (_, k) => t3box(k * L / 7, -0.45, -0.45, k * L / 7 + L / 8, 0.45, 0.45, k % 2 ? ECOL.iron : ECOL.steel, 0.2)), t3box(L - 0.4, -2.2, -0.3, L + 0.6, 0.2, 0.3, ECOL.steel, 0.2)]);   // Switch's chain whip and its hook
     if (id === 'flare') return t3all([t3rod(0, L - 1, 0.55, C('#c02a2a'), 6), t3rod(L - 1, L, 0.45, C('#fff0d0'), 6)]);   // Tinder's road flare
     if (id === 'wrench') return t3all([t3rod(0, L, 0.7, ECOL.iron, 6), t3box(L - 1.2, -1.6, -0.5, L + 0.4, 1.6, 0.5, ECOL.steel, 0.25)]);
+    if (id === 'syringe') return t3all([t3rod(0, L, 0.5, C('#e8d040'), 6), t3rod(L, L + 3, 0.15, ECOL.steel, 4)]);   // St. Cecilia
+    if (id === 'bonesaw') return t3all([t3rod(0, 2, 0.6, C('#c8a020'), 6), t3box(2, -1.6, -0.15, L, 1.0, 0.15, ECOL.steelD, 0.3)]);
+    if (id === 'tank') return t3rod(0, L, 1.8, C('#3a7a4a'), 10);
     if (id === 'flaregun') return t3all([t3box(0, -0.8, -0.6, L + 1, 0.9, 0.6, C('#b8902a'), 0.3), t3box(-0.3, -3, -0.45, 1.4, -0.6, 0.45, C('#6a4a2a'), 0.3)]);
     return t3all([t3rod(0, 1.8, 0.5, ECOL.grip, 6), t3box(1.8, -0.5, -0.12, L, 0.4, 0.12, ECOL.steel, 0.25)]);   // a knife
   }
