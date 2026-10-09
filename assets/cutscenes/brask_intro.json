@@ -1,0 +1,15 @@
+{
+  "id": "brask_intro",
+  "title": "Count Brask",
+  "music": "music:brask_hall",
+  "_todo": "Portraits brask_smug, brask_amused, brask_smiling (being generated); elias_silent is planned (missing now: the player shows a placeholder), elias_cold exists. Voice lines brask_intro_01..05 do not exist yet.",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_cold" },
+  "right": { "id": "brask", "name": "COUNT TEODOR BRASK", "role": "Baritone · the Grand Casino Orfeo", "portrait": "portrait:brask_smug" },
+  "lines": [
+    { "speaker": "brask", "mood": "smug", "voice": "brask_intro_01", "text": "Gentlemen, the house welcomes the Sandman. Do you know what he was, before the grief made him dull?" },
+    { "speaker": "elias", "mood": "silent", "voice": "brask_intro_02", "text": "..." },
+    { "speaker": "brask", "mood": "amused", "voice": "brask_intro_03", "text": "Twelve years the Conductor's best. Every man he visited went to sleep, and never woke. His favourite lullaby. Now you're just noise, Grave." },
+    { "speaker": "elias", "mood": "cold", "voice": "brask_intro_04", "text": "You paid for the fire." },
+    { "speaker": "brask", "mood": "smiling", "voice": "brask_intro_05", "text": "I only place bets. The house sets the odds. Which of me will you hit?" }
+  ]
+}

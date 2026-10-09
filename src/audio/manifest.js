@@ -37,6 +37,15 @@ export const MUSIC_CUES = {
   'music:aquarium_teague': 'boss_marchetti',  // TODO: heavy, slow, chain-rattle percussion
   'music:kalt': 'boss_marchetti',             // TODO: kalt_p1..p3: low strings and a fog-horn brass
   'music:aquarium_outro': 'prologue',         // TODO: piano and rain, cut short by the gunshot
+  // House Always Wins (docs/levels/03-house-always-wins.md 9.4): no files yet; the nearest existing tracks stand in
+  'music:casino': 'docks_explore',            // TODO: slow lounge jazz (upright bass, brushed drums, a tired piano)
+  'music:casino_fight': 'docks_explore',      // TODO: baritone sax and toms
+  'music:casino_terrace': 'prologue',         // TODO: rain and a muted trumpet from a radio
+  'music:cooler': 'boss_marchetti',           // TODO: a short heavy loop (bass and kick)
+  'music:brask_hall': 'boss_marchetti',       // TODO: tango with harpsichord
+  'music:brask_wheel': 'boss_marchetti',      // TODO: tango, bandoneon, ball-clatter percussion
+  'music:brask_allin': 'boss_marchetti',      // TODO: strings join, tempo up
+  'music:casino_end': 'prologue',             // TODO: solo piano over rain
 };
 
 export function musicUrl(id, { loop = true, seed } = {}) {

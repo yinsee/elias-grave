@@ -1,0 +1,15 @@
+{
+  "id": "casino_terrace",
+  "title": "Smoke Break",
+  "music": "music:casino_terrace",
+  "_todo": "Portrait dealer_scared (optional, being generated: the player shows a placeholder until then); elias_cold exists. Voice lines dealer_terrace_01..03 and elias_casino_02..03 do not exist yet.",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_cold" },
+  "right": { "id": "dealer", "name": "THE DEALER", "role": "Grand Casino Orfeo", "portrait": "portrait:dealer_scared" },
+  "lines": [
+    { "speaker": "dealer", "mood": "scared", "voice": "dealer_terrace_01", "text": "I just deal cards, mister." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_casino_02", "text": "Where's the Count." },
+    { "speaker": "dealer", "mood": "scared", "voice": "dealer_terrace_02", "text": "Upstairs. The hall of mirrors. He's never alone in there. Nobody knows which one is him." },
+    { "speaker": "dealer", "mood": "scared", "voice": "dealer_terrace_03", "text": "Here. The service door. Take it, take it." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_casino_03", "text": "Go home." }
+  ]
+}

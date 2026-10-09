@@ -1,0 +1,36 @@
+{
+  "id": "casino_outro",
+  "title": "House Always Wins",
+  "music": "music:casino_end",
+  "musicLoop": false,
+  "_todo": "Panel art: assets/art/panels/casino/casino_outro_0N.png (being generated, docs/levels/03-house-always-wins.md 9.1). Voice lines casino_outro_01..04 do not exist yet.",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:casino_outro_01", "minTime": 1.5,
+        "shot": "The roulette wheel slows. Brask lies across the numbers, monocle cracked, white tuxedo red. The ball drops into the green zero.",
+        "lines": [
+          { "type": "say", "speaker": "Brask", "pos": "bottom", "voice": "casino_outro_01", "text": "The order came from the Board... from the Basses. The hard money goes through Kalt's aquarium." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:casino_outro_02", "minTime": 1.4,
+        "shot": "Brask's office. On the wall, an old photo: six men in tuxedos, a young Elias among them. One face, the man in the middle, is cut out with a razor. A Bell & Sons clock on the desk shows 3:17.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "casino_outro_02", "text": "My old life in one picture. Someone had cut out the man in the middle." }
+        ] },
+      { "image": "panel:casino_outro_03", "rain": true, "minTime": 1.2,
+        "shot": "Exterior, rain. Mags's old green coupé waits at the curb. Mags (red hair, leather jacket) leans out of the window. Nero is in the back seat.",
+        "lines": [
+          { "type": "say", "speaker": "Mags", "pos": "bottom", "voice": "casino_outro_03", "text": "Get in. The aquarium's closed. That's when it opens for them." }
+        ] }
+    ] },
+    { "layout": "full", "panels": [
+      { "image": "panel:casino_outro_04", "rain": true, "minTime": 1.5,
+        "shot": "Wide. The casino portico behind the car. A payphone on the wall rings and rings. Elias gets in without looking at it.",
+        "lines": [
+          { "type": "say", "speaker": "Mags", "pos": "top", "voice": "casino_outro_04a", "text": "You gonna get that?" },
+          { "type": "say", "speaker": "Elias", "pos": "bottom", "align": "right", "voice": "casino_outro_04b", "text": "Drive." }
+        ] }
+    ] }
+  ]
+}

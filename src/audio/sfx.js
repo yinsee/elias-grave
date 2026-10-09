@@ -458,6 +458,33 @@ export function createSfx(ctx, { destination = ctx.destination, vary = true } = 
       tone(v, { f0: 300, f1: 200, d: 0.03, vol: 0.3 });
       noise(v, { filter: 'bandpass', f0: 3000, q: 2, d: 0.012, vol: 0.6 });
     },
+    // House Always Wins (docs/levels/03-house-always-wins.md 9.5): procedural stand-ins
+    card_fwip(v) { noise(v, { filter: 'bandpass', f0: 3200, f1: 5200, q: 4, a: 0.005, d: 0.07, vol: 0.45 }); },
+    card_riffle(v) { for (let i = 0; i < 14; i++) noise(v, { filter: 'bandpass', f0: 2600 + rand() * 1800, q: 5, at: i * 0.028, d: 0.015, vol: 0.35 }); },
+    chip_spill(v) { for (let i = 0; i < 12; i++) ring(v, { f: 2400 + rand() * 1800, ratios: [1, 2.3], at: rand() * 0.35, d: 0.08, vol: 0.06 }); },
+    table_flip(v) { tone(v, { type: 'triangle', f0: 130, f1: 60, d: 0.2, vol: 0.9, drive: 3 }); noise(v, { buf: brown, filter: 'lowpass', f0: 1200, f1: 300, d: 0.25, vol: 0.6 }); for (let i = 0; i < 6; i++) ring(v, { f: 2600 + rand() * 1600, ratios: [1, 2.3], at: 0.05 + rand() * 0.3, d: 0.08, vol: 0.05 }); },
+    slot_break(v) { glass(v, 10, 0.3, 0.6); for (let i = 0; i < 10; i++) ring(v, { f: 1600 + (i % 4) * 400, ratios: [1, 2], at: 0.1 + i * 0.09, d: 0.25, vol: 0.06 }); send(v, 0.4); },
+    mirror_crack(v) { noise(v, { filter: 'highpass', f0: 4500, d: 0.05, vol: 0.6, drive: 2 }); ring(v, { f: 5200, at: 0.01, d: 0.25, vol: 0.05 }); },
+    mirror_shatter(v) { tone(v, { f0: 160, f1: 70, d: 0.12, vol: 0.4, drive: 2 }); noise(v, { filter: 'highpass', f0: 4000, f1: 7000, d: 0.6, vol: 0.7 }); glass(v, 50, 1.6, 0.9); send(v, 0.45); },
+    mirror_ripple(v) { tone(v, { f0: 1800, f1: 2600, a: 0.15, d: 0.5, vol: 0.06, sweep: 0.5 }); noise(v, { filter: 'bandpass', f0: 6000, q: 6, a: 0.1, d: 0.5, vol: 0.12, lin: true }); send(v, 0.6); },
+    chandelier_snap(v) { ring(v, { f: 700, ratios: [1, 1.7, 2.9], d: 0.3, vol: 0.12 }); noise(v, { filter: 'bandpass', f0: 2400, q: 3, d: 0.05, vol: 0.6 }); },
+    chandelier_whistle(v) { tone(v, { f0: 1200, f1: 500, a: 0.05, d: 0.5, vol: 0.05, sweep: 0.5 }); for (let i = 0; i < 8; i++) ring(v, { f: 3000 + rand() * 3000, at: rand() * 0.4, d: 0.2, vol: 0.03 }); },
+    chandelier_crash(v) { tone(v, { type: 'triangle', f0: 110, f1: 40, d: 0.4, vol: 1, drive: 5 }); noise(v, { filter: 'highpass', f0: 2500, f1: 6000, d: 0.9, vol: 0.8 }); glass(v, 60, 1.8, 1.0); send(v, 0.5); },
+    monocle_ting(v) { ring(v, { f: 4200, ratios: [1, 2.7], d: 0.35, vol: 0.08 }); },
+    cane_whoosh(v) { noise(v, { filter: 'bandpass', f0: 500, f1: 1400, q: 1.5, a: 0.05, d: 0.18, vol: 0.5, lin: true }); },
+    roulette_rumble(v) { tone(v, { type: 'sawtooth', f0: 50, f1: 70, a: 0.3, d: 1.2, vol: 0.12, drive: 3 }); noise(v, { buf: brown, filter: 'lowpass', f0: 300, a: 0.3, d: 1.2, vol: 0.5, lin: true }); for (let i = 0; i < 16; i++) noise(v, { filter: 'bandpass', f0: 3000, q: 6, at: i * 0.07, d: 0.01, vol: 0.2 }); },
+    roulette_groan(v) { tone(v, { type: 'sawtooth', f0: 90, f1: 45, a: 0.2, d: 0.9, vol: 0.18, drive: 4 }); noise(v, { buf: brown, filter: 'bandpass', f0: 240, q: 2, a: 0.2, d: 0.9, vol: 0.5 }); },
+    roulette_ball_clatter(v) { for (let i = 0; i < 12; i++) ring(v, { f: 2200 + rand() * 900, ratios: [1, 2.4], at: i * (0.05 + rand() * 0.03), d: 0.05, vol: 0.08 }); },
+    roulette_ball_roll(v) { noise(v, { filter: 'bandpass', f0: 1400, q: 3, a: 0.05, d: 1.4, vol: 0.25, lin: true }); },
+    roulette_ball_settle(v) { for (const [at, f] of [[0, 2600], [0.22, 2500], [0.38, 2550], [0.5, 2450]]) ring(v, { f, ratios: [1, 2.4], at, d: 0.12, vol: 0.09 }); send(v, 0.5); },
+    pocket_hum(v) { tone(v, { type: 'square', f0: 120, f1: 120, a: 0.2, d: 1.0, vol: 0.05 }); tone(v, { f0: 240, f1: 240, a: 0.2, d: 1.0, vol: 0.04 }); },
+    pocket_zap(v) { for (let i = 0; i < 12; i++) noise(v, { filter: 'highpass', f0: 2500 + rand() * 4000, at: rand() * 0.3, d: 0.015, vol: 0.5, drive: 4 }); tone(v, { type: 'square', f0: 100, f1: 100, d: 0.4, vol: 0.12, drive: 3 }); },
+    gas_whoomph(v) { noise(v, { buf: brown, filter: 'lowpass', f0: 200, f1: 2200, a: 0.05, d: 0.9, vol: 1, drive: 2, sweep: 0.3 }); tone(v, { f0: 70, f1: 40, d: 0.5, vol: 0.5 }); send(v, 0.3); },
+    bills_burst(v) { for (let i = 0; i < 10; i++) noise(v, { filter: 'bandpass', f0: 1800 + rand() * 1500, q: 2, at: rand() * 0.3, d: 0.05, vol: 0.4 }); },
+    vault_door_bell(v) { tone(v, { type: 'triangle', f0: 90, f1: 60, d: 0.3, vol: 1, drive: 5 }); ring(v, { f: 330, ratios: [1, 2.32, 4.1, 5.9], d: 2.2, vol: 0.2 }); send(v, 0.6); },
+    vault_roll(v) { tone(v, { type: 'sawtooth', f0: 45, f1: 38, a: 0.2, d: 1.6, vol: 0.15, drive: 4 }); noise(v, { buf: brown, filter: 'lowpass', f0: 400, a: 0.2, d: 1.6, vol: 0.6, lin: true }); },
+    alarm_bell(v) { for (let i = 0; i < 10; i++) ring(v, { f: 1400, ratios: [1, 2.1], at: i * 0.06, d: 0.06, vol: 0.06 }); },
+    pa_chime(v) { for (const [at, f] of [[0, 784], [0.28, 659], [0.56, 523]]) ring(v, { f, ratios: [1, 2, 3], at, d: 0.9, vol: 0.08 }); send(v, 0.5); },
     ui_confirm(v) {
       tone(v, { type: 'sawtooth', f0: 220, d: 0.08, vol: 0.18, drive: 2 });
       tone(v, { type: 'sawtooth', f0: 330, at: 0.07, d: 0.18, vol: 0.18, drive: 2 });
