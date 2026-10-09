@@ -9311,6 +9311,7 @@ import { casino3d } from './levels/casino/three.js';
     SURF.length = 0; SURF.push(GROUND_S, ...PLATS, ...TRAMPS);
     for (const w of HOUSEWIN) { w.off = false; w.peek = false; w.t = 0; w.lv = 1; }
     if (id === 'metro') { if (!MR) MR = METRO.createMetro(ENG); LVH = MR; } else if (id === 'aquarium') { if (!AR) AR = AQUA.createAquarium(ENG); LVH = AR; } else if (id === 'casino') { if (!CR) CR = CASINO.createCasino(ENG); LVH = CR; } else LVH = {};
+    document.title = id === 'street' ? 'Elias Grave' : `${LV.title} · Elias Grave`;   // the browser tab names the level (the street is the title screen and the tutorial)
   }
   // the engine for a level module (src/levels/metro/run.js): the sim's state and functions, read and called from there
   const countdownEl = (() => { const el = document.createElement('div'); el.className = 'countdown'; el.hidden = true; el.innerHTML = '<span></span><div class="bar"><i></i></div>'; document.getElementById('bossbar')?.after(el); return el; })();
