@@ -225,7 +225,8 @@ export const WAVES = {
 export const SNIPER = {
   nests: { water: { x: 1500, y: -420 }, trees: { x: 2300, y: -380 }, north: { x: 2900, y: -460 } },
   rooms: { boiler: ['water'], nave: ['water', 'trees'], dome: ['trees', 'north', 'water'] },
-  max: [1, 2, 2, 3], lock: [1.2, 0.9, 0.75, 0.6], search: 1.2, lag: 0.35, vmax: 180, cd: 2.5, dmg: [20, 30, 30, 35], hitR: 6,
+  max: [1, 2, 2, 3], lock: [1.2, 1.1, 0.75, 0.6], search: 1.2, lag: 0.35, vmax: 180, cd: 2.5, dmg: [22, 22, 26, 27],   // dmg times DIFFS.dmg: 15 / 22 / 30 / 35 (Medium was 30, a third of her fight)
+  hitR: 6,
   spot: 0.7, spotOut: 10, palm: 2, goonDmg: 40, bossDmg: 60, bossStun: 1.5,
   dots: { yard2: [1, 1, 2, 2], nave: [1, 2, 2, 3], brandt: [0, 0, 1, 1] }, slowE: 1.5,
 };
