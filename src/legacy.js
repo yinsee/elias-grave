@@ -4691,14 +4691,14 @@ import * as SPIRE from './levels/skyscraper/index.js';
   }
   function drawSecondary(face) {
     const b = beltAt(), ox = D[2].x - P[2].x, oy = D[2].y - P[2].y;   // follow the drawn pose (squash, 12 fps)
-    // suit front: white shirt in a V under the lapels, black tie down the middle
+    // suit front: white shirt in a V under the lapels, the red tie down the middle ([read] his mark: no goon wears it; 2 px wide, the 3D tie quad too)
     const [ux, uy] = norm(D[1].x - D[2].x, D[1].y - D[2].y), nx = D[1].x, ny = D[1].y;
     const L = Math.hypot(D[1].x - D[2].x, D[1].y - D[2].y) * 0.72;
-    for (let t = 0; t <= L * 0.58; t += 0.5) {
-      const w = 2.2 - t / (L * 0.58) * 1.9, cx = nx - ux * t + b.bx * 1.3, cy = ny - uy * t + b.by * 1.3;
+    for (let t = 0; t <= L * 0.62; t += 0.5) {
+      const w = 2.6 - t / (L * 0.62) * 2.2, cx = nx - ux * t + b.bx * 1.3, cy = ny - uy * t + b.by * 1.3;
       for (let o = -w; o <= w; o += 0.5) plot(Math.floor(cx + b.bx * o), Math.floor(cy + b.by * o), PAL.collar);
     }
-    line1(nx + b.bx * 1.3, ny + b.by * 1.3, nx - ux * L * 0.62 + b.bx * 1.6, ny - uy * L * 0.62 + b.by * 1.6, PAL.tie);
+    for (const o of [1.0, 1.6]) line1(nx + b.bx * o, ny + b.by * o, nx - ux * L * 0.62 + b.bx * (o + 0.3), ny - uy * L * 0.62 + b.by * (o + 0.3), PAL.tie);
     plot(Math.floor(nx + b.bx * 2.4 - ux * 0.5), Math.floor(ny + b.by * 2.4 - uy * 0.5), PAL.collarD);   // collar tip
   }
   // ===== [/G1] =====
@@ -6358,6 +6358,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // its colour, in two hard steps: the silhouette ring at full strength, the ring inside it at half. Facing = the edge normal
   // (toward the empty neighbours) against the direction to the light, lifted out of the screen as the 3D one is (z 12).
   const RIM = { k: 0.35, z: 12 };
+  const HERO_RIM = [235, 150, 70, 0.55];   // the hero's warm rim: r, g, b and how far his edge pixels take it
+
   let rimE = new Uint8Array(0);
   function rimPass() {
     const M = figArt.mask, x0 = Math.max(1, figArt.x0), x1 = Math.min(cam.vw - 2, figArt.x1), y0 = Math.max(1, figArt.y0), y1 = Math.min(cam.vh - 2, figArt.y1);
@@ -6389,6 +6391,14 @@ import * as SPIRE from './levels/skyscraper/index.js';
         if (r + g + b < 0.02) continue;
         const s = RIM.k * 255 * (f === 2 ? 1 : 0.5), i = y * CW + x, c = buf[i];
         buf[i] = (255 << 24 | Math.min(255, (c >> 16 & 255) + b * s) << 16 | Math.min(255, (c >> 8 & 255) + g * s) << 8 | Math.min(255, (c & 255) + r * s)) >>> 0;
+      }
+      // [read] the hero's own mark (no goon has it): a warm 1 px rim round his silhouette, lit or dark, against a goon too (his pixels are
+      // marked 2), so he reads in a crowd of black suits. The 3D view gives his outline shell the same colour (HERO_RIM, playerRig).
+      const [hr, hg, hb, hk] = HERO_RIM;
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const i = y * CW + x; if (M[i] !== 2 || (M[i - 1] === 2 && M[i + 1] === 2 && M[i - CW] === 2 && M[i + CW] === 2)) continue;
+        const c = buf[i];
+        buf[i] = (255 << 24 | Math.round((c >> 16 & 255) * (1 - hk) + hb * hk) << 16 | Math.round((c >> 8 & 255) * (1 - hk) + hg * hk) << 8 | Math.round((c & 255) * (1 - hk) + hr * hk)) >>> 0;
       }
     }
     for (let y = Math.max(0, figArt.y0); y <= Math.min(cam.vh - 1, figArt.y1); y++) M.fill(0, y * CW + Math.max(0, figArt.x0), y * CW + Math.min(cam.vw - 1, figArt.x1) + 1);
@@ -6520,7 +6530,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       figArt.on = true; drawEnemies(L); figArt.on = false;
       if (L === LANE.FIGHT) drawEShots();
       if (L === LANE.FRONT) drawDog();
-      if (ctl.lane === L) { figArt.on = true; drawCharacter(look, face); figArt.on = false; drawBottle(); }
+      if (ctl.lane === L) { figArt.on = 2; drawCharacter(look, face); figArt.on = false; drawBottle(); }
       if (L === LANE.PLAT) drawStairRails();   // the fire escape's outer rail: in front of anyone on the stairs, behind the street
       if (L === LANE.PLAT && LVH.drawBackTrains) LVH.drawBackTrains();   // Line Zero: a train on track 2 (the back lane), in front of the far ledge and the niches
       if (L === LANE.FIGHT && LVH.drawFrontTrains) LVH.drawFrontTrains();   // a train on track 1 (the floor): in front of the fight lane
@@ -8223,6 +8233,10 @@ import * as SPIRE from './levels/skyscraper/index.js';
       this.cylF = inst(cyl, fill, 1200); this.cylO = inst(cyl, out, 1200);
       this.sphF = inst(sph, fill, 2400); this.sphO = inst(sph, out, 2400);
       const bx = new THREE.BoxGeometry(1, 1, 1); this.boxF = inst(bx, fill, 300); this.boxO = inst(bx, out, 300); this.XA = new THREE.Vector3(1, 0, 0);
+      {   // [read] the hero's outline shell: his warm rim (HERO_RIM, rimPass), unlit like the 2D one; his shells go here, his slots in the black ones get scale 0
+        const rc = C('#' + HERO_RIM.slice(0, 3).map(v => v.toString(16).padStart(2, '0')).join('')), rim = new THREE.MeshBasicMaterial({ color: t3rgb(t3mix(PAL.out, rc, HERO_RIM[3] * 0.75)), side: THREE.BackSide });   // (a shade darker: the shell is wider than the 2D 1 px ring)
+        this.hO = { c: inst(cyl, rim, 200), s: inst(sph, rim, 400), b: inst(bx, rim, 30) }; this.nH = { c: 0, s: 0, b: 0 }; this.rimH = false; this.M0 = new THREE.Matrix4().makeScale(0, 0, 0);
+      }
       this.cylF.setColorAt(0, new THREE.Color()); this.sphF.setColorAt(0, new THREE.Color()); this.boxF.setColorAt(0, new THREE.Color());
       this.modelMat = t3mat({ vertexColors: true }, 2);
       this.heads = new Map();   // owner -> { mesh, key }
@@ -8246,7 +8260,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       const n = this.nC++;
       if (n < 1200) {
         M.compose(V, Q, S.set(r, len, r * zs)); this.cylF.setMatrixAt(n, M); this.cylF.setColorAt(n, this.col(c));
-        M.compose(V, Q, S.set(r + ow, len, (r + ow) * zs)); this.cylO.setMatrixAt(n, M);
+        M.compose(V, Q, S.set(r + ow, len, (r + ow) * zs)); this.shell(this.cylO, 'c', n, M);
       }
       this.ball(ax, ay, z, r, ow, c, zs); this.ball(bx, by, z, r, ow, c, zs);
     },
@@ -8255,7 +8269,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       if (n >= 2400) return;
       V.set(x, -y, z + this.bz);
       M.compose(V, this.Q0, S.set(r, r, r * zs)); this.sphF.setMatrixAt(n, M); this.sphF.setColorAt(n, this.col(c));
-      M.compose(V, this.Q0, S.set(r + ow, r + ow, (r + ow) * zs)); this.sphO.setMatrixAt(n, M);
+      M.compose(V, this.Q0, S.set(r + ow, r + ow, (r + ow) * zs)); this.shell(this.sphO, 's', n, M);
     },
     // a shoe: a box from the heel a to the toe b, hh high, hd deep, flat underneath, in a black shell ow thicker
     shoe(ax, ay, bx, by, z, hh, hd, ow, c) {
@@ -8265,7 +8279,12 @@ import * as SPIRE from './levels/skyscraper/index.js';
       const ux = -DIR.y, uy = DIR.x, up = uy >= 0 ? 1 : -1;   // the side of the foot line that is up: the shoe rises from its sole
       V.set((ax + bx) / 2 + ux * up * hh * 0.55, -(ay + by) / 2 + uy * up * hh * 0.55, z + this.bz);
       M.compose(V, Q, S.set(len + hh * 1.2, hh * 2, hd * 2)); this.boxF.setMatrixAt(n, M); this.boxF.setColorAt(n, this.col(c));
-      M.compose(V, Q, S.set(len + hh * 1.2 + ow * 2, hh * 2 + ow * 2, hd * 2 + ow * 2)); this.boxO.setMatrixAt(n, M);
+      M.compose(V, Q, S.set(len + hh * 1.2 + ow * 2, hh * 2 + ow * 2, hd * 2 + ow * 2)); this.shell(this.boxO, 'b', n, M);
+    },
+    // a black outline shell, or (while the hero is built) his warm one
+    shell(O, k, n, M) {
+      if (!this.rimH) { O.setMatrixAt(n, M); return; }
+      O.setMatrixAt(n, this.M0); const h = this.hO[k], i = this.nH[k]++; if (i < h.instanceMatrix.count) h.setMatrixAt(i, M);
     },
     // the 2D head (hair, face, outline) drawn upright, extruded into voxels; rebuilt only when its pixels change
     // the sculpted head (t3heroHead / t3goonHead), rebuilt only when what shows on it changes (key)
@@ -8316,13 +8335,13 @@ import * as SPIRE from './levels/skyscraper/index.js';
       this.seg(sx.x, sx.y, mx.x, mx.y, 0, 2.5, 0.9, PAL.shirt, TZ);
       this.seg(mx.x, mx.y, pl.x, pl.y, 0, 2.3, 1.1, PAL.pants, TZ);   // narrow in the hips
       leg(pl, kF, fF, PAL.pants, ZL);
-      {   // the shirt front: a white V under the lapels and the black tie, on the chest (drawSecondary)
-        const [ux, uy] = norm(nk.x - pl.x, nk.y - pl.y), bx = -uy * f, by = ux * f, L = Math.hypot(nk.x - pl.x, nk.y - pl.y) * 0.72, T = L * 0.58, z = 3.0 * TZ + 0.06 + this.bz;
+      {   // the shirt front: a white V under the lapels and the red tie, on the chest (drawSecondary)
+        const [ux, uy] = norm(nk.x - pl.x, nk.y - pl.y), bx = -uy * f, by = ux * f, L = Math.hypot(nk.x - pl.x, nk.y - pl.y) * 0.72, T = L * 0.62, z = 3.0 * TZ + 0.06 + this.bz;
         const c0x = nk.x + bx * 1.3, c0y = nk.y + by * 1.3, cTx = nk.x - ux * T + bx * 1.3, cTy = nk.y - uy * T + by * 1.3;
         const zl = 2.5 * TZ + 0.06 + this.bz, setQ = (m, p, zz) => { const a = m.geometry.attributes.position; for (let i = 0; i < 4; i++) a.setXYZ(i, p[i][0], -p[i][1], i < 2 ? zz : zl + (zz - z)); a.needsUpdate = true; m.visible = true; };   // the lower end lies on the narrower chest
-        setQ(this.shirtV, [[c0x - bx * 2.2, c0y - by * 2.2], [c0x + bx * 2.2, c0y + by * 2.2], [cTx + bx * 0.3, cTy + by * 0.3], [cTx - bx * 0.3, cTy - by * 0.3]], z);
+        setQ(this.shirtV, [[c0x - bx * 2.6, c0y - by * 2.6], [c0x + bx * 2.6, c0y + by * 2.6], [cTx + bx * 0.4, cTy + by * 0.4], [cTx - bx * 0.4, cTy - by * 0.4]], z);
         const t0x = nk.x + bx * 1.3, t0y = nk.y + by * 1.3, t1x = nk.x - ux * L * 0.62 + bx * 1.6, t1y = nk.y - uy * L * 0.62 + by * 1.6, [px, py] = norm(t1y - t0y, -(t1x - t0x));
-        setQ(this.tie, [[t0x - px * 0.45, t0y - py * 0.45], [t0x + px * 0.45, t0y + py * 0.45], [t1x + px * 0.45, t1y + py * 0.45], [t1x - px * 0.45, t1y - py * 0.45]], z + 0.08);
+        setQ(this.tie, [[t0x - px * 0.75, t0y - py * 0.75], [t0x + px * 0.75, t0y + py * 0.75], [t1x + px * 0.6, t1y + py * 0.6], [t1x - px * 0.6, t1y - py * 0.6]], z + 0.08);
       }
       {   // the loose hair locks, behind the head: each lock tapers to its tip and sits back in depth, so the top locks do not stand
         // up beside the skull as two "ears"; two in-between strands (averages of locks 0-1 and 1-2) fill the mass (3D only)
@@ -8446,12 +8465,13 @@ import * as SPIRE from './levels/skyscraper/index.js';
       this.shadow(dog.x, GROUND - 3, 9);
     },
     updateFighters() {
-      this.nC = 0; this.nS = 0; this.nSh = 0; this.nB = 0;
+      this.nC = 0; this.nS = 0; this.nSh = 0; this.nB = 0; this.nH.c = this.nH.s = this.nH.b = 0;
       for (const h of this.heads.values()) h.used = false;
       this.shirtV.visible = this.tie.visible = false;
       for (const e of enemies) if (e.dead) this.enemyRig(e);
       for (const e of enemies) if (!e.dead) this.enemyRig(e);
-      this.playerRig();
+      this.rimH = true; this.playerRig(); this.rimH = false;
+      for (const k in this.hO) { const m = this.hO[k]; m.count = Math.min(this.nH[k], m.instanceMatrix.count); m.instanceMatrix.needsUpdate = true; }
       if (dog && !dog.hidden && (!flags.club || isMetro() || isSpire())) this.dogRig();
       this.p9Rig();
       const nC = Math.min(this.nC, 1200), nS = Math.min(this.nS, 2400);

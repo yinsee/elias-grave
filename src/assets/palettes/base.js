@@ -4,7 +4,7 @@ import { C } from '../../core/color.js';
 export const PAL = {
   out: C('#1b1226'), skin: C('#e8b28a'), skinB: C('#c08a68'), hair: C('#1f191c'), hairL: C('#3d3439'), hairD: C('#120d10'), stub: C('#8c6450'),
   shirt: C('#1c1a24'), shirtB: C('#15131b'), shirtL: C('#2e2c3a'), rim: C('#5a4a4a'), pants: C('#1e1c27'), pantsB: C('#16151e'),
-  shoe: C('#0f0d12'), collar: C('#f4f1ea'), collarD: C('#c9c4d4'), tie: C('#0b0a0e'), white: C('#fff6e0'), accent: C('#ffb347'), shadow: C('#15141d'),
+  shoe: C('#0f0d12'), collar: C('#f4f1ea'), collarD: C('#c9c4d4'), tie: C('#c41e2a'), white: C('#fff6e0'), accent: C('#ffb347'), shadow: C('#15141d'),
   dust1: C('#c4a67f'), dust2: C('#8f7358'),
   band: C('#f4f0e6'), ribbon: C('#f4f0e6'), ribbonD: C('#b9b2c8'), ghost1: C('#6a4a8c'), ghost2: C('#4d3a6e'),
   bag: C('#9b3b2f'), bagD: C('#5e2019'), bagL: C('#c05a43'), chain: C('#9aa0b5'),
