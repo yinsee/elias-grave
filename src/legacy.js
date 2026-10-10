@@ -1830,7 +1830,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     }
     if (opts && opts.boss) {   // a level boss: its own stats (hp by difficulty), size and name
       const Bd = opts.boss;
-      Object.assign(e, { hp: Bd.hp[diffSel], maxHp: Bd.hp[diffSel], s: Bd.s, m: Bd.m, speed: Bd.speed, reach: Bd.reach, dmg: Bd.dmg, heavyDmg: Bd.heavyDmg, poise: Bd.poise,
+      Object.assign(e, { hp: Bd.hp[diffSel], maxHp: Bd.hp[diffSel], s: Bd.s, m: Bd.m, speed: Bd.speed, reach: Bd.reach, dmg: Bd.dmg, heavyDmg: Bd.heavyDmg, moveDmg: Bd.moveDmg || null, poise: Bd.poise,
         windup: Bd.windup, cd: Bd.cd.slice(), kind: Bd.kind || 'marchetti', hookCd: 3.5, hook: null, chgCd: 6, tunaCd: 3, iceCd: 7, stalkT: 0, hidden: false });
       if (Bd.skin) e.pal.skin = C(Bd.skin[0]), e.pal.skinB = C(Bd.skin[1]);
     }
@@ -2024,6 +2024,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // No block, no parry: the answers are the dodge (a perfect dodge exposes him), a jump and spacing
   function hurtPlayer(dmg, x, y, dirx, heavy, impK = 1, src = null) {   // impK scales how hard the blow moves him (not the damage)
     if (hero.mode !== 'anim' || hero.invT > 0) return;
+    if (LVH.noHurt && LVH.noHurt(src)) return;   // a level's safe spot (Line Zero's refuge niche: no goon blow or shot reaches him there)
     if (src && src.low) lowHint();
     hstr.n = 0; hstr.t = -9;   // hit: his string is broken
     if (ctl.grab) grabFree(30);   // hit in the clinch: he lets go
@@ -2118,6 +2119,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     hstr.n++; hstr.last = b; hstr.rep = rep; hstr.t = simTime; hstr.atk = hero.atkId;
   }
   function damageEnemy(e, dmg, dirx, power, up, x, y, blade) {
+    if (e.type === 'boss' && e.hold) { e.flash = 0.04; return; }   // a boss held for his intro (Krieg under the lamp) takes no damage: no free hits before the fight
     if (enc.eHitKind) e.hitAt = simTime;   // (a goon at finisher health stays finisher-ready FIN.open s after the hero's hit lands)
     if (e === enc.boss) dmg = Math.max(1, Math.round(dmg * (enc.eHitKind === 2 ? 0.8 : 0.75)));   // the boss shrugs off part of every hit (guns no worse than fists)
     if (e.dmgK && e.dmgK !== 1) dmg = Math.round(dmg * e.dmgK);   // (Tinder doused: he takes more)
@@ -2827,7 +2829,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   function bossLink(e) {   // the next blow of a boss's string (a short tell); Malaspina's string ends in the cane overhead
     const a = e.combo[e.ci];
     if (e.kind === 'malaspina') { if (a === 'hchop') bStart(e, a, bTell(MAL.over), 'overhead', MAL.dmg.over); else bStart(e, a, 0.2, 'jab', MAL.dmg.jab); }
-    else bStart(e, a, 0.2, EMOVES[a].heavy ? 'cleaverHeavy' : 'cleaver');
+    else bStart(e, a, 0.2, EMOVES[a].heavy ? 'cleaverHeavy' : 'cleaver', e.moveDmg?.[a]);   // (a boss with a damage per blow: that blow's)
   }
   // Don Lucien Malaspina (the street boss, the club): a cane and a fur coat, 1.4x. He picks moves by distance. Close: a cane jab, a 3-hit
   // string that ends in the cane overhead (the cane raised high in both hands: dodge it or jump back; it cracks on the floor, 0.9 s open),
@@ -3205,6 +3207,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       const fl = floorBelow(e.x, pf - 0.5, 0);
       if (e.y + 2 >= fl.y) { if (e.vy > 120) dust(e.x, fl.y - 1, 3); e.y = fl.y - 2; e.vy = 0; e.air = false; } else e.air = true;
       e.x = clamp(e.x, enc.arena && e.zone === 'arena' || e === enc.boss ? 2440 : 8, W - 10);
+      if (typeof e.zone === 'number' && isStreet()) e.x = Math.min(e.x, stageCap(e.zone));   // a tutorial stage's goon stays in front of its shut gate
       if (e.sp === 'jslam' && e.leapt && !e.air && e.spT > 0.1) {   // landing: a shockwave both ways, then a long gasp
         e.sp = null; e.recT = 0.9; e.vx = 0;
         waves.push({ x: e.x - 8, y: e.y + 1, t: 0 }); waves.push({ x: e.x + 8, y: e.y + 1, t: 0 });
@@ -5010,6 +5013,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
   const PROP_TASKS = { smash: ['crate', 'bigcrate'], split: ['stack'], lift: [...LIFTABLE], bash: [...LIFTABLE], toss: [...LIFTABLE], pocket: ['can', 'bottle'], pockethit: ['can', 'bottle'] };
   let gateT = 0;
   const stageDone = i => ZONES[i].tasks.every(([k]) => done.has(k));
+  // the x a stage's goons may not pass while the gate after the stage is shut (the hero cannot reach past it); Infinity: no cap
+  const stageCap = i => flags.demo || flags.attract || i + 1 >= ZONES.length || stageDone(i) ? Infinity : ZONES[i + 1].x0 - 12;
   const openStage = () => { for (let i = 0; i < ZONES.length; i++) if (!stageDone(i)) return i; return ZONES.length - 1; };
   function tutGate(rdt) {
     if (flags.demo || flags.attract || endPh || openT >= 0) return;
@@ -5193,13 +5198,14 @@ import * as SPIRE from './levels/skyscraper/index.js';
     // a stage goon steps out of the nearest unused house door, alley gap or parked-car door near x0; with none near (or one too close to the hero)
   // he walks in from off screen on x0's side
   function stageGoon(i, x0, used) {
-    const hx = P[2].x; let src = null, best = 46;
+    const hx = P[2].x, cap = stageCap(i); let src = null, best = 46;
+    x0 = Math.min(x0, cap);   // (not behind the stage's shut gate)
     for (const [kind, list] of [['door', DOORS], ['alley', ALLEYS], ['car', CARDOORS]]) for (const d of list) {
-      const dd = Math.abs(d.x - x0); if (dd < best && !used.has(d) && Math.abs(d.x - hx) > 60) { best = dd; src = { kind, d }; }
+      const dd = Math.abs(d.x - x0); if (dd < best && !used.has(d) && Math.abs(d.x - hx) > 60 && d.x <= cap) { best = dd; src = { kind, d }; }
     }
     let x;
     if (src) { used.add(src.d); x = src.d.x; spawnFx.push({ kind: src.kind, d: src.d, x, t: 0 }); }
-    else x = clamp(x0 >= hx ? Math.max(x0, cam.x + cam.vw + 14) : Math.min(x0, cam.x - 14), 12, Math.min(W, STREET_END) - 20);
+    else x = Math.min(cap, clamp(x0 >= hx ? Math.max(x0, cam.x + cam.vw + 14) : Math.min(x0, cam.x - 14), 12, Math.min(W, STREET_END) - 20));
     const g = spawnEnemy('goon', x, i);
     g.cdT = Math.max(g.cdT, 0.9);
   }
@@ -5755,6 +5761,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     for (let i = 0; i < P.length; i++) if (Math.abs(P[i].x - Dh[i].x) > tl || Math.abs(P[i].y - Dh[i].y) > tl) tele = true;
     for (let i = 0; i < P.length; i++) {   // a joint's drawn position moves only when physics leaves it by > HYST px
       const p = P[i], q = Dh[i];
+      if (!Number.isFinite(q.x + q.y)) { q.x = p.x; q.y = p.y; }   // (a NaN held joint never passes the test below: it would stay NaN)
       if (tele || Math.abs(p.x - q.x) > HYST) q.x = p.x;
       if (tele || Math.abs(p.y - q.y) > HYST) q.y = p.y;
     }
@@ -6099,7 +6106,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   };
   const SIGN = { x0: 2176, x1: 2330, y0: GOAL.y - 100, y1: GOAL.y - 60 };   // 2.7 m clear above the roof: the hero walks under it
   function drawSign() {
-    if (isP9() || isCasino() || isHosp() || isPalm() || isTrain() || isSpire()) return;   // (the street's signs and rails: not in the casino's hall or St. Cecilia)
+    if (!isStreet()) return;   // (the street's signs and rails: only on the street; they leaked into Line Zero and the aquarium)
     if (flags.club || cam.x > SIGN.x1 + 40 || cam.x + cam.vw < SIGN.x0 - 40) return;
     const t = simTime, { x0, x1, y0, y1 } = SIGN;
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) plot(x, y, x === x0 || x === x1 || y === y0 || y === y1 ? PAL.out : x === x0 + 1 || x === x1 - 1 || y === y0 + 1 || y === y1 - 1 ? C('#3a3a48') : C('#160d1c'));
@@ -6130,7 +6137,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // at the foot of the fire escape: a blade sign (a neon cocktail over NOIR) hangs off the corner of the club, and three chevrons on the wall climb toward the roof
   const BLADE = { x0: 2163, x1: 2179, y0: 116, y1: 194 }, CHEV_X = STAIR_X0 + 10;
   function drawStairSign() {
-    if (isP9() || isCasino() || isHosp() || isPalm() || isTrain() || isSpire()) return;
+    if (!isStreet()) return;
     if (flags.club || cam.x > STAIR_X0 + 60 || cam.x + cam.vw < BLADE.x0 - 20) return;
     const t = simTime, { x0, x1, y0, y1 } = BLADE, iron = C('#2a2a34'), ironL = C('#4a4a58');
     // two iron arms hold the blade off the wall
@@ -6177,7 +6184,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     flush(); return out;
   })();
   function drawStairRails() {
-    if (isP9() || isCasino() || isHosp() || isPalm() || isTrain() || isSpire()) return;
+    if (!isStreet()) return;
     if (flags.club || cam.x > STAIR_X1 + 20 || cam.x + cam.vw < STAIR_X0 - 20) return;
     const top = C('#7c7c96'), post = C('#34343f');
     for (const [ax, ay, bx, by, run] of RAILSEG) {

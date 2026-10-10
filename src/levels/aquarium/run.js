@@ -49,7 +49,7 @@ export function createAquarium(G) {
       teague: null, teagueDone: false, plate: { hp: TEAGUE.plate.hp, broken: false, spill: 0 }, crewT: 0, crewN: 0,
       sharks: [{ x: 2780, y: 140, dir: -1, v: 34, k: 1.1, mode: 'circle', t: 0 }, { x: 2470, y: 172, dir: 1, v: 26, k: 0.8, mode: 'circle', t: 3 }], ramT: 0, frenzy: [], blood: 0,
       cats: D.CATWALKS.filter(c => c.chains).map(c => ({ ...c, st: 'up', t: 0, k: 0, side: 1, s: null, removed: false })), fallen: false,
-      end: null, introDone: false, club: false, kalt: null, pinHit: null, decoy: null, lockSpawn: 0, l1Line: false,
+      end: null, introDone: false, club: false, kalt: null, kaltCk: false, pinHit: null, decoy: null, lockSpawn: 0, l1Line: false,
       teagueOut: false, sharkPass: false, jlOpen: false, kHarp: false, kCat: null, kTrail: null, readT: 0, pinSpray: null, pinDps: 0, herBite: 0, clingHit: false, blood: 0, doorT: 0,
     });
     for (const c of S.cats) c.s = surfOf(c);
@@ -422,9 +422,13 @@ export function createAquarium(G) {
   // ---------------- the bloom (the rotunda's set piece) ----------------
   function bloomStep(dt) {
     const B = S.bloom, cyl = S.panes.cylinder;
-    if (!B.armed && !cyl.burst && S.w.j2.out && D.paneStage(cyl) >= 2) {
+    if (!B.hint && !B.armed && !cyl.burst && S.w.j2.out && D.paneStage(cyl) >= 1) { B.hint = true; G.toast('The jellyfish cylinder', 'Crack it with them near it', true); }
+    // (both waves down and the bloom never armed: arm it anyway, cracked or not, so the glass can burst and the 40 s fallback runs;
+    // else the right door never opens)
+    const wavesDown = S.w.j2.out && allDown('j1') && allDown('j2');
+    if (!B.armed && !cyl.burst && S.w.j2.out && (D.paneStage(cyl) >= 2 || wavesDown)) {
       const near = G.enemies.filter(e => !e.dead && Math.abs(e.x - D.CYL.x) < D.GLASS.arm.near).length;
-      if (near >= D.GLASS.arm.goons) {
+      if (near >= D.GLASS.arm.goons || wavesDown) {
         B.armed = true; B.t = 0; cyl.armed = true; sfx('glass_tink', D.CYL.x, 1, 1.3);
         G.toast('The glass is ready.', 'One shot, a thrown thing or a heavy blow bursts it', true); G.emit('bloom:armed', { x: D.CYL.x });
       }
@@ -751,7 +755,9 @@ export function createAquarium(G) {
     Object.assign(e, { intro: true, introX: 2690, alert: true, hpCd: 1.5, lungeCd: 3, bigT: 6, zipCd: 4, chumCd: 6, backT: 0, reloadT: 0, Rg: e.R, Rk: { ...e.R, ...KALT.knife } });
     enc.boss = e; enc.introT = 0; G.bossBarK = 0; S.kalt = e;
     if (G.ckBoss) { G.ckBoss = false; G.bossDlg.on = G.bossDlg.done = true; e.x = e.introX; }
-    G.setCkpt('boss');
+    G.setCkpt('boss', S.kaltCk ? 2 : 0);
+    // (a retry after the flood-out: she starts just under the phase-2 line, so the flood-out runs again at once; not phase 1 at full HP)
+    if (S.kaltCk) e.hp = Math.ceil(e.maxHp * KALT.ph2.below) - 1;
     G.emit('boss:intro', { boss: e, name: e.name });
     G.dom.toast.hidden = true;
     S.crewT = 6; S.crewN = 0;
@@ -791,6 +797,7 @@ export function createAquarium(G) {
     const hx = hole ? (hole.x0 + hole.x1) / 2 : clamp(e.x, 2486, 2758);
     const order = Object.values(S.panes).filter(p => p.kind === 'roof' && !p.burst).sort((a, b) => Math.abs((a.x0 + a.x1) / 2 - hx) - Math.abs((b.x0 + b.x1) / 2 - hx));
     S.fo = { t: 0, hx, order, next: hole ? 0.6 : 0.2 };
+    if (!G.flags.demo) G.setCkpt('boss', 2);   // the flood-out is a checkpoint: a death in phase 2 or 3 retries from here (i = 2)
     const cwB = S.cats.find(c => c.id === 'cwB');
     e.sp = 'escape'; e.spT = 0; e.inv = true; e.act = null; e.combo = null; e.esc = { x0: e.x, y0: e.y, hx, tx: (cwB.x0 + cwB.x1) / 2, ty: cwB.y - 2 };
     sfx('reel_whine', e.x, 1); S.alarm = true; sfx('alarm_bell', e.x, 0.8);
@@ -1233,7 +1240,7 @@ export function createAquarium(G) {
   M.skipToTeague = () => { G.reset(); clearTo(1950); S.w.d0.out = S.w.d1.out = S.w.d2.out = true; G.heroTo(2000); };
   M.skipTo = x => { G.reset(); clearTo(x); G.heroTo(x); if (x >= 1478 && x < 1884) { S.pump = { on: false, y: GROUND, st: -1, t: 0, hold: 0 }; S.jbox.st = 'off'; S.open.pumpIn = true; S.w.p1.out = S.w.p2.out = false; } };
   M.retry = C => {   // a checkpoint retry: the beats before it stay done
-    if (C.kind === 'boss') { clearTo(2420); return null; }
+    if (C.kind === 'boss') { clearTo(2420); S.kaltCk = C.i === 2; return null; }
     const x = C.kind === 'wave' ? ({ r1: 480, j1: 1070, d1: 1900 }[D.WAVES[C.i].id] ?? 40) : C.i;
     clearTo(x);
     if (C.kind === 'wave' && D.WAVES[C.i].id === 'j1') { S.open.jellyL = true; S.w.j1.out = S.w.j2.out = false; }
