@@ -1138,7 +1138,14 @@ export function createAquarium(G) {
     const el = G.dom.countdown; if (!el) return;
     const on = b > 0;
     if (el.hidden === on) el.hidden = !on;
-    if (on) { const max = D.BREATH.t[dif()], k = clamp(1 - b / max, 0, 1); el.firstChild.textContent = k > 0 ? 'Breath' : 'Drowning'; el.lastChild.firstChild.style.width = (k * 100).toFixed(1) + '%'; el.classList.toggle('low', k < 0.35); }
+    if (on) {
+      const max = D.BREATH.t[dif()], k = clamp(1 - b / max, 0, 1);
+      // half the breath gone and a ledge over him: say the way out (players stayed low and drowned; the climb is easy to miss)
+      const up = k < 0.5 && G.SURF.some(s => s !== G.GROUND_S && !s.water && s.y < ctl.y - 8 && s.y > ctl.y - 130 && ctl.x >= s.x0 - 70 && ctl.x <= s.x1 + 70);
+      const txt = (k > 0 ? 'Breath' : 'Drowning') + (up ? ' · ↑ climb out' : '');
+      if (el.firstChild.textContent !== txt) el.firstChild.textContent = txt;
+      el.lastChild.firstChild.style.width = (k * 100).toFixed(1) + '%'; el.classList.toggle('low', k < 0.35);
+    }
   }
 
   // ---------------- the ending: the deep plunge, the freeze frame, her last words, the outro ----------------

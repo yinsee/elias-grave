@@ -14,6 +14,8 @@
     --mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
   }
   html, body { height: 100%; }
+  /* the pixel font joins "fi" into one glyph that reads as "A" ("The fishbowl" read "The Ashbowl"). !important: each rule's font shorthand resets it */
+  body, body * { font-variant-ligatures: none !important; }
   body {
     background: var(--bg);
     color: var(--text);
@@ -53,6 +55,7 @@
   .tut li::before { content: "○ "; color: var(--accent); }
   .tut li.done { color: var(--muted); text-decoration: line-through; opacity: .7; }
   .tut li.done::before { content: "✓ "; color: var(--ok); }
+  .tut li .opt { font-style: normal; color: var(--muted); }   /* an optional lesson: it does not hold the street shut */
   .tut .stage-n { display: block; font: 10px/1.2 var(--mono); color: var(--muted); margin-bottom: 2px; }
   .tut .next { margin-top: 4px; color: var(--accent); }
   .tut.lessons { max-width: min(24%, 260px); }   /* the street's whole lesson list: narrow, so it clears the objective panel */
@@ -121,6 +124,7 @@
     padding: 8px 14px; font: 500 16px/1.3 var(--display); text-align: center; pointer-events: none;
   }
   .toast small { display: block; font: 12px/1.4 var(--mono); color: var(--muted); }
+  .toast.line { top: 64px; }   /* a spoken line (a PA, a shout): the top band, under the HP and boss bars, clear of the fighters' heads */
   .results {
     position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); min-width: min(78%, 260px);
     background: rgba(15, 13, 24, .94); border: 2px solid var(--accent); box-shadow: 0 4px 0 var(--accent-deep);
@@ -132,7 +136,7 @@
   .results dd { margin: 0; text-align: right; }
   .results .rank { margin-top: 8px; text-align: center; font: 500 16px/1 var(--display); letter-spacing: .08em; }
   .results .rank b { font-size: 24px; font-weight: 500; color: var(--accent); margin-left: 6px; vertical-align: -3px; }
-  .results .rank .score { display: block; margin-top: 4px; font: 500 16px/1 var(--display); color: var(--text); letter-spacing: .1em; font-variant-numeric: tabular-nums; }
+  .results .rank .score { display: block; margin-top: 4px; font: 500 16px/1 var(--mono); color: var(--text); letter-spacing: .06em; font-variant-numeric: tabular-nums; }   /* the mono font: in the pixel font a 5 read as an S and an 8 as a B ("5690" read "$690") */
   .results .rank .best { display: block; margin-top: 4px; font: 12px/1.3 var(--mono); color: var(--muted); letter-spacing: .02em; }
   .results .rank .best.new { color: var(--ok); }
   .results .rank[data-grade="S"] b { color: #ff3b3b; text-shadow: 0 0 6px rgba(255, 40, 40, .6); }
@@ -191,6 +195,7 @@
   .bossbar .bar i { background: var(--ko); }
   .bossbar.mini { width: min(28%, 220px); font-size: 13px; }   /* a mini-boss (Line Zero's Tinder): a smaller bar */
   .bossbar.mini .bar { height: 7px; }
+  @media (max-width: 900px) { .bossbar { top: auto; bottom: 10px; width: min(44%, 280px); } }   /* a small view: at the top it lay over the HP bar; the bottom centre is free */
   .countdown { position: absolute; top: 40px; left: 50%; transform: translateX(-50%); width: min(32%, 260px); display: flex; flex-direction: column; gap: 3px; align-items: center; font: 500 12px/1 var(--mono, monospace); color: #ffd8a0; letter-spacing: .08em; pointer-events: none; text-shadow: 0 1px 0 #000, 0 0 3px #000; }
   .countdown[hidden] { display: none; }
   .countdown .bar { width: 100%; height: 5px; }
@@ -216,14 +221,20 @@
   .title .tagline { margin: 0; padding-top: 10px; border-top: 2px solid rgba(200, 50, 58, .7); white-space: nowrap;
     font: italic 400 14px/1.5 var(--mono); letter-spacing: .06em; color: #c9c0d6; text-shadow: 0 1px 0 #000, 0 0 6px #000; }
   @media (max-width: 1100px) { .title h2 { font-size: 48px; } }
-  @media (max-width: 760px) { .title { left: 0; justify-content: flex-start; padding-top: 16px; } .title h2 { font-size: 32px; } .title .tagline { font-size: 12px; white-space: normal; } }
+  /* small views: the title keeps to the right of the menu (at 640 x 360 it sat on top of the menu); on a phone held upright, above it */
+  @media (max-width: 760px) { .title { left: min(300px, 46%); padding: 0 8px 6%; gap: 8px; } .title h2 { font-size: 24px; } .title .tagline { font-size: 11px; white-space: normal; padding-top: 6px; } }
+  @media (max-width: 560px) { .title { left: 0; justify-content: flex-start; padding-top: 8px; gap: 0; } .title .tagline { display: none; }
+    .attract .menu { justify-content: flex-end; padding-bottom: 6px; } .attract .menu button { font-size: 16px; padding-top: 2px; padding-bottom: 2px; } }
   @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .25; } }
   @keyframes buzz { 0%, 93%, 96% { opacity: 1; } 94%, 97% { opacity: .35; } }
   .attract .hud, .attract .regen, .attract .bossbar, .attract .target, .attract .feed, .attract .hud-weapon { display: none !important; }   /* the title screen shows no HUD */
   .attract .tut, .attract .obj, .attract .toast, .attract .results, .attract .style, .attract .danger { display: none; }
+  /* a toast from the title menu (why a chapter is locked) shows over the title screen, in the title's column */
+  .attract .toast.ui:not([hidden]) { display: block; z-index: 9; top: auto; bottom: 14%; left: calc(clamp(300px, 38%, 460px) + (100% - clamp(300px, 38%, 460px)) / 2); }
+  @media (max-width: 760px) { .attract .toast.ui:not([hidden]) { left: 50%; bottom: 6%; } }
   /* the style meter (src/feedback/style.js): top right, under the lesson panel. A big rank letter, its name, the way to the next rank */
   .style { --rc: #9aa6c4; position: absolute; right: 10px; top: 8px; display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; column-gap: 8px; align-items: end;
-    pointer-events: none; color: var(--rc); text-shadow: 0 2px 0 #000, 0 0 3px #000; transition: top .2s steps(4); }
+    pointer-events: none; color: var(--rc); text-shadow: 0 2px 0 #000, 0 0 3px #000; }   /* (no transition on top: it slid over the objective panel each time that grew or stepped down under a boss bar) */
   .style[hidden] { display: none; }
   .style-l { grid-row: 1 / 3; font: 500 48px/1 var(--display); color: var(--rc); text-shadow: 0 3px 0 #000, 2px 0 0 #000, -2px 0 0 #000, 0 0 10px color-mix(in srgb, var(--rc) 45%, transparent); }
   .style-n { font: 500 16px/1 var(--display); letter-spacing: .1em; align-self: center; }
@@ -303,6 +314,7 @@
   .menu button.sel::before { content: "▶"; position: absolute; left: 0; font-size: .7em; top: 50%; transform: translateY(-50%); animation: pulse 1s ease-in-out infinite; }
   .menu button.sel .v { color: #ffe14f; }
   .menu button.sel .v::before { content: "◀ "; } .menu button.sel .v::after { content: " ▶"; }
+  .menu button.sel .v.fixed::before, .menu button.sel .v.fixed::after { content: none; }   /* a locked value: no arrows, it cannot change */
   .menu .help { margin-top: 18px; font: 11px/1.5 var(--mono); color: var(--muted); text-shadow: 0 1px 0 #000; }
   .controls-card { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(560px, 86%); z-index: 9; background: rgba(12, 10, 20, .96); border: 2px solid var(--accent); box-shadow: 0 4px 0 var(--accent-deep);
     padding: 16px 20px; font: 13px/1.7 var(--mono); color: var(--muted); }
@@ -314,3 +326,26 @@
   .controls-card small { display: block; margin-top: 10px; color: var(--muted); }
   /* small screens: the pixel font steps down a grid size (24 -> 16), never to an in-between size */
   @media (max-width: 900px) { .menu button { font-size: 16px; } .menu button .v { font-size: 12px; } .card b { font-size: 16px; } }
+  /* touch controls (src/ui/touch.js): a d-pad on the left, Q / W / Space on the right, Esc and Enter top left; see-through, over the view */
+  .touch { --tk: clamp(44px, 10vmin, 68px); position: fixed; inset: 0; z-index: 20; pointer-events: none; }
+  .touch .tk { all: unset; box-sizing: border-box; position: absolute; width: var(--tk); height: var(--tk); display: grid; place-items: center; pointer-events: auto; touch-action: none;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; border-radius: 12px; border: 2px solid rgba(239, 230, 216, .38); background: rgba(16, 12, 26, .42);
+    color: rgba(239, 230, 216, .9); font: 500 18px/1 var(--display); text-shadow: 0 1px 0 #000; }
+  .touch .tk.held { background: rgba(255, 179, 71, .55); border-color: var(--accent); color: #fff; }
+  .touch .pad.l { left: 12px; bottom: calc(12px + var(--tk)); }
+  .touch .pad.r { left: calc(12px + 2 * var(--tk)); bottom: calc(12px + var(--tk)); }
+  .touch .pad.u { left: calc(12px + var(--tk)); bottom: calc(12px + 2 * var(--tk)); }
+  .touch .pad.d { left: calc(12px + var(--tk)); bottom: 12px; }
+  .touch .pad.sh { left: 12px; bottom: calc(12px + 2 * var(--tk)); height: calc(var(--tk) * .6); font: 500 11px/1 var(--mono); }
+  .touch .act.q { right: calc(18px + var(--tk)); bottom: calc(18px + var(--tk) * .8); width: calc(var(--tk) * 1.1); height: calc(var(--tk) * 1.1); border-radius: 50%; font-size: 24px; }
+  .touch .act.w { right: 12px; bottom: calc(24px + var(--tk) * 1.5); width: calc(var(--tk) * 1.1); height: calc(var(--tk) * 1.1); border-radius: 50%; font-size: 24px; }
+  .touch .act.s { right: 12px; bottom: 12px; width: calc(var(--tk) * 1.6); height: calc(var(--tk) * .7); font-size: 14px; font-family: var(--mono); }
+  .touch .sys { top: 4px; width: 56px; height: 26px; font: 500 12px/1 var(--mono); border-radius: 8px; }   /* top centre: clear of the HP bar, the menu and the objective panel */
+  .touch .sys.esc { left: calc(50% - 60px); } .touch .sys.ent { left: calc(50% + 4px); }
+  .attract .touch .pad, .attract .touch .act { display: none; }   /* the title screen: tap the menu (Esc and Enter stay) */
+  .touch-rot { display: none; position: absolute; left: 50%; top: 40px; transform: translateX(-50%); margin: 0; padding: 6px 12px; background: rgba(16, 12, 26, .85); border: 1px solid var(--line);
+    font: 12px/1.3 var(--mono); color: var(--muted); white-space: nowrap; }
+  @media (orientation: portrait) { .touch-rot { display: block; } }
+  /* with the touch controls up, the weapon readout and the kill feed step out of their way */
+  .touch-on .hud-weapon { bottom: calc(24px + 3 * clamp(44px, 10vmin, 68px)); }
+  .touch-on .feed { bottom: calc(30px + 2.6 * clamp(44px, 10vmin, 68px)); }

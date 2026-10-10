@@ -299,8 +299,8 @@ export function createCasino(G) {
     for (const m of S.mirrors) if (m.hp > 0 && hx >= m.x0 - 2 && hx <= m.x1 + 2 && hy > m.y0 && (heavy || !busy) && once('m' + m.id)) damageMirror(m, heavy ? 40 : 20, hx, hy);
     // chains: from the mezzanine or the gallery (the anchors on their rails), or from the hub (the spindle's top)
     for (const c of S.chands) if (c.st === 'hang' && c.armed !== false && c.anchor && Math.abs(hx - c.anchor.x) < 10 && Math.abs(hy - c.anchor.y) < 18 && once('ch' + c.id)) chainHit(c, blade ? 99 : heavy ? 20 : 10);
-    // the cashier glass from the corridor
-    if (boothClosed() && Math.abs(hx - D.BOOTH.x0) < 8 && ctl.x < D.BOOTH.x0 && once('booth')) { const p = S.panes.find(p => p.hp > 0 && hy + 8 >= p.y0 && hy - 8 <= p.y1) || S.panes.find(p => p.hp > 0); if (p) { p.hp -= heavy ? 34 : 12; p.flash = 0.06; G.hitStop = Math.max(G.hitStop, 0.05); sfx('glass_small', D.BOOTH.x0, 0.8, 0.7); if (p.hp <= 0) paneBreak(p); } }
+    // the cashier glass from the corridor (a window of 14: each swing steps him on to x 1437+, and at 8 most point-blank blows missed)
+    if (boothClosed() && Math.abs(hx - D.BOOTH.x0) < 14 && ctl.x < D.BOOTH.x0 && once('booth')) { const p = S.panes.find(p => p.hp > 0 && hy + 8 >= p.y0 && hy - 8 <= p.y1) || S.panes.find(p => p.hp > 0); if (p) { p.hp -= heavy ? 34 : 12; p.flash = 0.06; G.hitStop = Math.max(G.hitStop, 0.05); sfx('glass_small', D.BOOTH.x0, 0.8, 0.7); if (p.hp <= 0) paneBreak(p); } }
     // the slot row: a heavy blow breaks a machine (jackpot bells, a shower of coins)
     if (heavy && hx >= D.SLOTS.x0 && hx <= D.SLOTS.x1 && ctl.y > GROUND - 14) { const sx = D.SLOTS.x0 + Math.floor((hx - D.SLOTS.x0) / 23) * 23; if (!S.slotBroke.has(sx) && once('slot' + sx)) { S.slotBroke.add(sx); sfx('slot_break', sx, 1); burst(sx + 10, D.SLOTS.y + 14, 16, [A.CC.gold, A.CC.goldL], 80, 90, 1.0); G.emit('feat', 'jackpot'); } }
     // a heavy blow near a roulette table spills its chips
@@ -472,6 +472,8 @@ export function createCasino(G) {
       for (const e of G.enemies) if (e.booth && live(e)) e.stunBooth = 1;
       G.emit('feat', 'cartram'); if (p.hp <= 0) paneBreak(p);
     }
+    // the booth's way in is not plain to see: say it once, as he comes into the counting house with the glass still up
+    if (boothClosed() && hero.mode === 'anim' && ctl.x >= D.GUARD_BOX.x0 - 40 && ctl.x < D.BOOTH.x0 && !G.flags.demo) say('boothWay', 'The cashier booth', 'Up the locker ↑, over the cage catwalk, down through the hatch. Or break the glass');
     // the Cooler: past the counting machines, once the corridor is down
     if (!S.coolerOut && allDown('w6') && ctl.x >= D.COOLER_ARENA.x0 + 24 && hero.mode === 'anim') startCooler();
     const T = S.cooler;
@@ -878,6 +880,7 @@ export function createCasino(G) {
     else if (S.hallDone) setObjective('The hall of mirrors', 'Through the broken wall →');
     else if (S.cooler && !S.coolerDone) setObjective('The counting room', `Beat ${COOLER.name}`);
     else if (sec.id === 'terrace') setObjective(sec.name, S.keyCard ? 'The service door →' : 'A man under the awning');
+    else if (sec.id === 'vault' && boothClosed() && ctl.x < D.BOOTH.x0) setObjective(sec.name, `${left ? `The House: ${left} · ` : ''}the booth: up the locker ↑, over the cage`);
     else setObjective(sec.name, left ? `The House: ${left}` : 'Get the Count');
   };
 

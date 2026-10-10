@@ -283,7 +283,11 @@ export function createPalmhouse(G) {
     for (const p of S.panes) {
       if (!M.blocks(p)) continue;
       const px = (p.x0 + p.x1) / 2;
-      if (hero.mode === 'anim' && ctl.y > p.y0 && ctl.y - 30 < p.y1) { if (S.prevX <= px && ctl.x > px - 6) { ctl.x = px - 6; ctl.spd = 0; } else if (S.prevX > px && ctl.x < px + 6) { ctl.x = px + 6; ctl.spd = 0; } }
+      if (hero.mode === 'anim' && ctl.y > p.y0 && ctl.y - 30 < p.y1) {
+        let bump = false;
+        if (S.prevX <= px && ctl.x > px - 6) { ctl.x = px - 6; ctl.spd = 0; bump = true; } else if (S.prevX > px && ctl.x < px + 6) { ctl.x = px + 6; ctl.spd = 0; bump = true; }
+        if (bump && !G.flags.demo) say('cabinet', 'Glass cabinets', 'Blows, shots or a thrown body break them', false);   // (the first bump: nothing else says the glass breaks)
+      }
       for (const e of G.enemies) {
         if (e.dead || e.down || !(e.y > p.y0 && e.y - 30 < p.y1)) continue;
         const pp = e.ppx ?? e.x;
@@ -723,6 +727,10 @@ export function createPalmhouse(G) {
   M.retry = C => {
     const lv = ORDER.indexOf(C.kind); if (lv < 0) return null;
     restoreTo(lv); later(dogTo, 0.02);
+    // the objective line: the rooms' arrivals set their own; the yard, the nave and the Door have none, so set them here (it showed a room long behind him)
+    if (lv === 0) setObjective('The service yard', allDown('yard') ? 'The kitchen door →' : 'Cash bags for a riot van. Fast and quiet: a radio call warns the party.');
+    if (lv === 5) setObjective('The nave', 'Warm air, palms, glass overhead. Get to the far gate.');
+    if (lv === 6) setObjective('The nave', 'The iron gate · a man in front of it');
     if (lv === 0) { S.grp = 0; return D.HEDGE + 10; }
     if (lv === 1) { S.w.b1a = { out: false, n: 0 }; S.w.b1b = { out: false, n: 0 }; S.w.shields = { out: false, n: 0 }; S.alarm = false; S.toastDone = false; S.open.private = false; S.guests = S.guests.filter(g => g.room !== 1); later(() => arriveBallroom(true), 0.01); return D.KITCHEN_IN; }
     if (lv === 2) { S.w.o1 = { out: false, n: 0 }; S.w.o2 = { out: false, n: 0 }; S.open.office = false; later(() => arriveOrchids(true), 0.01); return 1174; }
