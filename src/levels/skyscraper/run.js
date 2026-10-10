@@ -189,7 +189,11 @@ export function createSpire(G) {
       // a goon on a ledge comes down: a ranged one after 3 shots or 8 s, a melee one after 1.5 s, anyone when hit
       if (e.perchS) {
         const s = e.perchS; e.perchT = (e.perchT || 0) + dt;
-        if ((ctl.surf === s && hero.mode === 'anim' && !ctl.air) || (e.thrN || 0) >= D.PERCH.shots || e.perchT > (V.ranged ? D.PERCH.time : D.PERCH.melee) || e.hurtT > 0 || e.down) { e.perchS = null; e.dropTo = ctl.x < (s.x0 + s.x1) / 2 ? s.x1 + 8 : s.x0 - 8; }
+        if ((ctl.surf === s && hero.mode === 'anim' && !ctl.air) || (e.thrN || 0) >= D.PERCH.shots || e.perchT > (V.ranged ? D.PERCH.time : D.PERCH.melee) || e.hurtT > 0 || e.down) {
+          e.perchS = null; const g = D.GROUPS[e.grp ?? S.grp], ok = x => x > g[0] + 10 && x < g[1] - 10;
+          const pref = ctl.x < (s.x0 + s.x1) / 2 ? [s.x0 - 8, s.x1 + 8] : [s.x1 + 8, s.x0 - 8];   // down on the hero's side, unless a wall is there
+          e.dropTo = ok(pref[0]) ? pref[0] : pref[1];
+        }
         else if (!e.down && !e.air && Math.abs(e.y + 2 - s.y) < 3) e.x = clamp(e.x, s.x0 + 4, s.x1 - 4);
       }
       if (e.dropTo != null) { if (e.down || (!e.air && e.y > GROUND - 6)) e.dropTo = null; else { e.cdT = Math.max(e.cdT, 0.3); if (!e.act) { e.x += Math.sign(e.dropTo - e.x) * 80 * dt; e.face = Math.sign(e.dropTo - e.x) || e.face; } } }

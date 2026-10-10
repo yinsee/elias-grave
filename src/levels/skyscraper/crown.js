@@ -346,8 +346,8 @@ export function installCrown(X) {
     }
     if (d && E.ph !== 'walk' && !d.hidden) G.dogStep(d, rdt);
   };
-  M.camZoom = () => S.end && S.end.ph !== 'card' ? 0.45 : null;   // the ending: a wide shot of the face, the hand, the edge
-  M.camAim = () => S.end && S.end.ph !== 'card' ? { x: 2680, y: 170 } : null;
+  M.camZoom = () => S.end && S.end.ph !== 'card' ? 0.4 : null;   // the ending: a wide shot of the face, the hand, the edge
+  M.camAim = () => S.end && S.end.ph !== 'card' ? { x: 2680, y: 196 } : null;
   M.outro = async () => {
     if (S.end && (S.end.ph === 'scenes' || S.end.ph === 'card')) return;
     if (!S.end) S.end = { ph: 'scenes', t: 0, n: 12 }; S.end.ph = 'scenes';

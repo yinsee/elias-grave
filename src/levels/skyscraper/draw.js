@@ -62,6 +62,7 @@ export function drawWorld(R, S) {
       for (let k = -16; k <= 16; k++) { const yy = y + Math.round(Math.abs(k) * 0.3); plot(x + k, yy, SC.gold); if (k % 4 === 0) for (let d = 1; d < 6; d++) plot(x + k, yy + d, d === 5 ? SC.lamp : SC.whiteD); }
       for (let k = -8; k <= 8; k++) plot(x + k, y - 6 + Math.round(Math.abs(k) * 0.5), SC.goldL);
     }
+    else for (let k = -18; k <= 18; k++) { plot(x + k, GROUND - 2 - (Math.abs(k) < 8 ? 2 : 0) + (k % 3 === 0 ? 1 : 0), k % 4 === 0 ? SC.whiteD : SC.goldD); if (k % 5 === 0) plot(x + k, GROUND - 5 + (k & 1), SC.gold); }   // the wreck
   }
   if (S.slip && S.slip.t > 0) for (let x = S.slip.x0; x <= S.slip.x1; x += 2) if (((x + Math.floor(t * 3)) % 5) < 2) plot(x, GROUND - 1, (x % 4) ? SC.white : SC.goldL);
   // mirrors: glass, cracks, and the reflections of everyone in front of them (never the real Lys: she has no reflection)
@@ -128,7 +129,7 @@ export function drawWorld(R, S) {
   // the face: the lit dial, the numeral ledges, the hour hand at XII, the minute hand, the bell above, the beacon, Nero's hatch
   if (vis(2436, 2800)) {
     const F = D.FACE;
-    for (let dy = -F.r; dy <= F.r; dy++) for (let dx = -F.r; dx <= F.r; dx++) { const r2 = dx * dx + dy * dy; if (r2 > F.r * F.r) continue; const x = F.cx + dx, y = F.cy + dy; if (y >= GROUND - 6) continue; plot(x, y, r2 > (F.r - 3) ** 2 ? SC.brass : (dx * 3 + dy * 5) % 29 === 0 ? SC.amber : mix(SC.amberD, SC.dial, 0.3 + 0.15 * Math.sin((dx + dy) * 0.05))); }
+    for (let dy = -F.r; dy <= F.r; dy++) for (let dx = -F.r; dx <= F.r; dx++) { const r2 = dx * dx + dy * dy; if (r2 > F.r * F.r) continue; const x = F.cx + dx, y = F.cy + dy; if (y >= GROUND - 6) continue; plot(x, y, r2 > (F.r - 3) ** 2 ? SC.brass : (dx * 3 + dy * 5) % 29 === 0 ? SC.amber : mix(SC.brassD, SC.amberD, 0.35 + 0.25 * Math.sin((dx + dy) * 0.05))); }
     for (let h = 1; h <= 12; h++) { const a = h / 12 * Math.PI * 2, x = Math.round(F.cx + Math.sin(a) * (F.r - 10)), y = Math.round(F.cy - Math.cos(a) * (F.r - 10)); if (y < GROUND - 6) for (let k = -2; k <= 2; k++) { plot(x + k, y, SC.black); plot(x + k, y + 1, SC.black); } }
     for (const n of D.NUMERALS) for (let k = -13; k <= 13; k++) { plot(n.x + k, n.y, SC.brassL); plot(n.x + k, n.y + 1, SC.brassD); }
     line1(F.cx, F.cy, F.cx, F.cy - 50, SC.black); line1(F.cx + 1, F.cy, F.cx + 1, F.cy - 50, SC.black);

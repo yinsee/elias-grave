@@ -41,10 +41,11 @@ export function installSet(X) {
   function chandStep(dt) {
     const c = S.chand; if (!c) return;
     if (c.st === 'hang') {
-      for (let i = G.bullets.length - 1; i >= 0; i--) { const b = G.bullets[i]; if (Math.abs(b.x - D.CHAND.x) < 5 && b.y > 36 && b.y < c.y + 4) { G.bullets.splice(i, 1); c.hp -= 40; G.sparks.push({ x: b.x, y: b.y, t: 0 }); sfx('chandelier_snap', D.CHAND.x, 0.6); } }
+      for (let i = G.bullets.length - 1; i >= 0; i--) { const b = G.bullets[i]; if ((Math.abs(b.x - D.CHAND.x) < 5 && b.y > 36 && b.y < c.y + 4) || (Math.abs(b.x - D.CHAND.x) < 16 && Math.abs(b.y - c.y - 2) < 8)) { G.bullets.splice(i, 1); c.hp -= 40; G.sparks.push({ x: b.x, y: b.y, t: 0 }); sfx('chandelier_snap', D.CHAND.x, 0.6); } }
       for (const t of G.thrown) if (!t.stuck && Math.abs(t.x - D.CHAND.x) < 8 && t.y < c.y + 6 && t.y > 36) c.hp = 0;
+      for (const q of G.tossed) if (Math.abs(q.x - D.CHAND.x) < 14 && Math.abs(q.y - c.y) < 8) c.hp = 0;
       if (c.hp <= 0) { c.st = 'fall'; c.vy = 0; sfx('chandelier_whistle', D.CHAND.x, 1); }
-      else if (!S.said.has('chand') && Math.abs(ctl.x - D.CHAND.x) < 120 && G.enemies.filter(e => !e.dead && Math.abs(e.x - D.CHAND.x) < 50).length >= 2) say('chand', 'The chandelier', 'Shoot its chain: it drops on everyone under it', true);
+      else if (!S.said.has('chand') && Math.abs(ctl.x - D.CHAND.x) < 120 && G.enemies.filter(e => !e.dead && Math.abs(e.x - D.CHAND.x) < 50).length >= 2) say('chand', 'The chandelier', 'Shoot it from the mezzanine, or throw something at it: it drops on everyone under it', true);
     } else if (c.st === 'fall') {
       c.vy += 400 * dt; c.y += c.vy * dt;
       if (c.y >= GROUND - 8) {
@@ -307,7 +308,7 @@ export function installSet(X) {
       if (k >= 1) {
         S.sweep = null;
         const t = H.tileAt(ctl.x);
-        if (t && hero.mode === 'anim' && !ctl.air) { H.tileHit(t, 999); S.coyote = 0.5; }
+        if (t && hero.mode === 'anim' && !ctl.air) { H.tileHit(t, 999); S.coyote = 0.8; }   // (a beat on the falling glass: jump now)
         S.dive = { t: 0 }; S.prompt = { x: D.RAIL.x0 + 6, y: D.RAIL.y, r: 14 };
         G.slowMo(D.MG_SWEEP.slow, 'mgsweep'); sfx('slowmo_in', ctl.x, 1);
         G.toast('DIVE', 'Jump or roll → to the stair rail', false); G.emit('feat', 'mgsweep');

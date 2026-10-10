@@ -45,7 +45,7 @@ export function paint(api) {
     if (x < 530) {   // the lobby: black and gold marble, a coffered ceiling, high storm windows, a red runner on the mezzanine
       if (y < 40) c = (x % 24 < 2 || y % 20 < 2) ? SC.goldD : SC.black;
       else if (y < 90 && (x % 70) > 14 && (x % 70) < 56) c = (x % 70 === 35) ? SC.goldD : storm(x, y + 100);   // the high windows
-      else { c = noise2(x >> 2, y >> 3) < 0.06 ? SC.vein : (x + y * 2) % 41 === 0 ? SC.marbleL : SC.marble; if (y > 196 && y < 200) c = SC.goldD; if (y > GROUND - 8) c = shade(c, 0.7); }
+      else { const v = (x * 2 + y + Math.floor(noise2(x >> 5, y >> 5) * 40)) % 53; c = v === 0 && noise2(x >> 3, y >> 3) < 0.6 ? SC.vein : v === 1 && noise2(x >> 3, y >> 3) < 0.3 ? SC.marbleL : (x + y * 2) % 41 === 0 ? SC.marbleL : SC.marble; if (y > 196 && y < 200) c = SC.goldD; if (y > GROUND - 8) c = shade(c, 0.7); }
     } else if (x < 830) {   // the lift: the storm and the facade (the scroll itself is drawn live)
       c = storm(x, y);
     } else if (x < 1350) {   // the sky garden: the storm in layers, the crown lit above, the city through the gaps
@@ -138,7 +138,7 @@ export function paint(api) {
   rect(D.VESTRY.hatch - 8, GROUND - 60, D.VESTRY.hatch + 8, GROUND - 1, (x, y) => x === D.VESTRY.hatch - 8 || x === D.VESTRY.hatch + 8 || y === GROUND - 60 ? O : (y % 6 === 0) ? SC.brassD : SC.brass);
 
   // ---- the crown ----
-  text((x, y, c) => put(x, y, c), 'BELL & SONS', 1890, 250, SC.brassL);
+  text((x, y, c) => put(x, y, c), 'BELL AND SONS', 1880, 250, SC.brassL);
   // the ladder out of the gear room; the dial wall at the end of the pendulum hall
   for (let y = 40; y < GROUND; y++) { put(D.GEAR_ARENA.ladder - 4, y, SC.brassD); put(D.GEAR_ARENA.ladder + 4, y, SC.brassD); if (y % 8 === 0) for (let x = -4; x <= 4; x++) put(D.GEAR_ARENA.ladder + x, y, SC.brass); }
   for (const bl of D.BALCONIES) { rect(bl.x0, bl.y, bl.x1, bl.y + 5, (x, y) => y === bl.y ? SC.brassL : y === bl.y + 5 ? O : SC.brassD); for (let x = bl.x0; x <= bl.x1; x += 5) for (let y = bl.y - 8; y < bl.y; y++) put(x, y, SC.brassD); }
