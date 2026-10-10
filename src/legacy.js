@@ -1631,7 +1631,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   }
   // flags: noBleed = the opening's body (no blood in the air); wasted = Wicked: knocked out, the run is over; demo = the demo drives the fighter;
   // club = the fight is inside Club Noir; attract = the title screen's attract demo
-  const flags = { noBleed: false, wasted: false, demo: false, club: false, attract: false };
+  const flags = { noBleed: false, wasted: false, demo: false, club: false, attract: false, hooked: false };   // hooked: a test hook (window.__pier9 ...) drove this run; it saves no best and opens no chapter
   function bleed(x, y, dirx, n, force = 1) {
     if (flags.noBleed) return;
     for (let i = 0; i < n; i++) particles.push({ x, y, vx: dirx * (30 + simRand() * 110) * force + (simRand() - 0.5) * 60, vy: -20 - simRand() * 100 * force,
@@ -2268,7 +2268,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (e === enc.boss) {
       enc.bossBeaten = true; enc.arena = null; emit('feat', 'boss'); crowdReact(e.x, 0, 'big'); slowMo(FOCUS.boss, 'boss');
       emit('boss:defeated', { boss: e, x: e.x });
-      if (!flags.demo && !flags.attract) unlock(isP9() ? 'ch2' : isMetro() ? 'ch3' : isCasino() ? 'ch4' : isAqua() ? 'ch5' : isHosp() ? 'ch6' : isPalm() ? 'ch7' : isTrain() ? 'ch8' : isSpire() ? 'done' : 'ch1');   // a real win opens the next chapter
+      if (!flags.demo && !flags.attract && !flags.hooked) unlock(isP9() ? 'ch2' : isMetro() ? 'ch3' : isCasino() ? 'ch4' : isAqua() ? 'ch5' : isHosp() ? 'ch6' : isPalm() ? 'ch7' : isTrain() ? 'ch8' : isSpire() ? 'done' : 'ch1');   // a real win opens the next chapter
       for (const g of enemies) if (!g.dead && g.zone === 'arena') killEnemy(g, Math.sign(g.x - e.x) || 1, 200, 0.5);
     }
   }
@@ -5178,7 +5178,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (flags.attract) return;
     emit('run:over', { result: 'cleared' });
     const t = Math.round(runS.t), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
-    const r = gradeRun('ch1', { t: runS.t, kills: runS.kills, maxRank: styleM.maxRank, dmg: runS.dmg, kos }, !flags.demo);
+    const r = gradeRun('ch1', { t: runS.t, kills: runS.kills, maxRank: styleM.maxRank, dmg: runS.dmg, kos }, !flags.demo && !flags.hooked);
     resultsEl.innerHTML = `<h2>Club cleared</h2><dl><dt>Difficulty</dt><dd>${DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${runS.kills}</dd>`
       + `<dt>Top style</dt><dd>${rankName(styleM.maxRank)}</dd><dt>Damage taken</dt><dd>${Math.round(runS.dmg)}</dd><dt>Knock-outs</dt><dd>${kos}</dd><dt>Lessons</dt><dd>${done.size} / ${TOTAL}</dd></dl>`
       + `${rankHtml(r)}<small>Enter: on to the story · R: play the tutorial again</small>`;
@@ -9550,7 +9550,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     heroDmg: n => n * DIF().dmg,   // what a blow or a burn of n costs him on this difficulty (a level's own HP drains go through it; a fall is a rule, not scaled)
     spawnEnemy, hurtPlayer, damageEnemy, knockDown, killEnemy, toast, bark, setCkpt, playScene, shakeIt, dust, hitFx, slowMo, bossPhase, bStart, bSpecial, bossTell, bTell, bCd, bRand,
     eStart, eRelease, eHop, climbStep, makeObj, removeObj, damageObj, floorBelow, heroTo, equip, fullCharge, makeDog, dogStep, puff, hitsPlayer, eWeapon, plot, line1, blendPlot,
-    get R9() { return R9; }, get R9T() { return R9T; }, gradeRun, rankHtml, rankName, styleM, runS, get kos() { return kos; },
+    get R9() { return R9; }, get R9T() { return R9T; }, gradeRun: (ch, st, save) => gradeRun(ch, st, save && !flags.hooked), rankHtml, rankName, styleM, runS, get kos() { return kos; },
     get dog() { return dog; }, set dog(v) { dog = v; }, get hitStop() { return hitStop; }, set hitStop(v) { hitStop = v; }, get lockT() { return lockT; }, set lockT(v) { lockT = v; },
     get killBy() { return killBy; }, set killBy(v) { killBy = v; }, get endPh() { return endPh; }, set endPh(v) { endPh = v; }, get fadeDir() { return fadeDir; }, set fadeDir(v) { fadeDir = v; },
     get slamDone() { return slamDone; }, set bossBarK(v) { bossBarK = v; }, get ckBoss() { return ckBoss; }, set ckBoss(v) { ckBoss = v; }, bossDlg, set autoWalk(v) { autoWalk = v; },
@@ -9813,7 +9813,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     endPh = 'done';
     emit('run:over', { result: 'cleared' });
     const t = Math.round(runS.t), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
-    const r = gradeRun('ch2', { t: runS.t, kills: runS.kills, maxRank: styleM.maxRank, dmg: runS.dmg, kos }, !flags.demo);
+    const r = gradeRun('ch2', { t: runS.t, kills: runS.kills, maxRank: styleM.maxRank, dmg: runS.dmg, kos }, !flags.demo && !flags.hooked);
     resultsEl.innerHTML = `<h2>Pier 9 cleared</h2><dl><dt>Difficulty</dt><dd>${DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${runS.kills}</dd>`
       + `<dt>Top style</dt><dd>${rankName(styleM.maxRank)}</dd><dt>Damage taken</dt><dd>${Math.round(runS.dmg)}</dd><dt>Knock-outs</dt><dd>${kos}</dd></dl>${rankHtml(r)}<small>Enter: back to the menu</small>`;
     resultsEl.hidden = false; toastEl.hidden = true;
@@ -10029,6 +10029,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   const titleEl = document.getElementById('title');
   let titleFadeT = null;
   function startAttract() {
+    flags.hooked = false;   // back at the title: the next run is a player's (it saves its best, it opens chapters)
     if (!isStreet()) { loadLevel('street'); reset(); }
     flags.attract = true; gameAudio.playMusic('title'); showMenu(true); titleEl.hidden = false; titleEl.classList.remove('faded'); document.body?.classList.add('attract'); setDemo(true);
     clearTimeout(titleFadeT); titleFadeT = setTimeout(() => { if (flags.attract) titleEl.classList.add('faded'); }, 2500);   // the card fades out after 2.5 s; the demo plays on
@@ -10330,5 +10331,13 @@ import * as SPIRE from './levels/skyscraper/index.js';
       kill: (n = 1e9) => { for (const e of enemies) if (!e.dead && e.type !== 'boss' && n-- > 0) killEnemy(e, 1, 200, 0.3); }, setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; },
       hurtBoss: n => { const b = enc.boss && !enc.boss.dead ? enc.boss : SR && SR.mini(); if (b) b.hp = Math.max(1, b.hp - n); }, hurtMini: n => { const m = SR && SR.mini(); if (m) m.hp = Math.max(1, m.hp - n); }, hurtHero: n => window.__pier9.hurtHero(n), heal: () => { hero.hp = 100; },
       view3d: on => setMode3D(!!on), zoom: z => setZoom(String(z)), equip: w => equip(w, fullCharge(w)), retry: () => retry(), unlock: id => unlock(id), get progress() { return progress; }, get SR() { return SR; }, get ENG() { return ENG; } };
+    // a run that a hook started or bent (a skip, a jump to the boss, a set difficulty) is a test: no "New best", no chapter opened.
+    // Reads (peek, progress) and view settings do not count. Quit to title clears it.
+    const READS = new Set(['peek', 'progress', 't3mem', 'zoom', 'view3d']);
+    for (const k of ['__pier9', '__metro', '__aquarium', '__casino', '__hospital', '__palmhouse', '__train', '__spire']) {
+      const o = window[k];
+      for (const [n, d] of Object.entries(Object.getOwnPropertyDescriptors(o))) if (typeof d.value === 'function' && !READS.has(n)) { const f = d.value; o[n] = (...a) => { flags.hooked = true; return f(...a); }; }
+    }
+    { const f = window.__skipToBoss; window.__skipToBoss = () => { flags.hooked = true; return f(); }; }
   } else requestAnimationFrame(frame);
 })();
