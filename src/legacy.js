@@ -9497,6 +9497,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   function p9SpawnOne(q) {
     const src = q.src, hx = P[2].x;
     if (P9.SALTMEN[q.v].max && enemies.filter(g => !g.dead && g.v === q.v).length >= P9.SALTMEN[q.v].max) { q.t = 1; p9.queue.push(q); return; }   // (at most 2 Tallymen alive)
+    if (P9.ALIVE[diffSel] && enemies.filter(g => !g.dead && g.type !== 'boss' && g.zone !== 'arena').length >= P9.ALIVE[diffSel]) { q.t = 1; p9.queue.push(q); return; }   // (Wicked: at most 5 Saltmen up at once)
     let x = src.x, kind = src.kind, perch = null;
     if (kind === 'top') {   // a perched shooter: straight onto the stack top when no one sees it, else out of a container door and up the stacks
       perch = PLATS.find(s => x >= s.x0 && x <= s.x1 && Math.abs(s.y - src.y) < 2) || null;
