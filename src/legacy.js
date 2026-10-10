@@ -7452,7 +7452,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       // a vehicle or a scaffold is not one slab: wheels are tyres at its two sides, the cabin is narrower than the body,
       // a scaffold is two open frames with the deck between them (VPARTS, recorded as the street was drawn)
       const parts = (Z, px, w, h) => {
-        const V = Z.z0 === ZF && Z.z1 - Z.z0 > 10 ? VPARTS.filter(v => v.x0 <= Z.x1 && v.x1 >= Z.x0) : [];
+        const V = !custom && Z.z0 === ZF && Z.z1 - Z.z0 > 10 ? VPARTS.filter(v => v.x0 <= Z.x1 && v.x1 >= Z.x0) : [];   // (VPARTS are the street's: a level's block at the same x is no car)
         const d = Z.z1 - Z.z0, zc = (Z.z0 + Z.z1) / 2;
         if (!V.length) return [{ px, d, z: zc }];
         const full = new Uint32Array(w * h), cab = new Uint32Array(w * h), wheel = new Uint32Array(w * h), frame = new Uint32Array(w * h), low = new Uint32Array(w * h);
@@ -7478,7 +7478,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
         for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (Z.y0 + y) * W + Z.x0 + x; if (zone[i] === id) px[y * w + x] = t3glow(stat[i]); }
         // the vehicles in this block get their real model (t3vehicle); their pixels leave the extrusion, the rest of the block
         // (a bar a car is parked against) is extruded as before
-        const cars = Z.z0 === ZF && Z.z1 - Z.z0 > 10 ? VPARTS.filter(v => (v.car || v.bed) && v.x0 <= Z.x1 && v.x1 >= Z.x0) : [];
+        const cars = !custom && Z.z0 === ZF && Z.z1 - Z.z0 > 10 ? VPARTS.filter(v => (v.car || v.bed) && v.x0 <= Z.x1 && v.x1 >= Z.x0) : [];
         const owns = (v, x, y) => v.car ? x >= v.car.L - 2 && x <= v.car.R + 2 && y >= v.car.top(x) - 1 : x >= v.bed.x0 - 2 && x <= v.bed.x1 + 1 && y >= v.bed.tilt - 1;
         for (const v of cars) {
           for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (px[y * w + x] && owns(v, Z.x0 + x, Z.y0 + y)) px[y * w + x] = 0;
