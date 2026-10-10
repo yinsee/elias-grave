@@ -297,4 +297,6 @@ export function drawFx(R, S) {
   }
   // the revolver's tell: a click and a glint at the muzzle (never a red dot)
   for (const g of S.glints) { for (let k = -3; k <= 3; k++) { plot(g.x + k, g.y, C('#ffffff')); plot(g.x, g.y + k, C('#ffffff')); } }
+  // a room narrower than the view: past its walls, the dark (the camera keeps it in the middle)
+  if (S.dark) { const [a, b] = S.dark, y0 = Math.floor(cam.y), y1 = Math.ceil(cam.y + cam.vh); for (let x = Math.floor(cam.x); x < cam.x + cam.vw; x++) { if (x >= a - 4 && x <= b + 4) continue; const k = Math.min(1, (x < a ? a - 4 - x : x - b - 4) / 10); for (let y = y0; y < y1; y++) blendPlot(x, y, 6, 6, 10, 0.55 + 0.4 * k); } }
 }

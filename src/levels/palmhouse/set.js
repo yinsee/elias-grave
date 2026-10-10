@@ -278,7 +278,8 @@ export function installSet(M) {
     const wind = s.grp === 4 ? 30 + Math.sin(G.simTime * 0.7) * 30 : 8;
     let tries = 0;
     while (rain.drops.length < want && tries++ < 40) {
-      let x = cam.x + G.simRand() * cam.vw, y = cam.y - 6, top = -1e9;
+      const rb = M.roomBounds ? M.roomBounds() : [cam.x, cam.x + cam.vw], xa = Math.max(cam.x, rb[0] - 4), xb = Math.min(cam.x + cam.vw, rb[1] + 4);
+      let x = xa + G.simRand() * Math.max(0, xb - xa), y = cam.y - 6, top = -1e9;
       if (cols.length && G.simRand() < cols.length * 14 / Math.max(1, want)) { const c = cols[Math.floor(G.simRand() * cols.length)]; x = c.x0 + G.simRand() * (c.x1 - c.x0); y = Math.max(cam.y, c.y); top = c.y; }
       else if (!outdoorX(x) && !(roofBand && x >= 1880)) continue;
       rain.drops.push({ x, y, v: 22 + G.simRand() * 26, ph: G.simRand() * 6, top, sz: G.simRand() < 0.2 ? 2 : 1 });

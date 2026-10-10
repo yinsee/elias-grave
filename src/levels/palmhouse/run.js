@@ -578,11 +578,18 @@ export function createPalmhouse(G) {
   };
   M.special = (e, dt, px) => e.kind === 'brandt' ? brandtSpecial(M, e, dt, px) : e.kind === 'vane' ? vaneSpecial(M, e, dt, px) : false;
   M.mini = () => S.brandt && !S.brandt.dead && !S.brandt.hold ? S.brandt : null;
-  M.camBounds = () => {
+  // the room the camera keeps to (a room narrower than the view sits in the middle of it; drawFx darkens what lies past its walls)
+  const roomBounds = () => {
     if (G.flags.club) return D.GROUPS[6];
     if (S.grp === 4) return S.roofOpen ? [D.GROUPS[4][0], 2040] : D.GROUPS[4];
     if (S.grp === 5) return [S.landed ? D.GROUPS[5][0] : 1700, D.GROUPS[5][1]];
     return D.GROUPS[S.grp] || [0, 2800];
+  };
+  M.roomBounds = roomBounds;
+  M.camBounds = () => {
+    const b = roomBounds(), vw = G.cam.vw;
+    if (b[1] - b[0] >= vw) return b;
+    const cx = (b[0] + b[1]) / 2; return [cx - vw / 2 - 1, cx + vw / 2 + 1];
   };
 
   // ---------------- lighting ----------------
@@ -628,6 +635,7 @@ export function createPalmhouse(G) {
     S.glints.length = 0;
     const e = S.glintE; if (e && !e.dead && e.sp === 'revolver' && e.spT < 0 && e.J) S.glints.push({ x: Math.round(e.J[6].x + e.face * 4), y: Math.round(e.J[6].y) });
     S.tells.length = 0;
+    const rb = roomBounds(); S.dark = !G.flags.club && rb[1] - rb[0] < G.cam.vw && ctl.y > D.ROOF_Y ? rb : null;
     const V = S.vane; if (V && !V.dead && V.sp === 'charge' && V.spT < 0) S.tells.push({ kind: 'path', x0: V.x, x1: clamp(V.x + V.face * 200, D.ARENA.x0, D.ARENA.x1), t: 0.1 });
     const Bd = S.brandt; if (Bd && !Bd.dead && Bd.sp === 'charge' && Bd.spT < 0) S.tells.push({ kind: 'path', x0: Bd.x, x1: clamp(Bd.x + Bd.face * 170, D.BRANDT_ARENA.x0, D.BRANDT_ARENA.x1), t: 0.1 });
     if (Bd && !Bd.dead && Bd.sp === 'slot' && Bd.spT < 0 && Bd.J) S.glints.push({ x: Math.round(Bd.x + Bd.face * 10), y: Math.round(Bd.y - 22) });
@@ -687,7 +695,7 @@ export function createPalmhouse(G) {
   }
   M.retry = C => {
     const lv = ORDER.indexOf(C.kind); if (lv < 0) return null;
-    restoreTo(lv);
+    restoreTo(lv); later(dogTo, 0.02);
     if (lv === 0) { S.grp = 0; return D.HEDGE + 10; }
     if (lv === 1) { S.w.b1a = { out: false, n: 0 }; S.w.b1b = { out: false, n: 0 }; S.w.shields = { out: false, n: 0 }; S.alarm = false; S.toastDone = false; S.open.private = false; S.guests = S.guests.filter(g => g.room !== 1); later(() => arriveBallroom(true), 0.01); return D.KITCHEN_IN; }
     if (lv === 2) { S.w.o1 = { out: false, n: 0 }; S.w.o2 = { out: false, n: 0 }; S.open.office = false; later(() => arriveOrchids(true), 0.01); return 1174; }
@@ -698,7 +706,9 @@ export function createPalmhouse(G) {
     return null;   // the dome: the game puts him through the gate (enterClub); Vane comes on the next frame
   };
   M.ckptName = C => ({ 'p:yard': 'the service yard', 'p:ballroom': 'the ballroom', 'p:orchids': 'the orchid rooms', 'p:office': 'the office', 'p:boiler': 'the boiler yard', 'p:nave': 'the nave', 'p:brandt': 'the Door', boss: 'the great dome' })[C.kind] || 'the start';
-  M.skipTo = where => {   // tests: jump to a beat with what came before done
+  const dogTo = () => { if (G.dog) { G.dog.x = ctl.x - 20; G.dog.vx = 0; } };
+  M.skipTo = where => { skip0(where); dogTo(); };
+  const skip0 = where => {   // tests: jump to a beat with what came before done
     G.reset();
     const at = { yard: 0, ballroom: 1, orchids: 2, office: 3, boiler: 4, gantry: 4, nave: 5, brandt: 6, dome: 7 }[where] ?? 0;
     restoreTo(at);
