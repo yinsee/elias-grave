@@ -171,6 +171,7 @@ export function drawFx(R, S) {
   for (const r of S.ropes || []) line1(Math.round(r.x), 0, Math.round(r.x), Math.round(r.y), SC.steelL);
   for (const tl of S.tells || []) {
     if (tl.kind === 'ring') for (let k = 0; k < 28; k++) { const a = k / 28 * Math.PI * 2; plot(Math.round(tl.x + Math.cos(a) * tl.r), Math.round((tl.y ?? GROUND - 1) + Math.sin(a) * tl.r * 0.25), tl.c || 0xff4060ff); }
+    else if (tl.kind === 'line') { line1(Math.round(tl.x0), Math.round(tl.y0), Math.round(tl.x1), Math.round(tl.y1), SC.goldD); for (let k = -1; k <= 1; k++) plot(Math.round(tl.x1) + k, Math.round(tl.y1), SC.goldL); }
     else if (tl.kind === 'mark') for (let k = -6; k <= 6; k++) plot(Math.round(tl.x) + k, GROUND - 1, k % 2 ? 0xff3030ff : 0xffffffff);
     else if (tl.kind === 'laser') { line1(Math.round(tl.x0), Math.round(tl.y0), Math.round(tl.x1), GROUND - 1, 0xff2020ff); plot(Math.round(tl.x1), GROUND - 2, 0xffffffff); }
     else if (tl.kind === 'peal') for (let k = 0; k < 48; k++) { const a = k / 48 * Math.PI * 2; blendPlot(Math.round(tl.x + Math.cos(a) * tl.r), Math.round(tl.y + Math.sin(a) * tl.r * 0.5), 240, 220, 170, 0.6 * (1 - tl.k)); }
