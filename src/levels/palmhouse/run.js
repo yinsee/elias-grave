@@ -270,6 +270,15 @@ export function createPalmhouse(G) {
       else if (ctl.x < lo + 8 || ctl.x > hi - 8) { ctl.x = clamp(ctl.x, lo + 8, hi - 8); ctl.spd = 0; if (dR && !S.open[dR.id] && ctl.x > hi - 10 && (S.noT || 0) < G.simTime) { S.noT = G.simTime + 3; G.toast(dR.name, 'Shut. Not yet.', true); } }
     }
     if (high && !S.roofOpen && ctl.x > D.ROOF_DOOR - 4) { ctl.x = D.ROOF_DOOR - 4; ctl.spd = 0; if ((S.noT || 0) < G.simTime) { S.noT = G.simTime + 3; G.toast('The roof door', 'Locked while they hold the yard', true); } }
+    // a body on the floor (a knock-down, a throw) obeys the walls too: below the roof line it stays in its room, and nothing passes the shut roof door
+    // (a sniper round at the top of the stairs threw him over the boiler wall into the nave, with the yard still alive: a soft-lock)
+    if (hero.mode !== 'anim' && !S.fade) {
+      const [lo, hi] = D.GROUPS[g] || [0, 2800], shut = !S.roofOpen && g <= 4;
+      for (const p of G.P) {
+        const a = p.y > D.ROOF_Y ? lo + 2 : -1e9, b = Math.min(p.y > D.ROOF_Y ? hi - 2 : 1e9, shut ? D.ROOF_DOOR - 2 : 1e9);
+        if (p.x < a) { p.x = a; p.px = Math.max(p.px, a); } else if (p.x > b) { p.x = b; p.px = Math.min(p.px, b); }
+      }
+    }
     for (const p of S.panes) {
       if (!M.blocks(p)) continue;
       const px = (p.x0 + p.x1) / 2;
@@ -559,7 +568,7 @@ export function createPalmhouse(G) {
 
   // ---------------- the fixed step ----------------
   M.step = dt => {
-    if (!G.flags.club && Math.abs(ctl.x - S.prevX) > 30 && !S.fade) { S.grp = grpAt(ctl.x, ctl.y); S.prevX = ctl.x; }
+    if (!G.flags.club && Math.abs(ctl.x - S.prevX) > 30 && !S.fade) { const g = grpAt(ctl.x, ctl.y); S.grp = g === 5 && !S.roofOpen && !S.landed ? 4 : g; S.prevX = ctl.x; }   // (never the nave while the roof door is shut)
     if (!G.flags.club && hero.mode === 'anim' && ctl.y < D.ROOF_Y && ctl.x >= D.ROOF_DOOR) S.grp = 5;
     if (!G.flags.club && S.grp === 5 && ctl.y > D.ROOF_Y && ctl.x < D.WALLS[4] && hero.mode === 'anim') S.grp = 4;   // (back down the stairs)
     for (let i = S.queue.length - 1; i >= 0; i--) { const q = S.queue[i]; if ((q.t -= dt) <= 0) { S.queue.splice(i, 1); spawnOne(q); } }
