@@ -7451,10 +7451,39 @@ import * as SPIRE from './levels/skyscraper/index.js';
       }
       // a vehicle or a scaffold is not one slab: wheels are tyres at its two sides, the cabin is narrower than the body,
       // a scaffold is two open frames with the deck between them (VPARTS, recorded as the street was drawn)
+      // a level's block (L3D) is not one slab either: what is solid in 2D (a box, a slab, a deck: 3 x 3 px or more) goes through the
+      // block's depth; a rail, a post, a rung, a hanger or a brace (thinner) is a bar 2 px deep, as the street's scaffold poles are: at
+      // the back above a ledge on the block (its front edge stays open, so a body up there shows), at the back and the front under it
+      // (a post at each corner), in the middle of a block with no ledge over it (a lamp stand, a ladder)
+      const thin = (Z, px, w, h) => {
+        const d = Z.z1 - Z.z0, zc = (Z.z0 + Z.z1) / 2;
+        if (d < 6) return [{ px, d, z: zc }];
+        const thick = new Uint8Array(w * h);
+        for (let y = 0; y + 3 <= h; y++) for (let x = 0; x + 3 <= w; x++) {
+          let ok = true;
+          for (let j = 0; j < 3 && ok; j++) for (let i = 0; i < 3; i++) if (!px[(y + j) * w + x + i]) { ok = false; break; }
+          if (ok) for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) thick[(y + j) * w + x + i] = 1;
+        }
+        const L = PLATS.filter(s => s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 - 1 && s.y <= Z.y1);
+        const full = new Uint32Array(w * h), back = new Uint32Array(w * h), front = new Uint32Array(w * h), mid = new Uint32Array(w * h);
+        for (let x = 0; x < w; x++) {
+          const wx = Z.x0 + x; let deck = null;
+          for (const s of L) if (wx >= s.x0 - 1 && wx <= s.x1 + 1 && (deck == null || s.y < deck)) deck = s.y;
+          for (let y = 0; y < h; y++) {
+            const o = y * w + x, c = px[o]; if (!c) continue;
+            const wy = Z.y0 + y;
+            if (thick[o] || (deck != null && wy >= deck - 1 && wy <= deck + 3)) full[o] = c;   // (the deck a body stands on is never a bar)
+            else if (deck == null) mid[o] = c;
+            else if (wy < deck) back[o] = c;
+            else { back[o] = c; front[o] = c; }
+          }
+        }
+        return [{ px: full, d, z: zc }, { px: back, d: 2, z: Z.z0 + 1.2 }, { px: front, d: 2, z: Z.z1 - 1.2 }, { px: mid, d: 2, z: zc }];
+      };
       const parts = (Z, px, w, h) => {
         const V = !custom && Z.z0 === ZF && Z.z1 - Z.z0 > 10 ? VPARTS.filter(v => v.x0 <= Z.x1 && v.x1 >= Z.x0) : [];   // (VPARTS are the street's: a level's block at the same x is no car)
         const d = Z.z1 - Z.z0, zc = (Z.z0 + Z.z1) / 2;
-        if (!V.length) return [{ px, d, z: zc }];
+        if (!V.length) return L3D() ? thin(Z, px, w, h) : [{ px, d, z: zc }];
         const full = new Uint32Array(w * h), cab = new Uint32Array(w * h), wheel = new Uint32Array(w * h), frame = new Uint32Array(w * h), low = new Uint32Array(w * h);
         for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
           const c = px[y * w + x]; if (!c) continue;
