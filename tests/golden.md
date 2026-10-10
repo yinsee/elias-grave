@@ -4,9 +4,19 @@ Run with a static server (`tools/serve.py`, port 8765, no browser cache; or `pyt
 Two runs of the same URL must give the same hashes. A refactor step that keeps both hashes changed nothing.
 A step that changes behaviour on purpose records new hashes here, with the reason.
 
-## Current
+## Current (main c93692f: step 1 fixes, 3D audit, readability, the difficulty model, the rain's own RNG; 2026-10-10)
 
-PENDING
+| URL | state | buf | l3 | note |
+|---|---|---|---|---|
+| `index.html?autotest=demo&frames=1200` | `76752384` | `ae334fff` | | 2D (attract demo, seed 1, 960x540 view) |
+| `index.html?autotest=boss&frames=1800` | `acf4859b` | `77cb15c1` | | 2D (skipToBoss + demo, seed 1) |
+| `index.html?autotest=demo&frames=1200&view3d` | `76752384` | `bc51a93b` | `75c14d2a` | 3D view: the same state hash as 2D |
+| `index.html?autotest=boss&frames=1800&view3d` | `acf4859b` | `de1871a3` | `4c7f7dca` | 3D view: the same state hash as 2D |
+
+Two full runs of `PORT=8765 sh tools/golden.sh`, every pair matched, 2D state = 3D state. Why they changed: the merge of the
+readability branch (camera, hero mark, light) and the difficulty branch (both below), then the rain and sleet drops moved to
+their own RNG (`fxRand`): their draws depend on the view width, so they had been moving the sim. From here on a view-only change
+(camera, light, models) must keep the state hashes; only buf/l3 may change.
 
 ### The difficulty branch alone (2026-10-10)
 
