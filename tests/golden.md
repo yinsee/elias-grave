@@ -18,6 +18,9 @@ readability branch (camera, hero mark, light) and the difficulty branch (both be
 their own RNG (`fxRand`): their draws depend on the view width, so they had been moving the sim. From here on a view-only change
 (camera, light, models) must keep the state hashes; only buf/l3 may change.
 
+Still the same at main c420846 (+ performance, step 5 tutorial/UI, the St. Cecilia clarity pass, the 3D glass/water/haze):
+all four URLs, every hash, one run each.
+
 ### The difficulty branch alone (2026-10-10)
 
 | URL | state | buf | l3 | note |
