@@ -2848,7 +2848,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (e.ph >= 2 && simRand() < dt * 5) particles.push({ x: e.J[0].x + (simRand() - 0.5) * 6, y: e.J[0].y - 7, vx: (simRand() - 0.5) * 12, vy: -55, life: 0.3, c: EFX.steam });
     if (!aggro || e.sp || e.act || e.hurtT > 0 || e.air || e.exposed > 0) return;
     if (e.ph === 1 && e.hp < e.maxHp * MAL.ph2) {   // phase 2: the roar, the coat comes off, his crew comes in
-      bossPhase(e, 2, 'Enough. The coat comes off.');
+      bossPhase(e, 2, 'Enough. The coat comes off.'); phaseCk(2);
       e.coat = false; e.speed = MAL.speed2; e.windup = MAL.windup2; e.cd = MAL.cd2.slice(); e.bigCd = 1.8;
       enc.coat = { x: e.J[1].x, y: e.J[1].y, vx: -e.face * 70, vy: -130, a: 0, av: -e.face * 8, rest: false };
       enc.crewBurst = DIF().crew.alive; enc.spawnT = Math.min(enc.spawnT, 1);
@@ -2905,7 +2905,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (!e.hidden && simRand() < dt * (e.ph >= 2 ? 5 : 1.5)) particles.push({ x: e.J[0].x + e.face * 5, y: e.J[0].y + 1, vx: e.face * 14, vy: -18, life: 0.45, c: EFX.steam });   // breath in the cold
     if (!aggro || e.sp || e.act || e.hurtT > 0 || e.air || e.exposed > 0) return;
     if (e.ph === 1 && e.hp < e.maxHp * M.ph2.below) { bossPhase(e, 2, M.ph2.line); Object.assign(e, { speed: M.ph2.speed, cd: M.ph2.cd.slice(), windup: M.ph2.windup, levTo: 'speed', tunaCd: 2.5, iceCd: 6 }); return; }
-    if (e.ph === 2 && e.hp < e.maxHp * M.ph3.below) { bossPhase(e, 3, M.ph3.line); Object.assign(e, { speed: M.ph3.speed, cd: M.ph3.cd.slice(), levTo: 'freezer' }); return; }
+    if (e.ph === 2 && e.hp < e.maxHp * M.ph3.below) { bossPhase(e, 3, M.ph3.line); Object.assign(e, { speed: M.ph3.speed, cd: M.ph3.cd.slice(), levTo: 'freezer' }); phaseCk(3); return; }
     if (e.levTo) { startLever(e, e.levTo); e.levTo = null; return; }   // after the roar: the walk to the lever, his back to the hero
     if (e.ph >= 3 && !F.on && F.offT > M.fog.back) { startLever(e, 'freezer'); return; }   // the hero cleared the fog: he goes back to pull it again
     const fog = e.ph >= 3 && F.on && F.k > 0.5, free = level && hero.mode === 'anim' && !ctl.air;
@@ -4905,6 +4905,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     });
   }
   function reset() {
+    retryC = null;
     if (!flags.attract) gameAudio.playMusic('docks_explore', { volume: isP9() ? 0.6 : isMetro() ? 0.4 : 0.45 });   // a game: the calm street track, low (the title screen plays the title theme)
     if (openT >= 0) endOpening();
     endPh = null; endT = 0; endCam = null; dog = null; ctl.bottle = false; jumpEnd = false;
@@ -5095,7 +5096,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   }
   // checkpoints: each tutorial stage, the boss door (street); the quay start, the shutter, the boss door (Pier 9). Reaching one refills the
   // second winds (a boss fight has its own count). Wasted with none left: retry from the last one; the lessons done stay done.
-  let ckpt = null, ckBoss = false;   // ckBoss: a retry at the boss door (the entrance and the dialog are skipped)
+  let ckpt = null, ckBoss = false, retryC = null;   // retryC: the checkpoint of the retry in progress (a level may pass a section checkpoint on its way back to the boss)   // ckBoss: a retry at the boss door (the entrance and the dialog are skipped)
   const ckptName = () => !ckpt ? 'the start' : LVH.ckptName ? LVH.ckptName(ckpt) : ckpt.kind === 'boss' ? 'the boss door' : ckpt.kind === 'shutter' ? 'the shutter' : ckpt.kind === 'wave' ? P9.WAVES[ckpt.i].ckpt : ckpt.kind === 'stage' ? `stage ${ckpt.i + 1}` : 'the start';
   let fallKeep = null;   // after a fall's retry: the second winds he has left (the level re-arriving at the same checkpoint does not refill them)
   function setCkpt(kind, i = 0, quiet) {
@@ -5123,7 +5124,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     const C = ckpt; fallKeep = null;
     if (!C || C.lv !== LV.id || DIF().perma) { reset(); return; }
     const keep = [...done], rs = { ...runS }, k0 = kos, boss = C.kind === 'boss';
-    reset();
+    reset(); ckpt = retryC = C;   // (the level's own retry reads it: a boss's phase checkpoint)
     for (const k of keep) done.add(k); tutDirty = true;   // the lessons stay done
     ZONES.forEach((Z, i) => { if (stageDone(i)) cleared.add(i); });   // (no 'stage clear' toasts again)
     Object.assign(runS, rs, { down: false, koUp: false, endT: -1, hp: 100 }); kos = k0;
@@ -5148,6 +5149,10 @@ import * as SPIRE from './levels/skyscraper/index.js';
     toast('Retry', `From ${ckptName()} · second winds: ${hero.wind}`);
   }
   const retry = () => DIF().perma ? reset() : retryCkpt();
+  // a boss's last-phase checkpoint (Easy, Medium and Hard; Wicked keeps the whole fight): reached, the checkpoint moves to it (boss, i = ph).
+  // A retry from it (atPhaseCk) starts the boss just under the line into that phase, so the phase change plays again at once
+  const phaseCk = ph => { if (diffSel < 3 && !flags.demo && !flags.attract) setCkpt('boss', ph, true); };
+  const atPhaseCk = ph => [ckpt, retryC].some(c => !!c && c.lv === LV.id && c.kind === 'boss' && c.i === ph) && !flags.demo;
   // a lethal fall the level does not catch (a train gap, the Spire's drop): one rule for every level. Wicked: the Wasted card, from the
   // start. Hard: back to the checkpoint, never healed by it (a fall on Hard took him from 20 HP to 100): it costs a second wind if he
   // has one, else 40 HP; a fall that empties him is Wasted
@@ -5273,7 +5278,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
       enc.boss = spawnEnemy('boss', CLUB_DOORS[0], 'boss'); enc.boss.intro = true; enc.boss.introX = CLUB_DOORS[0] + 56; enc.boss.face = 1;
       enc.introT = 0; bossBarK = 0; spawnFx.push({ kind: 'club', x: CLUB_DOORS[0], t: 0 });
       if (ckBoss) { ckBoss = false; enc.boss.x = enc.boss.introX; enc.introT = 1.69; malDlg = malDlgDone = true; }   // a retry: no entrance walk, no dialog
-      if (!flags.demo) setCkpt('boss');   // the boss door: a checkpoint, and the fight's own second winds
+      const pc = atPhaseCk(2); if (pc) enc.boss.hp = Math.ceil(enc.boss.maxHp * MAL.ph2) - 1;   // (a retry from his phase-2 checkpoint: the coat comes off again at once)
+      if (!flags.demo) setCkpt('boss', pc ? 2 : 0);   // the boss door: a checkpoint, and the fight's own second winds
       emit('boss:intro', { boss: enc.boss, name: BOSS_NAME });
       for (const d of dancers) { d.mood = 'shock'; d.t = 2.6; d.home0 = d.home; d.home = clamp(d.home + (d.home > enc.boss.introX ? 18 : -18), CLUB_X + 34, W - 24); }
       toastEl.hidden = true; toastT = 0; toastQ.length = 0;
@@ -9420,7 +9426,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     get dog() { return dog; }, set dog(v) { dog = v; }, get hitStop() { return hitStop; }, set hitStop(v) { hitStop = v; }, get lockT() { return lockT; }, set lockT(v) { lockT = v; },
     get killBy() { return killBy; }, set killBy(v) { killBy = v; }, get endPh() { return endPh; }, set endPh(v) { endPh = v; }, get fadeDir() { return fadeDir; }, set fadeDir(v) { fadeDir = v; },
     get slamDone() { return slamDone; }, set bossBarK(v) { bossBarK = v; }, get ckBoss() { return ckBoss; }, set ckBoss(v) { ckBoss = v; }, bossDlg, set autoWalk(v) { autoWalk = v; },
-    reset: () => reset(), retry: () => retry(), fallOut: () => fallOut(), dropWeapon: (e, w) => dropWeapon(e, w), quitToTitle: () => quitToTitle(),
+    reset: () => reset(), retry: () => retry(), fallOut: () => fallOut(), phaseCk, atPhaseCk, dropWeapon: (e, w) => dropWeapon(e, w), quitToTitle: () => quitToTitle(),
     placeHero(x, s) {   // on the ground at x, then up onto surface s (the mezzanine)
       heroTo(x); const dy = s.y - 2 - ctl.y; ctl.y = s.y - 2; ctl.surf = s;
       for (const p of P) { p.y += dy; p.py += dy; } for (const st of hair) for (const p of st) { p.y += dy; p.py += dy; } if (tails) for (const t of tails) for (const p of t) { p.y += dy; p.py += dy; }
@@ -9548,7 +9554,9 @@ import * as SPIRE from './levels/skyscraper/index.js';
     enc.boss.intro = true; enc.boss.introX = dx - 70; enc.boss.face = -1;
     enc.introT = 0; bossBarK = 0; spawnFx.push({ kind: 'club', x: dx, t: 0 });
     if (ckBoss) { ckBoss = false; enc.boss.x = enc.boss.introX; }   // a retry: no entrance walk (bossDlg.done is set: no dialog)
-    setCkpt('boss');
+    const pc = atPhaseCk(3), M = P9.MARCHETTI;   // a retry from his phase-3 checkpoint: phase 2, just under the phase-3 line (the fog comes again at once)
+    if (pc) Object.assign(enc.boss, { ph: 2, hp: Math.ceil(enc.boss.maxHp * M.ph3.below) - 1, speed: M.ph2.speed, cd: M.ph2.cd.slice(), windup: M.ph2.windup });
+    setCkpt('boss', pc ? 3 : 0);
     emit('boss:intro', { boss: enc.boss, name: enc.boss.name });
     toastEl.hidden = true; toastT = 0; toastQ.length = 0;
   }

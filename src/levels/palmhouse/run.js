@@ -398,7 +398,9 @@ export function createPalmhouse(G) {
     G.dog = G.makeDog(2470, 1); S.nero.mode = 'wait'; S.nero.tx = 2480;
     const again = G.ckBoss;
     if (G.ckBoss) { G.ckBoss = false; G.bossDlg.on = G.bossDlg.done = true; }
-    G.setCkpt('boss');
+    const pc = G.atPhaseCk(3);
+    G.setCkpt('boss', pc ? 3 : 0);
+    if (pc) { e.ph = 2; e.hp = Math.ceil(e.maxHp * VANE.ph3.below) - 1; S.haleLight = true; }   // a retry from her phase-3 checkpoint: the lantern again at once
     S.blindT = 11;
     const go = () => { e.hold = false; e.cdT = 1; G.setMusic('boss_marchetti', 1); say('vane', VANE.name, 'Behind the shield: hit her back, or cut her whistle in the wind-up. Roll as a dot locks.', false); };
     if (!again && !G.flags.demo) G.playScene('dialog', 'vane_intro').then(go); else go();
@@ -412,6 +414,7 @@ export function createPalmhouse(G) {
       later(() => G.toast('Hale\'s office', 'A lamp on behind the glass. A man in a hat, on the phone. Nero growls at him.', true), 2);
     }
     if (ph === 3) {
+      G.phaseCk(3);
       if (e.shield || S.vShp > 0) { e.shield = false; S.vShp = 0; S.shieldDrop = null; sfx('windscreen_shot', e.x, 1, 0.6); shatter(e); }
       later(() => { if (!e.dead) G.bark(e, VANE.ph3.line2); }, 1.6);
       Object.assign(e, { speed: VANE.ph3.speed, windup: VANE.ph3.windup, cd: VANE.ph3.cd.slice() });

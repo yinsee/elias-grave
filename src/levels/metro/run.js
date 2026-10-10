@@ -625,10 +625,12 @@ export function createMetro(G) {
     Object.assign(e, { hookD: SWITCH.hook, hookCd: 4, spkCd: 3, levCd: 0, ramCd: 3, slideCd: 2, dropCd: 4, levPull: -1, intro: true, introX: e.x, alert: true });
     enc.boss = e; enc.introT = 0; G.bossBarK = 0;
     if (G.ckBoss) { G.ckBoss = false; G.bossDlg.on = G.bossDlg.done = true; }
-    G.setCkpt('boss');
+    const pc = G.atPhaseCk(3);
+    G.setCkpt('boss', pc ? 3 : 0);
     G.emit('boss:intro', { boss: e, name: e.name });
     G.dom.toast.hidden = true;
     S.crewT = 6; S.crewN = 0; S.rail.t = 0;
+    if (pc) { e.ph = 2; e.hp = Math.ceil(e.maxHp * SWITCH.ph3.below) - 1; M.switchPhase(e, 2); }   // a retry from her phase-3 checkpoint: the 23:10 again at once
     sfx('train_horn', 2900, 0.5, 0.8);   // a far horn
   }
   M.canLever = () => !S.trains.length && !S.handcarRide && !(S.countdown);
@@ -688,6 +690,7 @@ export function createMetro(G) {
   M.switchPhase = (e, ph) => {
     if (ph === 2) { S.handcar = { x: D.PORTALS[0] - 20, dir: 1, v: SWITCH.ram.v[dif()], hits: 0, broken: false, pump: 0, lamp: true, surf: null }; S.crewT = 2; }
     if (ph === 3) {
+      G.phaseCk(3);
       S.jam = true; S.countdown = { t: SWITCH.countdown[dif()], max: SWITCH.countdown[dif()], horns: new Set(), next: 'F2310' }; endRide(e, false);
       for (const g of G.enemies) if (!g.dead && g.zone === 'arena') g.flee = g.x < 2620 ? D.PORTALS[0] : D.PORTALS[1];
       const r = G.enemies.find(g => g.flee); if (r) G.bark(r, 'Not on the 23:10!');
