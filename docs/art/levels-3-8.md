@@ -57,3 +57,20 @@ Panels and portraits follow section 9 of `07-last-train.md`, without the `panel:
 - `train_intro_01`: the platform clock is not exact (23:39). The game can put the time in the caption.
 - `train_intro_05` shows Lenz standing on the roof of the last car, with the metronome beside him.
 - `elias_cold` and `elias_furious_quiet` are shared with earlier levels.
+
+## Level 8: skyscraper
+
+Panels follow section 9.1 of `08-the-spire.md`, without the `panel:` prefix: `spire_intro_1`..`4`, `spire_end_1`..`3`, `epilogue_1`..`4` and `title_card` (no zero padding, as in the doc).
+
+Section 9.2 gives only mood names. The portrait files are `<character>_<mood>.png`:
+
+- Bell: `bell_warm`, `bell_proud`, `bell_calm`, `bell_regretful`, `bell_cold`, `bell_amused`, `bell_stern`, `bell_hurt`, `bell_hanging`
+- Elias: `elias_quiet` and `elias_grieving` are new. `elias_cold` and `elias_furious` exist from earlier levels.
+- Lys Moreau: `lys_amused`, `lys_breathless`
+- Kessel: `kessel_grinning`, `kessel_fading`
+
+Notes:
+
+- `title_card` has no words: a dark rain panel with a small man and dog at the bottom. The game must draw the ELIAS GRAVE title on it.
+- `epilogue_1`: the newspaper is blank. The game must draw "THE CHOIR EXPOSED".
+- `spire_intro_4` (the sepia flashback) uses Bell's reference face. The boy is not face-swapped, because the Elias reference is an adult.
