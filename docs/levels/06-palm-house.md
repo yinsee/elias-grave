@@ -834,3 +834,138 @@ Character references (`art/characters/<char>/ref.png`): `vane`, `brandt`. Hale's
 ### 9.6 Voice (`audio/voice/`, optional)
 
 `voice:vane_intro_01..03`, `voice:vane_bark_mark`, `voice:vane_bark_whistle`, `voice:vane_bark_openfire`, `voice:vane_bark_holdfire`, `voice:vane_outro_01`, `voice:hale_call_01..03`, `voice:hale_outro_01`, `voice:brandt_intro_01..02`, `voice:elias_*` (one to five words each).
+
+---
+
+## 10. As built (first pass, 2026-10-10)
+
+Code: `src/levels/palmhouse/` (`data.js` the map and numbers, `paint.js` the art, `set.js` the set pieces and hazards, `run.js` the run,
+`three.js` the 3D blocks, `index.js`), `src/bosses/brandt.js`, `src/bosses/vane.js`. The game calls the run's hooks (`LVH` in
+`src/legacy.js`; `isPalm()`). Chapter 6 in the menu: locked until `progress.ch6` ("Beat Krieg at St. Cecilia"); Vane's defeat unlocks
+`ch7`. St. Cecilia's results card now says "Enter: on to Chapter 6, The Palm House", and Enter starts Chapter 6.
+
+### 10.1 The folded map (world 2800 x 320)
+
+Walls part the rooms. A door in a wall opens at the end of a room's fight; the hero walks into it (a short fade). A room narrower than
+the view sits in the middle of it, with the dark past its walls.
+
+| Room | x | What is there |
+|---|---|---|
+| `park` | 0-524 | The red carpet (guests walk into the portico x 140), the waiter with a tray (a bottle), the hedge gate x 172, the snowy botanist (cover), riot van 1 x 280-346 (roof), cash bags, the shed and its axe x 428, riot van 2 x 454-516 (rear window: the shotgun on Easy/Medium; an ammo box on Hard/Wicked), the kitchen door x 524 |
+| `ballroom` | 524-1154 | Buffet tables, the cake table (a step), the balcony y 196 x 740-990, the grand piano (a step), 3 champagne towers, 2 chandeliers, the honour guard's dress sabre (a katana) x 846, the ice swan (a heavy crate) x 880, 2 planters (crates), the portico and main doors in the back wall, the Private door x 1154 |
+| `orchids` | 1154-1504 | Floor mist, 3 glass cabinets that block (hp 30; shots crack them, a thrown body breaks them), potting benches, the walkway y 196, 2 misting pipes, the fire box (an ammo box), the office door |
+| `office` | 1504-1604 | The desk (the folder: ↑), the phone (↑ when it rings), the cherry pipe ash, the green lamp, the gun cabinet (break the glass: a shotgun), the back door |
+| `boiler` | 1604-1880 | Snow and wind; the boiler house and its overhang (sniper cover), the coal heap, the iron stairs (32 treads) to the roof door x 1878 |
+| `nave` | 1880-2414 | The gantry y 152 outside the glass (x 1866-1990), the skylight x 1990-2030, the glass roof (10 panes), palms, the koi bridge, the gallery y 214 x 2130-2262 (cover; the machine gun), its step, the botanist statue x 2096 (it topples), planters, the Door's arena x 2240-2410, the iron gate x 2404 |
+| `dome` (the game's "club") | 2436-2800 | 10 dome panes, the west and east galleries y 196 (cover; Vane's pistols), planters (steps), columns x 2548 and 2692, the statues Flora and Pomona (they topple), the fountain (rim y 262) and its wet ring x 2584-2660, the lantern x 2622, Hale's glass office x 2730-2784, the Bell & Sons clock at 3:17, doors x 2452 and 2786 |
+
+Checkpoints: `p:yard`, `p:ballroom`, `p:orchids`, `p:office`, `p:boiler`, `p:nave` (after the Drop), `p:brandt`, `boss`.
+
+### 10.2 Beats as built
+
+1. **First Snow**: guests on the carpet, Nero at heel, snow. At the hedge: the caption, then wave `yard`.
+2. **Service Yard**: the alarm rule works (an officer who sees the hero for 12 s radios in; a pistol shot). After an early alarm only panel 5
+   plays (`palmhouse_toast_alarm`), the guests already run, and on Wicked `b1b` brings a shield officer.
+3. **The Toast**: at x 650 or after 20 s, `palmhouse_toast`. Then the alarm: the lights go to half, red and blue strobes show through the
+   windows, the guests flee to the kitchen and portico doors, the waiters drop their bottles (pocketable), wave `b1a` comes.
+4. **Ballroom Brawl**: `b1b` (pistols on the balcony) comes when `b1a` has 1 left. Pistols hold fire when a guest is in their line (Easy, Medium).
+5. **Shield Wall**: the riot squad comes through the main doors (they flash blue first). On Easy/Medium the first shield officer comes alone.
+6. **Orchid Rooms**: `o1`, then `o2` (pistols behind the cabinets fire through the glass and crack it). Nero leads to the office door.
+7. **Cherry Smoke**: Nero circles the desk and stares at the chair; three bell notes play. ↑ at the desk plays `palmhouse_office`; the phone
+   rings; ↑ answers it (`palmhouse_call`); the back door opens.
+8. **Boiler Yard**: wave `yard2` and the first sniper dots (1/1/2/2). A dead spotter darkens one dot for 10 s. Then the roof door opens;
+   Nero waits by the boiler house.
+9. **The Drop**: on the gantry, wave `gantry` (0/1/2/2) and the nave's dots. A step onto the skylight: a sniper round breaks it, slow
+   motion, the fall into the nave; wave `drop` waits below.
+10. **The Sniper Volley**: wave `volley`; at x 2080 six roof panes burst left to right (0.15 s apart) in slow motion. Frost marks show where
+    the shards land; snow pours in through the holes.
+11. **The Door**: `brandt_intro`, then Sgt. Brandt (10.4). His death opens the gate and drops a shotgun.
+12. **Order and Silence**: through the gate into the dome; `vane_intro`; Commissioner Vane (10.4).
+13. **The Informant**: the dots go out one by one; the radio says "Commissioner down. Pull out."; her squad kneels; Nero barks at Hale's
+    glass; `palmhouse_outro`; the results card (Hale's notebook: the Meridian Express). Enter: back to the menu (Chapter 7 is open).
+
+### 10.3 The Blue Choir (data: `CHOIR` in `data.js`) and the verbs
+
+| Variant | Base | What it does | The answer |
+|---|---|---|---|
+| Riot officer (`shield`) | shield role | Takes every blow from the front. Shield health 80/120/140/160 (heavy 25, katana heavy 35, axe heavy 60, flying kick 50, a bullet 10, a shotgun pellet 10 near / 4 far, a sniper round 120; a thrown thing floors him). Turns slowly (0.6/0.45/0.35/0.25 s) | Get behind him, sweep him, throw something, break the shield, or lure a dot onto him |
+| Officer (`baton`) | pipe | Armoured swings; the baton snaps open as he arrives | Dodge, then punish the recovery |
+| Officer (`pistol`) | pistol | Holds fire with a guest in his line (Easy, Medium); on a ledge he comes down after 3 shots or 8 s | Rush him; use the guests and the glass |
+| Detective | brawler | Quick fists, plain clothes | Trade, then grab him when he stumbles |
+| Detective (`knifeDet`) | knife | Fast and short | Keep to heavy range |
+| Billhook officer | machete (long reach) | Long, armoured swings | Roll inside them |
+| Spotter | pistol | While he lives, every dot in his room locks 30 % faster; his death darkens one dot for 10 s | Kill him first |
+
+The snipers (`set.js`): a dot searches, tracks (at most 180 px/s), locks (1.2/0.9/0.75/0.6 s; twice as long under a palm; faster with a
+spotter), fires, then cools down 2.5 s. The round hits whoever stands on the dot: the hero 20/30/30/35 and a knock-down; goons 40; a riot
+shield 120; Brandt 40 and a 1 s stun; Vane 60 and a 1.5 s stun. Cover between the nest and the dot (an overhang, a gallery, a van, a
+standing statue, the fallen lantern) stops the lock (the dot flickers). A roll during the lock moves you off it. A round that crosses
+the roof glass cracks a pane; two cracks break it.
+
+Set pieces: champagne towers (any blow, shot, throw or flying body: a slip zone 60 px wide for 8 s; running goons fall), chandeliers (a
+blow from the balcony or a shot at the chain: a shadow for 1 s, then 50 to everyone under it, 30 to the hero), misting pipes (a hit:
+steam for 1.5 s; goons in it can not attack and take 6), statues (walk into one or hit it hard: it falls the way it was pushed, 60 along
+its length; a standing one is cover and a wall for a charge), roof shards (a frost mark for 0.9 s, then 10/14/16/18; nobody under a
+gallery is hit; a broken dome pane leaves a melt zone after 4 s).
+
+No new key: ↑ by the desk or the phone; walk into an open door; mash Q, W or Space to break Vane's arrest.
+
+### 10.4 Bosses
+
+- **Sgt. Brandt, "the Door"** (`src/bosses/brandt.js`): HP 300/380/440/520. The tower shield blocks everything from the front (a sweep too;
+  only a thrown object gets through). Moves: the string (a bash, then the baton over the top); the charge (0.6 s; into an arena wall: a
+  1.6 s stun with the shield down); the slot shot (a glint and a click for 0.5 s; a 70 px cone, 22; after 2 shots a 1.4 s reload with the
+  shield lowered); hold the line (Medium and up, every 20 s: one officer). Hard/Wicked: one sniper dot (it can hit him too).
+- **Commissioner Vane** (`src/bosses/vane.js`): HP 760/960/1080/1200, shield 240/320/380/440. Phase 1: strings; the shield charge (into a
+  column, a statue, the lantern or a wall: a 1.8 s stun, the shield drops beside her, she takes it back after); the whistle (the chosen
+  door flashes blue; any hit in its 0.8 s wind-up cuts it); "Mark!" (dots on the hero). Her crew comes only by the whistle: alive 2/3/4/5,
+  total 8/12/16/20; pistols go to the galleries (and come down by the ledge rule). Phase 2 (65 %): four dome panes over the hero burst,
+  Hale's lamp goes on (a man in a hat on the phone), Nero barks at the glass; the arrest (a hold and a dot locked on him: mash 3/5/6/8
+  presses to break free, then she staggers 0.8 s; not free: 30); the shock (every wet zone, the fountain ring and the melt water: 16 and a
+  0.8 s stun; jump or stand dry; her baton sticks 1 s after); two dots per mark on Medium. Phase 3 (30 %): a sniper splits her shield; she
+  draws a revolver (3 shots after a click and a glint, then a 1.4 s reload); the lantern falls (a 2 s mark; 40; it stays as cover and a
+  wall); the blind volley every 10-12 s (3/4/5/6 dots in a row 60 px apart; the gaps are safe). She steps off any locked dot. Two
+  knock-downs clear her squad.
+
+### 10.5 Asset names (stable)
+
+- Panels (`assets/art/panels/palmhouse/`): `palmhouse_intro_01`..`02`, `palmhouse_toast_03`..`05`, `palmhouse_office_01`, `palmhouse_outro_01`..`05`.
+- Portraits: `vane_stern`, `vane_contemptuous`, `vane_shocked`, `vane_furious`, `brandt_gruff`, `brandt_grim`, `hale_tired_phone`,
+  `hale_careful_phone`, `elias_cold`. (`vane_broken`, `elias_silent` and `elias_furious_quiet` are in 9.2, but no script uses them yet.)
+- Cutscene scripts (`assets/cutscenes/`): `palmhouse_intro`, `palmhouse_toast`, `palmhouse_toast_alarm` (new: panel 5 only, after an early
+  alarm), `palmhouse_office` (the insert), `palmhouse_call` (Hale on the desk phone; the plan's `hale_call` id belongs to St. Cecilia),
+  `brandt_intro`, `vane_intro`, `palmhouse_outro`.
+- Music cues added to `src/audio/manifest.js` (no files yet; stand-ins play): `music:palmhouse`, `music:boss_vane`, `music:palmhouse_outro`.
+  In the level: `docks_explore`, `prologue` and `boss_marchetti`.
+- SFX: existing names stand in (`rat_whistle_short`/`_long` for the police whistle, `windscreen_shot` for the sniper round, `ui_blip` for
+  the lock beep, `glass_*`, `chandelier_*`, `douse_hiss` for steam, `rail_shock` and `junction_spark` for the shock, `helmet_clang`,
+  `payphone_ring`, `bell_ting` for Bell's three notes, `nero_*`). Every other name in 9.5 is missing.
+- Voice ids in the scripts (none exist yet): `palmhouse_intro_01..02`, `vane_toast_01`, `vane_toast_05`, `palmhouse_toast_04`,
+  `palmhouse_office_01`, `hale_call_01..03`, `elias_silentnight`, `elias_number`, `brandt_intro_01..02`, `elias_retire`, `vane_intro_01..04`,
+  `elias_mags`, `vane_outro_01`, `hale_outro_01`, `palmhouse_outro_03..05`.
+
+### 10.6 Test hooks (`?manual`)
+
+`window.__palmhouse`: `chapter()`, `start()`, `skip('yard'|'ballroom'|'orchids'|'office'|'boiler'|'gantry'|'nave'|'brandt'|'dome')`, `toBoss()`,
+`peek()`, `tp(x)`, `kill(n)`, `setDiff(i)`, `hurtBoss(n)`, `hurtMini(n)`, `hurtHero(n)`, `heal()`, `view3d(on)`, `zoom(z)`, `equip(w)`, `retry()`,
+`unlock(id)`, `progress()`, `PR` (the run), `ENG`.
+
+### 10.7 Shared code changed
+
+- `src/legacy.js`: the import; `isPalm()` in `ownWorld()` and `L3D()`; `PALM.LOOKS` in `LOOK_X`; the `loadLevel` branch; `startChapter6()`;
+  the Chapter 6 menu item; `unlock('ch7')`; the boss-down toast; the section event; the street's sign and rail painters skip the level;
+  the 3D club floor skips it; the results-card chain (St. Cecilia → Chapter 6); `window.__palmhouse`. One generic hook: a mash also
+  counts while `LVH.held()` is true (Vane's arrest).
+- `src/levels/hospital/run.js`: the card's Enter line. `src/audio/manifest.js`: three music cues.
+
+### 10.8 Not done in this pass
+
+- Civilians are painted figures, not actors: they can not be knocked down, and on Hard/Wicked nobody shoots at them.
+- No phalanx bracing (a sweep floors a shield officer in a group too), no kneeling pistol behind a shield, no "Nero, hold!".
+- The ice swan, the planters and the cash bags are the engine's crates and bags (drawn as such). No snow shovel, rake trap or fertiliser cans.
+- The fire box always holds an ammo box (not the "axe if the shed axe is still there" rule). No lamp-post snow drop, no blood-on-snow fade, no footprints.
+- Vane's dropped shield can not be picked up and thrown (she takes it back after the stun). No escort on Hard/Wicked. No freeze frame
+  with floating medals at the end (the game's boss slow motion plays).
+- The Drop's aim is the game's normal air fire; no special axe plunge.
+- Snow in the 3D view uses the game's rain drops (streaks, not flakes).
+- The camera zoom per room (office 0.75, dome 0.45) is the game's auto zoom.

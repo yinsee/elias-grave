@@ -46,6 +46,10 @@ export const MUSIC_CUES = {
   'music:brask_wheel': 'boss_marchetti',      // TODO: tango, bandoneon, ball-clatter percussion
   'music:brask_allin': 'boss_marchetti',      // TODO: strings join, tempo up
   'music:casino_end': 'prologue',             // TODO: solo piano over rain
+  // The Palm House (docs/levels/06-palm-house.md 9.4): no files yet; the nearest existing tracks stand in
+  'music:palmhouse': 'prologue',              // TODO: stems waltz (the quartet), combat, orchids, roof
+  'music:boss_vane': 'boss_marchetti',        // TODO: a military march under a choir
+  'music:palmhouse_outro': 'prologue',        // TODO: one violin, the waltz, slow and broken
 };
 
 export function musicUrl(id, { loop = true, seed } = {}) {
