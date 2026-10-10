@@ -311,6 +311,7 @@ export function createTrain(G) {
   M.fire = e => {
     if (e.kind === 'lenz' && e.act === 'throw') { throwCase(e); return true; }
     const V = e.S; if (!V || !D.USHERS[e.hv]) return false;
+    if (e.grp != null && e.grp !== S.grp) { e.cdT = Math.max(e.cdT, 0.5); return true; }   // (not from another car)
     if (V.gunner) return true;   // (a Gunner only fires his sweep)
     if (e.act === 'shoot') {
       if (!tokenFree(1)) { e.cdT = Math.max(e.cdT, 0.5); return true; }   // he holds his aim: no token free
@@ -388,6 +389,8 @@ export function createTrain(G) {
     if (e.kind === 'lenz') { lenzThink(M, e, dt, px, dx, adx, level, aggro); return true; }
     if (e.kneel) { e.tx = null; e.vx = 0; e.act = null; e.crouchT = 0.2; if (e.tok) G.eRelease(e); return true; }
     if (e.seated) { e.tx = null; e.vx = 0; e.act = null; e.crouchT = 0.2; e.face = -1; if (e.tok) G.eRelease(e); return true; }
+    // a gun in another car holds: an Usher fires only at a hero in his own car (one on the roof shot him through the baggage car's wall)
+    if (e.R && e.R.ranged && e.grp != null && e.grp !== S.grp) { e.tx = null; e.vx = 0; if (e.act === 'shoot' || e.act === 'throw') e.act = null; e.gst = null; if (e.tok) G.eRelease(e); return true; }
     if (e.hv === 'gunner') return gunnerThink(e, dt, px, dx, adx);
     if (e.hv === 'doorman') {
       e.grabCd = (e.grabCd ?? 2) - dt;
