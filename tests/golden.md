@@ -15,6 +15,9 @@ A step that changes behaviour on purpose records new hashes here, with the reaso
 
 Each URL run twice in headless Chrome (`PORT=8765 sh tools/golden.sh`); each pair matched, and the 3D state hashes equal the 2D ones.
 Level 7 (The Last Train, branch `worktree-agent-ac65d69a2c43084f5`): all four hashes unchanged (2026-10-10).
+The 3D audit fixes (branch `worktree-agent-a4f2f9e9fe5dc2aa1`, docs/reviews/2026-10-10-3d-audit.md: layer order, thin bars, dither,
+live pixels on blocks, the level movers' models, the street's signs on the street only): all four hashes unchanged (2026-10-10; the
+3D runs timed out under load and matched on re-runs; the boss 3D URL run twice).
 - The instant turn in an attack (2026-10-09: ←/→ against the face turns the hero at once in a ground attack, and every ground
   attack, a chained or a low one too, starts the way the stick points) changed the two demo URLs on purpose: the attract demo's bot
   holds a direction while a swing plays, so the hero now turns there. Before: demo state `c4892f44`, buf `e1b927a6` (2D),
