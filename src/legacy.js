@@ -4926,6 +4926,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     lockT = 0; ctl.niche = false; bossDlg.on = bossDlg.done = false;
     if (isP9()) p9Reset();
     if (LVH.reset) LVH.reset();
+    for (const x of isP9() ? P9.BANDS : LV.id === 'street' ? STREET_BANDS : []) ammoBoxes.push({ band: true, x, y: GROUND - 3, vx: 0, vy: 0, life: 1e9 });   // a bandage before the boss (Hard and Wicked have no regen)
     setCkpt('start', 0, true); ckBoss = false; slowT = 0; hstr.n = 0; hstr.t = -9; ctl.stepV = 0;
     styleM.reset(); director.reset();
     endFocus(); foc.m = 0; accW = 0; ctl.grab = null; ctl.fin = null; ctl.dive = null; ctl.diveH = 0; ctl.aimDnT = 0; finE = null; finCam.t = 0;
@@ -4934,6 +4935,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // ---------- tutorial: zones, lessons, weapon pickups ----------
   // the tutorial: every mechanic of the game, stage by stage, left to right.
   // A task's text is 'Verb: how to do it'; [Q] in the text shows as a key cap (the objective panel shows the verb big, the how under it)
+  const STREET_BANDS = [2170];   // the bandages on the street: one as the club roof stage starts, before Malaspina
   const ZONES = [
     { x0: -99, title: '1 · Move', tasks: [['run', 'Run: [←] [→]'], ['walk', 'Walk: hold [Shift] as you move'],
       ['jump', 'Climb onto the car: jump [↑] at its side and keep [↑] held'], ['charge', 'Climb higher: hold [↑] as you jump at a roof or a scaffold'],

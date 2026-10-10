@@ -58,6 +58,7 @@ export const SALT_LOOKS = {   // Saltmen outfits (src/sim/enemies/roster.js LOOK
 //   gaff: the gaff pull (range px, windup s, v = hook px/s, pull px/s, cd s, miss = recovery s after a miss, chop = follow-up dmg) -> dodge through it
 //   clip / reload: shots before a reload, the reload window (s); max = alive at once -> rush him while he reloads
 //   shield: blows from the front ring off (turn = s he needs to turn round) -> get behind him, sweep him, or throw something
+export const BANDS = [2250];   // a bandage on the market front, before the shutter and Marchetti (Pier 9 had none placed)
 export const ALIVE = [0, 0, 0, 5];   // at most this many Saltmen alive at once (0: no cap); Wicked's yard had 7-8 up at once
 export const SALTMEN = {
   deckhand: { role: 'brawler', look: 'oilskin', type: 'Deckhand', weapon: null, hpK: 1.1, props: { near: [40, 110], seek: 70, cd: 6, aim: 0.45 } },
