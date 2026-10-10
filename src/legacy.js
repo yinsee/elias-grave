@@ -2118,6 +2118,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     hstr.n++; hstr.last = b; hstr.rep = rep; hstr.t = simTime; hstr.atk = hero.atkId;
   }
   function damageEnemy(e, dmg, dirx, power, up, x, y, blade) {
+    if (e.type === 'boss' && e.hold) { e.flash = 0.04; return; }   // a boss held for his intro (Krieg under the lamp) takes no damage: no free hits before the fight
     if (enc.eHitKind) e.hitAt = simTime;   // (a goon at finisher health stays finisher-ready FIN.open s after the hero's hit lands)
     if (e === enc.boss) dmg = Math.max(1, Math.round(dmg * (enc.eHitKind === 2 ? 0.8 : 0.75)));   // the boss shrugs off part of every hit (guns no worse than fists)
     if (e.dmgK && e.dmgK !== 1) dmg = Math.round(dmg * e.dmgK);   // (Tinder doused: he takes more)
