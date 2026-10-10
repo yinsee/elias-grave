@@ -38,7 +38,7 @@ export function gradeRun(chapter, stats, save = true) {
 // the card's rank block: the grade, the score, and the best (or "New best")
 export function rankHtml(r) {
   const best = r.isNew ? '<span class="best new">New best</span>' : r.best ? `<span class="best">Best: ${r.best.grade} · ${r.best.score}</span>` : '';
-  return `<div class="rank" data-grade="${r.grade}">Rank<b>${r.grade}</b><span class="score">${r.score}</span>${best}</div>`;
+  return `<div class="rank" data-grade="${r.grade}">Rank<b>${r.grade}</b><span class="score">Score ${r.score}</span>${best}</div>`;
 }
 
 export const rankName = (i) => (i < 0 ? '-' : `${RANKS[i].id} · ${RANKS[i].name}`);
