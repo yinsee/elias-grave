@@ -8614,7 +8614,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
       for (const b of eshots) if (b.k === 't') this.tunaModel(b.x, b.y, Math.atan2(b.vy, b.vx), this.ease(b, this.laneZ[LANE.FIGHT]), 20);   // Marchetti's lobbed tuna
       for (const b of eshots) if (b.k === 'k') { const m = this.model(this.knifeGeo); m.position.set(b.x, -b.y, this.ease(b, this.laneZ[b.lane ?? LANE.FIGHT])); m.rotation.set(0, 0, -(b.t * 22)); }
       this.p9Models(); this.mModels();
-      if (LVH.sprites3d) for (const q of LVH.sprites3d(T3)) this.sprite(q.size, q.x, q.y, q.draw, q.d, q.z, q.slot);   // a level's moving models (the Leviathan: the hanging catwalks, the hoist's pallet, the bait cage)
+      if (LVH.sprites3d) for (const q of LVH.sprites3d(T3)) this.sprite(q.size, q.x, q.y, q.draw, q.d, q.z, q.slot);
+      { const LM = L3D(); if (LM && LM.models && LVH.S) for (const q of LM.models(T3, LVH.S, R9, cam)) this.sprite(q.size, q.x, q.y, q.draw, q.d, q.z, q.slot); }   // a level's movers modelled in its three.js (the Palm House)   // a level's moving models (the Leviathan: the hanging catwalks, the hoist's pallet, the bait cage)
       for (let i = this.nM; i < this.mpool.length; i++) this.mpool[i].visible = false;
       if (this.gpool) for (let i = this.nG; i < this.gpool.length; i++) this.gpool[i].visible = false;
     },
@@ -8684,7 +8685,9 @@ import * as SPIRE from './levels/skyscraper/index.js';
     updateLayers() {
       const { ZF } = T3;
       if (flags.club && isStreet()) this.layer(this.lClub, () => { drawClub(); drawDancers(); }, { glow: true, z: ZF - 0.6 }); else this.lClub.mesh.visible = false;   // (the hall's wall is a mesh: p9Build)
+      R9.models3d = !!(L3D() && L3D().models);   // (the movers a level models in 3D stay off its wall layer)
       this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); if (LVH.drawWorld) LVH.drawWorld(); }, { glow: true, z: flags.club && !ownWorld() ? ZF - 0.3 : ZF + 0.3 });
+      R9.models3d = false;
       if (L3D()) this.liveOnProps();
       this.layer(this.lSign, drawSign, { glow: true, z: ZF + 5.05 });
       this.layer(this.lBlade, drawStairSign, { glow: true, z: ZF + 4.05 });
