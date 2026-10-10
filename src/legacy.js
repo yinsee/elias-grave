@@ -5,7 +5,7 @@ import { WEAPONS } from './sim/weapons/defs.js';
 import { LOOT, STREET_DROPS } from './sim/weapons/drops.js';
 import { KINDS, LIFTABLE, TOSS, FLOOR_BREAK, PUSH_BREAK, KICKS } from './sim/objects/kinds.js';
 import { EPAL, BUILD, LOOK, ROLE, ZROLES, AROLES, AMIX, ETYPE, STOCKY_POISE } from './sim/enemies/roster.js';
-import { DIFFS, FALL } from './core/difficulty.js';
+import { DIFFS, FALL, hpCurve, BOSS_HP } from './core/difficulty.js';
 import { PAL } from './assets/palettes/base.js';
 import { mod, IDLE, GUARD, SQUAT, RISE, SITUP, PUSHUP, KNEEL, GU_T, fitPose, getupPose, K, AIR, teeterPose } from './sim/hero/poses.js';
 import { CLIMB, MOVES, keyAt, TRN, DASH, STOP, DEF, FINS, JUG, FLY, GRAB, OTG, DIVE, FOCUS, FIN, SLAM } from './sim/hero/moves.js';
@@ -1783,7 +1783,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
   const pickN = a => a[Math.floor(simRand() * a.length)];
   const BOSS_NAME = 'Don Lucien Malaspina';   // 20 characters, the same every time
   // Malaspina's numbers (Medium base; hp by difficulty E/M/H/W). dmg: by move. Tells scale with bTell (t / A^0.25). fur: coat, its shade, the collar
-  const MAL = { hp: [640, 800, 1000, 1220], s: 1.4, reach: 27, speed: 27, speed2: 33, windup: 0.34, windup2: 0.28, cd: [0.7, 1.4], cd2: [0.6, 1.2], ph2: 0.5,
+  const MAL = { hp: hpCurve(BOSS_HP.malaspina),   // (the game's boss HP curve)
+    s: 1.4, reach: 27, speed: 27, speed2: 33, windup: 0.34, windup2: 0.28, cd: [0.7, 1.4], cd2: [0.6, 1.2], ph2: 0.5,
     R: { w: 'cane', len: 13, off: -0.35, reach: 27 }, fur: ['#4a3a32', '#36291f', '#8a7462'],
     dmg: { jab: 9, lunge: 12, over: 22, butt: 16, shove: 5, sweep: 18 }, still: 0.45, read: 0.3, grab: 0.5, butt: 0.45, sweep: 0.5, shove: 0.2, over: 0.5,
     crew: { delay: 15, every: [9, 6], alive1: 1 } };   // his crew: phase 1, alive1 at a time after delay s; phase 2: DIF().crew (in all, at once)

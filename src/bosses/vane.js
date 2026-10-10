@@ -9,10 +9,12 @@
 //   Phase 3 "Silence" (under 30 %): a sniper round splits her shield; she draws a revolver (a click and a glint, never a red dot: 3 shots,
 //     then a 1.4 s reload). The lantern falls into the centre. The blind volley: a row of dots across the floor; the gaps are safe.
 // The game calls vaneThink(M, e, ...) and vaneSpecial(M, e, dt, px) (M: the level run, src/levels/palmhouse/run.js).
+import { hpCurve, BOSS_HP } from '../core/difficulty.js';
 
 export const VANE = {
   kind: 'vane', name: 'Commissioner Augusta Vane', title: 'Commissioner of Police', look: 'vane',
-  hp: [760, 960, 1080, 1200], s: 1.15, m: 5, speed: 25, reach: 24, dmg: 14, heavyDmg: 22, poise: 40, windup: 0.4, cd: [0.8, 1.5],
+  hp: hpCurve(BOSS_HP.vane),   // (the game's boss HP curve)
+  s: 1.15, m: 5, speed: 25, reach: 24, dmg: 14, heavyDmg: 22, poise: 40, windup: 0.4, cd: [0.8, 1.5],
   R: { w: 'pipe', len: 8, off: -1.1, reach: 24 },
   combos: [['jab', 'jab', 'bash'], ['hchop'], ['bash', 'hchop'], ['jab', 'lowkick']],
   shieldHp: [240, 320, 380, 440], turn: [0.6, 0.45, 0.35, 0.25],

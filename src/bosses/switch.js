@@ -12,10 +12,12 @@
 //     Faster lashes, the slide (jump it), the hook toward a live rail, the drop from the gantry. At zero the freight passes; get high
 //     or into a niche. Then a new countdown ("the empty stock").
 // The game calls switchThink(M, e, ...) and switchSpecial(M, e, dt, px) (M: the level run, src/levels/metro/run.js).
+import { hpCurve, BOSS_HP } from '../core/difficulty.js';
 
 export const SWITCH = {
   kind: 'switch', name: 'Ilsa "Switch" Varga', title: 'Tenor of the Tunnels', look: 'switch',
-  hp: [650, 820, 950, 1080], s: 1.0, m: 4, speed: 36, reach: 30, dmg: 14, heavyDmg: 22, poise: 18, windup: 0.3, cd: [0.6, 1.2],
+  hp: hpCurve(BOSS_HP.switch),   // (the game's boss HP curve)
+  s: 1.0, m: 4, speed: 36, reach: 30, dmg: 14, heavyDmg: 22, poise: 18, windup: 0.3, cd: [0.6, 1.2],
   R: { w: 'chain', len: 17, off: -0.5, reach: 30 },
   combos: [['slash'], ['slash', 'slash'], ['slash', 'lowstab']],          // lash; lash lash; lash, sweep (low: jump it)
   hook: { windup: 0.6, fogWindup: 0.6, range: [90, 90, 96, 100], v: 300, pull: 240, cd: [5, 8], mash: [3, 4, 5, 6], line: 'Mind the gap!' },

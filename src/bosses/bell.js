@@ -13,10 +13,12 @@
 //   Phase 1 the gear room (100-66 %), phase 2 the pendulum hall (66-33 %), phase 3 the face, outside (33-0 %): the Last Movement
 //     (15 %, Easy 20 %): his next Winding, Nero bursts out of the hatch and bites the flail arm. FINISH.
 // The game calls bellThink(M, e, ...) and bellSpecial(M, e, dt, px) (M: the level run, src/levels/skyscraper/run.js).
+import { hpCurve, BOSS_HP } from '../core/difficulty.js';
 
 export const BELL = {
   kind: 'bell', name: 'Augustin Bell', title: 'The Conductor', look: 'bell',
-  hp: [1000, 1200, 1350, 1500], s: 1.05, m: 4, speed: 34, reach: 26, dmg: 18, heavyDmg: 26, poise: 40, windup: 0.28, cd: [0.5, 1.1],
+  hp: hpCurve(BOSS_HP.bell),   // (the game's boss HP curve)
+  s: 1.05, m: 4, speed: 34, reach: 26, dmg: 18, heavyDmg: 26, poise: 40, windup: 0.28, cd: [0.5, 1.1],
   R: { w: 'cane', len: 13, off: -0.35, reach: 26 }, skin: ['#d8bca0', '#b09478'],
   combos: [['stab'], ['slash', 'slash'], ['feint'], ['stab', 'slash', 'jab']], caneT: 0.35, caneDmg: 18,
   Q: [60, 50, 40, 32], rings: [[1, 2, 3], [1, 2, 3], [1, 2, 3], [2, 3, 4]], peal: { tele: 1.6, gap: 0.45, push: 120, pushT: 0.3 },

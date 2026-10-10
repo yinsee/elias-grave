@@ -9,10 +9,12 @@
 //     a crackle: the mast or the puddle nearest the hero), and Code Blue (he kneels and plants the paddles in a puddle: every puddle
 //     shocks; stand on a dry island: the hut roof, a bed, the mast's dais). A strike into his own puddle stuns him 2.5 s.
 // The game calls kriegThink(M, e, ...) and kriegSpecial(M, e, dt, px) (M: the level run, src/levels/hospital/run.js).
+import { hpCurve, BOSS_HP } from '../core/difficulty.js';
 
 export const KRIEG = {
   kind: 'krieg', name: 'Dr. Anselm Krieg', title: "The Choir's Surgeon", look: 'krieg',
-  hp: [700, 900, 1050, 1200], s: 1.12, m: 5, speed: 30, reach: 26, dmg: 14, heavyDmg: 20, poise: 22, windup: 0.4, cd: [0.8, 1.5],
+  hp: hpCurve(BOSS_HP.krieg),   // (the game's boss HP curve)
+  s: 1.12, m: 5, speed: 30, reach: 26, dmg: 14, heavyDmg: 20, poise: 22, windup: 0.4, cd: [0.8, 1.5],
   R: { w: 'bonesaw', len: 10, off: -1.1, reach: 26 },
   combos: [['slash'], ['stab', 'slash'], ['slash', 'slash']],
   grind: { n: 2, dmg: 6, gap: 0.15 }, jam: 1.6,

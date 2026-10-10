@@ -13,10 +13,12 @@
 //   cadenza    (phase 3) the bell rings twice (a bar's count-in), six cuts on half-beats    -> back off, or roll through the 4th; 1.6 s open after
 //   rubato     (below 10 %, once) the metronome stops a bar: the silence is the tell; then an off-beat lunge -> roll in the silence
 // The game calls lenzThink / lenzSpecial; the run calls lenzBeat on every beat (M: the level run).
+import { hpCurve, BOSS_HP } from '../core/difficulty.js';
 
 export const LENZ = {
   kind: 'lenz', name: 'Viktor Lenz', title: 'First Violin', look: 'lenz',
-  hp: [800, 1000, 1150, 1300], s: 1.06, m: 4, speed: 34, reach: 30, dmg: 16, heavyDmg: 26, poise: 35, windup: 0.4, cd: [0.6, 1.2],
+  hp: hpCurve(BOSS_HP.lenz),   // (the game's boss HP curve)
+  s: 1.06, m: 4, speed: 34, reach: 30, dmg: 16, heavyDmg: 26, poise: 35, windup: 0.4, cd: [0.6, 1.2],
   R: { w: 'machete', len: 12, off: -1.1, reach: 30 },
   bpm: [84, 104, 126], meter: 3,
   punish: [2, 1.5, 1, 1],            // beats after a strike

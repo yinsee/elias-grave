@@ -15,6 +15,7 @@
 
 import { C } from '../core/color.js';
 import { rng } from '../core/rng.js';
+import { hpCurve, BOSS_HP } from '../core/difficulty.js';
 
 const GROUND = 280, hy = h => GROUND - h;
 
@@ -120,7 +121,8 @@ export const DROPS = {
 // (tells scale in the game by t / A^0.25; times in s, speeds in px/s; arrays are by difficulty E, M, H, W)
 export const MARCHETTI = {
   name: 'Sal "the Scale" Marchetti', title: 'Tenor of the Choir · Pier 9', look: 'marchetti',
-  hp: [800, 1050, 1250, 1450], s: 1.3, m: 7, speed: 24, reach: 25, dmg: 12, heavyDmg: 22, poise: 34, windup: 0.4, cd: [0.8, 1.5],
+  hp: hpCurve(BOSS_HP.marchetti),   // (the game's boss HP curve)
+  s: 1.3, m: 7, speed: 24, reach: 25, dmg: 12, heavyDmg: 22, poise: 34, windup: 0.4, cd: [0.8, 1.5],
   R: { w: 'cleaver', len: 9, off: -1.1, reach: 25 },
   combos: [['chop'], ['chop', 'chop'], ['jab', 'chop'], ['chop', 'hchop']],
   // the hook: mash = presses to break free of the pull

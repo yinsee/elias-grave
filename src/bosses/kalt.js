@@ -17,10 +17,12 @@
 //   Phase 3 "Blood in the Water" (30-0 %): a taunt (a free hit), the crew leaves; dive is her main move (a decoy trail from Hard), a shot
 //     catwalk falls for good, the bait cage drops once, and her blood in the water draws the sharks to her.
 // The game calls kaltThink(M, e, ...) and kaltSpecial(M, e, dt, px) (M: the level run, src/levels/aquarium/run.js).
+import { hpCurve, BOSS_HP } from '../core/difficulty.js';
 
 export const KALT = {
   kind: 'kalt', name: 'Nerissa Kalt', title: 'The Undertow · Baritone of the Choir', look: 'kalt',
-  hp: [700, 840, 940, 1040], s: 1.1, m: 4, speed: 30, reach: 20, dmg: 18, heavyDmg: 26, poise: 22, windup: 0.32, cd: [0.8, 1.5],
+  hp: hpCurve(BOSS_HP.kalt),   // (the game's boss HP curve)
+  s: 1.1, m: 4, speed: 30, reach: 20, dmg: 18, heavyDmg: 26, poise: 22, windup: 0.32, cd: [0.8, 1.5],
   skin: ['#e6cbb0', '#bfa084'],
   R: { w: 'harpoon', len: 13, off: -0.25, reach: 20 },
   knife: { w: 'knife', len: 5, off: -0.2, reach: 20 },
