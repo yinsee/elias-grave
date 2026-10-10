@@ -158,7 +158,7 @@ fr.onload = async () => {
         if (f - wastF > 120) { tries++; wastF = -1; seen = null; deadF = -1; releaseAll(); plan = []; S.retry(); hp0 = S.hero.hp; }
         step(); continue;
       }
-      if (B && !B.intro && !B.hold && (S.enc.introT == null || S.enc.introT < 0)) varied(B); else releaseAll();
+      if (B && !B.intro && !B.hold && (S.enc.introT == null || S.enc.introT < 0)) varied(B); else if (!B && !S.sceneOn) { walk(1); if (f % 40 === 0) tap('ArrowUp', 20); } else releaseAll();   // (no one up: on to the next room, up a stair or a ladder)
       step();
       if ((f - f0) / 60 > MAX) break;
       if (f % 600 === 0) await sleep(0);
