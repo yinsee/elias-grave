@@ -46,6 +46,10 @@ Level 7 (The Last Train, branch `worktree-agent-ac65d69a2c43084f5`): all four ha
   2D state = 3D state). The new shared hooks (`LVH.preHit`, `LVH.sprites3d`, `R.gun`, the harpoon and anchor weapon draws) do not
   run on the street; `isAqua()` branches are off there. The level is tested with `?manual`, `window.__aquarium` and `tests/aquabot.js`.
 
+- The Palm House (Level 6, branch of 22a5642): all four URLs keep these hashes (state, buf, l3; one good run each in headless Chrome
+  after load timeouts, 2D state = 3D state). The one shared hook (`LVH.held()` lets a mash count) and the `isPalm()` branches are off
+  on the street. The level is tested with `?manual` and `window.__palmhouse` (`skip`, `peek`, `kill`, `tp`, ...).
+
 Boss fights are tested with bots, not hashes: `PORT=8765 sh tools/bossbot.sh street|pier <diff 0-3> jab|varied [seed]`
 (`tests/bossbot.html`; run them one at a time: side-by-side headless runs can stall). No block, no parry: the varied bot
 perfect-dodges, jumps, grabs and finishes crewmen. Tests with `?manual`: `__sim` also holds `EMOVES`, `MOVES`, `MAL`, `p9`,

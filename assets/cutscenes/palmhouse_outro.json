@@ -1,0 +1,43 @@
+{
+  "id": "palmhouse_outro",
+  "title": "The Informant",
+  "music": "music:palmhouse_outro",
+  "musicLoop": false,
+  "_todo": "Panel art: assets/art/panels/palmhouse/palmhouse_outro_0N.png (being generated). Music palmhouse_outro (one violin, the waltz, broken), stinger sting_hale and voice lines vane_outro_01, hale_outro_01, palmhouse_outro_03..05 do not exist yet.",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:palmhouse_outro_01", "tint": "cold", "minTime": 1.6,
+        "shot": "The palm house wrecked. Snow falls through the broken dome onto the palms. Vane kneels in shattered glass, her medals torn off. A clock at 3:17 in the background.",
+        "lines": [
+          { "type": "say", "speaker": "Vane", "pos": "top", "voice": "vane_outro_01", "text": "The Board leaves tonight. You're too late. You were always going to be." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:palmhouse_outro_02", "minTime": 1.5,
+        "shot": "Through a glass office wall: Inspector Hale (trench coat, hat) on the phone, his back turned. Nero growls at the glass.",
+        "lines": [
+          { "type": "say", "speaker": "Hale", "pos": "bottom", "voice": "hale_outro_01", "text": "He's on schedule, Maestro. Vane's done. Next, the train." }
+        ] },
+      { "image": "panel:palmhouse_outro_03", "minTime": 1.5,
+        "sfx": { "text": "KSSSH", "at": [60, 30] },
+        "shot": "A thin sabre bursts through the glass and through Hale. Behind the cracks, a pale man in a white suit (Lenz) bows and leaves into the snow.",
+        "lines": [
+          { "type": "vo", "pos": "bottom", "voice": "palmhouse_outro_03", "text": "My informant. His leads were never his. Someone was writing my score." }
+        ] }
+    ] },
+    { "layout": "full", "panels": [
+      { "image": "panel:palmhouse_outro_04", "minTime": 1.6,
+        "shot": "Close-up. The hero holds Hale's bloody notebook: Meridian Express, 23:40, Platform 9. The Board leaves with the ledgers. Nero sniffs Hale's coat and whines.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "palmhouse_outro_04", "text": "The last train out of Valmora. I had a ticket." }
+        ] }
+    ] },
+    { "layout": "full", "panels": [
+      { "image": "panel:palmhouse_outro_05", "minTime": 1.6,
+        "shot": "Close-up. The phone receiver hangs from its cord over the broken glass. The line is still open.",
+        "lines": [
+          { "type": "vo", "pos": "bottom", "voice": "palmhouse_outro_05", "text": "On the other end, a clock was ticking. Then someone hung up." }
+        ] }
+    ] }
+  ]
+}

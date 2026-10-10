@@ -1,0 +1,22 @@
+{
+  "id": "palmhouse_intro",
+  "title": "The Palm House",
+  "music": "music:palmhouse",
+  "_todo": "Panel art: assets/art/panels/palmhouse/palmhouse_intro_0N.png (being generated). Music palmhouse (the waltz stem) and voice lines palmhouse_intro_01..02 do not exist yet.",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:palmhouse_intro_01", "tint": "cold", "minTime": 1.6,
+        "shot": "Wide. The glass palm house glows gold in a snowy park. Limousines arrive. Guests in furs climb red-carpet steps. Police at the portico.",
+        "lines": [
+          { "type": "vo", "pos": "top", "voice": "palmhouse_intro_01", "text": "First snow. The owners of the city, in their glass house, warm as summer." }
+        ] }
+    ] },
+    { "layout": "full", "panels": [
+      { "image": "panel:palmhouse_intro_02", "minTime": 1.5,
+        "shot": "Medium. The hero in his black suit, snow on his shoulders, among the guests. A waiter offers champagne. Nero is with him, off the leash, head high.",
+        "lines": [
+          { "type": "vo", "pos": "bottom", "voice": "palmhouse_intro_02", "text": "Nobody stops a man in black tie. Nobody stops a dog with his eyes." }
+        ] }
+    ] }
+  ]
+}

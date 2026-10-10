@@ -1,0 +1,14 @@
+{
+  "id": "palmhouse_call",
+  "title": "The desk phone",
+  "_todo": "Portraits hale_tired_phone and hale_careful_phone (being generated); elias_cold exists. Voice lines hale_call_01..03 and elias_silentnight, elias_number do not exist yet.",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_cold" },
+  "right": { "id": "hale", "name": "INSPECTOR HALE", "role": "On the phone", "portrait": "portrait:hale_tired_phone" },
+  "lines": [
+    { "speaker": "hale", "mood": "tired_phone", "voice": "hale_call_01", "text": "You found her office. Good." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_silentnight", "text": "Silent Night." },
+    { "speaker": "hale", "mood": "careful_phone", "voice": "hale_call_02", "text": "Then you know more than I do. Vane's under the dome. Snipers hold the park. Go over the roof." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_number", "text": "How'd you get this number?" },
+    { "speaker": "hale", "mood": "tired_phone", "voice": "hale_call_03", "text": "I'm a detective, Grave. Go." }
+  ]
+}

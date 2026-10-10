@@ -1164,7 +1164,7 @@ export function createHospital(G) {
     const r = G.gradeRun('ch6', { t: G.runS.t, kills: G.runS.kills, maxRank: G.styleM.maxRank, dmg: G.runS.dmg, kos: G.kos }, !G.flags.demo);
     G.dom.results.innerHTML = `<h2>St. Cecilia cleared</h2><dl><dt>Difficulty</dt><dd>${G.DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${G.runS.kills}</dd>`
       + `<dt>Top style</dt><dd>${G.rankName(G.styleM.maxRank)}</dd><dt>Damage taken</dt><dd>${Math.round(G.runS.dmg)}</dd><dt>Knock-outs</dt><dd>${G.kos}</dd>`
-      + `<dt>In his pocket</dt><dd>Krieg's phone ("Silence the bartender. — A.V.") · a red-sealed invitation: the Winter Gala</dd></dl>${G.rankHtml(r)}<small>Enter: back to the menu</small>`;
+      + `<dt>In his pocket</dt><dd>Krieg's phone ("Silence the bartender. — A.V.") · a red-sealed invitation: the Winter Gala</dd></dl>${G.rankHtml(r)}<small>Enter: on to Chapter 6, The Palm House</small>`;
     G.dom.results.hidden = false; G.dom.toast.hidden = true;
   };
 
