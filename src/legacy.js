@@ -1830,7 +1830,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     }
     if (opts && opts.boss) {   // a level boss: its own stats (hp by difficulty), size and name
       const Bd = opts.boss;
-      Object.assign(e, { hp: Bd.hp[diffSel], maxHp: Bd.hp[diffSel], s: Bd.s, m: Bd.m, speed: Bd.speed, reach: Bd.reach, dmg: Bd.dmg, heavyDmg: Bd.heavyDmg, poise: Bd.poise,
+      Object.assign(e, { hp: Bd.hp[diffSel], maxHp: Bd.hp[diffSel], s: Bd.s, m: Bd.m, speed: Bd.speed, reach: Bd.reach, dmg: Bd.dmg, heavyDmg: Bd.heavyDmg, moveDmg: Bd.moveDmg || null, poise: Bd.poise,
         windup: Bd.windup, cd: Bd.cd.slice(), kind: Bd.kind || 'marchetti', hookCd: 3.5, hook: null, chgCd: 6, tunaCd: 3, iceCd: 7, stalkT: 0, hidden: false });
       if (Bd.skin) e.pal.skin = C(Bd.skin[0]), e.pal.skinB = C(Bd.skin[1]);
     }
@@ -2827,7 +2827,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   function bossLink(e) {   // the next blow of a boss's string (a short tell); Malaspina's string ends in the cane overhead
     const a = e.combo[e.ci];
     if (e.kind === 'malaspina') { if (a === 'hchop') bStart(e, a, bTell(MAL.over), 'overhead', MAL.dmg.over); else bStart(e, a, 0.2, 'jab', MAL.dmg.jab); }
-    else bStart(e, a, 0.2, EMOVES[a].heavy ? 'cleaverHeavy' : 'cleaver');
+    else bStart(e, a, 0.2, EMOVES[a].heavy ? 'cleaverHeavy' : 'cleaver', e.moveDmg?.[a]);   // (a boss with a damage per blow: that blow's)
   }
   // Don Lucien Malaspina (the street boss, the club): a cane and a fur coat, 1.4x. He picks moves by distance. Close: a cane jab, a 3-hit
   // string that ends in the cane overhead (the cane raised high in both hands: dodge it or jump back; it cracks on the floor, 0.9 s open),
@@ -5755,6 +5755,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     for (let i = 0; i < P.length; i++) if (Math.abs(P[i].x - Dh[i].x) > tl || Math.abs(P[i].y - Dh[i].y) > tl) tele = true;
     for (let i = 0; i < P.length; i++) {   // a joint's drawn position moves only when physics leaves it by > HYST px
       const p = P[i], q = Dh[i];
+      if (!Number.isFinite(q.x + q.y)) { q.x = p.x; q.y = p.y; }   // (a NaN held joint never passes the test below: it would stay NaN)
       if (tele || Math.abs(p.x - q.x) > HYST) q.x = p.x;
       if (tele || Math.abs(p.y - q.y) > HYST) q.y = p.y;
     }

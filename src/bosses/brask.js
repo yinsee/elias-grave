@@ -20,7 +20,7 @@ export const BRASK = {
   hp: [700, 840, 920, 1000], s: 1.1, m: 5, speed: 30, reach: 26, dmg: 12, heavyDmg: 20, poise: 18, windup: 0.32, cd: [0.8, 1.5],
   R: { w: 'cane', len: 13, off: -0.35, reach: 26 }, skin: ['#ecd6c0', '#c4aa92'],
   combos: [['stab'], ['stab', 'lowstab'], ['clunge'], ['stab', 'stab', 'clunge']],   // a cane jab; jab and the low sweep (jump it); the thrust; jab jab thrust
-  dmg: { stab: 10, lowstab: 12, clunge: 14, slash: 10 },
+  moveDmg: { stab: 10, lowstab: 12, clunge: 14, slash: 10 },   // per blow (a second `dmg` key here overrode the number above: a NaN hit, the freeze)
   sidestep: { after: [4, 3, 3, 3], riposte: 12 },
   fan: { n: [3, 3, 5, 5], spread: 0.09, v: 260, dmg: 7, windup: 0.45, rec: 0.7, cd: [2.6, 4.4], range: [44, 190] },
   hook: { reach: 36, windup: 0.5, knee: 8, toss: 10, miss: 1.0, cd: [5, 8] },
@@ -75,7 +75,7 @@ export function braskThink(M, e, dt, px, dx, adx, level, aggro) {
   if (!onHub && adx <= e.reach + 1 && free && e.cdT <= 0) {   // close: the cane first (he never trades blows long: a jab and out)
     e.face = dir; e.goHub = false; const r = G.simRand(), Cb = B_.combos;
     e.combo = Cb[r < 0.35 ? 0 : r < 0.6 ? 1 : r < 0.8 ? 2 : 3]; e.ci = 0;
-    G.bStart(e, e.combo[0], G.bTell(e.windup), 'cane', B_.dmg[e.combo[0]]); return;
+    G.bStart(e, e.combo[0], G.bTell(e.windup), 'cane', B_.moveDmg[e.combo[0]]); return;
   }
   if (e.ph === 2 && !onHub && e.hubCd <= 0 && adx > 50 && G.simRand() < dt * 0.6) { e.hubCd = 9; e.goHub = true; e.goHubT = 3; }
   if (e.goHub && !onHub && (e.goHubT -= dt) > 0) { e.run = 2; if (M.toHub(e, dt)) { e.run = 2; return; } }
@@ -93,13 +93,13 @@ export function braskThink(M, e, dt, px, dx, adx, level, aggro) {
   if (!onHub && e.hookCd <= 0 && free && adx > 18 && adx < B_.hook.reach + 8) {
     e.hookCd = G.bRand(B_.hook.cd); e.hookHp = e.hp; G.bSpecial(e, 'grab', G.bTell(B_.hook.windup), 'caneHook'); G.emit('sfx', { name: 'cane_whoosh', x: e.x, vol: 0.6, pitch: 0.6 }); return;
   }
-  if (onHub) { e.face = dir; if (adx < e.reach + 2 && free && e.cdT <= 0) { e.combo = B_.combos[0]; e.ci = 0; G.bStart(e, 'stab', G.bTell(e.windup), 'cane', B_.dmg.stab); } return; }
+  if (onHub) { e.face = dir; if (adx < e.reach + 2 && free && e.cdT <= 0) { e.combo = B_.combos[0]; e.ci = 0; G.bStart(e, 'stab', G.bTell(e.windup), 'cane', B_.moveDmg.stab); } return; }
   if (adx > e.reach + 1) { e.tx = px - dir * e.reach * 0.7; e.run = P3 ? 1.25 : 1; return; }
   e.face = dir;
   if (free && e.cdT <= 0) {
     const r = G.simRand(), Cb = B_.combos;
     e.combo = Cb[r < 0.35 ? 0 : r < 0.6 ? 1 : r < 0.8 ? 2 : 3]; e.ci = 0;
-    G.bStart(e, e.combo[0], G.bTell(e.windup), 'cane', B_.dmg[e.combo[0]]);
+    G.bStart(e, e.combo[0], G.bTell(e.windup), 'cane', B_.moveDmg[e.combo[0]]);
   }
   void d;
 }
