@@ -36,7 +36,8 @@ export const KALT = {
   zip: { windup: 0.6, v: 300, dmg: 20, land: 0.7, cd: [6, 9] },
   chum: { windup: 0.7, w: 70, slick: 8, frenzy: 4, fw: 80, bite: 18, biteT: 0.8, rec: 0.8, cd: [7, 11] },
   chain: { windup: 1.1, hold: 5, fall: 4 },
-  dive: { tell: 0.9, dmg: 24, cling: [1.6, 1.0, 0.85, 0.7], knock: 1.2, decoy: [0, 0, 1, 1] },
+  dive: { tell: [1.2, 1.2, 0.9, 0.9], dmg: 24,   // tell: the bubble trail's run (s); Easy and Medium longer, it was hard to read
+    cling: [1.6, 1.0, 0.85, 0.7], knock: 1.2, decoy: [0, 0, 1, 1] },
   cage: { tell: 1.0, dmg: 30, w: 26 },
   shark: { fin: [2.2, 1.5, 1.2, 1.0], bite: [22, 22, 22, 22], blood: 2, herBite: 20 },
   crew: { every: 6, every2: 7, alive1: [1, 1, 2, 2], alive2: [1, 2, 2, 3], max: 8, paneDivers: [0, 1, 1, 2] },

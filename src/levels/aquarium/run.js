@@ -947,14 +947,14 @@ export function createAquarium(G) {
   M.canDive = e => e.ph >= 2 && S.p2 && !!M.catOf(e.x, e.y) && !!S.tankS;
   M.diveStart = e => {
     e.sp = 'dive'; e.spT = 0; e.dv = { st: 'drop', t: 0 }; e.act = null; e.combo = null;
-    G.bossTell(e, 'dive', KALT.dive.tell); sfx('water_splash_body', e.x, 0.9);
-    if (e.ph >= 3 && KALT.dive.decoy[dif()]) S.decoy = { x0: e.x < ctl.x ? 2790 : 2450, x: e.x < ctl.x ? 2790 : 2450, t: KALT.dive.tell + 0.3 };
+    G.bossTell(e, 'dive', KALT.dive.tell[dif()]); sfx('water_splash_body', e.x, 0.9);
+    if (e.ph >= 3 && KALT.dive.decoy[dif()]) S.decoy = { x0: e.x < ctl.x ? 2790 : 2450, x: e.x < ctl.x ? 2790 : 2450, t: KALT.dive.tell[dif()] + 0.3 };
   };
   M.diveStep = (e, dt) => {
     const v = e.dv; v.t += dt; e.vx = 0; e.vy = 0; e.air = false;
     if (v.st === 'drop') { e.y = Math.min(D.TANK_FLOOR - 2, e.y + 220 * dt); e.inv = true; if (e.y >= D.TANK_FLOOR - 2) { v.st = 'trail'; v.t = 0; e.hidden = true; e.inWater = true; v.x0 = e.x; } return true; }
     if (v.st === 'trail') {
-      const T = KALT.dive.tell, rem = Math.max(0.05, T - v.t);
+      const T = KALT.dive.tell[dif()], rem = Math.max(0.05, T - v.t);
       e.x += clamp((ctl.x - e.x) / rem, -260, 260) * dt; e.face = Math.sign(ctl.x - e.x) || e.face;
       S.kTrail = { x0: v.x0, x: e.x, y: D.TUN.tankY, kalt: true };
       if (v.t >= T) {
