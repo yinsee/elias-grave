@@ -28,7 +28,7 @@ const log = s => { logEl.textContent += s + '\n'; };
 
 fr.onload = async () => {
   const W = fr.contentWindow;
-  for (let i = 0; i < 200 && !W.__sim; i++) await sleep(50);
+  for (let i = 0; i < 2000 && !W.__sim; i++) await sleep(50);   // (a busy machine loads slowly)
   const S = W.__sim;
   let keep0 = new Map(); try { keep0 = new Map(Object.keys(W.localStorage).map(k => [k, W.localStorage.getItem(k)])); } catch (e) {}
   // ---- keys ----
@@ -123,7 +123,7 @@ fr.onload = async () => {
     walk(0);
     if (c.face !== td) { tap(td > 0 ? 'ArrowRight' : 'ArrowLeft', 1); return; }
     if (tgt === B && !open) {   // neutral: a quick poke when he is idle, else hold the spacing
-      if (!B.act && !B.sp && f - lastAtk > 36) strike(rnd() < 0.5 ? ['lp', 'lk'] : ['lk', 'lp']);
+      if (!B.act && !B.sp && f - lastAtk > (H ? 20 : 36)) strike(rnd() < 0.5 ? ['lp', 'lk'] : ['lk', 'lp']);
       return;
     }
     // a long opening (a big recovery, exposed, stunned, his back turned, or a crewman): a string with a heavy; a short one: two quick hits
@@ -141,7 +141,7 @@ fr.onload = async () => {
   }
 
   // ---- run ----
-  let result = 'timeout', tries = 0, lost = 0, hp0 = S.hero.hp, deadF = -1, wastF = -1;
+  let result = 'timeout', tries = 0, lost = 0, hp0 = S.hero.hp, deadF = -1, wastF = -1, waitF = 0, fT = 0;
   const RETRIES = +(Q.get('retries') || 0);
   for (;;) {
     if (S.sceneOn) { W.dispatchEvent(new W.KeyboardEvent('keydown', { key: 'Escape', code: 'Escape', bubbles: true })); await sleep(700); continue; }
@@ -169,18 +169,18 @@ fr.onload = async () => {
     if (S.flags.wasted) {
       if (wastF < 0) wastF = f;
       if (S.diffSel >= 3 || tries >= RETRIES) { result = 'lost'; break; }
-      if (f - wastF > 120) { tries++; wastF = -1; releaseAll(); plan = []; S.retry(); f0 = -1; }
+      if (f - wastF > 120) { tries++; wastF = -1; releaseAll(); plan = []; fT += f - f0; S.retry(); f0 = -1; waitF = f; }
       step(); continue;
     }
     if (B && B.dead) { result = 'win'; break; }
     if (f0 >= 0 && B) { if (BOT === 'jab') jab(B); else varied(B); }
     step();
     if (f0 >= 0 && (f - f0) / 60 > MAX) break;
-    if (f0 < 0 && f > 60 * 40) { result = 'nostart'; break; }
+    if (f0 < 0 && f - waitF > 60 * 40) { result = 'nostart'; break; }
     if (f % 600 === 0) await sleep(0);
   }
   releaseAll();
-  const B = seen || target() || S.enc.boss, t = (S.runT != null && H ? ((f - f0) / 60) : ((f - f0) / 60)).toFixed(1);
+  const B = seen || target() || S.enc.boss, t = ((fT + f - f0) / 60).toFixed(1);   // (every try's fight time)
   const out = `BOSSBOT boss=${BOSS} diff=${DIFF} bot=${BOT} seed=${SEED} result=${result} t=${t} bossHp=${B ? Math.max(0, Math.round(B.hp)) : '-'}/${B ? B.maxHp : '-'} heroHp=${Math.round(S.hero.hp)} kos=${S.kos} tries=${tries} lost=${Math.round(lost)} phases=${phases.join(',')} ` + Object.entries(ev).map(([k, v]) => `${k}=${v}`).join(' ') + (Q.has('dbg') ? ' why=' + why.join(' ') : '');
   document.title = out; log(out);
   try { for (const k of Object.keys(W.localStorage)) if (!keep0.has(k)) W.localStorage.removeItem(k); else W.localStorage.setItem(k, keep0.get(k)); } catch (e) {}   // (put the storage back as it was: a win unlocks a chapter)
