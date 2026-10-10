@@ -403,10 +403,23 @@ export function createSpire(G) {
       F.done = true;
       const d = dif(), assist = D.VOID_FALL.assist[d] && !F.force;
       if (X.onFall && X.onFall(F)) { /* a set piece's own fail branch */ }
-      else if (assist) { G.heroTo(S.safeX); hero.hp = Math.max(1, hero.hp - D.VOID_FALL.dmg[d]); G.toast('He catches the edge', `−${D.VOID_FALL.dmg[d]}`, true); }
+      else if (assist) { G.heroTo(catchX()); hero.hp = Math.max(1, hero.hp - D.VOID_FALL.dmg[d]); G.toast('He catches the edge', `−${D.VOID_FALL.dmg[d]}`, true); }
       else { S.fall = null; if (fadeEl) fadeEl.style.opacity = 0; G.retry(); return; }
     }
     if (F.t >= 0.9) { if (fadeEl) fadeEl.style.opacity = 0; S.fall = null; }
+  }
+  // where the edge catch puts him: 10 px back from the lip, on the side away from a boss by the drop (0.5 px from the void,
+  // Kessel's body shoved him straight back in: an endless "He catches the edge" loop with the input locked)
+  function catchX() {
+    const V = voids(), x = S.safeX; let v = null;
+    for (const iv of V) if (!v || Math.min(Math.abs(x - iv[0]), Math.abs(x - iv[1])) < Math.min(Math.abs(x - v[0]), Math.abs(x - v[1]))) v = iv;
+    if (!v) return x;
+    const [a, b] = v, mid = (a + b) / 2, L = a - 10, R = b + 10, g = D.GROUPS[S.grp] || [0, G.W];
+    const boss = G.enemies.find(e => e.type === 'boss' && !e.dead && Math.abs(e.x - mid) < 160);
+    const ok = q => q > g[0] + 8 && q < g[1] - 8 && !inVoid(q, V);
+    let pick = boss ? (boss.x > mid ? L : R) : (x < mid ? L : R);
+    if (!ok(pick)) pick = pick === L ? R : L;
+    return ok(pick) ? pick : x;
   }
   function fallersStep(dt) {
     for (let i = S.fallers.length - 1; i >= 0; i--) { const f = S.fallers[i]; f.t += dt; f.vy += 300 * dt; f.x += f.vx * dt; f.y += f.vy * dt; if (f.t > 2.5) S.fallers.splice(i, 1); }
@@ -471,7 +484,11 @@ export function createSpire(G) {
   M.mark = (x, t) => S.tellT.push({ kind: 'mark', x, t });
   M.chainFx = (e, reach, kind) => { const h = e.J ? e.J[6] : { x: e.x, y: e.y - 20 }; if (kind === 'spin') S.tellT.push({ kind: 'ring', x: e.x, r: reach, y: GROUND - 1, c: 0xff50c0f0, t: 0.25 }); else S.tellT.push({ kind: 'line', x0: h.x, y0: h.y, x1: kind === 'drop' ? e.dropX : e.x + e.face * reach, y1: kind === 'low' || kind === 'drop' ? GROUND - 3 : h.y, t: 0.2 }); };
   M.chainLine = (e, tx, ty, t = 0.05) => { const h = e.J ? e.J[6] : { x: e.x, y: e.y - 20 }; S.tellT.push({ kind: 'line', x0: h.x, y0: h.y, x1: tx, y1: ty, t }); };
-  M.pull = (e, tx, T) => { S.pull = { e, x0: ctl.x, tx, t: 0, T }; G.lockT = Math.max(G.lockT, T + 0.1); hero.act = null; };
+  M.pull = (e, tx, T) => {
+    // a hook drags him to the near lip of a drop, never over it (on Hard Kessel's first hook pulled him into the gap: the garden restarted)
+    for (const [a, b] of voids()) { if (tx > ctl.x && a > ctl.x && a < tx) tx = a - 4; else if (tx < ctl.x && b < ctl.x && b > tx) tx = b + 4; }
+    S.pull = { e, x0: ctl.x, tx, t: 0, T }; G.lockT = Math.max(G.lockT, T + 0.1); hero.act = null;
+  };
   function pullStep(dt) {
     const p = S.pull; if (!p) return;
     p.t += dt; const k = Math.min(1, p.t / p.T);
