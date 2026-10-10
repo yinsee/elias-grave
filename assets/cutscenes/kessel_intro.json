@@ -1,0 +1,25 @@
+{
+  "id": "kessel_intro",
+  "title": "Bruno Kessel",
+  "_todo": "Panel art and portraits are made by the art agent (docs/levels/08-the-spire.md 9.1, 9.2). Voice lines do not exist yet.",
+  "left": {
+    "id": "elias",
+    "name": "ELIAS GRAVE",
+    "role": "The Sandman",
+    "portrait": "portrait:elias_cold"
+  },
+  "right": {
+    "id": "kessel",
+    "name": "BRUNO KESSEL",
+    "role": "The Understudy · second chair",
+    "portrait": "portrait:kessel_grinning"
+  },
+  "lines": [
+    {
+      "speaker": "kessel",
+      "mood": "grinning",
+      "voice": "kessel_intro_01",
+      "text": "Second chair. Marchetti's chair. Let's see how far you fly."
+    }
+  ]
+}

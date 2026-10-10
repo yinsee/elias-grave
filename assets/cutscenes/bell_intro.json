@@ -1,0 +1,50 @@
+{
+  "id": "bell_intro",
+  "title": "Augustin Bell",
+  "_todo": "Panel art and portraits are made by the art agent (docs/levels/08-the-spire.md 9.1, 9.2). Voice lines do not exist yet.",
+  "left": {
+    "id": "elias",
+    "name": "ELIAS GRAVE",
+    "role": "The Sandman",
+    "portrait": "portrait:elias_cold"
+  },
+  "right": {
+    "id": "bell",
+    "name": "AUGUSTIN BELL",
+    "role": "The Conductor",
+    "portrait": "portrait:bell_warm"
+  },
+  "lines": [
+    {
+      "speaker": "bell",
+      "mood": "proud",
+      "voice": "bell_intro_01",
+      "text": "You came on time, Elias. You always did."
+    },
+    {
+      "speaker": "elias",
+      "mood": "grieving",
+      "voice": "elias_the_fire",
+      "text": "The fire."
+    },
+    {
+      "speaker": "bell",
+      "mood": "regretful",
+      "voice": "bell_intro_02",
+      "text": "The Board wanted me dead. They took your dog to make you do it. I gave you a better song."
+    },
+    {
+      "speaker": "elias",
+      "mood": "furious",
+      "voice": "elias_used_me",
+      "text": "You used me."
+    },
+    {
+      "speaker": "bell",
+      "mood": "cold",
+      "voice": "bell_intro_03",
+      "text": "I conducted you. Now the last movement. Keep your left guard up."
+    }
+  ],
+  "music": "music:boss_bell_1"
+}

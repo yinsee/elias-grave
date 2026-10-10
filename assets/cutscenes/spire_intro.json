@@ -1,0 +1,89 @@
+{
+  "id": "spire_intro",
+  "title": "The Spire",
+  "music": "music:spire_lobby",
+  "musicLoop": true,
+  "musicEnd": "keep",
+  "_todo": "Panel art and portraits are made by the art agent (docs/levels/08-the-spire.md 9.1, 9.2). Voice lines do not exist yet.",
+  "pages": [
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:spire_intro_1",
+          "rain": true,
+          "tint": "cold",
+          "minTime": 1.5,
+          "sfx": {
+            "text": "KRA-KOOM",
+            "at": [
+              72,
+              14
+            ]
+          },
+          "shot": "Extreme low angle. The Spire rises into black storm clouds. Lightning lights its glass clock crown; the hands read 11:40. The hero stands at the base, tiny, in the rain. Nero sits at his heel.",
+          "lines": [
+            {
+              "type": "vo",
+              "pos": "top",
+              "voice": "spire_intro_01",
+              "text": "Every road in Valmora leads up. Tonight, so did mine."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "layout": "row",
+      "panels": [
+        {
+          "image": "panel:spire_intro_2",
+          "minTime": 1.2,
+          "shot": "The mirrored marble lobby. A hundred reflections of the hero. Dozens of Choir men in black tie turn toward him at once. Every lapel has a silver tuning-fork pin (red tint).",
+          "lines": [
+            {
+              "type": "vo",
+              "pos": "top",
+              "voice": "spire_intro_02",
+              "text": "The whole Choir. All its voices, in one room."
+            }
+          ]
+        },
+        {
+          "image": "panel:spire_intro_3",
+          "minTime": 1.2,
+          "shot": "Close-up. The hero loads the shotgun. A raindrop falls from his hair onto the shell.",
+          "lines": [
+            {
+              "type": "say",
+              "speaker": "Elias",
+              "pos": "bottom",
+              "voice": "elias_last_song",
+              "text": "Last song."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:spire_intro_4",
+          "tint": "sepia",
+          "minTime": 1.5,
+          "shot": "Flashback, sepia: the young hero and Bell in the old workshop. Bell corrects the boy's left guard with a ruler. Clocks tick on every wall.",
+          "lines": [
+            {
+              "type": "say",
+              "speaker": "Bell",
+              "pos": "bottom",
+              "voice": "bell_memory",
+              "text": "Time is everything, boy. Strike when the bell rings."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

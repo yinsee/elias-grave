@@ -1,0 +1,31 @@
+{
+  "id": "lys_intro",
+  "title": "Lys Moreau",
+  "_todo": "Panel art and portraits are made by the art agent (docs/levels/08-the-spire.md 9.1, 9.2). Voice lines do not exist yet.",
+  "left": {
+    "id": "elias",
+    "name": "ELIAS GRAVE",
+    "role": "The Sandman",
+    "portrait": "portrait:elias_cold"
+  },
+  "right": {
+    "id": "lys",
+    "name": "LYS MOREAU",
+    "role": "The Understudy",
+    "portrait": "portrait:lys_amused"
+  },
+  "lines": [
+    {
+      "speaker": "lys",
+      "mood": "amused",
+      "voice": "lys_intro_01",
+      "text": "The Count was a bore. I'm his understudy. A gentleman looks for the one with no reflection."
+    },
+    {
+      "speaker": "elias",
+      "mood": "cold",
+      "voice": "elias_no_gentleman",
+      "text": "No gentleman here."
+    }
+  ]
+}
