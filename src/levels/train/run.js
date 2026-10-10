@@ -239,7 +239,7 @@ export function createTrain(G) {
     ctl.x = F.x; ctl.y = F.y0 + 260 * F.t * F.t; ctl.air = true; ctl.vu = 0; ctl.spd = 0; S.prevX = ctl.x;
     if (F.t > 0.45 && !F.out) {
       F.out = true; const d = dif();
-      if (D.FALL.perma[d]) { G.toast('Fallen', 'The track took him. From the last checkpoint.', false); S.fall = null; G.retry(); return; }
+      if (D.FALL.perma[d]) { G.fallOut(); return; }   // (the game's fall rule: Hard back to the checkpoint, never healed; Wicked the Wasted card. The restart clears S.fall)
       const dmg = S.grp === 8 ? 35 : D.FALL.dmg[d];
       teleport(F.back, () => { hero.hp = Math.max(1, hero.hp - dmg); G.toast('He catches the edge', `-${dmg} · he climbs back`, true); if (S.grp === 4 && S.stub.st !== 'idle' && !S.onStub) resetStub(); });
       later(() => { S.fall = null; }, 0.35);
@@ -311,6 +311,7 @@ export function createTrain(G) {
   M.fire = e => {
     if (e.kind === 'lenz' && e.act === 'throw') { throwCase(e); return true; }
     const V = e.S; if (!V || !D.USHERS[e.hv]) return false;
+    if (e.grp != null && e.grp !== S.grp) { e.cdT = Math.max(e.cdT, 0.5); return true; }   // (not from another car)
     if (V.gunner) return true;   // (a Gunner only fires his sweep)
     if (e.act === 'shoot') {
       if (!tokenFree(1)) { e.cdT = Math.max(e.cdT, 0.5); return true; }   // he holds his aim: no token free
@@ -388,6 +389,8 @@ export function createTrain(G) {
     if (e.kind === 'lenz') { lenzThink(M, e, dt, px, dx, adx, level, aggro); return true; }
     if (e.kneel) { e.tx = null; e.vx = 0; e.act = null; e.crouchT = 0.2; if (e.tok) G.eRelease(e); return true; }
     if (e.seated) { e.tx = null; e.vx = 0; e.act = null; e.crouchT = 0.2; e.face = -1; if (e.tok) G.eRelease(e); return true; }
+    // a gun in another car holds: an Usher fires only at a hero in his own car (one on the roof shot him through the baggage car's wall)
+    if (e.R && e.R.ranged && e.grp != null && e.grp !== S.grp) { e.tx = null; e.vx = 0; if (e.act === 'shoot' || e.act === 'throw') e.act = null; e.gst = null; if (e.tok) G.eRelease(e); return true; }
     if (e.hv === 'gunner') return gunnerThink(e, dt, px, dx, adx);
     if (e.hv === 'doorman') {
       e.grabCd = (e.grabCd ?? 2) - dt;
@@ -601,6 +604,9 @@ export function createTrain(G) {
         S.leap = { t: 0, x0: ctl.x, y0: ctl.y, tx: stubX() + 16, T: 0.75 };
         G.slowMo(D.SLOW.leap, 'leap'); sfx('slowmo_in', ctl.x, 0.9); G.emit('feat', 'leap'); hero.invT = Math.max(hero.invT, 0.9);
       }
+      // on his feet on the stub any other way (an early jump before the gap reached 40 px, a roll): he is on it all the same, so the
+      // dome glass creaks and drops him (an early jump left him riding the stub with no drop: a soft-lock)
+      else if (S.grp === 4 && S.stub.st === 'move' && !S.onStub && hero.mode === 'anim' && !ctl.air && ctl.x >= stubX()) { S.onStub = true; S.stubT = 0; }
       return;
     }
     L.t += dt; const k = Math.min(1, L.t / L.T); L.tx = Math.max(L.tx, stubX() + 16);
@@ -770,7 +776,7 @@ export function createTrain(G) {
         e.sp = 'lvault'; e.spT = 0; e.vT = 0.45; e.vx0 = e.x; e.vx1 = D.VROOF.x1 + 90;
         later(() => { S.plate = false; S.lgap = 30; sfx('chain_snap', D.PLATE.x0, 1); sfx('hook_clank', D.PLATE.x0, 1, 0.5); G.shakeIt(0.4, 3); for (let k = 0; k < 12; k++) G.sparks.push({ x: D.PLATE.x0 + G.simRand() * 30, y: GROUND - 2, t: 0 }); G.toast('The pin', 'Only the safety chain holds the cars. Cross on the narrow beats.', false); }, 0.5);
       }, 1.1);
-      if (dif() < 2 && !G.flags.demo) { S.ph3Ck = true; G.setCkpt('boss', 3, true); }
+      if (dif() < 3 && !G.flags.demo) { S.ph3Ck = true; G.setCkpt('boss', 3, true); }   // (Easy, Medium and Hard: a slip in phase 3 costs phase 3, not the fight; Wicked keeps the whole fight)
     }
   };
 
@@ -818,7 +824,7 @@ export function createTrain(G) {
   // ---------------- the fixed step ----------------
   M.step = dt => {
     if (G.flags.club) S.grp = 8;
-    else if (!S.fade && Math.abs(ctl.x - S.prevX) > 30) { S.grp = grpAt(ctl.x); }
+    else if (!S.fade && hero.mode === 'anim' && Math.abs(ctl.x - S.prevX) > 30) { S.grp = grpAt(ctl.x); }   // (only a heroTo jumps that far on his feet: a retry, a test hook; a body in flight never changes the car)
     for (let i = S.queue.length - 1; i >= 0; i--) { const q = S.queue[i]; if ((q.t -= dt) <= 0) { S.queue.splice(i, 1); spawnOne(q); } }
     for (const dd of S.doors) dd.t += dt; while (S.doors.length && S.doors[0].t > 0.8) S.doors.shift();
     trainStep(dt); sweepStep(dt); fallStep(dt); leapStep(dt); stubStep(dt); ejectStep(dt); coverStep(); glassStep(dt); dinStep(dt);
@@ -829,6 +835,9 @@ export function createTrain(G) {
   function wallsStep() {
     const g = D.GROUPS[S.grp], lo = g[0] + 8, hi = g[1] - 8;
     if (!S.fade && !S.fall && hero.mode === 'anim' && (ctl.x < lo || ctl.x > hi)) { ctl.x = clamp(ctl.x, lo, hi); ctl.spd = 0; }
+    // a body in flight (a gantry hit, a throw, a knock-down) stops at the car end too: cars change only through doors, fades and falls
+    // (a gantry hit near the tender wall threw him into the baggage car; its wave never started and the roof Usher shot through the wall)
+    if (!S.fade && !S.fall && hero.mode !== 'anim') for (const p of G.P) { if (p.x < g[0] + 2) { p.x = g[0] + 2; p.px = Math.max(p.px, p.x); } else if (p.x > g[1] - 2) { p.x = g[1] - 2; p.px = Math.min(p.px, p.x); } }
     if (S.grp === 0 && ctl.x < D.TENDER + 8) ctl.x = D.TENDER + 8;
     for (const e of G.enemies) {
       if (e.dead || e.type !== 'goon' || e.grp == null) continue;

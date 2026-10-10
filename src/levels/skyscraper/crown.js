@@ -150,7 +150,7 @@ export function installCrown(X) {
     if (e.exit || e.hold) return null;
     const kind = G.enc.eHitKind, pm = G.MOVES[hero.act], heavy = kind === 1 && pm && pm.power >= 200, close = Math.abs(ctl.x - e.x) < 50;
     const blast = kind === 2 && hero.weapon === 3 && close;
-    if (S.biteWin) { if ((kind === 1 && (heavy || dif() === 0)) || blast) finisher(e); return null; }
+    if (S.biteWin) { if (kind === 1 || kind === 0 || blast) finisher(e); return null; }   // (any blow lands it: Q or W, fists or a blade; a heavy's light start was swallowed and the heavy came too late)
     if (S.lastBreath) { if (heavy || blast || kind === 0) finisher(e); return null; }
     if (kind === 2) {
       if (blast) { e.hurtT = Math.max(e.hurtT, 0.5); }
@@ -251,7 +251,7 @@ export function installCrown(X) {
         sfx('nero_bite', e.x, 1); sfx('nero_growl', e.x, 1); G.bark(e, B.lines.bite); G.hitStop = Math.max(G.hitStop, 0.1);
         S.biteWin = { t: B.bite.window[dif()] }; G.slowMo(Math.min(3, S.biteWin.t), 'nero'); sfx('slowmo_in', ctl.x, 1);
         S.prompt = { x: e.x, y: e.y - 18, r: 14 };
-        G.toast('FINISH', dif() === 0 ? 'Any attack on him' : 'A heavy attack on him (hold Q or W)', false); G.emit('feat', 'nerobite');
+        G.toast('FINISH', 'Any blow on him (Q or W)', false); G.emit('feat', 'nerobite');
         G.setMusic('music:boss_bell_3', 0.2);
       }
     } else { d.vx = 0; d.st = S.biteWin ? 'stand' : 'sit'; d.face = e ? Math.sign(e.x - d.x) || d.face : d.face; if (e && S.biteWin) d.x = e.x - 8 * (Math.sign(e.x - d.x) || 1); }
@@ -259,7 +259,9 @@ export function installCrown(X) {
     if (S.biteWin) {
       if (S.prompt && e) { S.prompt.x = e.x; S.prompt.y = e.y - 18; }
       if (dif() === 0) G.slowMo(0.3, 'nero');
-      else if ((S.biteWin.t -= rdt) <= 0) {   // a miss: he shakes the dog off; Last Breath
+      // a blow already under way when the window closes plays out (up to 1.2 s more): in the slow motion a held W's heavy kick
+      // landed after the window, and the light kick before it had gone through him
+      else if ((S.biteWin.t -= rdt) <= 0 && !(G.MOVES[hero.act] && S.biteWin.t > -1.2)) {   // a miss: he shakes the dog off; Last Breath
         S.biteWin = null; S.prompt = null; S.lastBreath = true; if (e) { e.sp = null; e.stunT = e.recT = 0.5; e.hp = 1; }
         if (d) { d.x = F.hatch + 10; d.st = 'sit'; }
         G.toast('Last Breath', 'He shook the dog off. The next heavy blow, or anything that floors him, ends it.', false);
@@ -362,9 +364,11 @@ export function installCrown(X) {
     const t = Math.round(G.runS.t), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
     const r = G.gradeRun('ch9', { t: G.runS.t, kills: G.runS.kills, maxRank: G.styleM.maxRank, dmg: G.runS.dmg, kos: G.kos }, !G.flags.demo);
     let best = {}; try { best = JSON.parse(localStorage.getItem(BEST_KEY) || '{}') || {}; } catch (err) { best = {}; }
-    const names = [['ch1', 'The Street'], ['ch2', 'Pier 9'], ['ch3', 'Line Zero'], ['ch4', 'House Always Wins'], ['ch5', 'The Leviathan'], ['ch6', 'St. Cecilia'], ['ch7', 'The Palm House'], ['ch8', 'Last Train'], ['ch9', 'The Spire']];
+    // (the grade keys: ch1 is the tutorial, ch2..ch9 are the eight chapters of the menu; the count is of the chapters, as the menu has them)
+    const names = [['ch1', 'Tutorial: The Street'], ['ch2', 'Pier 9'], ['ch3', 'Line Zero'], ['ch4', 'House Always Wins'], ['ch5', 'Leviathan'], ['ch6', 'St. Cecilia'], ['ch7', 'The Palm House'], ['ch8', 'The Last Train'], ['ch9', 'The Spire']];
     const rows = names.filter(([k]) => best[k]), total = rows.reduce((n, [k]) => n + (best[k].score || 0), 0), secs = rows.reduce((n, [k]) => n + (best[k].t || 0), 0);
-    const story = rows.length ? `<h3>The whole story</h3><dl>${rows.map(([k, n]) => `<dt>${n}</dt><dd>${best[k].grade} · ${best[k].score}</dd>`).join('')}<dt>All chapters</dt><dd>${rows.length} of ${names.length} · ${Math.floor(secs / 60)} min · score ${total}</dd></dl>` : '';
+    const chN = rows.filter(([k]) => k !== 'ch1').length;
+    const story = rows.length ? `<h3>The whole story</h3><dl>${rows.map(([k, n]) => `<dt>${n}</dt><dd>${best[k].grade} · ${best[k].score}</dd>`).join('')}<dt>All chapters</dt><dd>${chN} of ${names.length - 1} · ${Math.floor(secs / 60)} min · score ${total}</dd></dl>` : '';
     G.dom.results.innerHTML = `<h2>The Spire cleared</h2><dl><dt>Difficulty</dt><dd>${G.DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${G.runS.kills}</dd>`
       + `<dt>Top style</dt><dd>${G.rankName(G.styleM.maxRank)}</dd><dt>Damage taken</dt><dd>${Math.round(G.runS.dmg)}</dd><dt>Knock-outs</dt><dd>${G.kos}</dd>`
       + `<dt>Midnight</dt><dd>The Conductor fell on the seventh strike. The rain stopped on the twelfth.</dd></dl>${G.rankHtml(r)}${story}<small>Enter: the credits</small>`;

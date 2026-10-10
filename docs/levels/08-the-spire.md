@@ -817,7 +817,7 @@ Bell's health per checkpoint: full, 66 %, 33 %.
 | Use the lift doors, the service lift, a stair door, the hatch, the ladder | ↑ by it | A 0.7 s fade |
 | The cable snap | Jump (or roll) → onto the cradle | Slow motion 2.5 s real; a 2.2 s (game) window; fail: the brake (−25/−25/−40) and the cradle meets the car; Wicked: lethal |
 | The dive to the rail | Jump or roll → | The tile under him goes at the end of the sweep (0.8 s game grace); the rail grabs him within 40/32/24/18 px; fail on Easy and Medium: a mullion catches him once (−20) |
-| FINISH | A heavy attack on Bell (hold Q or W); any attack on Easy; a shotgun blast up close | Slow motion; 1.2/1.0/0.8 s real (Easy: until he is hit) |
+| FINISH | Any blow on Bell (Q or W, fists or a blade), or a shotgun blast up close | Slow motion; 1.2/1.0/0.8 s real (Easy: until he is hit) |
 | Push the piano | Walk into it | 32 px/s; it flattens goons (40) and loads the glass under it as it rolls |
 | Squat or roll under the pendulum | ↓ or Space | The bob hits anyone standing in its path |
 

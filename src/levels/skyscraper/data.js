@@ -227,6 +227,6 @@ export const DROPS = {
 export const LIFT = { holdTxt: 'The Choir holds the car', roofWind: [40, 50, 60, 70], snapSlow: 2.5, snapFail: [25, 25, 40, -1] };
 export const WIND = { garden: [50, 60, 70, 80], face: [60, 70, 80, 95], every: [6, 9], faceEvery: [5, 8], warn: 1.0, t: 2.0 };
 export const MG_SWEEP = { t: 2.0, slow: 2.2, grab: [40, 32, 24, 18], second: [true, true, false, false] };
-export const VOID_FALL = { assist: [true, true, false, false], dmg: [15, 20, 0, 0] };
+export const VOID_FALL = { assist: [true, true, false, false], dmg: [15, 20, 0, 0] };   // no assist (Hard, Wicked): the game's fall rule (G.fallOut)
 // lightning: the flash (s) and its afterglow; thunder comes 0.3-2 s after
 export const LIGHTNING = { flash: 0.15, glow: 0.6, thunder: [0.3, 2] };

@@ -193,11 +193,15 @@ export function createSpire(G) {
           e.perchS = null; const g = D.GROUPS[e.grp ?? S.grp], ok = x => x > g[0] + 10 && x < g[1] - 10;
           const pref = ctl.x < (s.x0 + s.x1) / 2 ? [s.x0 - 8, s.x1 + 8] : [s.x1 + 8, s.x0 - 8];   // down on the hero's side, unless a wall is there
           e.dropTo = ok(pref[0]) ? pref[0] : pref[1];
+          if (s.y === D.CAR.roof && s.x0 === D.CAR.x0) e.dropTo = (D.CAR.hatch[0] + D.CAR.hatch[1]) / 2;   // the lift's roof: down through the hatch, into the car
         }
         else if (!e.down && !e.air && Math.abs(e.y + 2 - s.y) < 3) e.x = clamp(e.x, s.x0 + 4, s.x1 - 4);
       }
+      if (e.dropTo != null && !e.air && !e.down && !e.act && Math.abs(e.y + 2 - D.CAR.roof) < 3 && e.x > D.CAR.hatch[0] && e.x < D.CAR.hatch[1] && Math.abs(e.x - e.dropTo) < 4) { e.y = D.CAR.roof + 3; e.vy = 20; e.air = true; }   // (through the hatch)
       if (e.dropTo != null) { if (e.down || (!e.air && e.y > GROUND - 6)) e.dropTo = null; else { e.cdT = Math.max(e.cdT, 0.3); if (!e.act) { e.x += Math.sign(e.dropTo - e.x) * 80 * dt; e.face = Math.sign(e.dropTo - e.x) || e.face; } } }
       // a rappeller lands: 0.8 s of landing lag (a punish chance)
+      // a rappeller who lands on the lift's roof (out of Elias' reach) keeps the ledge rule: down through the hatch after 1.5 s (a gun: 3 shots or 8 s)
+      if (e.rope && !e.air && !e.perchS && e.y < GROUND - 6) { const s = G.floorBelow(e.x, e.y, 0); if (s !== G.GROUND_S) { e.perchS = s; e.perchT = 0; } }
       if (e.rope && !e.air) { e.rope = false; e.exposed = Math.max(e.exposed || 0, 0.8); e.cdT = Math.max(e.cdT, 0.8); G.dust(e.x, e.y + 1, 4); S.ropes = S.ropes.filter(r => r.e !== e); }
     }
     for (const r of S.ropes) r.y = r.e.y - 30;
@@ -396,17 +400,30 @@ export function createSpire(G) {
   }
   H.fallHero = fallHero;
   function fallTick(rdt) {
-    const F = S.fall; if (!F) return;
+    const F = S.fall; if (!F || F.out) return;   // (out: the Wasted card is up; the restart clears it)
     F.t += rdt;
     if (fadeEl) fadeEl.style.opacity = Math.min(1, F.t / 0.5).toFixed(2);
     if (F.t >= 0.6 && !F.done) {
       F.done = true;
       const d = dif(), assist = D.VOID_FALL.assist[d] && !F.force;
       if (X.onFall && X.onFall(F)) { /* a set piece's own fail branch */ }
-      else if (assist) { G.heroTo(S.safeX); hero.hp = Math.max(1, hero.hp - D.VOID_FALL.dmg[d]); G.toast('He catches the edge', `−${D.VOID_FALL.dmg[d]}`, true); }
-      else { S.fall = null; if (fadeEl) fadeEl.style.opacity = 0; G.retry(); return; }
+      else if (assist) { G.heroTo(catchX()); hero.hp = Math.max(1, hero.hp - D.VOID_FALL.dmg[d]); G.toast('He catches the edge', `−${D.VOID_FALL.dmg[d]}`, true); }
+      else { if (fadeEl) fadeEl.style.opacity = 0; if (G.DIF().perma) F.out = true; else S.fall = null; G.fallOut(); return; }   // (the game's fall rule: Hard back to the checkpoint, never healed; Wicked the Wasted card over the fall)
     }
     if (F.t >= 0.9) { if (fadeEl) fadeEl.style.opacity = 0; S.fall = null; }
+  }
+  // where the edge catch puts him: 10 px back from the lip, on the side away from a boss by the drop (0.5 px from the void,
+  // Kessel's body shoved him straight back in: an endless "He catches the edge" loop with the input locked)
+  function catchX() {
+    const V = voids(), x = S.safeX; let v = null;
+    for (const iv of V) if (!v || Math.min(Math.abs(x - iv[0]), Math.abs(x - iv[1])) < Math.min(Math.abs(x - v[0]), Math.abs(x - v[1]))) v = iv;
+    if (!v) return x;
+    const [a, b] = v, mid = (a + b) / 2, L = a - 10, R = b + 10, g = D.GROUPS[S.grp] || [0, G.W];
+    const boss = G.enemies.find(e => e.type === 'boss' && !e.dead && Math.abs(e.x - mid) < 160);
+    const ok = q => q > g[0] + 8 && q < g[1] - 8 && !inVoid(q, V);
+    let pick = boss ? (boss.x > mid ? L : R) : (x < mid ? L : R);
+    if (!ok(pick)) pick = pick === L ? R : L;
+    return ok(pick) ? pick : x;
   }
   function fallersStep(dt) {
     for (let i = S.fallers.length - 1; i >= 0; i--) { const f = S.fallers[i]; f.t += dt; f.vy += 300 * dt; f.x += f.vx * dt; f.y += f.vy * dt; if (f.t > 2.5) S.fallers.splice(i, 1); }
@@ -471,7 +488,11 @@ export function createSpire(G) {
   M.mark = (x, t) => S.tellT.push({ kind: 'mark', x, t });
   M.chainFx = (e, reach, kind) => { const h = e.J ? e.J[6] : { x: e.x, y: e.y - 20 }; if (kind === 'spin') S.tellT.push({ kind: 'ring', x: e.x, r: reach, y: GROUND - 1, c: 0xff50c0f0, t: 0.25 }); else S.tellT.push({ kind: 'line', x0: h.x, y0: h.y, x1: kind === 'drop' ? e.dropX : e.x + e.face * reach, y1: kind === 'low' || kind === 'drop' ? GROUND - 3 : h.y, t: 0.2 }); };
   M.chainLine = (e, tx, ty, t = 0.05) => { const h = e.J ? e.J[6] : { x: e.x, y: e.y - 20 }; S.tellT.push({ kind: 'line', x0: h.x, y0: h.y, x1: tx, y1: ty, t }); };
-  M.pull = (e, tx, T) => { S.pull = { e, x0: ctl.x, tx, t: 0, T }; G.lockT = Math.max(G.lockT, T + 0.1); hero.act = null; };
+  M.pull = (e, tx, T) => {
+    // a hook drags him to the near lip of a drop, never over it (on Hard Kessel's first hook pulled him into the gap: the garden restarted)
+    for (const [a, b] of voids()) { if (tx > ctl.x && a > ctl.x && a < tx) tx = a - 4; else if (tx < ctl.x && b < ctl.x && b > tx) tx = b + 4; }
+    S.pull = { e, x0: ctl.x, tx, t: 0, T }; G.lockT = Math.max(G.lockT, T + 0.1); hero.act = null;
+  };
   function pullStep(dt) {
     const p = S.pull; if (!p) return;
     p.t += dt; const k = Math.min(1, p.t / p.T);

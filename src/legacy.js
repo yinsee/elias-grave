@@ -5082,12 +5082,12 @@ import * as SPIRE from './levels/skyscraper/index.js';
     kos = 0; toastQ.length = 0; cleared.clear(); pickToasted.clear(); wavePend.clear(); resultsEl.hidden = true;
     kills.length = 0; landed = 0; feedDirty = true;   // (the demo's or the last run's kills do not carry over)
   }
-  function showWasted() {
+  function showWasted(why) {   // why: what killed him, when the card should say it (a fall)
     flags.wasted = true;
     const perma = !!DIF().perma;
     emit('run:over', { result: 'wasted', perma });
     const t = Math.round(runS.t), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
-    resultsEl.innerHTML = `<h2>Wasted</h2><dl><dt>Difficulty</dt><dd>${DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${runS.kills}</dd>`
+    resultsEl.innerHTML = `<h2>Wasted</h2><dl>${why ? `<dt>${why}</dt><dd>${perma ? 'From the start' : `From ${ckptName()}`}</dd>` : ''}<dt>Difficulty</dt><dd>${DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${runS.kills}</dd>`
       + `<dt>Hits landed</dt><dd>${landed}</dd>${perma ? '' : `<dt>Back to</dt><dd>${ckptName()}</dd>`}</dl>`
       + `<small>${perma ? 'Enter or R to play again' : 'Enter or R: retry from the checkpoint'} · Esc for the menu</small>`;
     resultsEl.hidden = false; toastEl.hidden = true; toastT = 0; toastQ.length = 0;
@@ -5096,9 +5096,12 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // second winds (a boss fight has its own count). Wasted with none left: retry from the last one; the lessons done stay done.
   let ckpt = null, ckBoss = false;   // ckBoss: a retry at the boss door (the entrance and the dialog are skipped)
   const ckptName = () => !ckpt ? 'the start' : LVH.ckptName ? LVH.ckptName(ckpt) : ckpt.kind === 'boss' ? 'the boss door' : ckpt.kind === 'shutter' ? 'the shutter' : ckpt.kind === 'wave' ? P9.WAVES[ckpt.i].ckpt : ckpt.kind === 'stage' ? `stage ${ckpt.i + 1}` : 'the start';
+  let fallKeep = null;   // after a fall's retry: the second winds he has left (the level re-arriving at the same checkpoint does not refill them)
   function setCkpt(kind, i = 0, quiet) {
+    const same = !!ckpt && ckpt.lv === LV.id && ckpt.kind === kind && ckpt.i === i;
     ckpt = { lv: LV.id, kind, i, w: hero.weapon, ch: charge.slice(), taken: pickups.map(k => k.taken) };
     hero.wind = DIF().wind;
+    if (fallKeep != null && same) hero.wind = Math.min(hero.wind, fallKeep); else fallKeep = null;
     if (!quiet && !flags.demo && !flags.attract) toast('Checkpoint', DIF().perma ? 'Wicked: one life, no second wind' : `Second winds: ${hero.wind}`, true);
   }
   function heroTo(x) {   // put him on the ground at x (the camera cuts there)
@@ -5110,7 +5113,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     cam.xf = x - 80; cam.yf = GROUND - 60; cam.v.x = cam.v.y = cam.v.z = 0;
   }
   function retryCkpt() {
-    const C = ckpt;
+    const C = ckpt; fallKeep = null;
     if (!C || C.lv !== LV.id || DIF().perma) { reset(); return; }
     const keep = [...done], rs = { ...runS }, k0 = kos, boss = C.kind === 'boss';
     reset();
@@ -5138,6 +5141,21 @@ import * as SPIRE from './levels/skyscraper/index.js';
     toast('Retry', `From ${ckptName()} · second winds: ${hero.wind}`);
   }
   const retry = () => DIF().perma ? reset() : retryCkpt();
+  // a lethal fall the level does not catch (a train gap, the Spire's drop): one rule for every level. Wicked: the Wasted card, from the
+  // start. Hard: back to the checkpoint, never healed by it (a fall on Hard took him from 20 HP to 100): it costs a second wind if he
+  // has one, else 40 HP; a fall that empties him is Wasted
+  const FALL_HP = 40;
+  function fallOut() {
+    if (flags.wasted) return;
+    if (DIF().perma) { lockT = 99; hero.invT = Math.max(hero.invT, 3); showWasted('Fallen'); return; }
+    const hp0 = hero.hp, w0 = hero.wind;
+    if (w0 <= 0 && hp0 - FALL_HP <= 0) { lockT = 99; hero.invT = Math.max(hero.invT, 3); showWasted('Fallen'); return; }
+    retryCkpt();
+    if (w0 > 0) { hero.wind = Math.min(hero.wind, w0 - 1); hero.hp = Math.min(hero.hp, hp0); }
+    else { hero.wind = 0; hero.hp = Math.min(hero.hp, hp0 - FALL_HP); }
+    fallKeep = hero.wind;
+    toast('Fallen', `From ${ckptName()} · ${w0 > 0 ? 'a second wind spent' : `−${FALL_HP}`} · second winds: ${hero.wind}`);
+  }
   function showResults() {
     if (flags.attract) return;
     emit('run:over', { result: 'cleared' });
@@ -9394,7 +9412,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     get dog() { return dog; }, set dog(v) { dog = v; }, get hitStop() { return hitStop; }, set hitStop(v) { hitStop = v; }, get lockT() { return lockT; }, set lockT(v) { lockT = v; },
     get killBy() { return killBy; }, set killBy(v) { killBy = v; }, get endPh() { return endPh; }, set endPh(v) { endPh = v; }, get fadeDir() { return fadeDir; }, set fadeDir(v) { fadeDir = v; },
     get slamDone() { return slamDone; }, set bossBarK(v) { bossBarK = v; }, get ckBoss() { return ckBoss; }, set ckBoss(v) { ckBoss = v; }, bossDlg, set autoWalk(v) { autoWalk = v; },
-    reset: () => reset(), retry: () => retry(), dropWeapon: (e, w) => dropWeapon(e, w), quitToTitle: () => quitToTitle(),
+    reset: () => reset(), retry: () => retry(), fallOut: () => fallOut(), dropWeapon: (e, w) => dropWeapon(e, w), quitToTitle: () => quitToTitle(),
     placeHero(x, s) {   // on the ground at x, then up onto surface s (the mezzanine)
       heroTo(x); const dy = s.y - 2 - ctl.y; ctl.y = s.y - 2; ctl.surf = s;
       for (const p of P) { p.y += dy; p.py += dy; } for (const st of hair) for (const p of st) { p.y += dy; p.py += dy; } if (tails) for (const t of tails) for (const p of t) { p.y += dy; p.py += dy; }
