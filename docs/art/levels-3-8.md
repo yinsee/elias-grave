@@ -34,3 +34,10 @@ Panels and portraits follow section 9 of `04-leviathan.md`.
 - `aquarium_manifest`: the model painted header words on the page. They are painted out by hand on the source image. The page and the red seal are blank, so the game must draw the manifest text.
 - `aquarium_outro_02` shows a hanging whale model, not a whale skeleton.
 - `elias_wet` is new.
+
+## Level 5: hospital
+
+Panels and portraits follow section 9 of `05-st-cecilia.md`, without the `panel:` and `portrait:` prefixes.
+
+- `hospital_outro_02`: the phone screen and the envelope are blank. The game must draw "Silence the bartender. - A.V." and "Winter Gala, Royal Conservatory".
+- `elias_furious`, `hale_hat` and `mags_weak` are new. Level 6 asks for `elias_furious_quiet` "from L5": Level 6 makes it as its own portrait.

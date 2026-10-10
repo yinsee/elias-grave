@@ -1,0 +1,181 @@
+[
+ {
+  "out": "assets/art/characters/krieg/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 56,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {krieg}, three-quarter view, upper body, standing in a dark operating theatre under a single surgical lamp, cold green and white light, a calm clinical smile, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/hospital/hospital_intro_01.png",
+  "seed": 5121,
+  "post": {
+   "out": "assets/art/panels/hospital/hospital_intro_01.png"
+  },
+  "prompt": "Night, heavy rain, red light. The sliding glass doors of a hospital emergency entrance under a big red neon cross. In the centre, {elias} carries an unconscious red-haired woman in a black leather jacket in his arms through the doors, her blood on his white shirt. On the right a nurse in white pushes a gurney toward them. One single German shepherd dog with a red collar runs at his heels. Plain blank walls, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/hospital/hospital_intro_02.png",
+  "seed": 5102,
+  "post": {
+   "out": "assets/art/panels/hospital/hospital_intro_02.png"
+  },
+  "prompt": "A dark private hospital room lit by the green glow of a heart monitor. {mags} lies unconscious in the bed, her shoulder bandaged. {nero} sits alert at the bedside. {elias} stands beside the dog and rests his hand on the dog's head. Rain on the window, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/hospital/hospital_intro_03.png",
+  "seed": 5103,
+  "post": {
+   "out": "assets/art/panels/hospital/hospital_intro_03.png"
+  },
+  "prompt": "A long hospital corridor with flickering fluorescent lights. A line of {orderlies} walks toward the camera. The one in front unwraps a shiny scalpel from a white cloth. A small silver tuning fork pin glints red on his lapel. Green-grey light, deep shadows, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/hospital/hospital_intro_04.png",
+  "seed": 5104,
+  "post": {
+   "out": "assets/art/panels/hospital/hospital_intro_04.png"
+  },
+  "prompt": "An almost completely black comic panel. A thin blue-white edge of a lightning flash through a window. In the darkness only a man's narrowed cold eyes catch the light, and the bright steel edge of a scalpel close in the foreground. Everything else is black, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/hospital/hospital_outro_01.png",
+  "seed": 5111,
+  "post": {
+   "out": "assets/art/panels/hospital/hospital_outro_01.png"
+  },
+  "prompt": "A hospital rooftop helipad at night in a thunderstorm, heavy rain, a big lightning bolt behind. {krieg} sits slumped against the steel mast of a landing light, beaten, his surgical gown torn. In a puddle in front of him, two defibrillator paddles spark with blue electric arcs, no text, blank signs",
+  "face": "krieg"
+ },
+ {
+  "out": "assets/art-src/panels/hospital/hospital_outro_02.png",
+  "seed": 5112,
+  "post": {
+   "out": "assets/art/panels/hospital/hospital_outro_02.png"
+  },
+  "prompt": "Close-up on wet concrete in the rain at night. A cracked mobile phone lies face up, its screen glowing white and blank. Beside it lies a cream envelope closed with a red wax seal. Rain drops, puddle reflections, dark background, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/hospital/hospital_outro_03.png",
+  "seed": 5113,
+  "post": {
+   "out": "assets/art/panels/hospital/hospital_outro_03.png"
+  },
+  "prompt": "A hospital room at dawn, soft grey light through the window, the storm passing. {mags} is awake in the bed, weak and pale, her shoulder bandaged, looking at the dog. {nero} rests his head on the edge of her bed, no text, blank signs",
+  "face": "mags"
+ },
+ {
+  "out": "assets/art-src/panels/hospital/hospital_outro_04.png",
+  "seed": 5114,
+  "post": {
+   "out": "assets/art/panels/hospital/hospital_outro_04.png"
+  },
+  "prompt": "Interior of a dark hospital room at dawn. {elias} stands at the window with his back to the camera, a silhouette. Across a river outside, a big grim stone police headquarters building glows with lights in the grey rain, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/hospital/hospital_outro_05.png",
+  "seed": 5115,
+  "post": {
+   "out": "assets/art/panels/hospital/hospital_outro_05.png"
+  },
+  "prompt": "An empty hospital ward corridor at dawn, grey light, a wet floor. On the wall an old black payphone, its receiver shaking on the hook as it rings. Nobody there, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/portraits/krieg_calm.png",
+  "seed": 5201,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/krieg_calm.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {krieg}, calm and clinical, snapping a latex glove onto his hand beside his face, cold white operating lamp light, dark background, no text, blank signs",
+  "face": "krieg"
+ },
+ {
+  "out": "assets/art-src/portraits/krieg_amused.png",
+  "seed": 5202,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/krieg_amused.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {krieg}, a thin amused smile, eyes glinting, his headlamp lit, green operating theatre light, dark background, no text, blank signs",
+  "face": "krieg"
+ },
+ {
+  "out": "assets/art-src/portraits/krieg_delighted.png",
+  "seed": 5203,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/krieg_delighted.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {krieg}, delighted with a wide unsettling grin, revving a battery bone saw beside his face, sparks flying from the blade, green and white light, dark background, no text, blank signs",
+  "face": "krieg"
+ },
+ {
+  "out": "assets/art-src/portraits/krieg_hurt.png",
+  "seed": 5204,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/krieg_hurt.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {krieg}, hurt and soaked by rain, his surgical gown torn, blood on his lip, hair wet and messy, a blue lightning flash behind, dark stormy background, no text, blank signs",
+  "face": "krieg"
+ },
+ {
+  "out": "assets/art-src/portraits/elias_furious.png",
+  "seed": 5205,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/elias_furious.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Bust portrait of {elias}, quiet fury, his eyes burning, jaw clenched, blood on his white shirt collar, cold green hospital light, dark background, no text, blank signs",
+  "face": "elias"
+ },
+ {
+  "out": "assets/art-src/portraits/hale_hat.png",
+  "seed": 5206,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/hale_hat.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {hale}, inside a glass phone booth at night, holding an old telephone receiver to his ear, his hat brim low, tired eyes, a single streetlamp light, rain on the glass, dark background, no text, blank signs",
+  "face": "hale"
+ },
+ {
+  "out": "assets/art-src/portraits/mags_weak.png",
+  "seed": 5217,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/mags_weak.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. Mags, a woman around thirty-five with realistic proportions, shoulder-length wavy copper-red hair messy on a white hospital pillow, a few freckles, green eyes, pale and weak, no makeup, a white bandage on her shoulder over a pale blue hospital gown, a tired brave half-smile, soft grey dawn light, dark background, no text, blank signs",
+  "face": "mags"
+ }
+]
