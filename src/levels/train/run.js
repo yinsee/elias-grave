@@ -33,7 +33,7 @@ export function createTrain(G) {
   G.bus.on('shot', p => { if (p && p.by === 'hero') S.shotAt = G.simTime; });
   const grounded = () => hero.mode === 'anim' && !ctl.air && ctl.surf === G.GROUND_S;
   const heroTop = () => { let m = 1e9; for (const p of G.P) if (p.y < m) m = p.y; return m; };
-  const heroLow = () => hero.mode !== 'anim' || hero.act === 'squat' || hero.act === 'dash' || /^s|low/.test(hero.act || '') || heroTop() > GROUND - 30;
+  const heroLow = () => hero.mode !== 'anim' || hero.act === 'squat' || hero.act === 'dash' || /^(squat|slp|slk|sweep|sslash|sdive|roll)/.test(hero.act || '') || heroTop() > GROUND - 30;
 
   // the fade between cars (a door, the hatch, the window, a fall): a black sheet over the stage
   const fadeEl = (() => {
