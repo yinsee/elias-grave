@@ -14,10 +14,12 @@
 //     thrown thing breaks the rhythm.
 // The game calls braskThink(M, e, ...) and braskSpecial(M, e, dt, px) (M: the level run, src/levels/casino/run.js); the decoys run
 // decoyThink. The arena gimmicks (mirrors, the wheel, the ball, the calls) live in the run.
+import { hpCurve, BOSS_HP } from '../core/difficulty.js';
 
 export const BRASK = {
   kind: 'brask', name: 'Count Teodor Brask', title: 'Baritone · owner of the Grand Casino Orfeo', look: 'brask',
-  hp: [700, 840, 920, 1000], s: 1.1, m: 5, speed: 30, reach: 26, dmg: 12, heavyDmg: 20, poise: 18, windup: 0.32, cd: [0.8, 1.5],
+  hp: hpCurve(BOSS_HP.brask),   // (the game's boss HP curve)
+  s: 1.1, m: 5, speed: 30, reach: 26, dmg: 12, heavyDmg: 20, poise: 18, windup: 0.32, cd: [0.8, 1.5],
   R: { w: 'cane', len: 13, off: -0.35, reach: 26 }, skin: ['#ecd6c0', '#c4aa92'],
   combos: [['stab'], ['stab', 'lowstab'], ['clunge'], ['stab', 'stab', 'clunge']],   // a cane jab; jab and the low sweep (jump it); the thrust; jab jab thrust
   moveDmg: { stab: 10, lowstab: 12, clunge: 14, slash: 10 },   // per blow (a second `dmg` key here overrode the number above: a NaN hit, the freeze)

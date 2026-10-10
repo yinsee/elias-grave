@@ -10,6 +10,7 @@ import * as A from './paint.js';
 import { COOLER, coolerThink, coolerSpecial } from '../../bosses/cooler.js';
 import { BRASK, braskThink, braskSpecial, decoyThink } from '../../bosses/brask.js';
 import { C } from '../../core/color.js';
+import { crewCap } from '../../core/difficulty.js';
 
 const GROUND = D.GROUND;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -423,7 +424,7 @@ export function createCasino(G) {
     S.burners.length = 0;
     if (S.flare > 0) S.flare -= dt;
     // the hero on the hot top
-    if (hero.mode === 'anim' && !ctl.air && on(ctl.x) && Math.abs(ctl.y + 2 - R_.top) < 3) { hero.hp -= D.FIRE.heroDps[dif()] * dt; S.heroBurn = 0.4; if (hero.hp <= 0) { hero.hp = 0.01; G.hurtPlayer(1, ctl.x, ctl.y - 10, -ctl.face, true, 1, { kind: 'fire' }); } if (!S.said.has('range')) { S.said.add('range'); G.toast('The gas range', 'It burns. Knock them onto it.', true); } }
+    if (hero.mode === 'anim' && !ctl.air && on(ctl.x) && Math.abs(ctl.y + 2 - R_.top) < 3) { hero.hp -= G.heroDmg(D.FIRE.heroDps[dif()]) * dt; S.heroBurn = 0.4; if (hero.hp <= 0) { hero.hp = 0.01; G.hurtPlayer(1, ctl.x, ctl.y - 10, -ctl.face, true, 1, { kind: 'fire' }); } if (!S.said.has('range')) { S.said.add('range'); G.toast('The gas range', 'It burns. Knock them onto it.', true); } }
     if (S.heroBurn > 0) { S.heroBurn -= dt; if (hero.mode !== 'rag') S.burners.push({ x: G.P[1].x, y: G.P[1].y + 8, w: 6, h: 9 }); }
     // goons: standing on the top, or down on it (knocked onto it): burning, they stagger and run
     for (const e of G.enemies) {
@@ -483,7 +484,7 @@ export function createCasino(G) {
         later(() => G.toast('The vault rolls open', 'The weapon locker too. The service lift goes up to the Salon Privé.'), 1.6);
         G.setMusic('music:casino', 0.45);
       } else if (dif() >= 2) {   // his crew on Hard and Wicked: a Floor Man every 10 s, one at a time
-        if ((S.crewT -= dt) <= 0 && !G.enemies.some(e => !e.dead && e.zone === 'coolerCrew')) { S.crewT = COOLER.crew.every; const g = spawnHouse('tux', D.COOLER_ARENA.x0 + 8, 'coolerCrew'); g.cdT = 1; }
+        if ((S.crewT -= dt) <= 0 && !G.enemies.some(e => !e.dead && e.zone === 'coolerCrew') && S.crewN < crewCap(dif()).n) { S.crewT = COOLER.crew.every; S.crewN++; const g = spawnHouse('tux', D.COOLER_ARENA.x0 + 8, 'coolerCrew'); g.cdT = 1; }
       }
     }
   }
@@ -493,7 +494,7 @@ export function createCasino(G) {
     const e = G.spawnEnemy('boss', D.COOLER_ARENA.x1 - 40, 'cooler', { boss: COOLER });
     Object.assign(e, { alert: true, face: -1, chgCd: 3, grabCd: 4, coldT: 0, mini: true, bigBar: true });
     e.pal.glove = COOLER.gloves.gold;
-    S.cooler = e; S.crewT = COOLER.crew.every;
+    S.cooler = e; S.crewT = COOLER.crew.every; S.crewN = 0;
     G.setMusic('music:cooler', 0.7);
     if (!G.flags.demo) G.playScene('dialog', 'cooler_intro');
     say('coolerTip', 'The Cooler', 'Roll through the charge: into the vault door, he is stunned', true);
@@ -619,11 +620,12 @@ export function createCasino(G) {
     const hp = S.braskHp || Math.round(e.maxHp * BRASK.ph2.below);
     Object.assign(e, { hp, ph: 2, intro: true, introX: D.WHEEL.x1 - 90, face: -1, alert: true, fanCd: 2.5, hookCd: 4, shufCd: 99, decoyCd: 99, rainCd: 99, allInCd: 99, tauntCd: 8, hubCd: 2 });
     if (S.braskMax) e.maxHp = S.braskMax;
+    const pc = G.atPhaseCk(3); if (pc) e.hp = Math.floor(e.maxHp * BRASK.ph3.below);   // a retry from his phase-3 checkpoint: all in again at once
     enc.boss = e; enc.introT = 0; G.bossBarK = 1;
     G.bossDlg.on = G.bossDlg.done = true;   // (the dialog was in the hall)
     if (G.ckBoss) G.ckBoss = false;
     S.brask = e; silver(e);
-    G.setCkpt('boss');
+    G.setCkpt('boss', pc ? 3 : 0);
     G.emit('boss:intro', { boss: e, name: e.name });
     G.dom.toast.hidden = true;
     S.croupier = true; S.crewT = 4; S.crewN = 0; S.callT = 5; S.ballT = 8;
@@ -634,6 +636,7 @@ export function createCasino(G) {
     say('wheelTip', 'The wheel', 'The floor turns. Watch the called colour; jump the ball', true);
   }
   M.braskPhase3 = e => {
+    G.phaseCk(3);
     S.wheel.speed = BRASK.drift.p3[dif()]; S.wheel.revT = Math.min(S.wheel.revT, BRASK.drift.every[1]);
     const c = S.chands.find(c => c.id === 'salon'); c.armed = true;
     S.crewT = 3; G.setMusic('music:brask_allin', 1);
@@ -771,7 +774,8 @@ export function createCasino(G) {
     if (!G.flags.club || !B || B.dead || B.intro || G.enc.introT >= 0) return;
     const P3 = B.ph >= 3, Cw = P3 ? BRASK.crew3 : BRASK.crew2, d = dif();
     const alive = G.enemies.filter(g => !g.dead && g.zone === 'arena').length;
-    if ((S.crewT -= dt) > 0 || alive >= Cw.alive[d]) return;
+    const cap = crewCap(d, Cw.alive[d]);   // (the game's crew rule: the hall and the salon share the total)
+    if ((S.crewT -= dt) > 0 || alive >= cap.alive || S.crewN >= cap.n) return;
     S.crewT = Cw.every; S.crewN++;
     if (!P3) { const x = S.crewN % 2 ? D.RIM[0] + 4 : D.RIM[1] - 4, g = spawnHouse('rake', x, 'arena'); g.cdT = 1; G.bark(g, pickN(['Messieurs, faites vos jeux.', 'The table is closed.', 'Hold him on red!'])); }
     else {
@@ -974,7 +978,7 @@ export function createCasino(G) {
   M.skipToCooler = () => { G.reset(); clearTo(1300); for (const id of ['w6']) S.w[id] = { out: true, n: 0, t: 0 }; S.gates.find(g => g.id === 'inner').open = 1; S.panes.forEach(p => { p.hp = 0; }); G.heroTo(D.COOLER_ARENA.x0 + 10); };
   M.skipToHall = () => { G.reset(); clearTo(2140); S.introSeen = false; G.heroTo(D.HALL.x0 + 4); };
   M.skipToBoss = () => {   // the hall done, the wall broken: he walks through into the salon
-    G.reset(); clearTo(2400); S.hallDone = true; S.braskOut = true; S.wallBroken = true; S.introSeen = true;
+    G.reset(); clearTo(2400); S.hallDone = true; S.braskOut = true; S.wallBroken = true; S.introSeen = true; S.introDone = true;
     const mx = BRASK.hp[dif()]; S.braskMax = mx; S.braskHp = Math.round(mx * BRASK.ph2.below);
     G.heroTo(D.END_WALL - 30);
     G.autoWalk = true;
@@ -987,7 +991,8 @@ export function createCasino(G) {
       if (Ck.kind === 'm:hall') S.introSeen = true;
       return x;
     }
-    if (Ck.kind === 'boss') { clearTo(2400); S.hallDone = true; S.braskOut = true; S.wallBroken = true; S.introSeen = true; const mx = BRASK.hp[dif()]; S.braskMax = mx; S.braskHp = Math.round(mx * BRASK.ph2.below); }
+    if (Ck.kind === 'boss') { clearTo(2400); S.hallDone = true; S.braskOut = true; S.wallBroken = true; S.introSeen = true; S.introDone = true;   // (introDone: the hall's intro would refill the salon Brask to full HP)
+      const mx = BRASK.hp[dif()]; S.braskMax = mx; S.braskHp = Math.round(mx * BRASK.ph2.below); }
     return null;
   };
   M.ckptName = Ck => Ck.kind === 'wave' ? D.WAVES[Ck.i].ckpt || 'the gaming floor' : Ck.kind === 'm:kitchen' ? 'the kitchens' : Ck.kind === 'm:terrace' ? 'the terrace' : Ck.kind === 'm:vault' ? 'the counting house' : Ck.kind === 'm:cooler' ? 'the counting room'

@@ -8,6 +8,7 @@ import * as D from './data.js';
 import * as A from './paint.js';
 import { GRAU, grauThink, grauSpecial } from '../../bosses/grau.js';
 import { LENZ, lenzThink, lenzSpecial, lenzBeat } from '../../bosses/lenz.js';
+import { crewCap } from '../../core/difficulty.js';
 
 const GROUND = D.GROUND;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -240,7 +241,7 @@ export function createTrain(G) {
     if (F.t > 0.45 && !F.out) {
       F.out = true; const d = dif();
       if (D.FALL.perma[d]) { G.fallOut(); return; }   // (the game's fall rule: Hard back to the checkpoint, never healed; Wicked the Wasted card. The restart clears S.fall)
-      const dmg = S.grp === 8 ? 35 : D.FALL.dmg[d];
+      const dmg = D.FALL.dmg[d];   // (the boss's car too: one fall rule)
       teleport(F.back, () => { hero.hp = Math.max(1, hero.hp - dmg); G.toast('He catches the edge', `-${dmg} · he climbs back`, true); if (S.grp === 4 && S.stub.st !== 'idle' && !S.onStub) resetStub(); });
       later(() => { S.fall = null; }, 0.35);
     }
@@ -266,7 +267,7 @@ export function createTrain(G) {
     if (h && !(h.held > 0)) {
       S.heldBy = null;
       if (Math.abs(ctl.x - (Z.x0 + Z.x1) / 2) < 46) {
-        S.doorCatch = { t: 0 }; hero.hp = Math.max(1, hero.hp - h.S.grab.door); G.lockT = Math.max(G.lockT, 1.0); hero.invT = Math.max(hero.invT, 1.4);
+        S.doorCatch = { t: 0 }; hero.hp = Math.max(1, hero.hp - G.heroDmg(h.S.grab.door)); G.lockT = Math.max(G.lockT, 1.0); hero.invT = Math.max(hero.invT, 1.4);
         G.toast('Thrown at the door', 'He catches the frame and climbs back in', true); sfx('hook_clank', Z.x0, 0.9, 0.7); G.shakeIt(0.25, 2);
       }
     }
@@ -637,7 +638,7 @@ export function createTrain(G) {
     for (let i = S.gunWarn.length - 1; i >= 0; i--) if ((S.gunWarn[i].t -= dt) <= 0 || S.gunWarn[i].e.dead) S.gunWarn.splice(i, 1);
     if (!e.dead && !e.hold) {   // the crew: an Usher from the rear door every 8 s, alive by difficulty
       const C = D.GRAU_CREW, n = G.enemies.filter(g => !g.dead && g.zone === 'gcrew' && !g.kneel).length;
-      if ((S.crewT -= dt) <= 0) { S.crewT = C.every; if (n < C.alive[dif()] && S.crewN < C.max && Math.abs(ctl.x - D.DOME_DOOR) > 50) { S.crewN++; S.queue.push({ v: 'usher', wave: 'gcrew', src: { kind: 'door', x: D.DOME_DOOR - 8 }, t: 0 }); S.w.gcrew.out = true; } }
+      if ((S.crewT -= dt) <= 0) { S.crewT = C.every; if (n < crewCap(dif(), C.alive[dif()]).alive && S.crewN < crewCap(dif(), 9, C.max).n && Math.abs(ctl.x - D.DOME_DOOR) > 50) { S.crewN++; S.queue.push({ v: 'usher', wave: 'gcrew', src: { kind: 'door', x: D.DOME_DOOR - 8 }, t: 0 }); S.w.gcrew.out = true; } }
     }
     if (e.dead && !S.grauDone) {
       S.grauDone = true; G.enc.arena = null; G.slowMo(1.2, 'boss'); G.bark(e, GRAU.lines.defeat); S.board = 'scream'; sfx('grunt_die', 1990, 0.6, 1.6);
@@ -713,7 +714,7 @@ export function createTrain(G) {
     // the stragglers (phase 2): every 4 bars an Usher climbs a ladder; scared, they shoot at whoever is near
     if (e.ph === 2) {
       const C = D.LENZ_CREW, n = G.enemies.filter(g => !g.dead && g.zone === 'lcrew').length;
-      if (bc.bar >= S.bcrewBar && bc.n === 0 && n < C.alive[dif()] && S.bcrewN < C.max) { S.bcrewBar = bc.bar + C.bars; S.bcrewN++; S.w.lcrew.out = true; S.queue.push({ v: 'roofUsher', wave: 'lcrew', src: { kind: 'ladder', x: D.BOSS_LADDERS[S.bcrewN % 2] }, t: 0, waitN: 99 }); }
+      if (bc.bar >= S.bcrewBar && bc.n === 0 && n < crewCap(dif(), C.alive[dif()]).alive && S.bcrewN < crewCap(dif(), 9, C.max).n) { S.bcrewBar = bc.bar + C.bars; S.bcrewN++; S.w.lcrew.out = true; S.queue.push({ v: 'roofUsher', wave: 'lcrew', src: { kind: 'ladder', x: D.BOSS_LADDERS[S.bcrewN % 2] }, t: 0, waitN: 99 }); }
     }
     if (S.rim > 0) S.rim -= dt;
     if (S.glint) { S.glint.t -= dt; if (S.glint.t <= 0) S.glint = null; }

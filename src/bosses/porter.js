@@ -8,7 +8,8 @@
 
 export const PORTER = {
   kind: 'porter', name: 'Bruno "The Porter"', title: 'Head porter of the morgue', look: 'porter',
-  hp: [220, 260, 300, 340], s: 1.2, m: 5, speed: 26, reach: 25, dmg: 11, heavyDmg: 18, poise: 20, windup: 0.36, cd: [0.9, 1.6],
+  hp: [280, 330, 380, 430], s: 1.2, m: 5, speed: 26, reach: 25, dmg: 11, heavyDmg: 18, poise: 40,   // (HP +25 %, poise 20 -> 40: a string no longer stun-locks him)
+  windup: 0.36, cd: [0.9, 1.6],
   R: { w: 'tank', len: 10, off: -1.1, reach: 25 },
   combos: [['chop'], ['chop', 'chop'], ['chop', 'chop', 'hchop']],
   charge: { windup: 0.5, v: 220, maxT: 1.3, dmg: 14, cd: [6, 9], range: [60, 200], wallStun: 1.6, rec: 1.0 },

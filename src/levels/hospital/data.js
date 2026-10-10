@@ -227,6 +227,6 @@ export const POWER = { erFail: { every: [14, 20], t: [3, 5] } };
 // lightning: the flash (s) and its afterglow; thunder comes 0.3-2 s after
 export const LIGHTNING = { flash: 0.15, glow: 0.6, thunder: [0.3, 2] };
 // the oxygen tank: its fuse once hit (s), the blast
-export const OXY = { fuse: 1.0, r: 60, dmg: 30, heroDmg: [18, 22, 26, 30], stunBoss: 2 };
+export const OXY = { fuse: 1.0, r: 60, dmg: 30, heroDmg: [22, 22, 22, 22], stunBoss: 2 };
 // the gurney ride's slow motion (s, sim) and the dive's auto-aim
 export const DIVE = { t: 0.9, slow: 2.5, aim: 3 };

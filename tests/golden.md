@@ -4,7 +4,26 @@ Run with a static server (`tools/serve.py`, port 8765, no browser cache; or `pyt
 Two runs of the same URL must give the same hashes. A refactor step that keeps both hashes changed nothing.
 A step that changes behaviour on purpose records new hashes here, with the reason.
 
-## Current (playtest readability: the fight camera, the hero mark, the light, 2026-10-10)
+## Current
+
+PENDING
+
+### The difficulty branch alone (2026-10-10)
+
+| URL | state | buf | l3 | note |
+|---|---|---|---|---|
+| `index.html?autotest=demo&frames=1200` | `8c6433a2` | `234a451e` | | 2D (attract demo, seed 1, 960x540 view) |
+| `index.html?autotest=boss&frames=1800` | `8b375f4a` | `86d47f24` | | 2D (skipToBoss + demo, seed 1) |
+| `index.html?autotest=demo&frames=1200&view3d` | `8c6433a2` | `31eeae79` | `49596c37` | 3D view: the same state hash as 2D |
+| `index.html?autotest=boss&frames=1800&view3d` | `8b375f4a` | `d3cc6678` | `d8e62fe9` | 3D view: the same state hash as 2D |
+
+- The difficulty model (docs/reviews/2026-10-10-difficulty.md) changes all four state hashes on purpose: the demo runs on Hard, so
+  damage taken is now x1.15, Malaspina has 960 HP (was 1000), the checkpoints lift HP to 40 on arrival, and a bandage lies at
+  x 2170 before the club. The demo's last frame looks the same (its buf and l3 hashes are unchanged); the boss run's last frame
+  does not. Two runs each in headless Chrome (one 2D demo run timed out and matched on a re-run), each pair matched, 2D state =
+  3D state. Main 46c7f40 still gives the old boss hashes (checked on a copy of it).
+
+### The readability branch alone (the fight camera, the hero mark, the light, 2026-10-10)
 
 | URL | state | buf | l3 | note |
 |---|---|---|---|---|
@@ -24,7 +43,7 @@ Why all four changed (playtest 5.1, 5.2, 5.5):
   differs (old 1ef98708, new e1c0225e), so the rain's RNG draws alone move the goons' later choices.
   A camera change will keep changing the state hashes until the rain has its own RNG.
 
-### main 9186e57 + the instant turn in an attack (2026-10-09)
+## Before the difficulty model (main 9186e57 + the instant turn in an attack, 2026-10-09)
 
 | URL | state | buf | l3 | note |
 |---|---|---|---|---|

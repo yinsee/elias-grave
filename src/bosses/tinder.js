@@ -9,9 +9,11 @@
 
 export const TINDER = {
   kind: 'tinder', name: 'Mattias "Tinder" Rook', title: 'Bomb-maker of the Tunnel Rats', look: 'tinder',
-  hp: [260, 320, 380, 440], s: 1.05, m: 2.5, speed: 30, reach: 21, dmg: 10, heavyDmg: 15, poise: 16, windup: 0.3, cd: [0.8, 1.5],
+  hp: [390, 480, 570, 660],   // (x1.5: he was over in 7-15 s; x2 with the 2-hit strings cost the bots the fight on Medium)
+  s: 1.05, m: 2.5, speed: 30, reach: 21, dmg: 10, heavyDmg: 15, poise: 16, windup: 0.3, cd: [0.8, 1.5],
   R: { w: 'flare', len: 7, off: -0.4, reach: 21 },
-  combos: [['slash'], ['slash', 'stab'], ['stab', 'slash'], ['slash', 'slash', 'chop']],
+  combos: [['slash', 'slash'], ['slash', 'stab'],   // (every torch string is at least a 2-hit chain)
+    ['stab', 'slash'], ['slash', 'slash', 'chop']],
   burn: { dps: 4, t: 2 },
   volley: { n: [1, 2, 2, 3], windup: 0.5, rec: 0.8, cd: [3.5, 6], range: [50, 170] },
   kick: { r: 34, v: 210, windup: 0.4, cd: [5, 8], rec: 1.5 },

@@ -9,23 +9,27 @@
 //   Phase 3 "Silence" (under 30 %): a sniper round splits her shield; she draws a revolver (a click and a glint, never a red dot: 3 shots,
 //     then a 1.4 s reload). The lantern falls into the centre. The blind volley: a row of dots across the floor; the gaps are safe.
 // The game calls vaneThink(M, e, ...) and vaneSpecial(M, e, dt, px) (M: the level run, src/levels/palmhouse/run.js).
+import { hpCurve, BOSS_HP } from '../core/difficulty.js';
 
 export const VANE = {
   kind: 'vane', name: 'Commissioner Augusta Vane', title: 'Commissioner of Police', look: 'vane',
-  hp: [760, 960, 1080, 1200], s: 1.15, m: 5, speed: 25, reach: 24, dmg: 14, heavyDmg: 22, poise: 40, windup: 0.4, cd: [0.8, 1.5],
+  hp: hpCurve(BOSS_HP.vane),   // (the game's boss HP curve)
+  s: 1.15, m: 5, speed: 25, reach: 24, dmg: 14, heavyDmg: 22, poise: 40, windup: 0.4, cd: [0.8, 1.5],
   R: { w: 'pipe', len: 8, off: -1.1, reach: 24 },
   combos: [['jab', 'jab', 'bash'], ['hchop'], ['bash', 'hchop'], ['jab', 'lowkick']],
   shieldHp: [240, 320, 380, 440], turn: [0.6, 0.45, 0.35, 0.25],
   charge: { windup: 0.6, floor: 0.4, v: 200, maxT: 1.0, dmg: 16, wallStun: 1.8, rec: 0.9, cd: [6, 10], range: [70, 230] },
   whistle: { windup: 0.8, floor: 0.5, every: [[18, 24], [14, 20]], stagger: 0.6 },
-  mark: { windup: 0.5, n: [[1, 1, 2, 2], [1, 2, 2, 3]], cd: [7, 11] },
+  mark: { windup: 0.5, n: [[1, 1, 2, 2], [1, 1, 2, 3]],   // (dots per "Mark!": Medium one in both phases)
+    cd: [7, 11] },
   arrest: { windup: 0.5, range: 26, hold: 1.2, slam: 10, dmg: 30, mash: [3, 5, 6, 8], stagger: 0.8, cd: [9, 13] },
   shock: { windup: 0.7, floor: 0.45, dmg: 16, stun: 0.8, rec: 1.0, cd: [8, 12] },
   revolver: { windup: 0.45, n: 3, gap: 0.3, dmg: 12, reload: 1.4, cd: [3, 5], range: [50, 240] },
   blind: { every: [10, 12], n: [3, 4, 5, 6], gap: 60, lock: 0.8 },
   ph2: { below: 0.65, line: 'Open fire! Bring the roof down on him!' },
   ph3: { below: 0.3, line: 'Hold fire! HOLD FIRE!', line2: "Fine. I'll do it myself.", speed: 30, windup: 0.32, cd: [0.5, 1.0] },
-  crew: { alive: [2, 3, 4, 5], total: [8, 12, 16, 20],
+  crew: { alive: [2, 2, 4, 5],   // (Medium 2; crewCap holds Hard to 3)
+    total: [8, 12, 16, 20],
     waves: [[['baton', 'baton'], ['shield', 'baton'], ['shield', 'shield', 'pistol'], ['shield', 'shield', 'pistol', 'pistol']],
             [['shield', 'baton'], ['shield', 'shield', 'pistol'], ['shield', 'shield', 'pistol', 'pistol'], ['shield', 'shield', 'shield', 'pistol', 'pistol']]] },
   lines: { whistle: 'Squad, on me!', mark: 'Mark!', arrest: 'Hands where I can see them. Mark him!', ko: 'Lights out, Sandman.', dying: 'The Board leaves tonight. You\'re too late.' },

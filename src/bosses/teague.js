@@ -16,7 +16,7 @@ export const TEAGUE = {
   R: { w: 'anchor', len: 14, off: -0.6, reach: 30 },
   combos: [['hchop'], ['chop', 'hchop'], ['slash', 'hchop']],
   swing: { windup: 0.7, dmg: 26 },
-  plate: { hp: 80, bodyK: 0.5, poiseBroken: 8 },
+  plate: { hp: 50, bodyK: [0.7, 0.7, 0.5, 0.5], poiseBroken: 8 },   // bodyK: a body hit from the front while the glass holds (Easy, Medium 0.7)
   anchor: { windup: 0.9, range: 260, v: 300, dmg: 20, cd: [5, 8], open: 1.0 },
   stomp: { windup: 0.5, r: 90, dmg: 14, cd: [4, 7], rec: 0.5, wetRec: 1.4 },
   dunk: { windup: 0.6, edge: 80, reach: 26, t: 2.0, dps: 6, mash: [4, 5, 6, 7], cd: [6, 9] },

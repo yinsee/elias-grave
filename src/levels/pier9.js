@@ -15,6 +15,7 @@
 
 import { C } from '../core/color.js';
 import { rng } from '../core/rng.js';
+import { hpCurve, BOSS_HP } from '../core/difficulty.js';
 
 const GROUND = 280, hy = h => GROUND - h;
 
@@ -57,6 +58,8 @@ export const SALT_LOOKS = {   // Saltmen outfits (src/sim/enemies/roster.js LOOK
 //   gaff: the gaff pull (range px, windup s, v = hook px/s, pull px/s, cd s, miss = recovery s after a miss, chop = follow-up dmg) -> dodge through it
 //   clip / reload: shots before a reload, the reload window (s); max = alive at once -> rush him while he reloads
 //   shield: blows from the front ring off (turn = s he needs to turn round) -> get behind him, sweep him, or throw something
+export const BANDS = [2250];   // a bandage on the market front, before the shutter and Marchetti (Pier 9 had none placed)
+export const ALIVE = [0, 0, 0, 5];   // at most this many Saltmen alive at once (0: no cap); Wicked's yard had 7-8 up at once
 export const SALTMEN = {
   deckhand: { role: 'brawler', look: 'oilskin', type: 'Deckhand', weapon: null, hpK: 1.1, props: { near: [40, 110], seek: 70, cd: 6, aim: 0.45 } },
   pipeman: { role: 'pipe', look: 'waders', type: 'Pipeman', weapon: 'pipe', heavy: 0.4 },
@@ -120,7 +123,8 @@ export const DROPS = {
 // (tells scale in the game by t / A^0.25; times in s, speeds in px/s; arrays are by difficulty E, M, H, W)
 export const MARCHETTI = {
   name: 'Sal "the Scale" Marchetti', title: 'Tenor of the Choir · Pier 9', look: 'marchetti',
-  hp: [800, 1050, 1250, 1450], s: 1.3, m: 7, speed: 24, reach: 25, dmg: 12, heavyDmg: 22, poise: 34, windup: 0.4, cd: [0.8, 1.5],
+  hp: hpCurve(BOSS_HP.marchetti),   // (the game's boss HP curve)
+  s: 1.3, m: 7, speed: 24, reach: 25, dmg: 12, heavyDmg: 22, poise: 34, windup: 0.4, cd: [0.8, 1.5],
   R: { w: 'cleaver', len: 9, off: -1.1, reach: 25 },
   combos: [['chop'], ['chop', 'chop'], ['jab', 'chop'], ['chop', 'hchop']],
   // the hook: mash = presses to break free of the pull
@@ -137,7 +141,8 @@ export const MARCHETTI = {
   // the hero; fill s; he goes back to the lever `back` s after the hero clears it
   fog: { dense: [0.6, 0.85, 0.9, 0.95], warm: 0.6, split: 2640, bubble: [90, 60, 50, 40], fill: 6, clear: 2, back: 4,
     barks: ['Cold, Grave?', 'I can hear you breathe.', 'Nobody sleeps in my freezer.'] },
-  tuna: { warn: 1.0, v: 210, dmg: [8, 14, 18, 24], every: [6, 9], bossDmg: 40 },
+  tuna: { warn: 1.0, v: 210, dmg: [14, 14, 14, 14],   // (flat: DIFFS[].dmg scales what a hit costs him)
+    every: [6, 9], bossDmg: 40 },
   // his crew: none in phase 1; phase 2 one per `every` s, at most DIFFS[].crew.alive at once and DIFFS[].crew.n in all (the street boss's
   // numbers); phase 3 none (Wicked: two filleters at its start)
   crew: { ph2: { every: 6 }, ph3Wicked: ['filleter', 'filleter'],

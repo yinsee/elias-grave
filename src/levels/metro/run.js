@@ -7,6 +7,7 @@ import * as D from './data.js';
 import * as A from './paint.js';
 import { TINDER, tinderThink, tinderSpecial } from '../../bosses/tinder.js';
 import { SWITCH, switchThink, switchSpecial } from '../../bosses/switch.js';
+import { crewCap } from '../../core/difficulty.js';
 
 const GROUND = D.GROUND;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -316,7 +317,7 @@ export function createMetro(G) {
     // the hero burning (a flare's hit, Tinder's torch, the slick): HP drains, no stagger
     if (S.heroBurn > 0) {
       S.heroBurn -= dt;
-      if (hero.mode === 'anim' && hero.hp > 0) { hero.hp -= (S.heroBurnDps || 4) * dt; if (hero.hp <= 0) { hero.hp = 0.01; G.hurtPlayer(1, ctl.x, ctl.y - 10, -ctl.face, true, 1, { kind: 'fire' }); } }
+      if (hero.mode === 'anim' && hero.hp > 0) { hero.hp -= G.heroDmg(S.heroBurnDps || 4) * dt; if (hero.hp <= 0) { hero.hp = 0.01; G.hurtPlayer(1, ctl.x, ctl.y - 10, -ctl.face, true, 1, { kind: 'fire' }); } }
       if (S.heroBurn <= 0) S.heroBurnDps = 0;
     }
   }
@@ -624,10 +625,12 @@ export function createMetro(G) {
     Object.assign(e, { hookD: SWITCH.hook, hookCd: 4, spkCd: 3, levCd: 0, ramCd: 3, slideCd: 2, dropCd: 4, levPull: -1, intro: true, introX: e.x, alert: true });
     enc.boss = e; enc.introT = 0; G.bossBarK = 0;
     if (G.ckBoss) { G.ckBoss = false; G.bossDlg.on = G.bossDlg.done = true; }
-    G.setCkpt('boss');
+    const pc = G.atPhaseCk(3);
+    G.setCkpt('boss', pc ? 3 : 0);
     G.emit('boss:intro', { boss: e, name: e.name });
     G.dom.toast.hidden = true;
     S.crewT = 6; S.crewN = 0; S.rail.t = 0;
+    if (pc) { e.ph = 2; e.hp = Math.ceil(e.maxHp * SWITCH.ph3.below) - 1; M.switchPhase(e, 2); }   // a retry from her phase-3 checkpoint: the 23:10 again at once
     sfx('train_horn', 2900, 0.5, 0.8);   // a far horn
   }
   M.canLever = () => !S.trains.length && !S.handcarRide && !(S.countdown);
@@ -687,6 +690,7 @@ export function createMetro(G) {
   M.switchPhase = (e, ph) => {
     if (ph === 2) { S.handcar = { x: D.PORTALS[0] - 20, dir: 1, v: SWITCH.ram.v[dif()], hits: 0, broken: false, pump: 0, lamp: true, surf: null }; S.crewT = 2; }
     if (ph === 3) {
+      G.phaseCk(3);
       S.jam = true; S.countdown = { t: SWITCH.countdown[dif()], max: SWITCH.countdown[dif()], horns: new Set(), next: 'F2310' }; endRide(e, false);
       for (const g of G.enemies) if (!g.dead && g.zone === 'arena') g.flee = g.x < 2620 ? D.PORTALS[0] : D.PORTALS[1];
       const r = G.enemies.find(g => g.flee); if (r) G.bark(r, 'Not on the 23:10!');
@@ -773,7 +777,8 @@ export function createMetro(G) {
     }
     if (!B || B.dead || enc.introT >= 0 || B.ph >= 3 || !S.junction) return;
     const C = SWITCH.crew, d = dif(), alive = G.enemies.filter(g => !g.dead && g.zone === 'arena').length;
-    if ((S.crewT -= dt) > 0 || alive >= C.alive[d] || S.crewN >= C.max[d] || S.lockSpawn > 0 || S.trains.some(t => t.t > -3)) return;
+    const cap = crewCap(d, C.alive[d], C.max[d]);   // (the game's crew rule)
+    if ((S.crewT -= dt) > 0 || alive >= cap.alive || S.crewN >= cap.n || S.lockSpawn > 0 || S.trains.some(t => t.t > -3)) return;
     S.crewT = C.every[d]; S.crewN++;
     const roles = C.roles.filter(r => r !== 'firebug' || (d >= 3 && B.ph >= 2)), v = roles[S.crewN % roles.length];
     const x = D.CREW_DOORS[S.crewN % 2], g = spawnRat(v, x, 'arena', { noLurk: true });

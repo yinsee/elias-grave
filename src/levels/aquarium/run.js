@@ -7,6 +7,7 @@ import * as D from './data.js';
 import * as A from './paint.js';
 import { TEAGUE, teagueThink, teagueSpecial } from '../../bosses/teague.js';
 import { KALT, kaltThink, kaltSpecial } from '../../bosses/kalt.js';
+import { crewCap } from '../../core/difficulty.js';
 
 const GROUND = D.GROUND;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -49,7 +50,7 @@ export function createAquarium(G) {
       teague: null, teagueDone: false, plate: { hp: TEAGUE.plate.hp, broken: false, spill: 0 }, crewT: 0, crewN: 0,
       sharks: [{ x: 2780, y: 140, dir: -1, v: 34, k: 1.1, mode: 'circle', t: 0 }, { x: 2470, y: 172, dir: 1, v: 26, k: 0.8, mode: 'circle', t: 3 }], ramT: 0, frenzy: [], blood: 0,
       cats: D.CATWALKS.filter(c => c.chains).map(c => ({ ...c, st: 'up', t: 0, k: 0, side: 1, s: null, removed: false })), fallen: false,
-      end: null, introDone: false, club: false, kalt: null, kaltCk: false, pinHit: null, decoy: null, lockSpawn: 0, l1Line: false,
+      end: null, introDone: false, club: false, kalt: null, kaltCk: false, kaltCk3: false, pinHit: null, decoy: null, lockSpawn: 0, l1Line: false,
       teagueOut: false, sharkPass: false, jlOpen: false, kHarp: false, kCat: null, kTrail: null, readT: 0, pinSpray: null, pinDps: 0, herBite: 0, clingHit: false, blood: 0, doorT: 0,
     });
     for (const c of S.cats) c.s = surfOf(c);
@@ -600,7 +601,7 @@ export function createAquarium(G) {
     if (d >= 40 && !S.climb) {
       S.breath += dt; S.breathShow = { x: G.P[0].x + ctl.face * 2, y: G.P[0].y };
       if (!S.said.has('breath')) say('breath', 'Under water', 'Your breath runs out: get up high', true);
-      if (S.breath > D.BREATH.t[dif()] && hero.hp > 0) { hero.hp -= D.BREATH.dps * dt; if (hero.hp <= 0) { hero.hp = 0.01; G.hurtPlayer(1, ctl.x, ctl.y - 10, -ctl.face, true, 1, { kind: 'drown' }); } }
+      if (S.breath > D.BREATH.t[dif()] && hero.hp > 0) { hero.hp -= G.heroDmg(D.BREATH.dps) * dt; if (hero.hp <= 0) { hero.hp = 0.01; G.hurtPlayer(1, ctl.x, ctl.y - 10, -ctl.face, true, 1, { kind: 'drown' }); } }
       if (G.simRand() < dt * 1.5) sfx('bubbles_rise', ctl.x, 0.4);
     } else { if (S.breath > 4) sfx('breath_gasp', ctl.x, 0.7); S.breath = d >= 40 ? S.breath : Math.max(0, S.breath - dt * 4); if (d < 40 && S.breath > 4) S.breath = 4; }
   }
@@ -667,7 +668,7 @@ export function createAquarium(G) {
     G.enc.arena = { x0: D.TEAGUE_ARENA.x0, x1: D.TEAGUE_ARENA.x1 };
     const e = G.spawnEnemy('boss', (D.CHANNEL.x0 + D.CHANNEL.x1) / 2, 'teague', { boss: TEAGUE });
     Object.assign(e, { alert: true, face: Math.sign(ctl.x - e.x) || -1, mini: true, ancCd: 2.5, stompCd: 3, dunkCd: 4, rise: 1.0 });
-    S.teague = e; S.plate = { hp: TEAGUE.plate.hp, broken: false, spill: 0 }; S.crewT = 4;
+    S.teague = e; S.plate = { hp: TEAGUE.plate.hp, broken: false, spill: 0 }; S.crewT = 4; S.crewN = 0;
     for (let k = 0; k < 14; k++) G.particles.push({ x: e.x + (G.simRand() - 0.5) * 20, y: GROUND - 1, vx: (G.simRand() - 0.5) * 80, vy: -80 - G.simRand() * 80, life: 0.6, c: 0xffc8e8f4 });
     sfx('water_splash_body', e.x, 1); sfx('helmet_clang', e.x, 0.8);
     G.setMusic('boss_marchetti', 0.7);
@@ -702,7 +703,7 @@ export function createAquarium(G) {
     const d = S.dunk; if (!d || hero.mode !== 'anim' || e.hurtT > 0.3) { S.dunk = null; return false; }
     d.t += dt; ctl.spd = 0; ctl.x += (e.x + e.face * 15 - ctl.x) * Math.min(1, dt * 12); ctl.face = -e.face;
     if (hero.atkId !== d.atk) { d.atk = hero.atkId; d.n++; }
-    hero.hp = Math.max(1, hero.hp - TEAGUE.dunk.dps * dt); S.breathShow = { x: G.P[0].x, y: G.P[0].y };
+    hero.hp = Math.max(1, hero.hp - G.heroDmg(TEAGUE.dunk.dps) * dt); S.breathShow = { x: G.P[0].x, y: G.P[0].y };
     if (G.simRand() < dt * 6) G.particles.push({ x: ctl.x + (G.simRand() - 0.5) * 8, y: GROUND - 2, vx: (G.simRand() - 0.5) * 30, vy: -40, life: 0.3, c: 0xffd8eef8 });
     if (d.n >= TEAGUE.dunk.mash[dif()]) { S.dunk = null; e.stunT = e.recT = 0.8; G.emit('feat', 'dunkfree'); return false; }
     if (d.t >= TEAGUE.dunk.t) { S.dunk = null; G.hurtPlayer(4, ctl.x, ctl.y - 20, e.face, true, 1.5, { e, kind: 'grab' }); return false; }
@@ -715,8 +716,8 @@ export function createAquarium(G) {
     if (!T.dead && T.y < GROUND - 4 && !T.air) T.y = GROUND - 2;
     // his crew: divers out of the channel every 8 s (none on Easy)
     if (!T.dead && T.rise <= 0) {
-      const cap = TEAGUE.crew.alive[dif()], alive = G.enemies.filter(g => !g.dead && g.zone === 'teagueCrew').length;
-      if ((S.crewT -= dt) <= 0 && alive < cap) { S.crewT = TEAGUE.crew.every; const g = spawnU('diver', D.CHANNEL.x0 + 10 + G.simRand() * (D.CHANNEL.x1 - D.CHANNEL.x0 - 20), 'teagueCrew'); g.wRise = 0.8; g.wRiseX = g.x; sfx('water_splash', g.x, 0.7); }
+      const cap = crewCap(dif(), TEAGUE.crew.alive[dif()]), alive = G.enemies.filter(g => !g.dead && g.zone === 'teagueCrew').length;   // (the game's crew rule: a total cap too)
+      if ((S.crewT -= dt) <= 0 && alive < cap.alive && S.crewN < cap.n) { S.crewT = TEAGUE.crew.every; S.crewN++; const g = spawnU('diver', D.CHANNEL.x0 + 10 + G.simRand() * (D.CHANNEL.x1 - D.CHANNEL.x0 - 20), 'teagueCrew'); g.wRise = 0.8; g.wRiseX = g.x; sfx('water_splash', g.x, 0.7); }
     }
     if (T.dead && !S.teagueDone) {
       S.teagueDone = true; G.enc.arena = null; S.anchor = null; S.dunk = null;
@@ -743,7 +744,7 @@ export function createAquarium(G) {
       } else if (!S.said.has('plate')) say('plate', 'The faceplate', 'Head blows, shots and throws crack the glass; low blows always land', true);
       return null;
     }
-    return Math.max(1, Math.round(dmg * TEAGUE.plate.bodyK));
+    return Math.max(1, Math.round(dmg * TEAGUE.plate.bodyK[dif()]));
   };
 
   // ---------------- the shark tunnel (Kalt's arena) ----------------
@@ -755,9 +756,10 @@ export function createAquarium(G) {
     Object.assign(e, { intro: true, introX: 2690, alert: true, hpCd: 1.5, lungeCd: 3, bigT: 6, zipCd: 4, chumCd: 6, backT: 0, reloadT: 0, Rg: e.R, Rk: { ...e.R, ...KALT.knife } });
     enc.boss = e; enc.introT = 0; G.bossBarK = 0; S.kalt = e;
     if (G.ckBoss) { G.ckBoss = false; G.bossDlg.on = G.bossDlg.done = true; e.x = e.introX; }
-    G.setCkpt('boss', S.kaltCk ? 2 : 0);
-    // (a retry after the flood-out: she starts just under the phase-2 line, so the flood-out runs again at once; not phase 1 at full HP)
-    if (S.kaltCk) e.hp = Math.ceil(e.maxHp * KALT.ph2.below) - 1;
+    G.setCkpt('boss', S.kaltCk3 ? 3 : S.kaltCk ? 2 : 0);
+    // (a retry after the flood-out: she starts just under the phase-2 line, so the flood-out runs again at once; not phase 1 at full HP.
+    // From her phase-3 checkpoint: just under the phase-3 line, so phase 3 follows the flood-out at once)
+    if (S.kaltCk) e.hp = Math.ceil(e.maxHp * (S.kaltCk3 ? KALT.ph3.below : KALT.ph2.below)) - 1;
     G.emit('boss:intro', { boss: e, name: e.name });
     G.dom.toast.hidden = true;
     S.crewT = 6; S.crewN = 0;
@@ -797,7 +799,7 @@ export function createAquarium(G) {
     const hx = hole ? (hole.x0 + hole.x1) / 2 : clamp(e.x, 2486, 2758);
     const order = Object.values(S.panes).filter(p => p.kind === 'roof' && !p.burst).sort((a, b) => Math.abs((a.x0 + a.x1) / 2 - hx) - Math.abs((b.x0 + b.x1) / 2 - hx));
     S.fo = { t: 0, hx, order, next: hole ? 0.6 : 0.2 };
-    if (!G.flags.demo) G.setCkpt('boss', 2);   // the flood-out is a checkpoint: a death in phase 2 or 3 retries from here (i = 2)
+    if (!G.flags.demo && !S.kaltCk3) G.setCkpt('boss', 2);   // the flood-out is a checkpoint: a death in phase 2 or 3 retries from here (i = 2)
     const cwB = S.cats.find(c => c.id === 'cwB');
     e.sp = 'escape'; e.spT = 0; e.inv = true; e.act = null; e.combo = null; e.esc = { x0: e.x, y0: e.y, hx, tx: (cwB.x0 + cwB.x1) / 2, ty: cwB.y - 2 };
     sfx('reel_whine', e.x, 1); S.alarm = true; sfx('alarm_bell', e.x, 0.8);
@@ -824,6 +826,7 @@ export function createAquarium(G) {
     if (!S.p2 && hero.mode === 'anim' && ctl.y < D.TUN.roofY - 20 && !S.climb) { S.p2 = true; G.toast('Over the tank', 'Kalt is on the catwalks. The sharks are in the water.', true); G.setMusic('boss_marchetti', 1); }
   }
   M.phase3 = e => {
+    G.phaseCk(3);
     for (const g of G.enemies) if (!g.dead && g.zone === 'arena') g.fleeTo = g.x < 2620 ? 2440 : 2790;   // the crew dives off and is gone
     G.emit('feat', 'phase3');
   };
@@ -944,14 +947,14 @@ export function createAquarium(G) {
   M.canDive = e => e.ph >= 2 && S.p2 && !!M.catOf(e.x, e.y) && !!S.tankS;
   M.diveStart = e => {
     e.sp = 'dive'; e.spT = 0; e.dv = { st: 'drop', t: 0 }; e.act = null; e.combo = null;
-    G.bossTell(e, 'dive', KALT.dive.tell); sfx('water_splash_body', e.x, 0.9);
-    if (e.ph >= 3 && KALT.dive.decoy[dif()]) S.decoy = { x0: e.x < ctl.x ? 2790 : 2450, x: e.x < ctl.x ? 2790 : 2450, t: KALT.dive.tell + 0.3 };
+    G.bossTell(e, 'dive', KALT.dive.tell[dif()]); sfx('water_splash_body', e.x, 0.9);
+    if (e.ph >= 3 && KALT.dive.decoy[dif()]) S.decoy = { x0: e.x < ctl.x ? 2790 : 2450, x: e.x < ctl.x ? 2790 : 2450, t: KALT.dive.tell[dif()] + 0.3 };
   };
   M.diveStep = (e, dt) => {
     const v = e.dv; v.t += dt; e.vx = 0; e.vy = 0; e.air = false;
     if (v.st === 'drop') { e.y = Math.min(D.TANK_FLOOR - 2, e.y + 220 * dt); e.inv = true; if (e.y >= D.TANK_FLOOR - 2) { v.st = 'trail'; v.t = 0; e.hidden = true; e.inWater = true; v.x0 = e.x; } return true; }
     if (v.st === 'trail') {
-      const T = KALT.dive.tell, rem = Math.max(0.05, T - v.t);
+      const T = KALT.dive.tell[dif()], rem = Math.max(0.05, T - v.t);
       e.x += clamp((ctl.x - e.x) / rem, -260, 260) * dt; e.face = Math.sign(ctl.x - e.x) || e.face;
       S.kTrail = { x0: v.x0, x: e.x, y: D.TUN.tankY, kalt: true };
       if (v.t >= T) {
@@ -1007,12 +1010,12 @@ export function createAquarium(G) {
     if (!B || B.dead || enc.introT >= 0 || B.ph >= 3 || !S.club || B.kind !== 'kalt') return;
     const C = KALT.crew, d = dif(), alive = G.enemies.filter(g => !g.dead && g.zone === 'arena' && g.fleeTo == null).length;
     if (B.ph === 1) {
-      if ((S.crewT -= dt) > 0 || alive >= C.alive1[d] || S.crewN >= C.max || (B.act === 'shoot' && B.shotMode === 'pin')) return;
+      if ((S.crewT -= dt) > 0 || alive >= crewCap(d, C.alive1[d]).alive || S.crewN >= crewCap(d, 9, C.max).n || (B.act === 'shoot' && B.shotMode === 'pin')) return;
       S.crewT = C.every; S.crewN++;
       const g = spawnU(S.crewN % 3 === 2 ? 'hookman' : 'smuggler', D.ENTRY + 6, 'arena'); g.cdT = Math.max(g.cdT, 0.8); S.doorFx.push({ x: D.ENTRY, t: 0.5 });
       if (G.simRand() < 0.4) G.bark(g, pickN(D.BARKS.any));
     } else if (S.p2 && !S.fo?.order.length) {
-      if ((S.crewT -= dt) > 0 || alive >= C.alive2[d] || S.crewN >= C.max + 4 || inTank()) return;
+      if ((S.crewT -= dt) > 0 || alive >= crewCap(d, C.alive2[d]).alive || S.crewN >= crewCap(d, 9, C.max + 4).n || inTank()) return;   // (the game's crew rule: both phases share the total)
       S.crewT = C.every2; S.crewN++;
       if (d >= 2 && !S.kHarp) { S.kHarp = true; const s = surfOf(D.CATWALKS[0]); if (s && ctl.surf !== s) { const g = spawnU('harpoon', D.CATWALKS[0].x0 + 20, 'arena', { y: s.y - 2 }); g.perchS = s; return; } }
       const lx = pickN(D.TANK_LADDERS), g = spawnU('diver', lx, 'arena', { y: D.TANK_FLOOR - 2 }); g.cdT = Math.max(g.cdT, 1); sfx('water_splash', lx, 0.7);
@@ -1040,7 +1043,7 @@ export function createAquarium(G) {
     const T = S.tun;
     if (T.y !== T.to) { const v = Math.abs(T.v || 8); T.y = T.y > T.to ? Math.max(T.to, T.y - v * dt) : Math.min(T.to, T.y + v * dt); }
     if (S.pinSpray && (S.pinSpray.t -= dt) > 0 && hero.mode === 'anim' && ctl.x >= S.pinSpray.x0 && ctl.x <= S.pinSpray.x1 && ctl.y > D.TUN.roofB && (S.pinDps = (S.pinDps || 0) - dt) <= 0) {
-      S.pinDps = 0.5; hero.hp = Math.max(1, hero.hp - KALT.pin.dps * 0.5); G.emit('hurt', { dmg: 2, x: ctl.x, y: ctl.y - 30, dir: 1, heavy: false, outcome: 'stagger' });
+      S.pinDps = 0.5; hero.hp = Math.max(1, hero.hp - G.heroDmg(KALT.pin.dps) * 0.5); G.emit('hurt', { dmg: 2, x: ctl.x, y: ctl.y - 30, dir: 1, heavy: false, outcome: 'stagger' });
     }
     if (S.pinSpray && S.pinSpray.t <= 0) S.pinSpray = null;
     for (let i = S.chum.length - 1; i >= 0; i--) if ((S.chum[i].t -= dt) <= 0) S.chum.splice(i, 1);
@@ -1240,7 +1243,7 @@ export function createAquarium(G) {
   M.skipToTeague = () => { G.reset(); clearTo(1950); S.w.d0.out = S.w.d1.out = S.w.d2.out = true; G.heroTo(2000); };
   M.skipTo = x => { G.reset(); clearTo(x); G.heroTo(x); if (x >= 1478 && x < 1884) { S.pump = { on: false, y: GROUND, st: -1, t: 0, hold: 0 }; S.jbox.st = 'off'; S.open.pumpIn = true; S.w.p1.out = S.w.p2.out = false; } };
   M.retry = C => {   // a checkpoint retry: the beats before it stay done
-    if (C.kind === 'boss') { clearTo(2420); S.kaltCk = C.i === 2; return null; }
+    if (C.kind === 'boss') { clearTo(2420); S.kaltCk = C.i >= 2; S.kaltCk3 = C.i === 3; return null; }
     const x = C.kind === 'wave' ? ({ r1: 480, j1: 1070, d1: 1900 }[D.WAVES[C.i].id] ?? 40) : C.i;
     clearTo(x);
     if (C.kind === 'wave' && D.WAVES[C.i].id === 'j1') { S.open.jellyL = true; S.w.j1.out = S.w.j2.out = false; }

@@ -6,6 +6,7 @@
 //   the vestry: the old Choir katana, the 3:17 clock, the soup and the pipe, Elena's scarf, the hatch
 import { LYS, KESSEL } from '../../bosses/understudies.js';
 import { C } from '../../core/color.js';
+import { crewCap } from '../../core/difficulty.js';
 
 export function installSet(X) {
   const { G, M, S, H, D } = X, ctl = G.ctl, hero = G.hero, GROUND = D.GROUND;
@@ -102,7 +103,7 @@ export function installSet(X) {
     const L = S.lys; if (!L || !S.lysOn) return;
     if (!L.dead && !L.hold) {
       if ((S.decoyT += dt) >= LYS.decoys.every) { S.decoyT = 0; spawnDecoys(); }
-      if (dif() >= 2 && (S.lysCrewT -= dt) <= 0) { S.lysCrewT = 12; if (G.enemies.filter(e => !e.dead && e.zone === 'lysCrew').length < 2) { const e = H.spawnChoir('stiletto', 380, 'lysCrew'); e.cdT = 1; } }
+      if (dif() >= 2 && (S.lysCrewT -= dt) <= 0) { S.lysCrewT = 12; if (G.enemies.filter(e => !e.dead && e.zone === 'lysCrew').length < 2 && (S.lysCrewN = (S.lysCrewN || 0) + 1) <= crewCap(dif()).n) { const e = H.spawnChoir('stiletto', 380, 'lysCrew'); e.cdT = 1; } }
     }
     if (L.dead && !S.lysDone) {
       S.lysDone = true; G.enc.arena = null; G.slowMo(1.0, 'boss');
@@ -249,7 +250,8 @@ export function installSet(X) {
   }
   function kesselStep(dt) {
     const K = S.kessel; if (!K || !S.kesselOn) return;
-    if (!K.dead && !K.hold && dif() >= 2 && (S.kCrewT -= dt) <= 0) { S.kCrewT = KESSEL.crew.every; if (G.enemies.filter(e => !e.dead && e.zone === 'kesselCrew').length < KESSEL.crew.max) { const e = H.spawnChoir('cane', 1196, 'kesselCrew'); e.cdT = 1; } }
+    if (!K.dead && !K.hold && dif() >= 2 && (S.kCrewT -= dt) <= 0) { S.kCrewT = KESSEL.crew.every; if (G.enemies.filter(e => !e.dead && e.zone === 'kesselCrew').length < KESSEL.crew.max && (S.kCrewN = (S.kCrewN || 0) + 1) <= crewCap(dif()).n) {   // (the game's crew rule: a total cap)
+      const e = H.spawnChoir('cane', 1196, 'kesselCrew'); e.cdT = 1; } }
     if (K.dead && !S.kesselDone) {
       S.kesselDone = true; G.enc.arena = null; G.slowMo(1.0, 'boss');
       G.toast('Bruno Kessel', `"${KESSEL.lines.defeat}"`, false);
@@ -326,7 +328,7 @@ export function installSet(X) {
   function diveDone() { S.dive = null; S.prompt = null; G.toast('The rail', 'Up the stair: the gunners are above you', true); G.emit('feat', 'raildive'); }
   X.onFall = F => {   // a set piece's own fail branch for a fall
     if (S.dive || (S.pentIn && H.grpAt(ctl.x) === 3 && !S.p2done && S.p2Started)) {
-      if (D.MG_SWEEP.second[dif()] && !S.secondUsed) { S.secondUsed = true; S.dive = null; S.prompt = null; G.heroTo(1662); hero.hp = Math.max(1, hero.hp - 20); G.toast('He catches a mullion', 'A second chance. −20', true); return true; }
+      if (D.MG_SWEEP.second[dif()] && !S.secondUsed) { S.secondUsed = true; S.dive = null; S.prompt = null; G.heroTo(1662); hero.hp = Math.max(1, hero.hp - D.VOID_FALL.dmg[dif()]); G.toast('He catches a mullion', `A second chance. −${D.VOID_FALL.dmg[dif()]}`, true); return true; }
       return false;
     }
     if (S.snap || S.lift.st === 'snap') { S.snap = null; S.prompt = null; if (D.LIFT.snapFail[dif()] >= 0) { hero.hp = Math.max(1, hero.hp - D.LIFT.snapFail[dif()]); G.placeHero(795, S.cradleS); snapDone(false); return true; } return false; }

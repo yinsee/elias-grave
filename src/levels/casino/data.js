@@ -211,7 +211,7 @@ export const TABLE = { hp: 60, h: 14, w: 9 };
 export const PILLAR = { hp: 60, h: 80, w: 6, stagger: 0.8, shardDmg: 4 };
 export const MIRROR_HP = 40;
 // the gas range: burning (dps to the hero by difficulty, to goons), the oil barrel's flare
-export const FIRE = { heroDps: [5, 6, 7, 8], goonDps: 16, flare: { t: 1.5, r: 40, dmg: 20 } };
+export const FIRE = { heroDps: [6, 6, 6, 6], goonDps: 16, flare: { t: 1.5, r: 40, dmg: 20 } };
 // the craps dive: a jump or a roll off the table with a gun: slow motion for `t` s real time (or until he lands); auto-aim cone (rad)
 export const DIVE = { slow: 1.8, cone: 0.44, recharge: 8, chips: 40, cards: 20 };
 // the Cooler (beat 7) and Count Brask (section 5): see src/bosses/cooler.js and src/bosses/brask.js

@@ -5,6 +5,7 @@
 //   lobby 0-520 · glass lift 540-820 · sky garden 840-1340 · penthouse 1360-1700 · vestry 1720-1840
 //   gear room 1860-2140 (boss P1) · pendulum hall 2160-2420 (boss P2) · the face 2436-2800 (boss P3, the club)
 // All arrays "by difficulty" are [Easy, Medium, Hard, Wicked].
+import { FALL as GAME_FALL } from '../../core/difficulty.js';
 
 export const GROUND = 280;
 const hy = h => GROUND - h;
@@ -224,9 +225,9 @@ export const DROPS = {
 };
 
 // ---- set pieces ----
-export const LIFT = { holdTxt: 'The Choir holds the car', roofWind: [40, 50, 60, 70], snapSlow: 2.5, snapFail: [25, 25, 40, -1] };
+export const LIFT = { holdTxt: 'The Choir holds the car', roofWind: [40, 50, 60, 70], snapSlow: 2.5, snapFail: [GAME_FALL.ledge, GAME_FALL.ledge, GAME_FALL.hard, -1] };   // (the fall rule: -30 Easy and Medium, -40 Hard, Wicked lethal)
 export const WIND = { garden: [50, 60, 70, 80], face: [60, 70, 80, 95], every: [6, 9], faceEvery: [5, 8], warn: 1.0, t: 2.0 };
 export const MG_SWEEP = { t: 2.0, slow: 2.2, grab: [40, 32, 24, 18], second: [true, true, false, false] };
-export const VOID_FALL = { assist: [true, true, false, false], dmg: [15, 20, 0, 0] };   // no assist (Hard, Wicked): the game's fall rule (G.fallOut)
+export const VOID_FALL = { assist: [true, true, false, false], dmg: [GAME_FALL.ledge, GAME_FALL.ledge, 0, 0] };   // no assist (Hard, Wicked): the game's fall rule (G.fallOut)
 // lightning: the flash (s) and its afterglow; thunder comes 0.3-2 s after
 export const LIGHTNING = { flash: 0.15, glow: 0.6, thunder: [0.3, 2] };

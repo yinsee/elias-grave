@@ -5,7 +5,7 @@ import { WEAPONS } from './sim/weapons/defs.js';
 import { LOOT, STREET_DROPS } from './sim/weapons/drops.js';
 import { KINDS, LIFTABLE, TOSS, FLOOR_BREAK, PUSH_BREAK, KICKS } from './sim/objects/kinds.js';
 import { EPAL, BUILD, LOOK, ROLE, ZROLES, AROLES, AMIX, ETYPE, STOCKY_POISE } from './sim/enemies/roster.js';
-import { DIFFS } from './core/difficulty.js';
+import { DIFFS, FALL, hpCurve, BOSS_HP } from './core/difficulty.js';
 import { PAL } from './assets/palettes/base.js';
 import { mod, IDLE, GUARD, SQUAT, RISE, SITUP, PUSHUP, KNEEL, GU_T, fitPose, getupPose, K, AIR, teeterPose } from './sim/hero/poses.js';
 import { CLIMB, MOVES, keyAt, TRN, DASH, STOP, DEF, FINS, JUG, FLY, GRAB, OTG, DIVE, FOCUS, FIN, SLAM } from './sim/hero/moves.js';
@@ -1783,7 +1783,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
   const pickN = a => a[Math.floor(simRand() * a.length)];
   const BOSS_NAME = 'Don Lucien Malaspina';   // 20 characters, the same every time
   // Malaspina's numbers (Medium base; hp by difficulty E/M/H/W). dmg: by move. Tells scale with bTell (t / A^0.25). fur: coat, its shade, the collar
-  const MAL = { hp: [640, 800, 1000, 1220], s: 1.4, reach: 27, speed: 27, speed2: 33, windup: 0.34, windup2: 0.28, cd: [0.7, 1.4], cd2: [0.6, 1.2], ph2: 0.5,
+  const MAL = { hp: hpCurve(BOSS_HP.malaspina),   // (the game's boss HP curve)
+    s: 1.4, reach: 27, speed: 27, speed2: 33, windup: 0.34, windup2: 0.28, cd: [0.7, 1.4], cd2: [0.6, 1.2], ph2: 0.5,
     R: { w: 'cane', len: 13, off: -0.35, reach: 27 }, fur: ['#4a3a32', '#36291f', '#8a7462'],
     dmg: { jab: 9, lunge: 12, over: 22, butt: 16, shove: 5, sweep: 18 }, still: 0.45, read: 0.3, grab: 0.5, butt: 0.45, sweep: 0.5, shove: 0.2, over: 0.5,
     crew: { delay: 15, every: [9, 6], alive1: 1 } };   // his crew: phase 1, alive1 at a time after delay s; phase 2: DIF().crew (in all, at once)
@@ -2028,7 +2029,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (src && src.low) lowHint();
     hstr.n = 0; hstr.t = -9;   // hit: his string is broken
     if (ctl.grab) grabFree(30);   // hit in the clinch: he lets go
-    hero.hp = Math.max(0, hero.hp - dmg); hero.invT = 0.45;
+    hero.hp = Math.max(0, hero.hp - dmg * DIF().dmg); hero.invT = 0.45;   // (the difficulty scales what it costs him, not how hard it moves him)
     if (LVH.hurt) LVH.hurt(dmg, src);
     const vx = ctl.air ? ctl.face * ctl.spd : ctl.face * ctl.spd, into = Math.max(0, -dirx * vx);
     const braced = hero.act === 'squat' || hero.act === 'guard' ? 0.7 : 1;
@@ -2847,7 +2848,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (e.ph >= 2 && simRand() < dt * 5) particles.push({ x: e.J[0].x + (simRand() - 0.5) * 6, y: e.J[0].y - 7, vx: (simRand() - 0.5) * 12, vy: -55, life: 0.3, c: EFX.steam });
     if (!aggro || e.sp || e.act || e.hurtT > 0 || e.air || e.exposed > 0) return;
     if (e.ph === 1 && e.hp < e.maxHp * MAL.ph2) {   // phase 2: the roar, the coat comes off, his crew comes in
-      bossPhase(e, 2, 'Enough. The coat comes off.');
+      bossPhase(e, 2, 'Enough. The coat comes off.'); phaseCk(2);
       e.coat = false; e.speed = MAL.speed2; e.windup = MAL.windup2; e.cd = MAL.cd2.slice(); e.bigCd = 1.8;
       enc.coat = { x: e.J[1].x, y: e.J[1].y, vx: -e.face * 70, vy: -130, a: 0, av: -e.face * 8, rest: false };
       enc.crewBurst = DIF().crew.alive; enc.spawnT = Math.min(enc.spawnT, 1);
@@ -2904,7 +2905,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (!e.hidden && simRand() < dt * (e.ph >= 2 ? 5 : 1.5)) particles.push({ x: e.J[0].x + e.face * 5, y: e.J[0].y + 1, vx: e.face * 14, vy: -18, life: 0.45, c: EFX.steam });   // breath in the cold
     if (!aggro || e.sp || e.act || e.hurtT > 0 || e.air || e.exposed > 0) return;
     if (e.ph === 1 && e.hp < e.maxHp * M.ph2.below) { bossPhase(e, 2, M.ph2.line); Object.assign(e, { speed: M.ph2.speed, cd: M.ph2.cd.slice(), windup: M.ph2.windup, levTo: 'speed', tunaCd: 2.5, iceCd: 6 }); return; }
-    if (e.ph === 2 && e.hp < e.maxHp * M.ph3.below) { bossPhase(e, 3, M.ph3.line); Object.assign(e, { speed: M.ph3.speed, cd: M.ph3.cd.slice(), levTo: 'freezer' }); return; }
+    if (e.ph === 2 && e.hp < e.maxHp * M.ph3.below) { bossPhase(e, 3, M.ph3.line); Object.assign(e, { speed: M.ph3.speed, cd: M.ph3.cd.slice(), levTo: 'freezer' }); phaseCk(3); return; }
     if (e.levTo) { startLever(e, e.levTo); e.levTo = null; return; }   // after the roar: the walk to the lever, his back to the hero
     if (e.ph >= 3 && !F.on && F.offT > M.fog.back) { startLever(e, 'freezer'); return; }   // the hero cleared the fog: he goes back to pull it again
     const fog = e.ph >= 3 && F.on && F.k > 0.5, free = level && hero.mode === 'anim' && !ctl.air;
@@ -4904,6 +4905,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     });
   }
   function reset() {
+    retryC = null;
     if (!flags.attract) gameAudio.playMusic('docks_explore', { volume: isP9() ? 0.6 : isMetro() ? 0.4 : 0.45 });   // a game: the calm street track, low (the title screen plays the title theme)
     if (openT >= 0) endOpening();
     endPh = null; endT = 0; endCam = null; dog = null; ctl.bottle = false; jumpEnd = false;
@@ -4924,6 +4926,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     lockT = 0; ctl.niche = false; bossDlg.on = bossDlg.done = false;
     if (isP9()) p9Reset();
     if (LVH.reset) LVH.reset();
+    for (const x of isP9() ? P9.BANDS : LV.id === 'street' ? STREET_BANDS : []) ammoBoxes.push({ band: true, x, y: GROUND - 3, vx: 0, vy: 0, life: 1e9 });   // a bandage before the boss (Hard and Wicked have no regen)
     setCkpt('start', 0, true); ckBoss = false; slowT = 0; hstr.n = 0; hstr.t = -9; ctl.stepV = 0;
     styleM.reset(); director.reset();
     endFocus(); foc.m = 0; accW = 0; ctl.grab = null; ctl.fin = null; ctl.dive = null; ctl.diveH = 0; ctl.aimDnT = 0; finE = null; finCam.t = 0;
@@ -4932,6 +4935,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // ---------- tutorial: zones, lessons, weapon pickups ----------
   // the tutorial: every mechanic of the game, stage by stage, left to right.
   // A task's text is 'Verb: how to do it'; [Q] in the text shows as a key cap (the objective panel shows the verb big, the how under it)
+  const STREET_BANDS = [2170];   // the bandages on the street: one as the club roof stage starts, before Malaspina
   const ZONES = [
     { x0: -99, title: '1 · Move', tasks: [['run', 'Run: [←] [→]'], ['walk', 'Walk: hold [Shift] as you move'],
       ['jump', 'Climb onto the car: jump [↑] at its side and keep [↑] held'], ['charge', 'Climb higher: hold [↑] as you jump at a roof or a scaffold'],
@@ -5094,12 +5098,18 @@ import * as SPIRE from './levels/skyscraper/index.js';
   }
   // checkpoints: each tutorial stage, the boss door (street); the quay start, the shutter, the boss door (Pier 9). Reaching one refills the
   // second winds (a boss fight has its own count). Wasted with none left: retry from the last one; the lessons done stay done.
-  let ckpt = null, ckBoss = false;   // ckBoss: a retry at the boss door (the entrance and the dialog are skipped)
+  let ckpt = null, ckBoss = false, retryC = null;   // retryC: the checkpoint of the retry in progress (a level may pass a section checkpoint on its way back to the boss)   // ckBoss: a retry at the boss door (the entrance and the dialog are skipped)
   const ckptName = () => !ckpt ? 'the start' : LVH.ckptName ? LVH.ckptName(ckpt) : ckpt.kind === 'boss' ? 'the boss door' : ckpt.kind === 'shutter' ? 'the shutter' : ckpt.kind === 'wave' ? P9.WAVES[ckpt.i].ckpt : ckpt.kind === 'stage' ? `stage ${ckpt.i + 1}` : 'the start';
   let fallKeep = null;   // after a fall's retry: the second winds he has left (the level re-arriving at the same checkpoint does not refill them)
   function setCkpt(kind, i = 0, quiet) {
     const same = !!ckpt && ckpt.lv === LV.id && ckpt.kind === kind && ckpt.i === i;
-    ckpt = { lv: LV.id, kind, i, w: hero.weapon, ch: charge.slice(), taken: pickups.map(k => k.taken) };
+    // first arrival at a section or boss checkpoint: HP up to DIF().ckHp (he does not walk into a boss with 3 HP); a phase checkpoint
+    // (a boss's, i > 0) does not heal him mid-fight, but its retry gives him the same floor. hp = what a retry from here gives: the HP
+    // he arrived with, never more (dying never pays better than arriving)
+    const phase = kind === 'boss' && i > 0, floor = DIF().ckHp || 0;
+    if (!same && kind !== 'start' && !phase) hero.hp = Math.max(hero.hp, floor);
+    const hp = same ? ckpt.hp : kind === 'start' ? 100 : Math.max(1, Math.round(hero.hp), phase ? floor : 0);
+    ckpt = { lv: LV.id, kind, i, w: hero.weapon, ch: charge.slice(), taken: pickups.map(k => k.taken), hp };
     hero.wind = DIF().wind;
     if (fallKeep != null && same) hero.wind = Math.min(hero.wind, fallKeep); else fallKeep = null;
     if (!quiet && !flags.demo && !flags.attract) toast('Checkpoint', DIF().perma ? 'Wicked: one life, no second wind' : `Second winds: ${hero.wind}`, true);
@@ -5116,7 +5126,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     const C = ckpt; fallKeep = null;
     if (!C || C.lv !== LV.id || DIF().perma) { reset(); return; }
     const keep = [...done], rs = { ...runS }, k0 = kos, boss = C.kind === 'boss';
-    reset();
+    reset(); ckpt = retryC = C;   // (the level's own retry reads it: a boss's phase checkpoint)
     for (const k of keep) done.add(k); tutDirty = true;   // the lessons stay done
     ZONES.forEach((Z, i) => { if (stageDone(i)) cleared.add(i); });   // (no 'stage clear' toasts again)
     Object.assign(runS, rs, { down: false, koUp: false, endT: -1, hp: 100 }); kos = k0;
@@ -5137,14 +5147,18 @@ import * as SPIRE from './levels/skyscraper/index.js';
       if (boss) { enterClub(); slamDone = true; clubT = 1; fade = 0; fadeDir = 0; ckBoss = true; if (isP9()) bossDlg.on = bossDlg.done = true; }
       else heroTo(!isP9() ? ZONES[C.i].x0 + 20 : C.kind === 'wave' ? P9.WAVES[C.i].at - 60 : P9.MARKET.shutter[0] - 40);
     }
-    ckpt = C; hero.wind = DIF().wind; hero.hp = 100;
+    ckpt = C; hero.wind = DIF().wind; hero.hp = C.hp ?? 100;   // (the HP he had there: dying never gives more than arriving)
     toast('Retry', `From ${ckptName()} · second winds: ${hero.wind}`);
   }
   const retry = () => DIF().perma ? reset() : retryCkpt();
+  // a boss's last-phase checkpoint (Easy, Medium and Hard; Wicked keeps the whole fight): reached, the checkpoint moves to it (boss, i = ph).
+  // A retry from it (atPhaseCk) starts the boss just under the line into that phase, so the phase change plays again at once
+  const phaseCk = ph => { if (diffSel < 3 && !flags.demo && !flags.attract) setCkpt('boss', ph, true); };
+  const atPhaseCk = ph => [ckpt, retryC].some(c => !!c && c.lv === LV.id && c.kind === 'boss' && c.i === ph) && !flags.demo;
   // a lethal fall the level does not catch (a train gap, the Spire's drop): one rule for every level. Wicked: the Wasted card, from the
   // start. Hard: back to the checkpoint, never healed by it (a fall on Hard took him from 20 HP to 100): it costs a second wind if he
   // has one, else 40 HP; a fall that empties him is Wasted
-  const FALL_HP = 40;
+  const FALL_HP = FALL.hard;
   function fallOut() {
     if (flags.wasted) return;
     if (DIF().perma) { lockT = 99; hero.invT = Math.max(hero.invT, 3); showWasted('Fallen'); return; }
@@ -5266,7 +5280,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
       enc.boss = spawnEnemy('boss', CLUB_DOORS[0], 'boss'); enc.boss.intro = true; enc.boss.introX = CLUB_DOORS[0] + 56; enc.boss.face = 1;
       enc.introT = 0; bossBarK = 0; spawnFx.push({ kind: 'club', x: CLUB_DOORS[0], t: 0 });
       if (ckBoss) { ckBoss = false; enc.boss.x = enc.boss.introX; enc.introT = 1.69; malDlg = malDlgDone = true; }   // a retry: no entrance walk, no dialog
-      if (!flags.demo) setCkpt('boss');   // the boss door: a checkpoint, and the fight's own second winds
+      const pc = atPhaseCk(2); if (pc) enc.boss.hp = Math.ceil(enc.boss.maxHp * MAL.ph2) - 1;   // (a retry from his phase-2 checkpoint: the coat comes off again at once)
+      if (!flags.demo) setCkpt('boss', pc ? 2 : 0);   // the boss door: a checkpoint, and the fight's own second winds
       emit('boss:intro', { boss: enc.boss, name: BOSS_NAME });
       for (const d of dancers) { d.mood = 'shock'; d.t = 2.6; d.home0 = d.home; d.home = clamp(d.home + (d.home > enc.boss.introX ? 18 : -18), CLUB_X + 34, W - 24); }
       toastEl.hidden = true; toastT = 0; toastQ.length = 0;
@@ -9528,13 +9543,14 @@ import * as SPIRE from './levels/skyscraper/index.js';
     get diffSel() { return diffSel; }, DIF, get simTime() { return simTime; }, simRand, emit, bus, get timeScale() { return timeScale; },
     ctl, hero, P, enemies, enc, objs, eshots, particles, sparks, waves, quakes, bullets, flashes, pickups, ammoBoxes, thrown, tossed, input, flags, zoneAlive, rain, cam, charge, WINL,
     LANE, GROUND, W, H, DT, DOOR_X, STREET_END, PLATS, SURF, GROUND_S, RUN, WALK, MOVES, EMOVES, WEAPONS, DEF, PAL,
+    heroDmg: n => n * DIF().dmg,   // what a blow or a burn of n costs him on this difficulty (a level's own HP drains go through it; a fall is a rule, not scaled)
     spawnEnemy, hurtPlayer, damageEnemy, knockDown, killEnemy, toast, bark, setCkpt, playScene, shakeIt, dust, hitFx, slowMo, bossPhase, bStart, bSpecial, bossTell, bTell, bCd, bRand,
     eStart, eRelease, eHop, climbStep, makeObj, removeObj, damageObj, floorBelow, heroTo, equip, fullCharge, makeDog, dogStep, puff, hitsPlayer, eWeapon, plot, line1, blendPlot,
     get R9() { return R9; }, get R9T() { return R9T; }, gradeRun, rankHtml, rankName, styleM, runS, get kos() { return kos; },
     get dog() { return dog; }, set dog(v) { dog = v; }, get hitStop() { return hitStop; }, set hitStop(v) { hitStop = v; }, get lockT() { return lockT; }, set lockT(v) { lockT = v; },
     get killBy() { return killBy; }, set killBy(v) { killBy = v; }, get endPh() { return endPh; }, set endPh(v) { endPh = v; }, get fadeDir() { return fadeDir; }, set fadeDir(v) { fadeDir = v; },
     get slamDone() { return slamDone; }, set bossBarK(v) { bossBarK = v; }, get ckBoss() { return ckBoss; }, set ckBoss(v) { ckBoss = v; }, bossDlg, set autoWalk(v) { autoWalk = v; },
-    reset: () => reset(), retry: () => retry(), fallOut: () => fallOut(), dropWeapon: (e, w) => dropWeapon(e, w), quitToTitle: () => quitToTitle(),
+    reset: () => reset(), retry: () => retry(), fallOut: () => fallOut(), phaseCk, atPhaseCk, dropWeapon: (e, w) => dropWeapon(e, w), quitToTitle: () => quitToTitle(),
     placeHero(x, s) {   // on the ground at x, then up onto surface s (the mezzanine)
       heroTo(x); const dy = s.y - 2 - ctl.y; ctl.y = s.y - 2; ctl.surf = s;
       for (const p of P) { p.y += dy; p.py += dy; } for (const st of hair) for (const p of st) { p.y += dy; p.py += dy; } if (tails) for (const t of tails) for (const p of t) { p.y += dy; p.py += dy; }
@@ -9605,6 +9621,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   function p9SpawnOne(q) {
     const src = q.src, hx = P[2].x;
     if (P9.SALTMEN[q.v].max && enemies.filter(g => !g.dead && g.v === q.v).length >= P9.SALTMEN[q.v].max) { q.t = 1; p9.queue.push(q); return; }   // (at most 2 Tallymen alive)
+    if (P9.ALIVE[diffSel] && enemies.filter(g => !g.dead && g.type !== 'boss' && g.zone !== 'arena').length >= P9.ALIVE[diffSel]) { q.t = 1; p9.queue.push(q); return; }   // (Wicked: at most 5 Saltmen up at once)
     let x = src.x, kind = src.kind, perch = null;
     if (kind === 'top') {   // a perched shooter: straight onto the stack top when no one sees it, else out of a container door and up the stacks
       perch = PLATS.find(s => x >= s.x0 && x <= s.x1 && Math.abs(s.y - src.y) < 2) || null;
@@ -9662,7 +9679,9 @@ import * as SPIRE from './levels/skyscraper/index.js';
     enc.boss.intro = true; enc.boss.introX = dx - 70; enc.boss.face = -1;
     enc.introT = 0; bossBarK = 0; spawnFx.push({ kind: 'club', x: dx, t: 0 });
     if (ckBoss) { ckBoss = false; enc.boss.x = enc.boss.introX; }   // a retry: no entrance walk (bossDlg.done is set: no dialog)
-    setCkpt('boss');
+    const pc = atPhaseCk(3), M = P9.MARCHETTI;   // a retry from his phase-3 checkpoint: phase 2, just under the phase-3 line (the fog comes again at once)
+    if (pc) Object.assign(enc.boss, { ph: 2, hp: Math.ceil(enc.boss.maxHp * M.ph3.below) - 1, speed: M.ph2.speed, cd: M.ph2.cd.slice(), windup: M.ph2.windup });
+    setCkpt('boss', pc ? 3 : 0);
     emit('boss:intro', { boss: enc.boss, name: enc.boss.name });
     toastEl.hidden = true; toastT = 0; toastQ.length = 0;
   }
