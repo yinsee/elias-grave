@@ -211,12 +211,27 @@ export function createMetro(G) {
     return true;
   };
   function nicheStep(dt) {
-    if (!ctl.niche) return;
+    if (!ctl.niche) { S.nicheFor = null; return; }
     S.nicheT += dt;
     const n = S.niche; if (!n || hero.mode !== 'anim') { ctl.niche = false; S.niche = null; return; }
+    if (S.nicheFor !== n) { S.nicheFor = n; S.nicheAtk = 0; S.nicheAct = null; }
     ctl.x += (n.x - ctl.x) * Math.min(1, dt * 14); ctl.spd = 0;
-    if ((G.input.dir && S.nicheT > 0.25) || G.MOVES[hero.act] || ctl.air) { ctl.niche = false; S.niche = null; }
+    // one attack from inside hits without stepping out; a second one (or ← →, a jump) steps him out
+    const act = G.MOVES[hero.act] ? hero.act : null;
+    if (act && act !== S.nicheAct) S.nicheAtk++;
+    S.nicheAct = act;
+    if ((G.input.dir && S.nicheT > 0.25) || S.nicheAtk > 1 || ctl.air) { ctl.niche = false; S.niche = null; return; }
+    // a refuge: no goon steps into his niche (one running for it takes another) and none strikes at him while he is in it
+    const half = n.w / 2 + 4;
+    for (const e of G.enemies) {
+      if (e.dead || e.type !== 'goon') continue;
+      if (e.refuge === n) e.refuge = D.NICHES.filter(q => q !== n && !!q.arena === S.junction && Math.abs(q.x - e.x) < 160 && (!q.board || S.stashes.find(s => s.id === q.board).broken)).sort((a, b) => Math.abs(a.x - e.x) - Math.abs(b.x - e.x))[0] || null;
+      if (!e.down && !e.air && e.y > GROUND - 6 && Math.abs(e.x - n.x) < half) e.x = n.x + (e.x < n.x ? -half : half);
+      if (e.act && !e.down) { e.act = null; e.combo = null; }
+      e.cdT = Math.max(e.cdT, 0.3);
+    }
   }
+  M.noHurt = src => !!ctl.niche && !!src && src.kind !== 'train' && !(src.e && src.e.type === 'boss');
   M.dive = () => {   // ↑ + Space (or Space in a jump) at a gap of the freight passing on track 2: through it, onto the far ledge
     if (S.junction || S.dive || hero.mode !== 'anim') return false;
     if (!(G.input.jumpHeld || ctl.air)) return false;

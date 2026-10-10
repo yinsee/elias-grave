@@ -2024,6 +2024,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // No block, no parry: the answers are the dodge (a perfect dodge exposes him), a jump and spacing
   function hurtPlayer(dmg, x, y, dirx, heavy, impK = 1, src = null) {   // impK scales how hard the blow moves him (not the damage)
     if (hero.mode !== 'anim' || hero.invT > 0) return;
+    if (LVH.noHurt && LVH.noHurt(src)) return;   // a level's safe spot (Line Zero's refuge niche: no goon blow or shot reaches him there)
     if (src && src.low) lowHint();
     hstr.n = 0; hstr.t = -9;   // hit: his string is broken
     if (ctl.grab) grabFree(30);   // hit in the clinch: he lets go
