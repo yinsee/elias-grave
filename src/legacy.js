@@ -3207,6 +3207,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       const fl = floorBelow(e.x, pf - 0.5, 0);
       if (e.y + 2 >= fl.y) { if (e.vy > 120) dust(e.x, fl.y - 1, 3); e.y = fl.y - 2; e.vy = 0; e.air = false; } else e.air = true;
       e.x = clamp(e.x, enc.arena && e.zone === 'arena' || e === enc.boss ? 2440 : 8, W - 10);
+      if (typeof e.zone === 'number' && isStreet()) e.x = Math.min(e.x, stageCap(e.zone));   // a tutorial stage's goon stays in front of its shut gate
       if (e.sp === 'jslam' && e.leapt && !e.air && e.spT > 0.1) {   // landing: a shockwave both ways, then a long gasp
         e.sp = null; e.recT = 0.9; e.vx = 0;
         waves.push({ x: e.x - 8, y: e.y + 1, t: 0 }); waves.push({ x: e.x + 8, y: e.y + 1, t: 0 });
@@ -5012,6 +5013,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
   const PROP_TASKS = { smash: ['crate', 'bigcrate'], split: ['stack'], lift: [...LIFTABLE], bash: [...LIFTABLE], toss: [...LIFTABLE], pocket: ['can', 'bottle'], pockethit: ['can', 'bottle'] };
   let gateT = 0;
   const stageDone = i => ZONES[i].tasks.every(([k]) => done.has(k));
+  // the x a stage's goons may not pass while the gate after the stage is shut (the hero cannot reach past it); Infinity: no cap
+  const stageCap = i => flags.demo || flags.attract || i + 1 >= ZONES.length || stageDone(i) ? Infinity : ZONES[i + 1].x0 - 12;
   const openStage = () => { for (let i = 0; i < ZONES.length; i++) if (!stageDone(i)) return i; return ZONES.length - 1; };
   function tutGate(rdt) {
     if (flags.demo || flags.attract || endPh || openT >= 0) return;
@@ -5195,13 +5198,14 @@ import * as SPIRE from './levels/skyscraper/index.js';
     // a stage goon steps out of the nearest unused house door, alley gap or parked-car door near x0; with none near (or one too close to the hero)
   // he walks in from off screen on x0's side
   function stageGoon(i, x0, used) {
-    const hx = P[2].x; let src = null, best = 46;
+    const hx = P[2].x, cap = stageCap(i); let src = null, best = 46;
+    x0 = Math.min(x0, cap);   // (not behind the stage's shut gate)
     for (const [kind, list] of [['door', DOORS], ['alley', ALLEYS], ['car', CARDOORS]]) for (const d of list) {
-      const dd = Math.abs(d.x - x0); if (dd < best && !used.has(d) && Math.abs(d.x - hx) > 60) { best = dd; src = { kind, d }; }
+      const dd = Math.abs(d.x - x0); if (dd < best && !used.has(d) && Math.abs(d.x - hx) > 60 && d.x <= cap) { best = dd; src = { kind, d }; }
     }
     let x;
     if (src) { used.add(src.d); x = src.d.x; spawnFx.push({ kind: src.kind, d: src.d, x, t: 0 }); }
-    else x = clamp(x0 >= hx ? Math.max(x0, cam.x + cam.vw + 14) : Math.min(x0, cam.x - 14), 12, Math.min(W, STREET_END) - 20);
+    else x = Math.min(cap, clamp(x0 >= hx ? Math.max(x0, cam.x + cam.vw + 14) : Math.min(x0, cam.x - 14), 12, Math.min(W, STREET_END) - 20));
     const g = spawnEnemy('goon', x, i);
     g.cdT = Math.max(g.cdT, 0.9);
   }
