@@ -71,13 +71,43 @@ export function backSet(S) {
   if (S.grp === 7) return 'ph3';
   return 'plain';
 }
-// a rect of the backdrop (a window, the roof's sky), clipped to the view
+// a rect of the backdrop (a window, the roof's sky), clipped to the view. [perf] backPix() column by column: what depends on the
+// column alone (the parallax offsets, the mountain line, the dam, the poles) and on the row alone (the sky colour) is worked out
+// once, with the same arithmetic, so every pixel is the colour backPix() gives
 export function drawBack(R, x0, x1, y0, y1, S, set) {
   const cam = R.cam, ax = Math.max(x0, cam.x), bx = Math.min(x1, cam.x + cam.vw - 1), ay = Math.max(y0, cam.y), by = Math.min(y1, cam.y + cam.vh - 1);
   if (ax > bx || ay > by) return;
-  const sc = S.sc;
-  for (let y = ay; y <= by; y++) for (let x = ax; x <= bx; x++) R.plot(x, y, backPix(x, y, sc, set, y0));
+  const sc = S.sc, T = TC, ny = by - ay + 1;
+  if (skyRow.length < ny) { skyRow = new Uint32Array(ny * 2); yDiv = new Float64Array(ny * 2); }
+  for (let y = ay; y <= by; y++) { skyRow[y - ay] = mix(T.sky0, T.sky1, Math.min(1, Math.max(0, (y - 60) / 200))); yDiv[y - ay] = y / 30; }
+  const damOn = set === 'mid' || set === 'ph1', ph3 = set === 'ph3', midSet = set === 'mid', valley = ph3 ? mix(T.valley, T.mount, 0.5) : 0;
+  for (let x = ax; x <= bx; x++) {
+    const cx = x - sc * 0.01, cx7 = Math.floor(cx / 7), cx40 = cx / 40;
+    const sx = 2690 - sc * 0.002 * 0, sdx = Math.abs(x - sx);
+    const mx = x - sc * 0.08, mh = 190 + smooth1(mx / 70) * 40 + smooth1(mx / 23) * 10;
+    let dx = -1, top = 0;
+    if (damOn) { dx = ((x - sc * 0.2) % 900 + 900) % 900; if (dx < 420) top = 200 + Math.sin(dx / 420 * Math.PI) * -12; }
+    const fx = x - sc * 0.3, fi = Math.floor(fx / 9), farOn = n1(fi) < 0.12 && ((fx % 9 + 9) % 9) < 2 && !midSet;
+    const px = ((x - sc * 0.5) % 110 + 110) % 110, wireY = 202 + Math.round(Math.abs(px - 55) / 14);
+    for (let y = ay; y <= by; y++) {
+      let c = skyRow[y - ay];
+      const cl = noise2(cx7, Math.floor(y / 5)) * 0.5 + smooth1(cx40 + yDiv[y - ay]) * 0.5;
+      if (cl > 0.72) c = T.cloudL; else if (cl > 0.55) c = T.cloud;
+      if (ph3 && sdx < 3 + Math.max(0, (y - 150) / 18) && y > 120 && y < 236) c = sdx < 2 && y > 150 && y < 160 ? T.spireL : T.spire;
+      if (y > mh) c = (y - mh) < 2 ? T.mountL : T.mount;
+      if (damOn && dx < 420) {
+        if (y > top && y < 262) { c = (y + dx) % 9 === 0 ? T.damD : mix(T.dam, T.damD, (y - top) / 70); if (dx % 60 < 6 && y > top + 6) c = noise2(dx, y) < 0.6 ? T.spill : T.damL; if (y > 250 && dx > 180 && dx < 230 && (dx + y) % 5 === 0) c = T.lit; }
+        if (y >= 262) c = T.water;
+      }
+      if (ph3 && y > 236) c = valley;
+      if (y > mh + 6 && y < mh + 9 && farOn) c = T.lit;
+      if (px < 2 && y > 196) c = T.pole;
+      if (y === wireY && !ph3) c = T.pole;
+      R.plot(x, y, c);
+    }
+  }
 }
+let skyRow = new Uint32Array(0), yDiv = new Float64Array(0);   // (drawBack: per row)
 
 // ---- the static layer ----
 export function paint(api) {

@@ -706,6 +706,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
         const row = vy * CW;
         if (vy >= bottom) { for (let vx = 0; vx < cam.vw; vx++) buf[row + vx] = L_.body; continue; }
         const irow = (vy - top) * im.w;
+        if (ox >= 0) { for (let vx = 0, ix = ox % im.w; vx < cam.vw; vx++, ix = ix + 1 === im.w ? 0 : ix + 1) { const c = im.px[irow + ix]; if (c) buf[row + vx] = c; } continue; }   // [perf] (vx + ox) % w, stepped
         for (let vx = 0; vx < cam.vw; vx++) { const c = im.px[irow + (vx + ox) % im.w]; if (c) buf[row + vx] = c; }
       }
     }
@@ -713,7 +714,12 @@ import * as SPIRE from './levels/skyscraper/index.js';
     for (let vy = 0; vy < cam.vh; vy++) {
       const wy = vy + cam.y, k = wy < GROUND - 110 || wy > GROUND ? 0 : wy < GROUND - 50 ? (wy - (GROUND - 110)) / 60 : 1 - (wy - (GROUND - 50)) / 50; if (k <= 0) continue;
       const a = 0.3 * k * (1 + rain.k * 0.5), row = vy * CW, fr = 0x1b * a, fg = 0x1d * a, fb = 0x35 * a;
-      for (let vx = 0; vx < cam.vw; vx++) { const c = buf[row + vx]; if (EMIT.has(c)) continue; buf[row + vx] = (255 << 24 | Math.round((c >> 16 & 255) * (1 - a) + fb) << 16 | Math.round((c >> 8 & 255) * (1 - a) + fg) << 8 | Math.round((c & 255) * (1 - a) + fr)) >>> 0; }
+      let pc = -1, po = 0;   // [perf] a run of one colour is fogged once (an emitter stays itself)
+      for (let vx = 0; vx < cam.vw; vx++) {
+        const c = buf[row + vx];
+        if (c !== pc) { pc = c; po = EMIT.has(c) ? c : (255 << 24 | Math.round((c >> 16 & 255) * (1 - a) + fb) << 16 | Math.round((c >> 8 & 255) * (1 - a) + fg) << 8 | Math.round((c & 255) * (1 - a) + fr)) >>> 0; }
+        buf[row + vx] = po;
+      }
     }
   }
   // people reflect in the glass behind them: a faint, cool ghost, shifted a little as if seen at an angle
@@ -722,13 +728,20 @@ import * as SPIRE from './levels/skyscraper/index.js';
   function glassReflect() {
     const mid = cam.vw / 2;
     refSrc.set(buf);
+    // [perf] the box round everything that is not the scene (people and what they carry): a glass pixel whose 5 x 5 sample lies
+    // outside it has nothing to reflect, and skips the sample
+    let px0 = 1e9, px1 = -1e9, py0 = 1e9, py1 = -1e9;
+    for (let vy = 0; vy < cam.vh; vy++) for (let vx = 0, row = vy * CW; vx < cam.vw; vx++) if (refSrc[row + vx] !== bgSnap[row + vx]) { if (vx < px0) px0 = vx; if (vx > px1) px1 = vx; if (vy < py0) py0 = vy; py1 = vy; }
+    if (px1 < 0) return;
     for (let vy = 0; vy < cam.vh; vy++) {
+      if (vy + 3 < py0 || vy - 1 > py1) continue;   // (its samples: rows vy - 1 .. vy + 3)
       const wy = vy + cam.y; if (wy < 0 || wy >= GROUND) continue;
       const row = vy * CW, srow = wy * W;
       for (let vx = 0; vx < cam.vw; vx++) {
         const i = row + vx;
         if (!glassMask[i] || refSrc[i] !== bgSnap[i]) continue;   // glass that no one stands in front of
         const off = Math.round(12 + (vx - mid) * 0.1), sx = vx - off, sy = vy + 1;
+        if (sx + 2 < px0 || sx - 2 > px1) continue;
         // a soft (gaussian 5x5) sample of whatever stands in front, so the reflection reads as blurred glass
         let wr = 0, wg = 0, wb = 0, wsum = 0, cover = 0;
         for (let ky = -2; ky <= 2; ky++) for (let kx = -2; kx <= 2; kx++) {
@@ -756,9 +769,11 @@ import * as SPIRE from './levels/skyscraper/index.js';
     for (let vy = 0; vy < cam.vh; vy++) {
       const wy = vy + cam.y; if (wy < 0 || wy >= GROUND) continue;
       const row = vy * CW, srow = wy * W;
+      let pc = -1, pg = false;   // [perf] the glass set is asked once per run of one colour
       for (let vx = 0; vx < cam.vw; vx++) {
         const wx = vx + cam.x, sc = stat[srow + wx];
-        if (GLASS_C.has(sc) && buf[row + vx] === sc) glassMask[row + vx] = 1;
+        if (sc !== pc) { pc = sc; pg = GLASS_C.has(sc); }
+        if (pg && buf[row + vx] === sc) glassMask[row + vx] = 1;
         if (!glassMask[row + vx]) continue;
         const base = buf[row + vx];
         const band = ((wx * 0.8 + wy - cam.x * 0.35) % 34 + 34) % 34, sheen = band < 2 ? 60 : band < 4 ? 26 : 0;
@@ -6350,22 +6365,33 @@ import * as SPIRE from './levels/skyscraper/index.js';
   const LROW = { r: new Float32Array(CW), g: new Float32Array(CW), b: new Float32Array(CW), w: new Float32Array(CW) };
   function lightPass() {
     const [aR, aG, aB, ls] = lightList(), Lr = LROW.r, Lg = LROW.g, Lb = LROW.b, Gw = LROW.w;
+    // [perf] the same numbers, cheaper: a row that no pool reaches is not cleared again; along a row, a run of one colour asks the
+    // glow set once, and an unlit run (ambient only) takes the last result (pixel art is mostly runs of one colour)
+    let dirty = true;
     for (let vy = 0; vy < cam.vh; vy++) {
       const row = vy * CW;
-      Lr.fill(0, 0, cam.vw); Lg.fill(0, 0, cam.vw); Lb.fill(0, 0, cam.vw); Gw.fill(0, 0, cam.vw);
+      if (dirty) { Lr.fill(0, 0, cam.vw); Lg.fill(0, 0, cam.vw); Lb.fill(0, 0, cam.vw); Gw.fill(0, 0, cam.vw); dirty = false; }
       for (let i = 0; i < ls.length; i++) {   // each pool adds its light along the part of this row it reaches
         const q = ls[i], dy = vy - q[1], dyy = dy * dy * (dy < 0 ? 2.2 : 0.75);
         if (dyy >= q[2]) continue;
         const span = Math.sqrt(q[2] - dyy), x0 = Math.max(0, Math.ceil(q[0] - span)), x1 = Math.min(cam.vw - 1, Math.floor(q[0] + span));
+        if (x0 <= x1) dirty = true;
         for (let vx = x0; vx <= x1; vx++) {
           const dx = vx - q[0], d2 = dx * dx + dyy;
           if (d2 < q[2]) { const k = 1 - d2 / q[2], kk = k * k; Lr[vx] += kk * q[3]; Lg[vx] += kk * q[4]; Lb[vx] += kk * q[5]; if (q[6] && d2 < 90) Gw[vx] += (1 - d2 / 90) * q[6]; }
         }
       }
+      let pc = -1, pe = false, uc = -1, uo = 0;   // the last colour and whether it glows; the last unlit colour and its result
       for (let vx = 0; vx < cam.vw; vx++) {
         const c = buf[row + vx];
-        if (!c || EMIT.has(c)) continue;   // (an empty pixel only happens in a 3D view layer)
-        const glow = Gw[vx], r = (c & 255) * (aR + Lr[vx]) + glow, g = (c >> 8 & 255) * (aG + Lg[vx]) + glow * 0.78, b = (c >> 16 & 255) * (aB + Lb[vx]) + glow * 0.35;
+        if (c !== pc) { pc = c; pe = !c || EMIT.has(c); }
+        if (pe) continue;   // (an empty pixel only happens in a 3D view layer)
+        const lr = Lr[vx], lg = Lg[vx], lb = Lb[vx], glow = Gw[vx];
+        if (lr === 0 && lg === 0 && lb === 0 && glow === 0) {
+          if (c !== uc) { uc = c; uo = (255 << 24 | Math.min(255, (c >> 16 & 255) * aB) << 16 | Math.min(255, (c >> 8 & 255) * aG) << 8 | Math.min(255, (c & 255) * aR)) >>> 0; }
+          buf[row + vx] = uo; continue;
+        }
+        const r = (c & 255) * (aR + lr) + glow, g = (c >> 8 & 255) * (aG + lg) + glow * 0.78, b = (c >> 16 & 255) * (aB + lb) + glow * 0.35;
         buf[row + vx] = (255 << 24 | Math.min(255, b) << 16 | Math.min(255, g) << 8 | Math.min(255, r)) >>> 0;
       }
     }
@@ -6584,50 +6610,91 @@ import * as SPIRE from './levels/skyscraper/index.js';
   const GRADE = { bloomT: 0.8, bloom: 0.55, sat: 1.12, vig: 0.28, W: [0.227, 0.195, 0.122, 0.054, 0.016] };
   const postB = { w: 0, h: 0 };
   const bloomK = () => (LVH.bloomK && LVH.bloomK()) || 1;   // a level's bloom scale (St. Cecilia's theatre lamp, the Palm House ballroom: 0.6), both views
+  // [perf] the same numbers, cheaper (bit for bit the old result): v / 255 and the bright pass's weight come from tables (per
+  // 0..255 value); the blur and the spread are skipped when no pixel is bright; a pixel with no glow near it takes its grade from
+  // a small cache by colour (the grade before the vignette depends on the colour alone)
+  const DIV255 = new Float64Array(256).map((_, v) => v / 255);
+  const BRK = new Float64Array(256).map((_, v) => { const m = v / 255; if (m <= GRADE.bloomT) return 0; const t = Math.min(1, (m - GRADE.bloomT) / (1 - GRADE.bloomT)); return t * t * (3 - 2 * t) / 16; });
+  const GC = { key: new Uint32Array(4096), ok: new Uint8Array(4096), v: new Float64Array(4096 * 3), out: new Uint32Array(4096) };   // colour -> graded r, g, b (before the vignette), and the pixel at vignette 1
+  const pack = (r, g, b) => (255 << 24 | (b <= 0 ? 0 : b >= 1 ? 255 : (b * 255 + 0.5) | 0) << 16 | (g <= 0 ? 0 : g >= 1 ? 255 : (g * 255 + 0.5) | 0) << 8 | (r <= 0 ? 0 : r >= 1 ? 255 : (r * 255 + 0.5) | 0)) >>> 0;
   function postPass() {
     const gw = Math.ceil(cam.vw / 4), gh = Math.ceil(cam.vh / 4), n = gw * gh;
     if (postB.w !== gw || postB.h !== gh) { Object.assign(postB, { w: gw, h: gh, a: new Float32Array(n * 3), b: new Float32Array(n * 3) }); }
     const A = postB.a, B = postB.b, Wt = GRADE.W;
     A.fill(0);
+    let bright = false;
+    if (!postB.ra || postB.ra.length !== gh) postB.ra = new Uint8Array(gh);
+    const RA = postB.ra; RA.fill(0);   // the rows of cells with a bright pixel
     for (let vy = 0; vy < cam.vh; vy++) for (let vx = 0, row = vy * CW; vx < cam.vw; vx++) {   // bright pass, averaged over each cell
-      const c = buf[row + vx], r = (c & 255) / 255, g = (c >> 8 & 255) / 255, b = (c >> 16 & 255) / 255, m = Math.max(r, g, b);
-      if (m <= GRADE.bloomT) continue;
-      const t = Math.min(1, (m - GRADE.bloomT) / (1 - GRADE.bloomT)), k = t * t * (3 - 2 * t) / 16, o = ((vy >> 2) * gw + (vx >> 2)) * 3;
-      A[o] += r * k; A[o + 1] += g * k; A[o + 2] += b * k;
+      const c = buf[row + vx], ri = c & 255, gi = c >> 8 & 255, bi = c >> 16 & 255, k = BRK[ri > gi ? (ri > bi ? ri : bi) : (gi > bi ? gi : bi)];
+      if (k === 0) continue;
+      const o = ((vy >> 2) * gw + (vx >> 2)) * 3;
+      A[o] += DIV255[ri] * k; A[o + 1] += DIV255[gi] * k; A[o + 2] += DIV255[bi] * k; bright = true; RA[vy >> 2] = 1;
     }
-    for (const [S, D, dx, dy] of [[A, B, 1, 0], [B, A, 0, 1]]) for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) {   // 9-tap blur, across then down
-      let r = 0, g = 0, b = 0;
-      for (let k = -4; k <= 4; k++) { const xx = clamp(x + dx * k, 0, gw - 1), yy = clamp(y + dy * k, 0, gh - 1), o = (yy * gw + xx) * 3, w = Wt[Math.abs(k)]; r += S[o] * w; g += S[o + 1] * w; b += S[o + 2] * w; }
-      const o = (y * gw + x) * 3; D[o] = r; D[o + 1] = g; D[o + 2] = b;
+    if (bright) {   // 9-tap blur, across then down (a row of cells with no glow within reach stays dark: written as zeros)
+      const RA = postB.ra, gm = gw - 1, hm = gh - 1;
+      for (let y = 0; y < gh; y++) {
+        const ro = y * gw * 3;
+        if (!RA[y]) { B.fill(0, ro, ro + gw * 3); continue; }
+        for (let x = 0; x < gw; x++) {
+          let r = 0, g = 0, b = 0;
+          for (let k = -4; k <= 4; k++) { const xx = x + k < 0 ? 0 : x + k > gm ? gm : x + k, o = ro + xx * 3, w = Wt[k < 0 ? -k : k]; r += A[o] * w; g += A[o + 1] * w; b += A[o + 2] * w; }
+          const o = ro + x * 3; B[o] = r; B[o + 1] = g; B[o + 2] = b;
+        }
+      }
+      for (let y = 0; y < gh; y++) {
+        const ro = y * gw * 3;
+        let near = false; for (let k = -4; k <= 4 && !near; k++) near = RA[y + k < 0 ? 0 : y + k > hm ? hm : y + k] === 1;
+        if (!near) { A.fill(0, ro, ro + gw * 3); continue; }
+        for (let x = 0; x < gw; x++) {
+          let r = 0, g = 0, b = 0;
+          for (let k = -4; k <= 4; k++) { const yy = y + k < 0 ? 0 : y + k > hm ? hm : y + k, o = (yy * gw + x) * 3, w = Wt[k < 0 ? -k : k]; r += B[o] * w; g += B[o + 1] * w; b += B[o + 2] * w; }
+          const o = ro + x * 3; A[o] = r; A[o + 1] = g; A[o + 2] = b;
+        }
+      }
     }
-    const ss = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
-    // the bloom grid spread smoothly over the pixels: per column and per row, the two cells to blend and the weight (built once)
+    // the bloom grid spread smoothly over the pixels: per column and per row, the two cells to blend and the weight (built once
+    // per view size). [perf] The view size changes on every frame of a zoom: the vignette is built from per-column and per-row
+    // terms into one buffer kept for the largest view (no new arrays), with the same arithmetic as before.
     if (postB.cw !== cam.vw || postB.chh !== cam.vh) {
       const col = n => { const i0 = new Int32Array(n), i1 = new Int32Array(n), t = new Float32Array(n), g = Math.ceil(n / 4); for (let v = 0; v < n; v++) { const f = clamp((v + 0.5) / 4 - 0.5, 0, g - 1), a = Math.floor(f); i0[v] = a; i1[v] = Math.min(g - 1, a + 1); t[v] = f - a; } return { i0, i1, t }; };
-      const vg = new Float32Array(cam.vw * cam.vh);   // the vignette, per pixel
-      for (let y = 0; y < cam.vh; y++) for (let x = 0; x < cam.vw; x++) { const d2 = ((x + 0.5) / cam.vw * 2 - 1) ** 2 + ((y + 0.5) / cam.vh * 2 - 1) ** 2; vg[y * cam.vw + x] = d2 <= 0.35 ? 1 : 1 - GRADE.vig * ss(0.35, 1.25, d2); }
+      const vg = postB.vgAll || (postB.vgAll = new Float32Array(CW * CHMAX)), FX = postB.fx || (postB.fx = new Float64Array(CW));   // the vignette, per pixel
+      for (let x = 0; x < cam.vw; x++) FX[x] = ((x + 0.5) / cam.vw * 2 - 1) ** 2;
+      for (let y = 0; y < cam.vh; y++) {
+        const fy = ((y + 0.5) / cam.vh * 2 - 1) ** 2, o = y * cam.vw;
+        for (let x = 0; x < cam.vw; x++) { const d2 = FX[x] + fy; if (d2 <= 0.35) { vg[o + x] = 1; continue; } const t = clamp((d2 - 0.35) / (1.25 - 0.35), 0, 1); vg[o + x] = 1 - GRADE.vig * (t * t * (3 - 2 * t)); }
+      }
       Object.assign(postB, { cw: cam.vw, chh: cam.vh, cx: col(cam.vw), cy: col(cam.vh), vg });
     }
     const CX = postB.cx, CY = postB.cy, bloom = GRADE.bloom * bloomK(), sat = GRADE.sat;
     const Sm = postB.sm && postB.sm.length === gw * gh ? postB.sm : (postB.sm = new Float32Array(gw * gh));
-    for (let i = 0; i < gw * gh; i++) Sm[i] = A[i * 3] + A[i * 3 + 1] + A[i * 3 + 2];   // a cell with no glow near it skips the spread
+    if (bright) for (let i = 0; i < gw * gh; i++) Sm[i] = A[i * 3] + A[i * 3 + 1] + A[i * 3 + 2];   // a cell with no glow near it skips the spread
+    const NB = postB.nb && postB.nb.length === gw * gh ? postB.nb : (postB.nb = new Uint8Array(gw * gh));   // per cell: glow in it or in the next cells (the 4 the spread blends)
+    if (bright) for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) { const y1 = Math.min(gh - 1, y + 1) * gw, x1 = Math.min(gw - 1, x + 1); NB[y * gw + x] = Sm[y * gw + x] + Sm[y * gw + x1] + Sm[y1 + x] + Sm[y1 + x1] > 1e-4 ? 1 : 0; }
+    const GK = GC.key, GO = GC.ok, GV = GC.v, GU = GC.out, VG = postB.vg;
     for (let vy = 0; vy < cam.vh; vy++) {
-      const ra = CY.i0[vy] * gw * 3, rb = CY.i1[vy] * gw * 3, ty = CY.t[vy], row = vy * CW, vrow = vy * cam.vw, VG = postB.vg;
+      const ra = CY.i0[vy] * gw * 3, rb = CY.i1[vy] * gw * 3, ty = CY.t[vy], row = vy * CW, vrow = vy * cam.vw, nrow = CY.i0[vy] * gw;
       for (let vx = 0; vx < cam.vw; vx++) {
-        const a = CX.i0[vx] * 3, b2 = CX.i1[vx] * 3;
-        let br = 0, bg = 0, bb = 0;
-        if (Sm[(ra + a) / 3] + Sm[(ra + b2) / 3] + Sm[(rb + a) / 3] + Sm[(rb + b2) / 3] > 1e-4) {
-          const tx = CX.t[vx], w00 = (1 - tx) * (1 - ty), w10 = tx * (1 - ty), w01 = (1 - tx) * ty, w11 = tx * ty;
-          br = A[ra + a] * w00 + A[ra + b2] * w10 + A[rb + a] * w01 + A[rb + b2] * w11;
-          bg = A[ra + a + 1] * w00 + A[ra + b2 + 1] * w10 + A[rb + a + 1] * w01 + A[rb + b2 + 1] * w11;
-          bb = A[ra + a + 2] * w00 + A[ra + b2 + 2] * w10 + A[rb + a + 2] * w01 + A[rb + b2 + 2] * w11;
+        const a = CX.i0[vx] * 3, b2 = CX.i1[vx] * 3, vg = VG[vrow + vx], c = buf[row + vx];
+        if (!bright || !NB[nrow + CX.i0[vx]]) {   // no glow near: the cached grade
+          const h = Math.imul(c, 0x9e3779b1) >>> 20;
+          if (!GO[h] || GK[h] !== c) {
+            const r = DIV255[c & 255], g = DIV255[c >> 8 & 255], b = DIV255[c >> 16 & 255];
+            const l = r * 0.299 + g * 0.587 + b * 0.114, t = l <= 0.2 ? 0 : l >= 0.8 ? 1 : ((l - 0.2) / 0.6) ** 2 * (3 - 2 * (l - 0.2) / 0.6);
+            const R = l + (r - l) * sat + (-0.01 + 0.04 * t), G = l + (g - l) * sat + 0.015 * t, B = l + (b - l) * sat + (0.035 - 0.055 * t);
+            GK[h] = c; GO[h] = 1; GV[h * 3] = R; GV[h * 3 + 1] = G; GV[h * 3 + 2] = B; GU[h] = pack(R, G, B);
+          }
+          buf[row + vx] = vg === 1 ? GU[h] : pack(GV[h * 3] * vg, GV[h * 3 + 1] * vg, GV[h * 3 + 2] * vg);
+          continue;
         }
-        const vg = VG[vrow + vx];
-        const c = buf[row + vx];
-        let r = (c & 255) / 255 + br * bloom, g = (c >> 8 & 255) / 255 + bg * bloom, b = (c >> 16 & 255) / 255 + bb * bloom;
+        const tx = CX.t[vx], w00 = (1 - tx) * (1 - ty), w10 = tx * (1 - ty), w01 = (1 - tx) * ty, w11 = tx * ty;
+        const br = A[ra + a] * w00 + A[ra + b2] * w10 + A[rb + a] * w01 + A[rb + b2] * w11;
+        const bg = A[ra + a + 1] * w00 + A[ra + b2 + 1] * w10 + A[rb + a + 1] * w01 + A[rb + b2 + 1] * w11;
+        const bb = A[ra + a + 2] * w00 + A[ra + b2 + 2] * w10 + A[rb + a + 2] * w01 + A[rb + b2 + 2] * w11;
+        let r = DIV255[c & 255] + br * bloom, g = DIV255[c >> 8 & 255] + bg * bloom, b = DIV255[c >> 16 & 255] + bb * bloom;
         const l = r * 0.299 + g * 0.587 + b * 0.114, t = l <= 0.2 ? 0 : l >= 0.8 ? 1 : ((l - 0.2) / 0.6) ** 2 * (3 - 2 * (l - 0.2) / 0.6);
         r = (l + (r - l) * sat + (-0.01 + 0.04 * t)) * vg; g = (l + (g - l) * sat + 0.015 * t) * vg; b = (l + (b - l) * sat + (0.035 - 0.055 * t)) * vg;
-        buf[row + vx] = (255 << 24 | (b <= 0 ? 0 : b >= 1 ? 255 : (b * 255 + 0.5) | 0) << 16 | (g <= 0 ? 0 : g >= 1 ? 255 : (g * 255 + 0.5) | 0) << 8 | (r <= 0 ? 0 : r >= 1 ? 255 : (r * 255 + 0.5) | 0)) >>> 0;
+        buf[row + vx] = pack(r, g, b);
       }
     }
   }
@@ -8759,11 +8826,33 @@ import * as SPIRE from './levels/skyscraper/index.js';
       for (let oy = 0; oy < TH; oy += CHMAX) for (let ox = 0; ox < TW; ox += CW) {
         const tw = Math.min(CW, TW - ox), th = Math.min(CHMAX, TH - oy);
         withView({ x: x0 + ox, y: y0 + oy, vw: tw, vh: th }, draw);
-        for (let y = 0; y < th; y++) for (let x = 0, r = y * CW, o = (oy + y) * L.dw + ox; x < tw; x++) {
-          let c = buf[r + x];
-          if (dith && c && c >>> 24 < 250) c = c >>> 24 > T3_BAYER[((y0 + oy + y) & 3) * 4 + ((x0 + ox + x) & 3)] ? (c | 0xff000000) >>> 0 : 0;   // (world-fixed, so it does not crawl)
-          if (c) any = true;
-          L.data[o + x] = !glow || !c ? c : EMIT.has(c) ? t3flag(c, 254) : gl && GLASS_C.has(c) ? t3flag(c, 253) : c;
+        // [perf] the same texture, cheaper: an empty row is not written again where the texture row is already empty (E0..E1: the
+        // columns of a texture row that may hold a pixel); a plain layer copies whole rows; a glow layer asks the glow and glass
+        // sets once per run of one colour
+        const E0 = L.e0 || (L.e0 = new Int32Array(L.dh).fill(L.dw)), E1 = L.e1 || (L.e1 = new Int32Array(L.dh));
+        for (let y = 0; y < th; y++) {
+          const r = y * CW, dy = oy + y, o = dy * L.dw + ox;
+          let x1 = 0; while (x1 < tw && !buf[r + x1]) x1++;
+          if (x1 === tw) {   // nothing drawn on this row
+            if (E0[dy] < E1[dy]) {
+              const a = Math.max(E0[dy], ox), b = Math.min(E1[dy], ox + tw);
+              if (a < b) L.data.fill(0, dy * L.dw + a, dy * L.dw + b);
+              if (E0[dy] >= ox && E1[dy] <= ox + tw) { E0[dy] = L.dw; E1[dy] = 0; }
+            }
+            continue;
+          }
+          if (ox < E0[dy]) E0[dy] = ox;
+          if (ox + tw > E1[dy]) E1[dy] = ox + tw;
+          if (!dith && !glow) { L.data.set(buf.subarray(r, r + tw), o); any = true; continue; }
+          let pc = -1, po = 0;
+          for (let x = 0; x < tw; x++) {
+            let c = buf[r + x];
+            if (dith && c && c >>> 24 < 250) c = c >>> 24 > T3_BAYER[((y0 + oy + y) & 3) * 4 + ((x0 + ox + x) & 3)] ? (c | 0xff000000) >>> 0 : 0;   // (world-fixed, so it does not crawl)
+            if (!c) { L.data[o + x] = 0; continue; }
+            any = true;
+            if (glow) { if (c !== pc) { pc = c; po = EMIT.has(c) ? t3flag(c, 254) : gl && GLASS_C.has(c) ? t3flag(c, 253) : c; } c = po; }
+            L.data[o + x] = c;
+          }
         }
       }
       L.wx0 = x0; L.wy0 = y0; L.tw = any ? TW : 0; L.th = TH;   // (liveOnProps reads the wall layer back in world pixels)
@@ -9357,9 +9446,12 @@ import * as SPIRE from './levels/skyscraper/index.js';
   }
   function drawDog() {
     if (!dog || dog.hidden || (flags.club && !isMetro() && !isSpire())) return;
+    { let lo = dog.x, hi = dog.x; for (const q of dog.tail) { lo = Math.min(lo, q.x); hi = Math.max(hi, q.x); }   // [perf] out of the view: nothing it draws would show
+      if (hi + 40 < cam.x || lo - 40 > cam.x + cam.vw) return; }
     const P = dogPose(dog), f = P.f, px = new Map();
     const TAN = C('#b97a3c'), TANL = C('#d9a05e'), TAND = C('#7a4e24'), BLK = C('#1c171a'), BLKL = C('#3b3238'), EYE = C('#0a0809');
-    const put = (x, y, c) => px.set(Math.round(x) + ',' + Math.round(y), c);
+    const K = (x, y) => (y + 2048) * 16384 + x + 4096, KX = k => k % 16384 - 4096, KY = k => Math.floor(k / 16384) - 2048;   // [perf] a pixel's key: a number, not a string
+    const put = (x, y, c) => px.set(K(Math.round(x), Math.round(y)), c);
     const at = (p, dx, dy) => [p[0] + dx * f, p[1] + dy];
     const poly = (pts, c) => {   // scanline fill of a closed outline
       let y0 = Infinity, y1 = -Infinity; for (const q of pts) { y0 = Math.min(y0, q[1]); y1 = Math.max(y1, q[1]); }
@@ -9405,13 +9497,13 @@ import * as SPIRE from './levels/skyscraper/index.js';
     }
     for (const pw of P.paws) if (!pw.far) leg(pw, false);
     // a rim of light along the top line (the lamp is overhead), then one clean outline round the whole dog
-    const cols = new Map(); for (const k of px.keys()) { const [x, y] = k.split(',').map(Number); if (!cols.has(x) || y < cols.get(x)) cols.set(x, y); }
-    for (const [x, y] of cols) { const c = px.get(x + ',' + y); px.set(x + ',' + y, c === BLK ? BLKL : c === TAN ? TANL : c); }
+    const cols = new Map(); for (const k of px.keys()) { const x = KX(k), y = KY(k); if (!cols.has(x) || y < cols.get(x)) cols.set(x, y); }
+    for (const [x, y] of cols) { const c = px.get(K(x, y)); px.set(K(x, y), c === BLK ? BLKL : c === TAN ? TANL : c); }
     for (let x = Math.round(Math.min(P.paws[0].x, P.paws[3].x)) - 6; x <= Math.round(Math.max(P.paws[0].x, P.paws[3].x)) + 6; x++) blendPlot(x, GROUND, 0, 0, 0, 0.35);   // its shadow on the pavement
     const out = [];
-    for (const k of px.keys()) { const [x, y] = k.split(',').map(Number); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { const kk = (x + dx) + ',' + (y + dy); if (!px.has(kk) && y + dy <= GROUND - 1) out.push([x + dx, y + dy]); } }
+    for (const k of px.keys()) { const x = KX(k), y = KY(k); for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) { if (!px.has(K(x + dx, y + dy)) && y + dy <= GROUND - 1) out.push([x + dx, y + dy]); } }
     for (const [x, y] of out) plot(x, y, PAL.out);
-    for (const [k, c] of px) { const [x, y] = k.split(',').map(Number); plot(x, y, c); }
+    for (const [k, c] of px) plot(KX(k), KY(k), c);
   }
   function drawBottle() {   // the bottle in his hand at the bar: dark green glass along the forearm, a bright edge
     if (!ctl.bottle || hero.mode !== 'anim') return;
@@ -9827,9 +9919,17 @@ import * as SPIRE from './levels/skyscraper/index.js';
   async function playScene(kind, id) {
     sceneOn = true; toastEl.hidden = true; sayEl.hidden = true; objEl.hidden = true; obj.key = null;
     keys.left = keys.right = keys.shift = false; btn.p.down = btn.k.down = false; Object.assign(input, { dir: 0, run: false, jump: false, jumpHeld: false, downHeld: false, fireHeld: false, attack: null, dash: false, dashHeld: false });
+    setTimeout(prewarm3D, 150);   // (once the first panel is up)
     try { const sc = await loadScript(id); return await (kind === 'dialog' ? playDialog : playPanels)(sc, { root: stage, audio: csAudio, bus }); }
     catch (err) { console.warn('cutscene failed:', id, err); return { id, skipped: true }; }
     finally { sceneOn = false; last = FIXED ? fixedT : performance.now(); keys.left = keys.right = keys.shift = false; input.dir = 0; }
+  }
+  // [perf] the 3D view's first frame in a new level builds that level's world and compiles its shaders and uploads its textures
+  // (0.25-0.4 s here, more on a busy machine): one 3D frame drawn behind the cutscene panels does it there instead. The 3D frame
+  // only reads the game state (the panels cover the canvas), so the game is the same.
+  function prewarm3D() {
+    if (!sceneOn || !mode3D || !Three3D.renderer || Three3D.builtFor === LV.id) return;
+    Three3D.frame(0);
   }
   // Chapter: Prologue + Pier 9. The prologue's two scenes (Escape on the first skips both), the docks intro, then the level
   async function startChapter1() {

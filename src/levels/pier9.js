@@ -382,16 +382,25 @@ function farLayer() {   // ships at anchor and harbour cranes in the fog: one st
   }
   return { w, h, px };
 }
+// [perf] the rows above the horizon (sky, sun, the far ships, their fog) depend on the view alone: they are kept in skyKeep and
+// copied back while the view stays put (the same pixels); the sea below moves every frame and is drawn each time
+const skyKeep = { px: null, key: '' }, seaC = { line: C('#8a92a2'), base: C('#2a3646'), band: C('#3e4c5e'), glint: C('#7a8496') };
+let seaS = new Float64Array(0);
 export function drawSky(R) {
   const { buf, CW, cam } = R;
   if (!skyC) { skyC = SKY.map(C); farL = farLayer(); }
   const hz = Math.round((GROUND - 46 - cam.y) * 0.7 + cam.vh * 0.62 * 0.3);   // the horizon line (view y)
-  for (let vy = 0; vy < cam.vh; vy++) {
+  const key = cam.x + ',' + cam.y + ',' + cam.vw + ',' + cam.vh, kept = skyKeep.key === key, top0 = kept ? Math.max(0, Math.min(cam.vh, hz)) : 0;
+  if (kept) for (let vy = 0; vy < top0; vy++) buf.set(skyKeep.px.subarray(vy * CW, vy * CW + cam.vw), vy * CW);
+  const sox = Math.round(cam.x * 0.5);
+  if (seaS.length < cam.vw) seaS = new Float64Array(CW);
+  for (let vx = 0; vx < cam.vw; vx++) seaS[vx] = Math.sin((vx + sox) * 0.031 - R.t * 0.5);   // the slow swell: one per column
+  for (let vy = top0; vy < cam.vh; vy++) {
     const row = vy * CW;
     if (vy >= hz) {   // harbour water: dark slate, with slow light bands and sleet rings
-      const d = vy - hz, base = d < 2 ? C('#8a92a2') : C('#2a3646'), band = C('#3e4c5e'), glint = C('#7a8496');
+      const d = vy - hz, base = d < 2 ? seaC.line : seaC.base, band = seaC.band, glint = seaC.glint;
       for (let vx = 0; vx < cam.vw; vx++) {
-        const wx = vx + Math.round(cam.x * 0.5), s = Math.sin(wx * 0.09 + d * 1.7 + R.t * 0.8) + Math.sin(wx * 0.031 - R.t * 0.5);
+        const wx = vx + sox, s = Math.sin(wx * 0.09 + d * 1.7 + R.t * 0.8) + seaS[vx];
         buf[row + vx] = d < 2 ? base : s > 1.55 ? glint : s > 0.9 && d % 2 ? band : base;
       }
       continue;
@@ -401,13 +410,20 @@ export function drawSky(R) {
   }
   // the low dawn sun behind the fog: a pale disc, then the far ships and cranes
   const sx = Math.round(330 - cam.x * 0.04), sy = hz - 14, sun = C('#e8d0b8'), halo = C('#b8a8a4');
-  for (let y = -10; y <= 10; y++) for (let x = -10; x <= 10; x++) { const d2 = x * x + y * y; if (sy + y >= hz) continue; if (d2 <= 30) R.plotV(sx + x, sy + y, sun); else if (d2 <= 90 && (x + y) & 1) R.plotV(sx + x, sy + y, halo); }
+  if (!kept) for (let y = -10; y <= 10; y++) for (let x = -10; x <= 10; x++) { const d2 = x * x + y * y; if (sy + y >= hz) continue; if (d2 <= 30) R.plotV(sx + x, sy + y, sun); else if (d2 <= 90 && (x + y) & 1) R.plotV(sx + x, sy + y, halo); }
   const ox = Math.round(cam.x * 0.12), top = hz - farL.h + 1;
-  for (let y = 0; y < farL.h; y++) { const vy = top + y; if (vy < 0 || vy >= cam.vh) continue; for (let vx = 0; vx < cam.vw; vx++) { const c = farL.px[y * farL.w + (vx + ox) % farL.w]; if (c) buf[vy * CW + vx] = c; } }
+  for (let y = 0; y < farL.h; y++) { const vy = top + y; if (vy < top0 || vy >= cam.vh) continue; for (let vx = 0; vx < cam.vw; vx++) { const c = farL.px[y * farL.w + (vx + ox) % farL.w]; if (c) buf[vy * CW + vx] = c; } }
   // fog: a soft grey veil, densest at the horizon
-  for (let vy = Math.max(0, hz - 40); vy < Math.min(cam.vh, hz + 12); vy++) {
+  for (let vy = Math.max(top0, hz - 40); vy < Math.min(cam.vh, hz + 12); vy++) {
     const k = vy < hz ? 1 - (hz - vy) / 40 : 1 - (vy - hz) / 12, a = 0.45 * k * k, row = vy * CW;
-    for (let vx = 0; vx < cam.vw; vx++) { const c = buf[row + vx]; buf[row + vx] = mixc(c, 0x9a, 0xa2, 0xb0, a); }
+    let pc = -1, po = 0;   // (a run of one colour is mixed once)
+    for (let vx = 0; vx < cam.vw; vx++) { const c = buf[row + vx]; if (c !== pc) { pc = c; po = mixc(c, 0x9a, 0xa2, 0xb0, a); } buf[row + vx] = po; }
+  }
+  if (!kept) {   // keep the rows above the horizon for the next frame
+    if (!skyKeep.px) skyKeep.px = new Uint32Array(buf.length);
+    const n = Math.max(0, Math.min(cam.vh, hz));
+    for (let vy = 0; vy < n; vy++) skyKeep.px.set(buf.subarray(vy * CW, vy * CW + cam.vw), vy * CW);
+    skyKeep.key = key;
   }
 }
 const clamp01 = v => v < 0 ? 0 : v > 1 ? 1 : v;
