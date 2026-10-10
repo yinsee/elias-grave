@@ -46,6 +46,19 @@ export const MUSIC_CUES = {
   'music:brask_wheel': 'boss_marchetti',      // TODO: tango, bandoneon, ball-clatter percussion
   'music:brask_allin': 'boss_marchetti',      // TODO: strings join, tempo up
   'music:casino_end': 'prologue',             // TODO: solo piano over rain
+  // The Spire (docs/levels/08-the-spire.md 9.4): no files yet; the nearest existing tracks stand in
+  'music:spire_lobby': 'docks_explore',       // TODO: "Black Tie": noir jazz in a tuxedo
+  'music:spire_lys': 'boss_marchetti',        // TODO
+  'music:spire_lift': 'docks_explore',        // TODO: "Ninety Floors": Shepard-tone strings
+  'music:spire_garden': 'docks_explore',      // TODO: "High Wind": timpani and wind
+  'music:spire_kessel': 'boss_marchetti',     // TODO
+  'music:spire_penthouse': 'prologue',        // TODO: "Glass": sparse piano
+  'music:spire_vestry': 'prologue',           // TODO: "Elena": upright bass and piano
+  'music:boss_bell_1': 'boss_marchetti',      // TODO: "The Last Movement" I: a fugue on Bell's motif
+  'music:boss_bell_2': 'boss_marchetti',      // TODO: II: follows the pendulum
+  'music:boss_bell_3': 'boss_marchetti',      // TODO: III: full orchestra, choir and storm
+  'music:ending_twelve': 'prologue',          // TODO: "Twelve": no percussion
+  'music:epilogue_morning': 'title',          // TODO: "No Rain": acoustic guitar and a ticking watch
 };
 
 export function musicUrl(id, { loop = true, seed } = {}) {

@@ -1,0 +1,26 @@
+{
+  "id": "spire_midnight",
+  "title": "Twelve",
+  "musicEnd": "keep",
+  "_todo": "Panel art and portraits are made by the art agent (docs/levels/08-the-spire.md 9.1, 9.2). Voice lines do not exist yet.",
+  "pages": [
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:spire_end_3",
+          "minTime": 2,
+          "shot": "Wide. The great clock face reads 12:00. Two small figures on the cornice, a man and a dog. Rings spread in the last of the rain. Far below, the storm swallows a tiny falling shape.",
+          "lines": [
+            {
+              "type": "vo",
+              "pos": "bottom",
+              "voice": "spire_end_03",
+              "text": "I didn't push him. Time did. He taught me that too."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

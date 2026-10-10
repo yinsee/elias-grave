@@ -1,0 +1,95 @@
+{
+  "id": "epilogue",
+  "title": "Morning",
+  "music": "music:epilogue_morning",
+  "musicLoop": true,
+  "musicEnd": "keep",
+  "_todo": "Panel art and portraits are made by the art agent (docs/levels/08-the-spire.md 9.1, 9.2). Voice lines do not exist yet. Panel 2 stands in for the playable dawn walk (not built; see the as-built notes).",
+  "pages": [
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:epilogue_1",
+          "minTime": 1.5,
+          "shot": "Dawn. The storm breaks. Pages from the Board's ledgers fall from the Spire over the city like snow. A newsboy holds up a paper: THE CHOIR EXPOSED.",
+          "lines": [
+            {
+              "type": "vo",
+              "pos": "top",
+              "voice": "epilogue_01",
+              "text": "By morning, the city could read its own sins. The rain had stopped. First time in weeks."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:epilogue_2",
+          "minTime": 1.5,
+          "shot": "The old-town street from the tutorial at dawn, dry cobbles. The hero and Nero walk up the street. One by one, windows light up.",
+          "lines": [
+            {
+              "type": "vo",
+              "pos": "top",
+              "voice": "epilogue_02",
+              "text": "They had switched off their lights for every fight."
+            },
+            {
+              "type": "vo",
+              "pos": "bottom",
+              "voice": "epilogue_03",
+              "text": "Now they switched them on."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "layout": "row",
+      "panels": [
+        {
+          "image": "panel:epilogue_3",
+          "minTime": 1.5,
+          "shot": "The Low Note, warm light. Mags, arm in a sling, puts a whisky on the bar and a bowl of water on the floor. Nero drinks. The hero's hand rests on the bar beside Elena's red scarf, folded.",
+          "lines": [
+            {
+              "type": "say",
+              "speaker": "Mags",
+              "pos": "bottom",
+              "voice": "mags_on_the_house",
+              "text": "On the house. Since there isn't one anymore."
+            }
+          ]
+        },
+        {
+          "image": "panel:epilogue_4",
+          "minTime": 1.5,
+          "shot": "The burned watch shop, boarded up. In the cracked window, one small new watch ticks. Its hands move past 3:17.",
+          "lines": [
+            {
+              "type": "vo",
+              "pos": "bottom",
+              "voice": "epilogue_04",
+              "text": "Time moves on. That's the only rule it ever had."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:title_card",
+          "minTime": 2.5,
+          "shot": "Black. Title: ELIAS GRAVE.",
+          "lines": []
+        }
+      ]
+    }
+  ]
+}

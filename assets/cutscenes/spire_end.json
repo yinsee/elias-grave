@@ -1,0 +1,50 @@
+{
+  "id": "spire_end",
+  "title": "Midnight",
+  "music": "music:ending_twelve",
+  "musicEnd": "keep",
+  "_todo": "Panel art and portraits are made by the art agent (docs/levels/08-the-spire.md 9.1, 9.2). Voice lines do not exist yet.",
+  "pages": [
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:spire_end_1",
+          "rain": true,
+          "tint": "cold",
+          "minTime": 1.5,
+          "shot": "Outside the shattered clock face. Bell hangs from the minute hand over the storm, ninety floors up. He reaches out his free hand. His loupe hangs from its cord and turns in the wind.",
+          "lines": [
+            {
+              "type": "say",
+              "speaker": "Bell",
+              "pos": "top",
+              "voice": "bell_end_01",
+              "text": "The Choir needs a Conductor. Come home, Elias."
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:spire_end_2",
+          "rain": true,
+          "minTime": 1.5,
+          "shot": "Medium. The hero on the clock edge, rain-soaked. Nero beside him, panting. The hero looks at the dog, not at Bell.",
+          "lines": [
+            {
+              "type": "say",
+              "speaker": "Elias",
+              "pos": "bottom",
+              "voice": "elias_home",
+              "text": "I am home."
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
