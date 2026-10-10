@@ -2,6 +2,8 @@
 // names its blocks and gives each its depth (a body up on one stands on its top). The movers (the beds, the gurneys) are models
 // built from the shared painters (paint.js drawBed, drawGurney) through the run's models3d(); only those models are 3D-only.
 import * as D from './data.js';
+import { paneCracks } from './paint.js';
+import { C } from '../../core/color.js';
 
 export const hospital3d = {
   // the named blocks: [x0, y0, x1, y1, depth from the wall, the surface it carries (its front face is where a climber hangs)]
@@ -25,5 +27,17 @@ export const hospital3d = {
       [D.HUT.x0, D.HUT.top - 30, D.HUT.x1, G - 1, 30, { x0: D.HUT.x0, y: D.HUT.top }],
       [D.MAST.dais.x0, 140, D.MAST.dais.x1 + 14, G - 1, 10, { x0: D.MAST.dais.x0, y: D.MAST.dais.top }],
     ].map(([x0, y0, x1, y1, d, s]) => ({ x0, y0, x1, y1, z0: ZF, z1: ZF + d, s }));
+  },
+  // the glass as real panes (paint.js leaves its sheen and cracks out: R.glass3d): the fishbowl's windows on the wall, the axe's case,
+  // and the panes that wall off the lane (a door, an office, the gallery) standing across it; their cracks on the glass
+  models(T3, S, R, cam) {
+    const out = [], ZF = T3.ZF, near = (x0, x1) => x1 > cam.x - 40 && x0 < cam.x + cam.vw + 40;
+    for (const p of S.panes) {
+      if (p.broken || !near(p.x0, p.x1)) continue;
+      const n = p.cracks ? p.cracks.length : 0, key = 'hp' + p.id + ':' + n;
+      if (p.def.blocks) out.push({ pane: { x0: p.x0 + 1, x1: p.x1 - 1, y0: p.y0, y1: p.y1, z0: ZF + 2, z1: 16, tint: C('#a8c8e0'), op: 0.07, crack: n ? { key, ax: 'zy', n: Math.min(9, n * 2 + 1), seed: n * 97 + p.x0 } : null } });
+      else out.push({ pane: { x0: p.x0, x1: p.x1, y0: p.y0, y1: p.y1, z0: ZF + 1, z1: p.id === 'axeCase' ? ZF + 9 : ZF + 2, tint: C('#a8c8e0'), op: 0.05, crack: n ? { key, draw: Rc => paneCracks(Rc, p) } : null } });
+    }
+    return out;
   },
 };

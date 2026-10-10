@@ -288,6 +288,7 @@ function rect2(plot, x0, y0, x1, y1, f) { for (let y = y0; y <= y1; y++) for (le
 
 // ---- over the lit scene, unlit ----
 const GLASS = [C('#a8c8e0'), C('#d8ecf8')];
+export function paneCracks(R, p) { for (const ck of p.cracks) { let x = ck.x, y = ck.y; for (let k = 0; k < 7; k++) { const nx = x + ck.dx * 3 + (k % 2 ? 1 : -1), ny = y + ck.dy * 2; R.line1(x, y, nx, ny, GLASS[1]); x = nx; y = ny; } } }
 export function drawFx(R, S) {
   const { plot, blendPlot, line1 } = R, t = R.t, cam = R.cam, vis = (x0, x1) => x1 > cam.x - 8 && x0 < cam.x + cam.vw + 8;
   // glass: panes (a sheen and a highlight), cracks; roof panes (cracks; broken ones leave a jagged frame)
@@ -295,14 +296,18 @@ export function drawFx(R, S) {
     if (!vis(p.x0, p.x1)) continue;
     if (p.broken) { if (p.roof) for (let x = Math.round(p.x0); x <= p.x1; x += 3) plot(x, Math.round(p.y0) + (x % 2), GLASS[0]); continue; }
     const a = p.def && p.def.back ? 0.08 : p.roof ? 0.16 : 0.12;
-    for (let y = Math.round(p.y0); y <= p.y1; y++) for (let x = Math.round(p.x0); x <= p.x1; x++) { const hl = ((x - Math.round(p.x0)) + (Math.round(p.y1) - y)) % 23 < 2; blendPlot(x, y, 170, 210, 230, hl ? 0.32 : a); }
+    if (!R.glass3d) for (let y = Math.round(p.y0); y <= p.y1; y++) for (let x = Math.round(p.x0); x <= p.x1; x++) { const hl = ((x - Math.round(p.x0)) + (Math.round(p.y1) - y)) % 23 < 2; blendPlot(x, y, 170, 210, 230, hl ? 0.32 : a); }   // (3D: a pane, three.js)
     if (p.roof) { for (let x = Math.round(p.x0); x <= p.x1; x++) plot(x, Math.round(p.y1) + 1, C('#2a2e36')); plot(Math.round(p.x0), Math.round(p.y0), C('#2a2e36')); }
-    for (const ck of p.cracks) { let x = ck.x, y = ck.y; for (let k = 0; k < 7; k++) { const nx = x + ck.dx * 3 + (k % 2 ? 1 : -1), ny = y + ck.dy * 2 + (p.roof ? 0 : 0); line1(x, y, nx, ny, GLASS[1]); x = nx; y = ny; } }
+    if (!R.glass3d) paneCracks(R, p);
   }
   // the floor mist in the orchid rooms (it hides feet; weapon glints still show over it)
-  if (vis(1154, 1504)) for (let x = Math.max(1158, Math.floor(cam.x)); x < Math.min(1500, cam.x + cam.vw); x++) for (let y = GROUND - 12; y < GROUND + 2; y++) { const n = Math.sin(x * 0.05 + t * 0.7) * 0.5 + Math.sin(x * 0.13 - t * 1.1) * 0.5; blendPlot(x, y, 210, 228, 220, Math.max(0, 0.42 - (GROUND - y) * 0.028 + n * 0.08)); }
+  if (vis(1154, 1504) && !R.glass3d) for (let x = Math.max(1158, Math.floor(cam.x)); x < Math.min(1500, cam.x + cam.vw); x++) for (let y = GROUND - 12; y < GROUND + 2; y++) { const n = Math.sin(x * 0.05 + t * 0.7) * 0.5 + Math.sin(x * 0.13 - t * 1.1) * 0.5; blendPlot(x, y, 210, 228, 220, Math.max(0, 0.42 - (GROUND - y) * 0.028 + n * 0.08)); }
   // steam from a burst pipe
-  for (const p of S.pipes) if (p.t > 0) for (let i = 0; i < 22; i++) { const ph = (t * 0.9 + i / 22) % 1, x = p.x + Math.sin(i * 2.3 + t * 2) * D.STEAM.r * ph, y = p.y + ph * (GROUND - p.y); blendPlot(Math.round(x), Math.round(y), 235, 240, 240, 0.5 * Math.min(1, p.t)); blendPlot(Math.round(x) + 1, Math.round(y), 235, 240, 240, 0.4 * Math.min(1, p.t)); }
+  for (const p of S.pipes) if (p.t > 0) for (let i = 0; i < 22; i++) {
+    const ph = (t * 0.9 + i / 22) % 1, x = p.x + Math.sin(i * 2.3 + t * 2) * D.STEAM.r * ph, y = p.y + ph * (GROUND - p.y);
+    if (R.soft) { R.soft(x + 0.5, y, 2 + ph * 6, 235, 240, 240, 0.32 * Math.min(1, p.t) * (1 - ph * 0.6), -30 + ph * 30); continue; }   // (3D: soft puffs, rolling out from the pipe on the wall)
+    blendPlot(Math.round(x), Math.round(y), 235, 240, 240, 0.5 * Math.min(1, p.t)); blendPlot(Math.round(x) + 1, Math.round(y), 235, 240, 240, 0.4 * Math.min(1, p.t));
+  }
   // slip zones: spilt champagne and glass
   for (const z of S.slips) for (let x = z.x0; x <= z.x1; x += 2) if ((x * 7) % 5 < 2) plot(x, GROUND + 1, (x + Math.floor(t * 8)) % 9 === 0 ? C('#ffffff') : C('#e8e0a0'));
   // floor tells: falling shards' frost marks, a chandelier's shadow, the lantern's mark, a charge's path, the wet zones before a shock

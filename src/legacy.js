@@ -6612,10 +6612,17 @@ import * as SPIRE from './levels/skyscraper/index.js';
       if (PUDDLE[p.d * W + x] || p.t < 0.15) { plot(Math.floor(p.x - w), y, rc); plot(Math.floor(p.x + w), y, rc); }
     }
   }
+  const softA = v => { const A = Math.round(Math.min(1, v) * 255); return A >= 250 ? 255 : A; };   // a see-through pixel's alpha (250-254 are the 3D flags: glow, glass)
   function blendPlot(x, y, r, g, b, a) {   // see-through pixel (world coordinates)
     x -= cam.x; y -= cam.y; if (x < 0 || y < 0 || x >= cam.vw || y >= cam.vh) return;
     const i = y * CW + x, c = buf[i];
-    if (!c) { buf[i] = (Math.round(a * 255) << 24 | b << 16 | g << 8 | r) >>> 0; return; }   // an empty pixel (a 3D view layer): keep the see-through
+    if (!c) { buf[i] = (softA(a) << 24 | b << 16 | g << 8 | r) >>> 0; return; }   // an empty pixel (a 3D view layer): keep the see-through
+    const ca = c >>> 24;
+    if (ca < 250) {   // see-through over see-through (a 3D view layer: steam over a sheen): the two cover more, but stay see-through ("over")
+      const k = ca / 255 * (1 - a), oa = a + k;
+      buf[i] = (softA(oa) << 24 | Math.round((b * a + (c >> 16 & 255) * k) / oa) << 16 | Math.round((g * a + (c >> 8 & 255) * k) / oa) << 8 | Math.round((r * a + (c & 255) * k) / oa)) >>> 0;
+      return;
+    }
     buf[i] = (255 << 24 | ((c >> 16 & 255) * (1 - a) + b * a) << 16 | ((c >> 8 & 255) * (1 - a) + g * a) << 8 | ((c & 255) * (1 - a) + r * a)) >>> 0;
   }
   function drawRain() {
@@ -6930,8 +6937,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // three.js X = world x, Y = -world y, Z = depth toward the camera (0 = the fight lane).
   // ZF: the wall; ZS: the street's front edge; STAIR, GOAL: how far the fire escape and the roof balcony stand out of the wall (the fight lane is z = 0)
   const T3 = { ZF: -34, ZS: 34, STAIR: 14, GOAL: 12, FOV: 20, PITCH: 16 * Math.PI / 180, PIX: 1, NL: 16, HEAD_YAW: 25 * Math.PI / 180 };   // HEAD_YAW: heads turn this far toward the camera
-  const T3_BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) * 16);   // a 4 x 4 ordered dither: alpha thresholds (layer())
   const T3_GROUND = GROUND - 0.5;   // the street surface (feet stand on it)
+  const T3_PANE_KIND = { glass: 0, mirror: 1, water: 2, floor: 3 }, T3_CRACK_AX = { xy: 0, xz: 1, zy: 2 };   // (paneMat's uKind, uAx)
   // Pier 9's 3D-only numbers: the bollards (as pier9.js paints them), the depth of the conveyor rail and the hall lamps, the chain colour
   const T3P9 = { BOLL: [30, 220, 300, 560, 1150, 1850, 2060], RZ: -8, LZ: -12, CHAIN: C('#4a4a52') };
   const t3rgb = c => new THREE.Color((c & 255) / 255, (c >> 8 & 255) / 255, (c >> 16 & 255) / 255);
@@ -6990,7 +6997,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
             vec2 wp = vec2(vT3W.x, -vT3W.y);
             if (t3Mir > 0.0) wp.y = 2.0 * t3Mir - wp.y;
             ${kind === 'floor' ? `wp.y += clamp((vT3W.z - (${T3.ZF.toFixed(1)})) / ${(T3.ZS - T3.ZF).toFixed(1)}, 0.0, 1.0) * ${(STREET + 1).toFixed(1)};   // row d of the street is lit at GROUND + d, as in 2D` : ''}
-            if (t3a > 0.999 || t3g) {
+            if (t3a > 0.999 || t3g || t3a < 0.979) {   // (under 0.98: a see-through pixel of a level's layer, lit like the rest; 254: a glow)
               ${kind === 'glass' ? `if (t3g) {   // drawGlass: a sheen band that slides with the camera, warm light from a lamp nearby
                 float band = mod(wp.x * 0.8 + wp.y - t3Cam.x * 0.35, 34.0), sheen = band < 2.0 ? 60.0 : band < 4.0 ? 26.0 : 0.0, warm = 0.0;
                 for (int i = 0; i < ${T3.NL}; i++) { vec4 q = t3LP[i]; if (q.w <= 0.0) continue; float d = length(vec2(wp.x - q.x, (wp.y - q.y) * 0.6)); if (d < 46.0) warm += (1.0 - d / 46.0) * 70.0; }
@@ -7563,6 +7570,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       this.buildModels();
       this.buildLayers();
       this.buildFx();
+      this.buildGlass();
       this.buildPost();
       this.resize();
     },
@@ -7591,7 +7599,10 @@ import * as SPIRE from './levels/skyscraper/index.js';
       s.background = null; r.setClearColor(0x000000, 0);
       s.position.set(12, 0, 2 * T3.ZF); s.scale.set(1, 1, -1);   // the glass: people and objects, mirrored behind the wall (shifted 12 px as in glassReflect, as if seen at an angle)
       r.clippingPlanes = [this.clipWin]; cam.layers.set(1);
+      const R = this.refl, F = [this.cylF, this.cylO, this.sphF, this.sphO, this.boxF, this.boxO], n0 = F.map(m => m.count);
+      if (R && R.any) { for (const [i, m] of F.entries()) m.count = Math.min(m.count, i < 2 ? R.c : i < 4 ? R.s : R.b); for (const h of R.heads) { h.userData.v = h.visible; h.visible = false; } }   // (no reflection: updateFighters)
       r.setRenderTarget(this.rtWin); r.clear(); r.render(s, cam);
+      if (R && R.any) { F.forEach((m, i) => { m.count = n0[i]; }); for (const h of R.heads) h.visible = h.userData.v; }
       s.position.set(0, -2 * T3_GROUND, 0); s.scale.set(1, -1, 1); T3U.mir.value = T3_GROUND;   // the street: everything above it, mirrored below
       r.clippingPlanes = [this.clipFlr]; cam.layers.set(2);
       r.setRenderTarget(this.rtFlr); r.clear(); r.render(s, cam);
@@ -8697,9 +8708,14 @@ import * as SPIRE from './levels/skyscraper/index.js';
       this.nC = 0; this.nS = 0; this.nSh = 0; this.nB = 0; this.nH.c = this.nH.s = this.nH.b = 0;
       for (const h of this.heads.values()) h.used = false;
       this.shirtV.visible = this.tie.visible = false;
-      for (const e of enemies) if (e.dead) this.enemyRig(e);
-      for (const e of enemies) if (!e.dead) this.enemyRig(e);
+      // a body with no reflection (House Always Wins: a glass decoy; the Spire: Lys) is rigged last, so reflect() can leave it out
+      const nr = e => (isCasino() && e.decoy) || (isSpire() && e.kind === 'lys');
+      for (const e of enemies) if (e.dead && !nr(e)) this.enemyRig(e);
+      for (const e of enemies) if (!e.dead && !nr(e)) this.enemyRig(e);
       this.rimH = true; this.playerRig(); this.rimH = false;
+      const R = this.refl ||= { heads: [] }; R.c = this.nC; R.s = this.nS; R.b = this.nB; R.heads.length = 0;
+      for (const e of enemies) if (nr(e)) { this.enemyRig(e); const h = this.heads.get(e); if (h) R.heads.push(h.mesh); }
+      R.any = R.c !== this.nC || R.s !== this.nS || R.b !== this.nB || R.heads.length > 0;
       for (const k in this.hO) { const m = this.hO[k]; m.count = Math.min(this.nH[k], m.instanceMatrix.count); m.instanceMatrix.needsUpdate = true; }
       if (dog && !dog.hidden && (!flags.club || isMetro() || isSpire())) this.dogRig();
       this.p9Rig();
@@ -8811,6 +8827,165 @@ import * as SPIRE from './levels/skyscraper/index.js';
       m.position.set(0, 0, 0); m.rotation.set(0, 0, 0);
       return m;
     },
+    // ----- glass, mirrors, water, mist and steam: real see-through surfaces and soft sprites, not pixels -----
+    // A level's models() names its glass as { pane: q }: x0..x1, y0..y1 (2D pixels, y down), z0..z1 (depth, back to front); kind 'glass'
+    // (a window, a case, a tank's front), 'mirror', 'water' (a body: tinted, its skin moves), 'floor' (a glass floor tile); tint (ARGB);
+    // op (how much the glass itself hides); flash (a hit); flat (it lies flat: a roof pane); crack: { key, draw(R) } the level's own crack
+    // painter, drawn once per key into the pane's texture (a flat pane: rows y0 .. y0 + rows run from the back (z0) to the front (z1)).
+    // { mist: q }: a soft bank of haze on a plane at depth z (x0..x1, y0..y1; c, a). R.soft(x, y, r, red, green, blue, a, z): a puff.
+    // The reflections are the two mirror images reflect() already makes: the scene mirrored through the wall (upright glass, mirrors)
+    // and through the ground (a glass floor, the top of the water); the lamps give each surface its glint.
+    buildGlass() {
+      this.ppool = []; this.mipool = []; this.crackTex = new Map();
+      this.paneGeo = new THREE.BoxGeometry(1, 1, 1); this.mistGeo = new THREE.PlaneGeometry(1, 1);
+      const N = this.softMax = 2400, g = new THREE.BufferGeometry();
+      g.setAttribute('position', new THREE.Float32BufferAttribute(new Float32Array(N * 3), 3));
+      g.setAttribute('aCol', new THREE.Float32BufferAttribute(new Float32Array(N * 4), 4));
+      g.setAttribute('aSize', new THREE.Float32BufferAttribute(new Float32Array(N), 1));
+      this.softU = { uScale: { value: 1 } };
+      this.softPts = new THREE.Points(g, new THREE.ShaderMaterial({
+        uniforms: this.softU, transparent: true, depthWrite: false,
+        blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendEquation: THREE.AddEquation,
+        vertexShader: `attribute vec4 aCol; attribute float aSize; uniform float uScale; varying vec4 vC;
+          void main() { vC = aCol; vec4 mv = modelViewMatrix * vec4(position, 1.0); gl_Position = projectionMatrix * mv; gl_PointSize = max(1.0, aSize * 2.0 * uScale / -mv.z); }`,
+        fragmentShader: `varying vec4 vC;
+          void main() { float d = length(gl_PointCoord - 0.5) * 2.0; if (d >= 1.0) discard; float k = 1.0 - d * d, a = vC.a * k * k; gl_FragColor = vec4(vC.rgb * a, a); }`,
+      }));
+      this.softPts.frustumCulled = false; this.softPts.renderOrder = 16; this.scene.add(t3L(this.softPts, 0));
+      this.softQ = [];
+      this.softFn = (x, y, r, cr, cg, cb, a, z) => { if (this.softQ.length < N * 8) this.softQ.push(x, y, z ?? this.curZ, r, cr, cg, cb, a); };
+    },
+    updateSoft() {   // the puffs the painters asked for this frame (R.soft), one draw
+      const q = this.softQ, n = Math.min(q.length / 8, this.softMax), g = this.softPts.geometry, P = g.attributes.position, A = g.attributes.aCol, S = g.attributes.aSize;
+      for (let i = 0; i < n; i++) { const o = i * 8; P.setXYZ(i, q[o], -q[o + 1], q[o + 2]); S.setX(i, q[o + 3]); A.setXYZW(i, q[o + 4] / 255, q[o + 5] / 255, q[o + 6] / 255, Math.min(1, q[o + 7])); }
+      if (n) { P.needsUpdate = A.needsUpdate = S.needsUpdate = true; }
+      g.setDrawRange(0, n); this.softPts.visible = n > 0;
+      this.softU.uScale.value = T3U.res.value.y / (2 * Math.tan(T3.FOV * Math.PI / 360));   // (a puff of radius r is r world pixels wide at any depth)
+    },
+    paneMat() {
+      return new THREE.ShaderMaterial({
+        uniforms: { t3Win: T3U.win, t3Flr: T3U.flr, t3Res: T3U.res, t3Cam: T3U.cam, t3LP: T3U.lp, t3LC: T3U.lc, t3LZ: T3U.lz,
+          uTint: { value: new THREE.Vector3() }, uOp: { value: 0.1 }, uKind: { value: 0 }, uFlat: { value: 0 }, uFlash: { value: 0 },
+          uCrack: { value: null }, uCk: { value: 0 }, uAx: { value: 0 }, uRip: { value: -1 }, uRect: { value: new THREE.Vector4() }, uZ: { value: new THREE.Vector2() } },
+        transparent: true, depthWrite: false,
+        blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendEquation: THREE.AddEquation,
+        vertexShader: `varying vec3 vW; varying vec3 vN;
+          void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * normal); gl_Position = projectionMatrix * viewMatrix * w; }`,
+        fragmentShader: `uniform sampler2D t3Win, t3Flr, uCrack; uniform vec2 t3Res; uniform vec4 t3Cam; uniform vec4 t3LP[${T3.NL}]; uniform vec3 t3LC[${T3.NL}]; uniform float t3LZ[${T3.NL}];
+          uniform vec3 uTint; uniform float uOp, uKind, uFlat, uFlash, uCk, uAx, uRip; uniform vec4 uRect; uniform vec2 uZ;
+          varying vec3 vW; varying vec3 vN;
+          void main() {
+            vec3 N = normalize(vN), V = normalize(cameraPosition - vW), An = abs(N);
+            vec2 wp = vec2(vW.x, -vW.y); float T = t3Cam.w;
+            bool mir = uKind > 0.5 && uKind < 1.5, wat = uKind > 1.5 && uKind < 2.5, flr = uKind > 2.5, top = N.y > 0.7;
+            vec2 bend = vec2(0.0);
+            if (wat) {   // the water moves: slow crossing waves bend its skin (the top chops harder)
+              bend = vec2(sin(wp.x * 0.31 + T * 2.3 + vW.z * 0.17) + 0.6 * sin(wp.x * 0.13 - T * 1.4),
+                          cos(wp.y * 0.27 - T * 1.9 + wp.x * 0.05) + 0.6 * sin(vW.z * 0.4 + T * 1.1)) * (top ? 0.14 : 0.08);
+              N = normalize(N + (top ? vec3(bend.x, 0.0, bend.y) : vec3(bend.x, bend.y, 0.0)));
+            }
+            float nv = max(dot(N, V), 0.0), fr = 0.04 + 0.96 * pow(1.0 - nv, 5.0);
+            // the mirror image: through the ground for a surface that faces up, through the wall for one that faces the camera
+            vec2 su = gl_FragCoord.xy / t3Res + bend * 0.012;
+            vec4 r = N.y > 0.7 ? texture2D(t3Flr, su) : N.z > 0.5 ? texture2D(t3Win, su) : vec4(0.0);
+            // the lamps: a hot glint where the surface turns a lamp toward the eye, and the light they throw on it
+            vec3 spec = vec3(0.0), lit = vec3(0.0);
+            for (int i = 0; i < ${T3.NL}; i++) {
+              vec4 q = t3LP[i]; if (q.z <= 0.0) continue;
+              vec3 Ld = vec3(q.x, -q.y, t3LZ[i] + 20.0) - vW; float d2 = dot(Ld.xy, Ld.xy) / (q.z * 2.5); if (d2 >= 1.0) continue;
+              float k = (1.0 - d2) * (1.0 - d2); vec3 H = normalize(normalize(Ld) + V);
+              spec += t3LC[i] * k * pow(max(dot(N, H), 0.0), wat ? 120.0 : 900.0) * (wat ? 0.5 : 0.7); lit += t3LC[i] * k;
+            }
+            float band = mod(wp.x * 0.8 + wp.y - t3Cam.x * 0.35 + vW.z * 0.5, 52.0), sheen = smoothstep(0.0, 2.5, band) * (1.0 - smoothstep(2.5, 9.0, band));
+            vec3 col; float a;
+            if (mir) {   // a mirror: whoever stands before it, clear; the silver itself, lit by the room
+              a = 0.95;
+              col = uTint * (0.35 + 0.5 * lit) * (1.0 - r.a * 0.75) + r.rgb * 0.8 * vec3(0.92, 0.95, 1.0) + spec * 0.5 + vec3(sheen * 0.08);
+            } else if (wat) {   // water: tinted, the scene shimmering in its skin, light playing in it, a bright line where its top catches a lamp
+              float cs = pow(1.0 - abs(sin(wp.x * 0.21 + bend.x * 3.0 + T * 1.1) + sin(wp.y * 0.17 + vW.z * 0.23 - T * 0.9 + wp.x * 0.08)) * 0.5, 10.0);   // light ribbons
+              a = clamp(uOp + fr * 0.3 + (top ? 0.12 : 0.0), 0.0, 0.9);
+              col = uTint * a * (0.55 + 0.6 * lit) + vec3(0.5, 0.8, 0.9) * cs * 0.12 * (0.4 + lit) + r.rgb * r.a * (0.15 + 0.5 * fr) + spec
+                  + (top ? vec3(0.06, 0.1, 0.11) * (0.5 + 0.5 * sin(wp.x * 0.19 + vW.z * 0.31 + T * 2.0 + bend.y * 4.0)) : vec3(0.0));
+            } else {   // glass: nearly clear, a faint tint; more of the scene in it at a glancing angle; the glints, a sheen sliding past
+              float rk = flr ? 0.5 : 0.32;
+              vec3 P = vec3(wp, vW.z), e3 = min(P - vec3(uRect.xy, uZ.x), vec3(uRect.xy + uRect.zw, uZ.y) - P);   // the glass's edges catch the light
+              float e = An.z > 0.5 ? min(e3.x, e3.y) : An.x > 0.5 ? min(e3.y, e3.z) : min(e3.x, e3.z), edge = 1.0 - smoothstep(0.3, 1.6, e);
+              a = clamp(uOp + fr * 0.3 + sheen * 0.08 + r.a * rk * 0.35 + edge * 0.3, 0.0, 0.92);
+              col = uTint * (uOp + edge * 0.18) * (0.4 + 0.7 * lit) + r.rgb * r.a * rk * (0.5 + 0.5 * fr) * vec3(0.85, 0.93, 1.0) + spec + vec3(0.75, 0.85, 0.95) * sheen * 0.08;
+            }
+            if (uCk > 0.5) {   // the cracks: the level's own crack painter, drawn on the pane
+              vec2 xy = (wp - uRect.xy) / uRect.zw; float zz = (vW.z - uZ.x) / (uZ.y - uZ.x);
+              vec2 cu = uAx > 1.5 ? vec2(zz, xy.y) : uAx > 0.5 ? vec2(xy.x, zz) : xy;   // (a pane across the lane: its cracks run in depth)
+              vec4 ck = texture2D(uCrack, clamp(cu, 0.0, 0.999));
+              col = col * (1.0 - ck.a) + ck.rgb * ck.a * min(vec3(1.0), 0.75 + 0.5 * lit); a = max(a, ck.a);
+            }
+            if (uRip >= 0.0 && abs((wp.y - uRect.y) / uRect.w - uRip) * uRect.w < 2.5) { col = vec3(0.94, 0.96, 1.0); a = 1.0; }   // a mirror's ripple (the Count's tell)
+            col += vec3(uFlash); a = max(a, uFlash);
+            gl_FragColor = vec4(min(col, vec3(1.0)), a);
+          }`,
+      });
+    },
+    pane(q) {
+      let m = this.ppool[this.nP];
+      if (!m) { m = new THREE.Mesh(this.paneGeo, this.paneMat()); m.frustumCulled = false; m.renderOrder = 3; this.scene.add(t3L(m, 0)); this.ppool.push(m); }
+      this.nP++;
+      const x0 = q.x0, x1 = q.x1 + 1, y0 = q.y0, y1 = q.y1 + 1, U = m.material.uniforms, flat = q.kind === 'floor' || !!q.flat, c = q.tint ?? 0xffe8dcd0;
+      m.position.set((x0 + x1) / 2, -(y0 + y1) / 2, (q.z0 + q.z1) / 2); m.scale.set(x1 - x0, y1 - y0, q.z1 - q.z0); m.visible = true;
+      U.uTint.value.set((c & 255) / 255, (c >> 8 & 255) / 255, (c >> 16 & 255) / 255);
+      U.uOp.value = q.op ?? 0.08; U.uKind.value = T3_PANE_KIND[q.kind] ?? 0; U.uFlat.value = flat ? 1 : 0;
+      U.uFlash.value = Math.min(0.6, q.flash || 0); U.uRip.value = q.rip ?? -1;
+      U.uRect.value.set(x0, y0, x1 - x0, y1 - y0); U.uZ.value.set(q.z0, q.z1);
+      U.uCk.value = 0;
+      if (q.crack) {
+        // the texture: cols x rows from (ox, oy) in the painter's coordinates; ax 'xy' (upright), 'xz' (flat: rows run in depth),
+        // 'zy' (a pane across the lane: columns run in depth). draw: the level's painter; or n rays from (hx, hy) (0..1 of the pane)
+        const k = q.crack, key = k.key, ax = k.ax || (flat ? 'xz' : 'xy'); let t = this.crackTex.get(key);
+        U.uAx.value = T3_CRACK_AX[ax];
+        if (!t) {
+          if (this.crackTex.size > 64) { for (const v of this.crackTex.values()) v.dispose(); this.crackTex.clear(); }
+          const ox = k.x0 ?? x0, oy = k.y0 ?? y0, w = k.cols ?? (ax === 'zy' ? Math.max(8, Math.round(q.z1 - q.z0)) : x1 - x0), h = k.rows ?? (ax === 'xz' ? Math.max(8, Math.round(q.z1 - q.z0)) : y1 - y0), px = new Uint32Array(w * h);
+          const plot = (x, y, cc) => { x = Math.floor(x) - ox; y = Math.floor(y) - oy; if (x >= 0 && y >= 0 && x < w && y < h) px[y * w + x] = cc; };
+          const draw = k.draw || (R => {   // rays from the hit point, a little bent, longer with each stage (as the levels' own cracks)
+            const cx = ox + (k.hx ?? 0.5) * w, cy = oy + (k.hy ?? 0.45) * h, n = k.n || 3, L = Math.min(w, h) * (0.25 + 0.12 * n / 3);
+            let sd = (k.seed || 7) >>> 0; const rnd = () => (sd = (Math.imul(sd, 1664525) + 1013904223) >>> 0) / 4294967296;
+            for (let i = 0; i < n; i++) {
+              let a = (i / n) * Math.PI * 2 + rnd() * 0.6, x = cx, y = cy; const l = L * (0.6 + rnd() * 0.6);
+              for (let s = 0; s < 4; s++) { a += (rnd() - 0.5) * 0.5; const nx = x + Math.cos(a) * l / 4, ny = y + Math.sin(a) * l / 4; R.line1(x, y, nx, ny, k.c ?? 0xfffff0e8); x = nx; y = ny; }
+            }
+          });
+          draw({ t: simTime, cam: { x: -1e6, y: -1e6, vw: 2e6, vh: 2e6 }, plot,
+            blendPlot: (x, y, r, g, b, a) => plot(x, y, (softA(a) << 24 | b << 16 | g << 8 | r) >>> 0),
+            line1: (ax, ay, bx, by, cc) => { const n = Math.max(1, Math.ceil(Math.max(Math.abs(bx - ax), Math.abs(by - ay)))); for (let i = 0; i <= n; i++) plot(Math.round(ax + (bx - ax) * i / n), Math.round(ay + (by - ay) * i / n), cc); } });
+          this.crackTex.set(key, t = t3tex(px, w, h));
+        }
+        U.uCrack.value = t; U.uCk.value = 1;
+      }
+      return m;
+    },
+    mistMat() {
+      return new THREE.ShaderMaterial({
+        uniforms: { t3Cam: T3U.cam, uC: { value: new THREE.Vector3() }, uA: { value: 0.3 }, uSeed: { value: 0 } },
+        transparent: true, depthWrite: false,
+        blending: THREE.CustomBlending, blendSrc: THREE.OneFactor, blendDst: THREE.OneMinusSrcAlphaFactor, blendEquation: THREE.AddEquation,
+        vertexShader: `varying vec2 vUv; varying vec3 vW; void main() { vUv = uv; vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; gl_Position = projectionMatrix * viewMatrix * w; }`,
+        fragmentShader: `uniform vec4 t3Cam; uniform vec3 uC; uniform float uA, uSeed; varying vec2 vUv; varying vec3 vW;
+          void main() {   // a bank of haze: thick at its foot, thinning upward, soft at its ends; slow folds drift through it
+            float T = t3Cam.w, x = vW.x, h = vUv.y;
+            float f = 0.5 + 0.25 * sin(x * 0.05 + T * 0.7 + uSeed) + 0.15 * sin(x * 0.13 - T * 1.1 + uSeed * 2.0) + 0.1 * sin(x * 0.31 + h * 5.0 + T * 0.4);
+            float top = 0.55 + 0.35 * f, k = clamp(1.0 - h / top, 0.0, 1.0);
+            float a = uA * k * k * (0.6 + 0.6 * f) * smoothstep(0.0, 0.1, vUv.x) * smoothstep(1.0, 0.9, vUv.x);
+            gl_FragColor = vec4(uC * a, a);
+          }`,
+      });
+    },
+    mist(q) {
+      let m = this.mipool[this.nMist];
+      if (!m) { m = new THREE.Mesh(this.mistGeo, this.mistMat()); m.frustumCulled = false; m.renderOrder = 16; this.scene.add(t3L(m, 0)); this.mipool.push(m); }
+      this.nMist++;
+      const U = m.material.uniforms, c = q.c;
+      m.position.set((q.x0 + q.x1) / 2, -(q.y0 + q.y1) / 2, q.z); m.scale.set(q.x1 - q.x0, q.y1 - q.y0, 1); m.visible = true;
+      U.uC.value.set((c & 255) / 255, (c >> 8 & 255) / 255, (c >> 16 & 255) / 255); U.uA.value = q.a; U.uSeed.value = q.seed || 0;
+    },
     tunaModel(x, y, a, z, len = 22) {   // a frozen tuna (p9TunaGeo: hung from its tail) laid along a (its nose's way, 2D angle) and centred on (x, y)
       const m = this.model(this.geo('tuna' + len, () => this.p9TunaGeo(len)));
       m.position.set(x - Math.cos(a) * len / 2, -(y - Math.sin(a) * len / 2), z); m.rotation.set(0, 0, Math.PI / 2 - a);
@@ -8858,8 +9033,11 @@ import * as SPIRE from './levels/skyscraper/index.js';
       for (const b of eshots) if (b.k === 'k') { const m = this.model(this.knifeGeo); m.position.set(b.x, -b.y, this.ease(b, this.laneZ[b.lane ?? LANE.FIGHT])); m.rotation.set(0, 0, -(b.t * 22)); }
       this.p9Models(); this.mModels();
       if (LVH.sprites3d) for (const q of LVH.sprites3d(T3)) this.sprite(q.size, q.x, q.y, q.draw, q.d, q.z, q.slot);
-      { const LM = L3D(); if (LM && LM.models && LVH.S) for (const q of LM.models(T3, LVH.S, R9, cam)) { if (q.rod) this.rod(q.rod); else if (q.box) this.box(q.box, q.c); else this.sprite(q.size, q.x, q.y, q.draw, q.d, q.z, q.slot); } }   // a level's movers modelled in its three.js (the Palm House)   // a level's moving models (the Leviathan: the hanging catwalks, the hoist's pallet, the bait cage)
+      this.nP = this.nMist = 0;
+      { const LM = L3D(); if (LM && LM.models && LVH.S) for (const q of LM.models(T3, LVH.S, R9, cam)) { if (q.rod) this.rod(q.rod); else if (q.box) this.box(q.box, q.c); else if (q.pane) this.pane(q.pane); else if (q.mist) this.mist(q.mist); else this.sprite(q.size, q.x, q.y, q.draw, q.d, q.z, q.slot); } }   // a level's movers, glass, water and mist modelled in its three.js (the Palm House)   // a level's moving models (the Leviathan: the hanging catwalks, the hoist's pallet, the bait cage)
       for (let i = this.nM; i < this.mpool.length; i++) this.mpool[i].visible = false;
+      for (let i = this.nP; i < this.ppool.length; i++) this.ppool[i].visible = false;
+      for (let i = this.nMist; i < this.mipool.length; i++) this.mipool[i].visible = false;
       if (this.gpool) for (let i = this.nG; i < this.gpool.length; i++) this.gpool[i].visible = false;
     },
 
@@ -8877,7 +9055,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
         g.setIndex([0, 2, 1, 1, 2, 3]);
         const mesh = new THREE.Mesh(g, lit ? t3mat(opts, 0, kind) : new THREE.MeshBasicMaterial(opts));
         mesh.renderOrder = order; mesh.frustumCulled = false; this.scene.add(t3L(mesh, ...ls));
-        return { data, tex, mesh, kind, dw, dh };
+        const L = { data, tex, mesh, kind, dw, dh }; (this.layerList ||= []).push(L);
+        return L;
       };
       this.lWall = mk(true, 0, true, 'glass', 0, 2);   // on the facades: lit windows with people (or dark glass), a door a goon came through, the club door
       this.lSign = mk(true, 0, true, '', 0, 2);        // the roof sign's face, on its box
@@ -8901,11 +9080,11 @@ import * as SPIRE from './levels/skyscraper/index.js';
     // draw into buf and copy into the layer's texture; a layer at depth z gets the window the camera sees at that depth
     // (wider, and shifted down by the lens shift), drawn in tiles of the buffer's size
     layer(L, draw, { glow = false, z = 0 } = {}) {
+      this.curZ = z;   // (R.soft: a puff's depth when its painter names none)
       const sx = cam.x, sy = cam.y, sw = cam.vw, sh = cam.vh, t = Math.tan(T3.FOV * Math.PI / 360), D = (sh / 2) / t, h = D * Math.tan(T3.PITCH);
       const k = z < 0 ? (D - z) / D * 1.03 : 1, TW = Math.min(L.dw, Math.ceil(sw * k) + (z < 0 ? 4 : 0)), TH = Math.min(L.dh, Math.ceil(sh * k) + (z < 0 ? 4 : 0));
       const x0 = Math.round(sx + sw / 2 - TW / 2), y0 = Math.round(sy + sh / 2 - h * Math.min(z, 0) / D - TH / 2), gl = L.kind === 'glass';
       let any = false;
-      const dith = !!L3D();   // a level's see-through pixels (glass sheen, mist, steam): a screen-door pattern of solid pixels, not dropped by the alpha test
       for (let oy = 0; oy < TH; oy += CHMAX) for (let ox = 0; ox < TW; ox += CW) {
         const tw = Math.min(CW, TW - ox), th = Math.min(CHMAX, TH - oy);
         withView({ x: x0 + ox, y: y0 + oy, vw: tw, vh: th }, draw);
@@ -8926,11 +9105,10 @@ import * as SPIRE from './levels/skyscraper/index.js';
           }
           if (ox < E0[dy]) E0[dy] = ox;
           if (ox + tw > E1[dy]) E1[dy] = ox + tw;
-          if (!dith && !glow) { L.data.set(buf.subarray(r, r + tw), o); any = true; continue; }
+          if (!glow) { L.data.set(buf.subarray(r, r + tw), o); any = true; continue; }
           let pc = -1, po = 0;
           for (let x = 0; x < tw; x++) {
             let c = buf[r + x];
-            if (dith && c && c >>> 24 < 250) c = c >>> 24 > T3_BAYER[((y0 + oy + y) & 3) * 4 + ((x0 + ox + x) & 3)] ? (c | 0xff000000) >>> 0 : 0;   // (world-fixed, so it does not crawl)
             if (!c) { L.data[o + x] = 0; continue; }
             any = true;
             if (glow) { if (c !== pc) { pc = c; po = EMIT.has(c) ? t3flag(c, 254) : gl && GLASS_C.has(c) ? t3flag(c, 253) : c; } c = po; }
@@ -8948,7 +9126,17 @@ import * as SPIRE from './levels/skyscraper/index.js';
       L.mesh.visible = true;
     },
     updateLayers() {
-      const { ZF } = T3;
+      const { ZF } = T3, lvl = !!L3D(), soft = lvl || isP9();
+      // a level's see-through pixels (steam, sprays, bubbles, Pier 9's freezer fog) blend for real: its layers are transparent and keep
+      // every pixel with any alpha (the street's layers stay cut-outs at 0.5, as they were)
+      if (this.softL !== soft) { this.softL = soft; for (const L of this.layerList) { const m = L.mesh.material; m.transparent = soft; m.alphaTest = soft ? 0.01 : 0.5; m.needsUpdate = true; } }
+      // the level painters see R.glass3d: their glass, mirrors and water are real surfaces here (paneModels), not pixels; R.soft: a
+      // puff of steam or smoke is a soft sprite (updateSoft)
+      this.softQ.length = 0; R9.glass3d = lvl; R9.soft = lvl ? this.softFn : null;
+      this.updateLayers2(ZF);
+      R9.glass3d = false; R9.soft = null;
+    },
+    updateLayers2(ZF) {
       if (flags.club && isStreet()) this.layer(this.lClub, () => { drawClub(); drawDancers(); }, { glow: true, z: ZF - 0.6 }); else this.lClub.mesh.visible = false;   // (the hall's wall is a mesh: p9Build)
       R9.models3d = !!(L3D() && L3D().models);   // (the movers a level models in 3D stay off its wall layer)
       this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); drawDrill(); if (LVH.drawWorld) LVH.drawWorld(); }, { glow: true, z: flags.club && !ownWorld() ? ZF - 0.3 : ZF + 0.3 });
@@ -8982,7 +9170,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
         drawEShots(false);
       });
       this.layer(this.lFx, () => {
-        drawP9Fog(true); drawFx(); drawOffscreen();
+        drawP9Fog(); drawFx(); drawOffscreen();   // (the fog: see-through pixels, blended for real on this layer)
         for (const e of enemies) {   // a goon's muzzle flash
           const J = e.dead ? e.pts : e.J; if (!J || e.R.w !== 'pistol' || !(e.muz > 0)) continue;
           const g = eWeapon(e, J); for (let d = 1; d <= 4; d++) plot(Math.floor(g.tx + g.dx * d), Math.floor(g.ty + g.dy * d), d < 3 ? PAL.white : PAL.accent);
@@ -9106,6 +9294,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       if (this.slots) for (const h of this.slots.values()) if (!h.used) h.mesh.visible = false;
       this.updateGore(rdt);
       this.updateFx();
+      this.updateSoft();
       this.reflect();
       this.post();
     },
@@ -9758,7 +9947,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     else { Object.assign(p9.fog, { on: true, t: 0, offT: 0 }); toast('Cold storage', 'He hides in the fog: watch for his breath and his gold chain. Hit the freezer lever to clear it.'); }
     emit('p9:lever', { which, by: 'boss' });
   }
-  function drawP9Fog(dither) { if (isP9() && flags.club && p9.fog.k > 0) P9.drawFog(R9, fogD, ctl.x, P[1].y, P9.MARCHETTI.fog.bubble[diffSel], dither); }   // (both views: in 3D on the front fx layer)
+  function drawP9Fog() { if (isP9() && flags.club && p9.fog.k > 0) P9.drawFog(R9, fogD, ctl.x, P[1].y, P9.MARCHETTI.fog.bubble[diffSel]); }   // (both views: in 3D on the front fx layer)
   function floorTuna(x, vx) {   // a frozen tuna on the floor: lift it and throw it at him (at most 3 lie about)
     const old = objs.filter(o => o.kind === 'tuna' && !o.carried);
     if (old.length >= 3) removeObj(old[0]);

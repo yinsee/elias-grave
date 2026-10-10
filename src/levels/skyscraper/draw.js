@@ -42,7 +42,10 @@ export function drawWorld(R, S) {
         else if (fy > 8 && fy < 52 && (x % 14) > 2 && ((x >> 3) * 7 + row * 13) % 5 === 0) plot(x, y, SC.cityL);
       }
     }
-    if (L.floor > 55 && L.floor < 73) for (let y = 0; y < 220; y += 2) for (let x = 540; x < 820; x += 2) if (((x * 7 + y * 3 + Math.floor(t * 20)) % 9) === 0) blendPlot(x, y, 180, 190, 210, 0.25);
+    if (L.floor > 55 && L.floor < 73) {   // through the clouds (3D: soft puffs of cloud, not a pattern of pixels)
+      if (R.soft) { for (let y = 0; y < 220; y += 8) for (let x = 540; x < 820; x += 8) if (((x * 7 + y * 3 + Math.floor(t * 20)) % 5) === 0) R.soft(x, y, 7, 180, 190, 210, 0.22); }
+      else for (let y = 0; y < 220; y += 2) for (let x = 540; x < 820; x += 2) if (((x * 7 + y * 3 + Math.floor(t * 20)) % 9) === 0) blendPlot(x, y, 180, 190, 210, 0.25);
+    }
     const T = L.twin;
     if (T && T.on) {
       const ty = Math.round(T.y);
@@ -87,7 +90,7 @@ export function drawWorld(R, S) {
       if (g.broken) { plot(x, y, (x * 5 + y * 3) % 13 === 0 ? SC.cityL : SC.city); continue; }
       plot(x, y, y === GROUND ? SC.glassL : (x * 7 + y * 5) % 17 === 0 ? SC.cityL : mix(SC.glass, SC.city, 0.5));
     }
-    if (!g.broken && g.stage >= 1) for (let k = 0; k < (g.stage >= 2 ? 9 : 4); k++) { const cx = g.x0 + 8 + ((k * 37) % (g.x1 - g.x0 - 16)); line1(cx, GROUND, cx + ((k % 3) - 1) * 9, GROUND + 4, SC.white); }
+    if (!g.broken && g.stage >= 1) tileCracks(R, g);
   }
   // the bells: the hammer lifts before a peal; the bell swings with it
   const bell = (bx, by) => {
@@ -112,7 +115,7 @@ export function drawWorld(R, S) {
     bell(...D.PEND_ARENA.bell);
     if (S.pend && !m3) drawPend(R, S.pend);
     if (S.dialBroken) for (let y = 30; y < GROUND; y += 2) for (let x = D.PEND_ARENA.dial - 2; x <= D.PEND_ARENA.dial + 2; x++) if ((x + y) % 5 === 0) plot(x, y, SC.sky1);
-    if (S.clutch > 0) for (let k = 0; k < 6; k++) blendPlot(2290 + Math.round(Math.sin(t * 9 + k) * 6), 130 - k * 6, 230, 230, 230, 0.4);
+    if (S.clutch > 0) for (let k = 0; k < 6; k++) { const x = 2290 + Math.sin(t * 9 + k) * 6, y = 130 - k * 6; if (R.soft) R.soft(x, y, 3 + k * 0.6, 230, 230, 230, 0.35); else blendPlot(Math.round(x), y, 230, 230, 230, 0.4); }
   }
   // the face: the lit dial, the numeral ledges, the hour hand at XII, the minute hand, the bell above, the beacon, Nero's hatch
   if (vis(2436, 2800)) {
@@ -137,9 +140,9 @@ export function drawWorld(R, S) {
     clock317(R, ...D.VESTRY.clock);
     const bx = D.VESTRY.bench;
     for (let k = -3; k <= 3; k++) plot(bx - 6 + k, GROUND - 14, C('#e0e0d8')); plot(bx - 6, GROUND - 15, C('#c08040'));
-    for (let k = 0; k < 4; k++) blendPlot(bx - 6 + Math.round(Math.sin(t * 2 + k) * 2), GROUND - 17 - k * 3, 220, 220, 220, 0.25);   // the soup, still warm
+    for (let k = 0; k < 4; k++) { const x = bx - 6 + Math.sin(t * 2 + k) * 2, y = GROUND - 17 - k * 3; if (R.soft) R.soft(x, y, 1.5 + k * 0.5, 220, 220, 220, 0.22); else blendPlot(Math.round(x), y, 220, 220, 220, 0.25); }   // the soup, still warm
     line1(bx + 4, GROUND - 13, bx + 10, GROUND - 13, C('#7a3a20'));
-    for (let k = 0; k < 5; k++) blendPlot(bx + 10 + Math.round(Math.sin(t * 1.5 + k * 0.8) * 2), GROUND - 15 - k * 3, 200, 200, 210, 0.3);   // the cherry-wood pipe, still smoking
+    for (let k = 0; k < 5; k++) { const x = bx + 10 + Math.sin(t * 1.5 + k * 0.8) * 2, y = GROUND - 15 - k * 3; if (R.soft) R.soft(x, y, 1.5 + k * 0.5, 200, 200, 210, 0.25); else blendPlot(Math.round(x), y, 200, 200, 210, 0.3); }   // the cherry-wood pipe, still smoking
   }
 }
 
@@ -176,13 +179,16 @@ export function drawHand(R, h) {   // the minute hand on the face
   for (let w = -1; w <= 1; w++) R.line1(F.cx, F.cy + w, Math.round(h.tx), Math.round(h.ty) + w, w ? SC.black : SC.blackL);
 }
 
+export function paneCracks(R, p) { for (const c of p.cracks) { R.line1(c.x, c.y, c.x + c.dx * 5, c.y + Math.round(c.dy * 7), SC.white); R.line1(c.x, c.y, c.x - c.dx * 3, c.y - 4, SC.whiteD); } }
+export function tileCracks(R, g) { for (let k = 0; k < (g.stage >= 2 ? 9 : 4); k++) { const cx = g.x0 + 8 + ((k * 37) % (g.x1 - g.x0 - 16)); R.line1(cx, GROUND, cx + ((k % 3) - 1) * 9, GROUND + 4, SC.white); } }   // (the glass floor's, by stage)
 export function drawFx(R, S) {
   const { plot, line1, blendPlot } = R, t = R.t;
   for (const p of S.panes || []) {
     if (p.def.mirror || p.broken) continue;
     const front = !p.def.back, wide = p.x1 - p.x0 > 40, m = wide ? 23 : front ? 5 : 7;
+    if (R.glass3d) continue;   // (3D: the glass and its cracks are a pane, three.js)
     for (let y = p.y0; y <= p.y1; y++) for (let x = p.x0; x <= p.x1; x++) if ((x + y) % m === 0) blendPlot(x, y, 170, 200, 230, wide ? 0.12 : front ? 0.22 : 0.3);
-    for (const c of p.cracks) { line1(c.x, c.y, c.x + c.dx * 5, c.y + Math.round(c.dy * 7), SC.white); line1(c.x, c.y, c.x - c.dx * 3, c.y - 4, SC.whiteD); }
+    paneCracks(R, p);
   }
   for (const f of S.forks || []) {
     const x = Math.round(f.x), y = Math.round(f.y);

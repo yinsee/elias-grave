@@ -3,6 +3,7 @@
 // statues, the misting pipes, the lantern) are voxel models of the shared painters (paint.js): only the models and depths are 3D-only.
 import * as D from './data.js';
 import * as P from './paint.js';
+import { C } from '../../core/color.js';
 
 export const palmhouse3d = {
   // the named blocks: [x0, y0, x1, y1, depth from the wall, the surface it carries]
@@ -35,7 +36,7 @@ export const palmhouse3d = {
   // the movers as models (src/legacy.js updateModels: voxel sprites of the 2D painters; the wall layer leaves them out: R.models3d).
   // Depths: behind the fight lane (z 0) and in front of the platform lane (ZF + 8), so none hides a fighter; the pipes on the wall
   models(T3, S, R, cam) {
-    const out = [], G = D.GROUND, ZF = T3.ZF, near = (x0, x1) => x1 > cam.x - 60 && x0 < cam.x + cam.vw + 60;
+    const out = [], G = D.GROUND, ZF = T3.ZF, near = (x0, x1) => x1 > cam.x - 60 && x0 < cam.x + cam.vw + 60, vis = near;
     S.guests.forEach((g, i) => { if (g.st !== 'gone' && near(g.x - 8, g.x + 8)) out.push({ size: 40, x: Math.round(g.x) - 20, y: G - 40, draw: () => P.drawGuestR(R, g), d: 5, z: ZF + 14, slot: 'phGuest' + i }); });
     S.towers.forEach((tw, i) => { if (near(tw.x - 12, tw.x + 12)) out.push({ size: 32, x: tw.x - 16, y: G - 32, draw: () => P.drawTower(R, tw), d: 10, z: -16, slot: 'phTower' + i }); });
     S.chands.forEach((ch, i) => {
@@ -52,6 +53,23 @@ export const palmhouse3d = {
       out.push({ size: 32, x: D.LANTERN.x - 16, y: ly - 12, draw: () => P.drawLantern(R, L), d: 12, z: -10, slot: 'phLantern' });
       if (L.st === 'hang' || L.st === 'warn') out.push({ size: 80, x: D.LANTERN.x - 40, y: D.LANTERN.chainY - 2, draw: () => P.drawLanternChain(R, L), d: 1.4, z: -10, slot: 'phLChain' });
     }
+    // the glass as real panes (paint.js leaves its sheen and cracks out: R.glass3d): the van's window on its side, the gun cabinet,
+    // the orchid cabinets' panes across the lane, the nave's and the dome's roof panes lying flat overhead; their cracks on the glass
+    const tint = C('#aad2e6');
+    for (const p of S.panes) {
+      if (p.broken || !vis(p.x0, p.x1)) continue;
+      const n = p.cracks.length, crack = n ? { key: 'ph' + p.id + ':' + n, draw: Rc => P.paneCracks(Rc, p) } : null;
+      if (p.def.blocks) out.push({ pane: { x0: p.x0 + 1, x1: p.x1 - 1, y0: p.y0, y1: p.y1, z0: ZF + 2, z1: 16, tint, op: 0.07, crack: n ? { key: crack.key, ax: 'zy', n: Math.min(9, n * 2 + 1), seed: p.x0 * 7 + n } : null } });
+      else if (p.id === 'vanWin') out.push({ pane: { x0: p.x0, x1: p.x1, y0: p.y0, y1: p.y1, z0: ZF + 26, z1: ZF + 26.8, tint, op: 0.1, crack } });
+      else out.push({ pane: { x0: p.x0, x1: p.x1, y0: p.y0, y1: p.y1, z0: ZF + 1, z1: ZF + 9, tint, op: 0.06, crack } });
+    }
+    for (const p of S.roof) {
+      if (p.broken || !vis(p.x0, p.x1)) continue;
+      const n = p.cracks.length, y0 = Math.round(p.y0), y1 = Math.round(p.y1);
+      out.push({ pane: { x0: Math.round(p.x0), x1: Math.round(p.x1), y0, y1, z0: ZF, z1: 20, flat: true, tint, op: 0.12, crack: n ? { key: 'phr' + p.id + ':' + n, y0, rows: y1 - y0 + 1, draw: Rc => P.paneCracks(Rc, p) } : null } });
+    }
+    // the floor mist in the orchid rooms: banks of soft haze at four depths (paint.js leaves its pixels out: R.glass3d)
+    if (vis(1154, 1504)) for (const [z, a, s] of [[ZF + 6, 0.5, 0], [-12, 0.45, 1.7], [2, 0.42, 3.1], [14, 0.32, 4.6]]) out.push({ mist: { x0: 1158, x1: 1500, y0: G - 22, y1: G + 1, z, c: C('#d2e4dc'), a, seed: s } });
     return out;
   },
 };

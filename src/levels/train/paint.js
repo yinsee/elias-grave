@@ -309,6 +309,7 @@ function roofBand(R, x0, x1, cam, glass) {
 }
 
 // ---- per frame: over the lit scene ----
+export function paneCracks(R, p) { for (const c of p.cracks) for (let k = 0; k < 6; k++) { R.plot(c.x + k, c.y + Math.round(k * 0.5), C('#e0f0ff')); R.plot(c.x - k, c.y + Math.round(k * 0.3), C('#e0f0ff')); } }
 export function drawFx(R, S, M) {
   const { plot, line1, blendPlot, cam } = R, t = R.t, T = TC, O = T.out;
   const vx0 = cam.x - 8, vx1 = cam.x + cam.vw + 8;
@@ -336,13 +337,17 @@ export function drawFx(R, S, M) {
   for (const p of S.panes) {
     if ((p.kind === 'window') !== (S.grp === 2) && !(p.kind === 'roof' && S.grp === 5)) continue;
     if (p.broken) { for (let y = p.y0; y <= p.y1; y += 2) for (let x = p.x0; x <= p.x1; x += 3) if (noise2(x, y) < 0.15) plot(x, y, T.white); continue; }
-    for (const c of p.cracks) for (let k = 0; k < 6; k++) { plot(c.x + k, c.y + Math.round(k * 0.5), C('#e0f0ff')); plot(c.x - k, c.y + Math.round(k * 0.3), C('#e0f0ff')); }
+    if (R.glass3d) continue;   // (3D: the glass and its cracks are a pane, three.js)
+    paneCracks(R, p);
     if (p.kind === 'roof') for (let x = p.x0; x <= p.x1; x += 5) blendPlot(x, p.y0 + 2, 220, 240, 255, 0.25);
   }
   // shard rings and Grau's glass rings: a circle on the floor shrinking to the drop
   for (const s of [...S.shards, ...S.rings]) { const r = Math.round(s.r * (0.5 + 0.5 * Math.min(1, s.t / 0.6))); for (let k = 0; k < 24; k++) { const q = k / 24 * Math.PI * 2; plot(Math.round(s.x + Math.cos(q) * r), Math.round(GROUND + 1 + Math.sin(q) * r * 0.25), k % 2 ? C('#e0f0ff') : T.red); } }
   // the steam jet
-  if (S.steam > 0 && S.grp === 2) for (let k = 0; k < 40; k++) blendPlot(D.STEAM.x - k, D.STEAM.y + Math.round(Math.sin(t * 30 + k) * (k / 10)), 240, 240, 240, 0.5 * (1 - k / 40));
+  if (S.steam > 0 && S.grp === 2) for (let k = 0; k < 40; k++) {
+    const x = D.STEAM.x - k, y = D.STEAM.y + Math.sin(t * 30 + k) * (k / 10);
+    if (R.soft) { if (k % 2 === 0) R.soft(x, y, 1.5 + k * 0.12, 240, 240, 240, 0.45 * (1 - k / 40)); } else blendPlot(x, Math.round(y), 240, 240, 240, 0.5 * (1 - k / 40));   // (3D: soft puffs)
+  }
   // the sabre's glint on beat 2 (a white line along the blade)
   if (S.glint && S.glint.e.J && !S.glint.e.dead) { const g = M.G.eWeapon(S.glint.e, S.glint.e.J), k = 1 - S.glint.t / 0.25; const x = g.x + (g.tx - g.x) * k, y = g.y + (g.ty - g.y) * k; plot(Math.round(x), Math.round(y), 0xffffffff); plot(Math.round(x) + 1, Math.round(y), 0xffffffff); }
 }

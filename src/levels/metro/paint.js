@@ -387,7 +387,7 @@ export function drawFx(R, S) {
   }
   for (const f of S.flares) {   // a flare burning on the floor: a red-white core, smoke
     plot(Math.round(f.x), Math.round(f.y), C('#fff0f0')); plot(Math.round(f.x) + 1, Math.round(f.y), C('#ff4040')); plot(Math.round(f.x), Math.round(f.y) - 1, C('#ff8080'));
-    for (let i = 0; i < 3; i++) { const ph = (t * 0.6 + i * 0.33) % 1; blendPlot(Math.round(f.x + Math.sin(t + i) * 3), Math.round(f.y - 4 - ph * 20), 120, 60, 60, 0.3 * (1 - ph)); }
+    for (let i = 0; i < 3; i++) { const ph = (t * 0.6 + i * 0.33) % 1, x = f.x + Math.sin(t + i) * 3, y = f.y - 4 - ph * 20; if (R.soft) R.soft(x, y, 2 + ph * 5, 120, 60, 60, 0.3 * (1 - ph)); else blendPlot(Math.round(x), Math.round(y), 120, 60, 60, 0.3 * (1 - ph)); }   // (3D: soft puffs)
   }
-  if (S.spray) { const x = D.WATERFALL.x; for (let i = 0; i < 10; i++) { const ph = (t * 1.7 + i * 0.1) % 1; blendPlot(Math.round(x - 8 + ((i * 37) % 16)), Math.round(GROUND - 2 - ph * 10), 200, 220, 240, 0.4 * (1 - ph)); } }
+  if (S.spray) { const x = D.WATERFALL.x; for (let i = 0; i < 10; i++) { const ph = (t * 1.7 + i * 0.1) % 1, sx = x - 8 + ((i * 37) % 16), sy = GROUND - 2 - ph * 10; if (R.soft) R.soft(sx, sy, 1.5 + ph * 3, 200, 220, 240, 0.35 * (1 - ph)); else blendPlot(Math.round(sx), Math.round(sy), 200, 220, 240, 0.4 * (1 - ph)); } }
 }

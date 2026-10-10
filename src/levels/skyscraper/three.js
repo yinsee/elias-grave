@@ -40,8 +40,22 @@ export const spire3d = {
       out.push({ size: 48, x: D.CHAND.x - 24, y: c.st === 'down' ? D.GROUND - 24 : y - 24, draw: () => P.drawChandelier(R, { ...c, st: c.st === 'hang' ? 'fall' : c.st }), d: 12, z: -10, slot: 'spChand' });
       if (c.st === 'hang') out.push({ rod: { x0: D.CHAND.x + 0.5, y0: 40, x1: D.CHAND.x + 0.5, y1: y - 10, w: 1, d: 1, z: -10, c: SC.goldD } });
     }
-    // the glass floor's tiles: a pane on the floor from the wall to the fight lane, as the 2D strip under the wall; cracked, paler; gone, the city
-    for (const g of S.tiles || []) if (near(g.x0, g.x1)) out.push({ box: [g.x0, D.GROUND - 0.7, ZF, g.x1 + 1, D.GROUND - 0.45, 2], c: g.broken ? SC.city : g.stage >= 1 ? SC.glassL : SC.glass });
+    // the glass floor's tiles: from the wall to the fight lane, as the 2D strip under the wall. The city far below shows through:
+    // its dark floor, and over it a real glass tile that mirrors whoever stands on it, with the painter's cracks; gone, the city
+    for (const g of S.tiles || []) {
+      if (!near(g.x0, g.x1)) continue;
+      out.push({ box: [g.x0, D.GROUND - 0.62, ZF, g.x1 + 1, D.GROUND - 0.45, 2], c: SC.city });
+      if (!g.broken) out.push({ pane: { x0: g.x0, x1: g.x1, y0: D.GROUND - 0.95, y1: D.GROUND - 1.63, z0: ZF, z1: 2, kind: 'floor', tint: g.stage >= 1 ? SC.glassL : SC.glass, op: 0.3,
+        crack: g.stage >= 1 ? { key: 'sp' + g.id + ':' + g.stage, y0: D.GROUND, rows: 8, draw: Rc => P.tileCracks(Rc, g) } : null } });
+    }
+    // the glass as real panes (draw.js leaves its sheen and cracks out: R.glass3d): the weapon cases, the lift car's back glass on the
+    // wall, its side panes and the windbreak across the lane; the mirrors stay painted (the reflections in them are the 2D view's rule)
+    for (const p of S.panes || []) {
+      if (p.def.mirror || p.broken || !near(p.x0, p.x1)) continue;
+      const n = p.cracks.length, key = 'spp' + p.id + ':' + n;
+      if (p.def.blocks) out.push({ pane: { x0: p.x0 + 1, x1: p.x1 - 1, y0: p.y0, y1: p.y1, z0: ZF + 2, z1: 16, tint: SC.glassL, op: 0.08, crack: n ? { key, ax: 'zy', n: Math.min(9, n * 2 + 1), seed: p.x0 + n * 13 } : null } });
+      else out.push({ pane: { x0: p.x0, x1: p.x1, y0: p.y0, y1: p.y1, z0: ZF + 1, z1: p.def.cased ? ZF + 9 : ZF + 2, tint: SC.glassL, op: p.x1 - p.x0 > 40 ? 0.05 : 0.08, crack: n ? { key, draw: Rc => P.paneCracks(Rc, p) } : null } });
+    }
     const pn = S.piano;
     if (pn && !pn.gone && near(pn.x - 24, pn.x + 24)) { const x = Math.round(pn.x), y = Math.round(pn.y ?? D.GROUND); out.push({ size: 48, x: x - 24, y: y - 40, draw: () => P.drawPiano(R, pn), d: 14, z: -8, slot: 'spPiano' }); }
     return out;
