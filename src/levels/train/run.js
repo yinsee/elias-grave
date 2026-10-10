@@ -601,6 +601,9 @@ export function createTrain(G) {
         S.leap = { t: 0, x0: ctl.x, y0: ctl.y, tx: stubX() + 16, T: 0.75 };
         G.slowMo(D.SLOW.leap, 'leap'); sfx('slowmo_in', ctl.x, 0.9); G.emit('feat', 'leap'); hero.invT = Math.max(hero.invT, 0.9);
       }
+      // on his feet on the stub any other way (an early jump before the gap reached 40 px, a roll): he is on it all the same, so the
+      // dome glass creaks and drops him (an early jump left him riding the stub with no drop: a soft-lock)
+      else if (S.grp === 4 && S.stub.st === 'move' && !S.onStub && hero.mode === 'anim' && !ctl.air && ctl.x >= stubX()) { S.onStub = true; S.stubT = 0; }
       return;
     }
     L.t += dt; const k = Math.min(1, L.t / L.T); L.tx = Math.max(L.tx, stubX() + 16);
