@@ -70,7 +70,7 @@ export function createHospital(G) {
     for (const k of G.pickups) k.hidden = k.hide0 || null;
     for (const it of D.ITEMS) if (it.band || it.ammo) G.ammoBoxes.push({ band: !!it.band, x: it.x, y: it.y - 4, vx: 0, vy: 0, life: 1e6, placed: true });
     for (const o of G.objs) if (o.kind === 'barrel') o.oxy = true;
-    S.gurney.surf = { x0: 0, x1: 0, y: D.GURNEY.top, box: true }; G.SURF.push(S.gurney.surf); syncGurney();
+    S.gurney.surf = { x0: 0, x1: 0, y: D.GURNEY.top }; G.SURF.push(S.gurney.surf); syncGurney();   // (not a crate: its top is 24 px up, past a jump, so a held ↑ climbs onto it)
     G.dog = G.makeDog(D.NERO.x, 1); G.dog.st = 'sit';
     G.rain.k = G.rain.goal = 0.7; G.rain.drops.length = 0; G.rain.flash = 0;
     G.heroTo(250); ctl.face = -1; S.prevX = ctl.x;
@@ -255,7 +255,7 @@ export function createHospital(G) {
   ];
   M.up = () => {   // ↑ on the ground by a door: through it (true = used, no jump)
     if (hero.mode !== 'anim' || ctl.air || ctl.surf !== G.GROUND_S || S.fade || S.dive || G.flags.club) return false;
-    const dd = DOORS.find(d => Math.abs(ctl.x - d.x) < 11);
+    const near = DOORS.filter(d => Math.abs(ctl.x - d.x) < 11), dd = near.find(d => d.ok()) || near[0];   // (the lever stands by the morgue's stair door)
     if (!dd) return false;
     if (!dd.ok()) { if (dd.no && (S.noT || 0) < G.simTime) { S.noT = G.simTime + 3; G.toast(dd.no, '', true); } return false; }
     dd.go(); return true;
@@ -446,7 +446,7 @@ export function createHospital(G) {
       // a goon on a ledge comes down: a thrower after 3 throws or 8 s; anyone at once when the hero climbs up, or when hit
       if (e.perchS) {
         const s = e.perchS; e.perchT = (e.perchT || 0) + dt;
-        if ((ctl.surf === s && hero.mode === 'anim' && !ctl.air) || (e.thrN || 0) >= PERCH.throws || e.perchT > (e.R.ranged ? PERCH.time : PERCH.melee) || e.hurtT > 0 || e.down) { e.perchS = null; e.dropTo = ctl.x < (s.x0 + s.x1) / 2 ? s.x1 + 8 : s.x0 - 8; }
+        if ((ctl.surf === s && hero.mode === 'anim' && !ctl.air) || (e.thrN || 0) >= PERCH.throws || e.perchT > (e.R.ranged ? PERCH.time : PERCH.melee) || e.hurtT > 0 || e.down) { e.perchS = null; const dir = ctl.x < (s.x0 + s.x1) / 2 ? 1 : -1; let to = dir > 0 ? s.x1 + 8 : s.x0 - 8; for (let k = 0; k < 6 && G.floorBelow(to, s.y, 0).y < GROUND - 6; k++) to += dir * 8; e.dropTo = to; }   // (down to the floor: past a step beside the ledge, the walkway's cabinet)
         else if (!e.down && !e.air && Math.abs(e.y + 2 - s.y) < 3) e.x = clamp(e.x, s.x0 + 4, s.x1 - 4);
       }
       if (e.dropTo != null) { if (e.down || (!e.air && e.y > GROUND - 6)) e.dropTo = null; else { e.cdT = Math.max(e.cdT, 0.3); if (!e.act) { e.x += Math.sign(e.dropTo - e.x) * 80 * dt; e.face = Math.sign(e.dropTo - e.x) || e.face; } } }
@@ -643,8 +643,8 @@ export function createHospital(G) {
       if (b.shoveT > 0) b.shoveT -= dt;
       // the wind on the roof rolls the beds
       if (b.wind && S.wind && S.wind.on && !b.tipped) b.vx += S.wind.dir * 160 * dt, b.vx = clamp(b.vx, -KRIEG.wind.bed, KRIEG.wind.bed);
-      // the hero pushes a bed he walks into
-      if (hero.mode === 'anim' && !ctl.air && ctl.surf === G.GROUND_S && !b.tipped && Math.abs(ctl.x - b.x) < b.w / 2 + 5) {
+      // the hero pushes a bed he walks into (not once Krieg has run for the roof: the beds stand behind the lane, so the stair door stays open)
+      if (hero.mode === 'anim' && !ctl.air && ctl.surf === G.GROUND_S && !b.tipped && !S.krGone && !(S.kr && S.kr.sp === 'flee') && Math.abs(ctl.x - b.x) < b.w / 2 + 5) {
         const side = Math.sign(ctl.x - b.x) || 1;
         ctl.x = b.x + side * (b.w / 2 + 5); S.prevX = ctl.x;
         if (ctl.spd > 10 && ctl.face === -side) b.vx = -side * Math.max(Math.abs(b.vx), 55);

@@ -45,7 +45,8 @@ export const WARD5 = { x: 874, room: [880, 962], row: [902, 926, 950] };
 export const ISO_STAIR = 972;
 export const SHAFT = 990;                 // the dead service lift: ↑ pries the doors, then the drop into the morgue
 // the morgue (B1): drawers, autopsy tables, the axe case, the cold room, the generator hall
-export const MORGUE_STAIR = 1022;
+// the morgue's stair door stands by the generator, where the D3 bark comes (the plan's rule: a stair door within 60 px of every bark)
+export const MORGUE_STAIR = 1472;
 export const SHAFT_LAND = 1056;
 export const DRAWERS = { x0: 1068, x1: 1188, rows: 3, cols: 6, y0: hy(66), y1: hy(10) };
 export const DRAWER_X = [1084, 1128, 1172];
@@ -54,8 +55,8 @@ export const TABLE_TOP = hy(28);
 export const AXE_CASE = { x: 1246, w: 16, h: 30, hp: 10 };
 export const COLD_DOOR = 1268;
 export const PORTER_ARENA = { x0: 1278, x1: 1478 };
-export const GENERATOR = { x0: 1396, x1: 1452 };
-export const LEVER = 1468;
+export const GENERATOR = { x0: 1376, x1: 1432 };
+export const LEVER = 1450;
 // the ER (G): triage desk, curtain bays, the security office, the sliding doors; the ambulance bay outside
 export const ER_STAIR = 1504;
 export const TRIAGE = { x0: 1530, x1: 1590, top: hy(32) };
