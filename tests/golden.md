@@ -4,7 +4,27 @@ Run with a static server (`tools/serve.py`, port 8765, no browser cache; or `pyt
 Two runs of the same URL must give the same hashes. A refactor step that keeps both hashes changed nothing.
 A step that changes behaviour on purpose records new hashes here, with the reason.
 
-## Current (main 9186e57 + the instant turn in an attack, 2026-10-09)
+## Current (playtest readability: the fight camera, the hero mark, the light, 2026-10-10)
+
+| URL | state | buf | l3 | note |
+|---|---|---|---|---|
+| `index.html?autotest=demo&frames=1200` | `846d0bb8` | `d3aef660` | | 2D (attract demo, seed 1, 960x540 view) |
+| `index.html?autotest=boss&frames=1800` | `fe4b2e63` | `1bcc9b12` | | 2D (skipToBoss + demo, seed 1) |
+| `index.html?autotest=demo&frames=1200&view3d` | `846d0bb8` | `fda53643` | `794e4ed6` | 3D view: the same state hash as 2D |
+| `index.html?autotest=boss&frames=1800&view3d` | `fe4b2e63` | `59134f04` | `256da3b5` | 3D view: the same state hash as 2D |
+
+Each URL run twice in headless Chrome (`PORT=8805 sh tools/golden.sh`); each pair matched, and the 3D state hashes equal the 2D ones.
+Why all four changed (playtest 5.1, 5.2, 5.5):
+- buf, l3: the fight camera is wider (352-448 px with 2+ goons on him), the hero has a warm rim and a red tie,
+  3D fighters have a highlight shoulder.
+- state: the camera is not view-only in this engine. The rain draws its drops from the sim's RNG (`simRand`, drawRain and
+  the sleet), and how many draws a frame takes depends on the view (drops respawn across `cam.vw`); the street's
+  off-screen spawn points (tutGate's reinforcements, stageGoon, the attract demo spawner) and the wave toast read
+  `cam.x`/`cam.vw` too. Checked: with those spawn points made camera-free in both trees, the boss URL's state still
+  differs (old 1ef98708, new e1c0225e), so the rain's RNG draws alone move the goons' later choices.
+  A camera change will keep changing the state hashes until the rain has its own RNG.
+
+### main 9186e57 + the instant turn in an attack (2026-10-09)
 
 | URL | state | buf | l3 | note |
 |---|---|---|---|---|

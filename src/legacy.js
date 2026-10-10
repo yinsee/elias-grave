@@ -4691,14 +4691,14 @@ import * as SPIRE from './levels/skyscraper/index.js';
   }
   function drawSecondary(face) {
     const b = beltAt(), ox = D[2].x - P[2].x, oy = D[2].y - P[2].y;   // follow the drawn pose (squash, 12 fps)
-    // suit front: white shirt in a V under the lapels, black tie down the middle
+    // suit front: white shirt in a V under the lapels, the red tie down the middle ([read] his mark: no goon wears it; 2 px wide, the 3D tie quad too)
     const [ux, uy] = norm(D[1].x - D[2].x, D[1].y - D[2].y), nx = D[1].x, ny = D[1].y;
     const L = Math.hypot(D[1].x - D[2].x, D[1].y - D[2].y) * 0.72;
-    for (let t = 0; t <= L * 0.58; t += 0.5) {
-      const w = 2.2 - t / (L * 0.58) * 1.9, cx = nx - ux * t + b.bx * 1.3, cy = ny - uy * t + b.by * 1.3;
+    for (let t = 0; t <= L * 0.62; t += 0.5) {
+      const w = 2.6 - t / (L * 0.62) * 2.2, cx = nx - ux * t + b.bx * 1.3, cy = ny - uy * t + b.by * 1.3;
       for (let o = -w; o <= w; o += 0.5) plot(Math.floor(cx + b.bx * o), Math.floor(cy + b.by * o), PAL.collar);
     }
-    line1(nx + b.bx * 1.3, ny + b.by * 1.3, nx - ux * L * 0.62 + b.bx * 1.6, ny - uy * L * 0.62 + b.by * 1.6, PAL.tie);
+    for (const o of [1.0, 1.6]) line1(nx + b.bx * o, ny + b.by * o, nx - ux * L * 0.62 + b.bx * (o + 0.3), ny - uy * L * 0.62 + b.by * (o + 0.3), PAL.tie);
     plot(Math.floor(nx + b.bx * 2.4 - ux * 0.5), Math.floor(ny + b.by * 2.4 - uy * 0.5), PAL.collarD);   // collar tip
   }
   // ===== [/G1] =====
@@ -6358,6 +6358,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // its colour, in two hard steps: the silhouette ring at full strength, the ring inside it at half. Facing = the edge normal
   // (toward the empty neighbours) against the direction to the light, lifted out of the screen as the 3D one is (z 12).
   const RIM = { k: 0.35, z: 12 };
+  const HERO_RIM = [235, 150, 70, 0.55];   // the hero's warm rim: r, g, b and how far his edge pixels take it
+
   let rimE = new Uint8Array(0);
   function rimPass() {
     const M = figArt.mask, x0 = Math.max(1, figArt.x0), x1 = Math.min(cam.vw - 2, figArt.x1), y0 = Math.max(1, figArt.y0), y1 = Math.min(cam.vh - 2, figArt.y1);
@@ -6389,6 +6391,14 @@ import * as SPIRE from './levels/skyscraper/index.js';
         if (r + g + b < 0.02) continue;
         const s = RIM.k * 255 * (f === 2 ? 1 : 0.5), i = y * CW + x, c = buf[i];
         buf[i] = (255 << 24 | Math.min(255, (c >> 16 & 255) + b * s) << 16 | Math.min(255, (c >> 8 & 255) + g * s) << 8 | Math.min(255, (c & 255) + r * s)) >>> 0;
+      }
+      // [read] the hero's own mark (no goon has it): a warm 1 px rim round his silhouette, lit or dark, against a goon too (his pixels are
+      // marked 2), so he reads in a crowd of black suits. The 3D view gives his outline shell the same colour (HERO_RIM, playerRig).
+      const [hr, hg, hb, hk] = HERO_RIM;
+      for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) {
+        const i = y * CW + x; if (M[i] !== 2 || (M[i - 1] === 2 && M[i + 1] === 2 && M[i - CW] === 2 && M[i + CW] === 2)) continue;
+        const c = buf[i];
+        buf[i] = (255 << 24 | Math.round((c >> 16 & 255) * (1 - hk) + hb * hk) << 16 | Math.round((c >> 8 & 255) * (1 - hk) + hg * hk) << 8 | Math.round((c & 255) * (1 - hk) + hr * hk)) >>> 0;
       }
     }
     for (let y = Math.max(0, figArt.y0); y <= Math.min(cam.vh - 1, figArt.y1); y++) M.fill(0, y * CW + Math.max(0, figArt.x0), y * CW + Math.min(cam.vw - 1, figArt.x1) + 1);
@@ -6520,7 +6530,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       figArt.on = true; drawEnemies(L); figArt.on = false;
       if (L === LANE.FIGHT) drawEShots();
       if (L === LANE.FRONT) drawDog();
-      if (ctl.lane === L) { figArt.on = true; drawCharacter(look, face); figArt.on = false; drawBottle(); }
+      if (ctl.lane === L) { figArt.on = 2; drawCharacter(look, face); figArt.on = false; drawBottle(); }
       if (L === LANE.PLAT) drawStairRails();   // the fire escape's outer rail: in front of anyone on the stairs, behind the street
       if (L === LANE.PLAT && LVH.drawBackTrains) LVH.drawBackTrains();   // Line Zero: a train on track 2 (the back lane), in front of the far ledge and the niches
       if (L === LANE.FIGHT && LVH.drawFrontTrains) LVH.drawFrontTrains();   // a train on track 1 (the floor): in front of the fight lane
@@ -6557,6 +6567,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // of 4 x 4 view pixels and spread back smoothly over the crisp pixels.
   const GRADE = { bloomT: 0.8, bloom: 0.55, sat: 1.12, vig: 0.28, W: [0.227, 0.195, 0.122, 0.054, 0.016] };
   const postB = { w: 0, h: 0 };
+  const bloomK = () => (LVH.bloomK && LVH.bloomK()) || 1;   // a level's bloom scale (St. Cecilia's theatre lamp, the Palm House ballroom: 0.6), both views
   function postPass() {
     const gw = Math.ceil(cam.vw / 4), gh = Math.ceil(cam.vh / 4), n = gw * gh;
     if (postB.w !== gw || postB.h !== gh) { Object.assign(postB, { w: gw, h: gh, a: new Float32Array(n * 3), b: new Float32Array(n * 3) }); }
@@ -6581,7 +6592,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       for (let y = 0; y < cam.vh; y++) for (let x = 0; x < cam.vw; x++) { const d2 = ((x + 0.5) / cam.vw * 2 - 1) ** 2 + ((y + 0.5) / cam.vh * 2 - 1) ** 2; vg[y * cam.vw + x] = d2 <= 0.35 ? 1 : 1 - GRADE.vig * ss(0.35, 1.25, d2); }
       Object.assign(postB, { cw: cam.vw, chh: cam.vh, cx: col(cam.vw), cy: col(cam.vh), vg });
     }
-    const CX = postB.cx, CY = postB.cy, bloom = GRADE.bloom, sat = GRADE.sat;
+    const CX = postB.cx, CY = postB.cy, bloom = GRADE.bloom * bloomK(), sat = GRADE.sat;
     const Sm = postB.sm && postB.sm.length === gw * gh ? postB.sm : (postB.sm = new Float32Array(gw * gh));
     for (let i = 0; i < gw * gh; i++) Sm[i] = A[i * 3] + A[i * 3 + 1] + A[i * 3 + 2];   // a cell with no glow near it skips the spread
     for (let vy = 0; vy < cam.vh; vy++) {
@@ -6653,32 +6664,47 @@ import * as SPIRE from './levels/skyscraper/index.js';
       const J = e.dead ? e.pts : e.J; if (!J) continue;
       add(J[0].x, J[0].y, 10 * e.s); add(J[2].x, J[2].y, 10 * e.s);
     }
+    for (const e of enemies) if (keyFoe(e, cx)) { add(e.x, e.J ? e.J[0].y : e.y - 30, 12); add(e.x, e.y, 12); }   // [read] who can hit him next is in the shot
     if (typeof eshots !== 'undefined') for (const b of eshots) if (Math.abs(b.x - cx) < 230) add(b.x, b.y, 8);
     for (const t of thrown) if (!t.stuck && Math.abs(t.x - cx) < 230) add(t.x, t.y, 10);
     return sBox = { x0, x1, y0, y1 };
   }
+  // the foes the fight camera must keep in frame (view only: it reads the sim, never changes it): a goon holding an attack
+  // token, a shooter or thrower winding up, a ranged goon who has him in his sights, the boss
+  function keyFoe(e, cx) {
+    if (e.dead || e.intro) return false;
+    const adx = Math.abs(e.x - cx);
+    if (e === enc.boss) return adx < 320;
+    if (e.tok || e.act === 'shoot' || e.act === 'throw') return adx < 320;
+    return !!(e.R && e.R.ranged && e.aggro && adx < 260);
+  }
   // the auto zoom (1 = 100 %: 160 world px across): a fight sits between 100 % and 75 %, framed to fit everyone in it;
   // otherwise 75 % walking (or standing), out to 50 % at a full run to see further ahead. (Further out the fighters turn into
   // specks; the menu still offers a fixed 25 %.)
-  // the auto camera: cinematics close (100 %), a fight framed at 40-60 %, walking 40 % out to 25 % at a full run
+  // the auto camera: cinematics close (100 %), a fight framed at 36-60 % (45 % or wider with 2+ goons on him), walking 40 % out to 25 % at a full run
   const cinematic = () => openT >= 0 || !!endPh || !!(enc.boss && enc.boss.intro);   // the opening, the ending, the boss's entrance
+  let zCrowd = 0;   // goons on him at the last auto zoom (2+: the camera widens fast, e.g. back out after a finisher's punch-in)
   function autoZoom() {
+    zCrowd = 0;
     if (cinematic()) return 1;
     if (bossBeat > 0 && enc.boss && !enc.boss.dead) return 0.85;   // a boss's phase change: the camera punches in on him
     const px = P[2].x, fight = flags.club || enemies.some(e => !e.dead && Math.abs(e.x - px) < 190 && e.zone !== 'arena' || (!e.dead && e === enc.boss && Math.abs(e.x - px) < 260));
-    if (fight) {
-      const bx = sceneBox();
-      return clamp(Math.min(1, 160 / (bx.x1 - bx.x0 + 24), 160 * CH / CW / (bx.y1 - bx.y0 + 20)), 0.4, 0.6);
-    }
     const run = hero.mode === 'anim' ? clamp((Math.abs(ctl.spd) - WALK) / (RUN - WALK), 0, 1) : 0;
-    return 0.4 - 0.15 * run;
+    let z = 0.4 - 0.15 * run;
+    if (fight) {   // [read] framed to fit the fight and every key foe (sceneBox); never tighter than 352 px with 2+ goons on him, never wider than 448 px (the hero stays readable)
+      const bx = sceneBox(), crowd = zCrowd = enemies.filter(e => !e.dead && e.aggro && Math.abs(e.x - px) < 200).length;
+      z = clamp(Math.min(1, 160 / (bx.x1 - bx.x0 + 24), 160 * CH / CW / (bx.y1 - bx.y0 + 20)), 160 / 448, crowd >= 2 ? 160 / 352 : 0.6);
+    }
+    const rb = LVH.roomBounds ? LVH.roomBounds() : LVH.camBounds ? LVH.camBounds() : null;   // (the room itself: the Palm House widens its camBounds to the view)
+    if (rb) z = Math.max(z, 160 / Math.max(160, rb[1] - rb[0]));   // a walled room: never wider than the room (no world past its walls)
+    return z;
   }
   function updateCamera(rdt) {
     const punch = finCam.t > 0, want = punch ? 1 : (LVH.camZoom && LVH.camZoom()) || (zoomMode === 'auto' ? autoZoom() : zoomMode);   // (a level's own shot: the Spire's ending)   // a finisher: the camera punches in close
     // the zoom glides: out over about a second, back in a little slower so it never pumps (it eases on the scale, so 100 -> 25 % feels even)
     const cx0 = cam.xf + cam.vw / 2, cy0 = cam.yf + cam.vh / 2;   // zoom about the view centre
     if (bossBeat > 0) bossBeat -= rdt;
-    const lz = smoothDamp(Math.log(cam.zoom), Math.log(want), cam.v, 'z', punch ? 0.09 : want < cam.zoom ? 0.9 : zoomMode === 'auto' && (cinematic() || bossBeat > 0) ? 0.35 : 1.3, rdt);   // (a cinematic is short: it closes in fast)
+    const lz = smoothDamp(Math.log(cam.zoom), Math.log(want), cam.v, 'z', punch ? 0.09 : want < cam.zoom ? (zCrowd >= 2 ? 0.45 : 0.9) : zoomMode === 'auto' && (cinematic() || bossBeat > 0) ? 0.35 : 1.3, rdt);   // (a cinematic is short: it closes in fast)
     cam.zoom = clamp(Math.exp(lz), 0.25, 1);
     // [feel] even view sizes: the centre stays on the same pixel as the view grows, so a zoom never jitters by 1 px
     cam.vw = Math.min(CW, 2 * Math.round(80 / cam.zoom)); cam.vh = Math.min(CHMAX, 2 * Math.round(cam.vw * CH / CW / 2));   // (taller than the world when far out: the sky fills the top)
@@ -6813,7 +6839,12 @@ import * as SPIRE from './levels/skyscraper/index.js';
                 if (d2 < q.z) { float k = 1.0 - d2 / q.z; L += k * k * t3LC[i]; if (q.w > 0.0 && d2 < 90.0) glow += (1.0 - d2 / 90.0) * q.w; }
               }
               ${shade ? 'L *= 0.72 + 0.42 * max(dot(normalize(vT3N), vec3(0.28, 0.56, 0.78)), 0.0);' : ''}
-              diffuseColor.rgb = min(diffuseColor.rgb * L + glow / 255.0 * vec3(1.0, 0.78, 0.35), vec3(1.0));
+              diffuseColor.rgb = diffuseColor.rgb * L + glow / 255.0 * vec3(1.0, 0.78, 0.35);
+              ${shade === 2 ? `{   // [read] fighters: a soft shoulder above 0.78, so a white suit under a lamp (Brask, Lenz) keeps its folds instead of burning out flat
+                float m = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b));
+                if (m > 0.78) diffuseColor.rgb *= (0.78 + 0.17 * (1.0 - exp((0.78 - m) / 0.17))) / m;
+              }` : ''}
+              diffuseColor.rgb = min(diffuseColor.rgb, vec3(1.0));
               ${shade === 2 ? `{   // rim light: the edges facing a lamp or a neon sign catch its colour, in two hard steps (pixel-art banding)
                 vec3 N = normalize(vT3N), V = normalize(cameraPosition - vT3W); float f = 1.0 - max(dot(N, V), 0.0); f = step(0.45, f) * (0.5 + 0.5 * step(0.7, f));
                 vec3 rim = vec3(0.0);
@@ -8265,6 +8296,10 @@ import * as SPIRE from './levels/skyscraper/index.js';
       this.cylF = inst(cyl, fill, 1200); this.cylO = inst(cyl, out, 1200);
       this.sphF = inst(sph, fill, 2400); this.sphO = inst(sph, out, 2400);
       const bx = new THREE.BoxGeometry(1, 1, 1); this.boxF = inst(bx, fill, 300); this.boxO = inst(bx, out, 300); this.XA = new THREE.Vector3(1, 0, 0);
+      {   // [read] the hero's outline shell: his warm rim (HERO_RIM, rimPass), unlit like the 2D one; his shells go here, his slots in the black ones get scale 0
+        const rc = C('#' + HERO_RIM.slice(0, 3).map(v => v.toString(16).padStart(2, '0')).join('')), rim = new THREE.MeshBasicMaterial({ color: t3rgb(t3mix(PAL.out, rc, HERO_RIM[3] * 0.75)), side: THREE.BackSide });   // (a shade darker: the shell is wider than the 2D 1 px ring)
+        this.hO = { c: inst(cyl, rim, 200), s: inst(sph, rim, 400), b: inst(bx, rim, 30) }; this.nH = { c: 0, s: 0, b: 0 }; this.rimH = false; this.M0 = new THREE.Matrix4().makeScale(0, 0, 0);
+      }
       this.cylF.setColorAt(0, new THREE.Color()); this.sphF.setColorAt(0, new THREE.Color()); this.boxF.setColorAt(0, new THREE.Color());
       this.modelMat = t3mat({ vertexColors: true }, 2);
       this.heads = new Map();   // owner -> { mesh, key }
@@ -8288,7 +8323,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       const n = this.nC++;
       if (n < 1200) {
         M.compose(V, Q, S.set(r, len, r * zs)); this.cylF.setMatrixAt(n, M); this.cylF.setColorAt(n, this.col(c));
-        M.compose(V, Q, S.set(r + ow, len, (r + ow) * zs)); this.cylO.setMatrixAt(n, M);
+        M.compose(V, Q, S.set(r + ow, len, (r + ow) * zs)); this.shell(this.cylO, 'c', n, M);
       }
       this.ball(ax, ay, z, r, ow, c, zs); this.ball(bx, by, z, r, ow, c, zs);
     },
@@ -8297,7 +8332,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       if (n >= 2400) return;
       V.set(x, -y, z + this.bz);
       M.compose(V, this.Q0, S.set(r, r, r * zs)); this.sphF.setMatrixAt(n, M); this.sphF.setColorAt(n, this.col(c));
-      M.compose(V, this.Q0, S.set(r + ow, r + ow, (r + ow) * zs)); this.sphO.setMatrixAt(n, M);
+      M.compose(V, this.Q0, S.set(r + ow, r + ow, (r + ow) * zs)); this.shell(this.sphO, 's', n, M);
     },
     // a shoe: a box from the heel a to the toe b, hh high, hd deep, flat underneath, in a black shell ow thicker
     shoe(ax, ay, bx, by, z, hh, hd, ow, c) {
@@ -8307,7 +8342,12 @@ import * as SPIRE from './levels/skyscraper/index.js';
       const ux = -DIR.y, uy = DIR.x, up = uy >= 0 ? 1 : -1;   // the side of the foot line that is up: the shoe rises from its sole
       V.set((ax + bx) / 2 + ux * up * hh * 0.55, -(ay + by) / 2 + uy * up * hh * 0.55, z + this.bz);
       M.compose(V, Q, S.set(len + hh * 1.2, hh * 2, hd * 2)); this.boxF.setMatrixAt(n, M); this.boxF.setColorAt(n, this.col(c));
-      M.compose(V, Q, S.set(len + hh * 1.2 + ow * 2, hh * 2 + ow * 2, hd * 2 + ow * 2)); this.boxO.setMatrixAt(n, M);
+      M.compose(V, Q, S.set(len + hh * 1.2 + ow * 2, hh * 2 + ow * 2, hd * 2 + ow * 2)); this.shell(this.boxO, 'b', n, M);
+    },
+    // a black outline shell, or (while the hero is built) his warm one
+    shell(O, k, n, M) {
+      if (!this.rimH) { O.setMatrixAt(n, M); return; }
+      O.setMatrixAt(n, this.M0); const h = this.hO[k], i = this.nH[k]++; if (i < h.instanceMatrix.count) h.setMatrixAt(i, M);
     },
     // the 2D head (hair, face, outline) drawn upright, extruded into voxels; rebuilt only when its pixels change
     // the sculpted head (t3heroHead / t3goonHead), rebuilt only when what shows on it changes (key)
@@ -8358,13 +8398,13 @@ import * as SPIRE from './levels/skyscraper/index.js';
       this.seg(sx.x, sx.y, mx.x, mx.y, 0, 2.5, 0.9, PAL.shirt, TZ);
       this.seg(mx.x, mx.y, pl.x, pl.y, 0, 2.3, 1.1, PAL.pants, TZ);   // narrow in the hips
       leg(pl, kF, fF, PAL.pants, ZL);
-      {   // the shirt front: a white V under the lapels and the black tie, on the chest (drawSecondary)
-        const [ux, uy] = norm(nk.x - pl.x, nk.y - pl.y), bx = -uy * f, by = ux * f, L = Math.hypot(nk.x - pl.x, nk.y - pl.y) * 0.72, T = L * 0.58, z = 3.0 * TZ + 0.06 + this.bz;
+      {   // the shirt front: a white V under the lapels and the red tie, on the chest (drawSecondary)
+        const [ux, uy] = norm(nk.x - pl.x, nk.y - pl.y), bx = -uy * f, by = ux * f, L = Math.hypot(nk.x - pl.x, nk.y - pl.y) * 0.72, T = L * 0.62, z = 3.0 * TZ + 0.06 + this.bz;
         const c0x = nk.x + bx * 1.3, c0y = nk.y + by * 1.3, cTx = nk.x - ux * T + bx * 1.3, cTy = nk.y - uy * T + by * 1.3;
         const zl = 2.5 * TZ + 0.06 + this.bz, setQ = (m, p, zz) => { const a = m.geometry.attributes.position; for (let i = 0; i < 4; i++) a.setXYZ(i, p[i][0], -p[i][1], i < 2 ? zz : zl + (zz - z)); a.needsUpdate = true; m.visible = true; };   // the lower end lies on the narrower chest
-        setQ(this.shirtV, [[c0x - bx * 2.2, c0y - by * 2.2], [c0x + bx * 2.2, c0y + by * 2.2], [cTx + bx * 0.3, cTy + by * 0.3], [cTx - bx * 0.3, cTy - by * 0.3]], z);
+        setQ(this.shirtV, [[c0x - bx * 2.6, c0y - by * 2.6], [c0x + bx * 2.6, c0y + by * 2.6], [cTx + bx * 0.4, cTy + by * 0.4], [cTx - bx * 0.4, cTy - by * 0.4]], z);
         const t0x = nk.x + bx * 1.3, t0y = nk.y + by * 1.3, t1x = nk.x - ux * L * 0.62 + bx * 1.6, t1y = nk.y - uy * L * 0.62 + by * 1.6, [px, py] = norm(t1y - t0y, -(t1x - t0x));
-        setQ(this.tie, [[t0x - px * 0.45, t0y - py * 0.45], [t0x + px * 0.45, t0y + py * 0.45], [t1x + px * 0.45, t1y + py * 0.45], [t1x - px * 0.45, t1y - py * 0.45]], z + 0.08);
+        setQ(this.tie, [[t0x - px * 0.75, t0y - py * 0.75], [t0x + px * 0.75, t0y + py * 0.75], [t1x + px * 0.6, t1y + py * 0.6], [t1x - px * 0.6, t1y - py * 0.6]], z + 0.08);
       }
       {   // the loose hair locks, behind the head: each lock tapers to its tip and sits back in depth, so the top locks do not stand
         // up beside the skull as two "ears"; two in-between strands (averages of locks 0-1 and 1-2) fill the mass (3D only)
@@ -8488,12 +8528,13 @@ import * as SPIRE from './levels/skyscraper/index.js';
       this.shadow(dog.x, GROUND - 3, 9);
     },
     updateFighters() {
-      this.nC = 0; this.nS = 0; this.nSh = 0; this.nB = 0;
+      this.nC = 0; this.nS = 0; this.nSh = 0; this.nB = 0; this.nH.c = this.nH.s = this.nH.b = 0;
       for (const h of this.heads.values()) h.used = false;
       this.shirtV.visible = this.tie.visible = false;
       for (const e of enemies) if (e.dead) this.enemyRig(e);
       for (const e of enemies) if (!e.dead) this.enemyRig(e);
-      this.playerRig();
+      this.rimH = true; this.playerRig(); this.rimH = false;
+      for (const k in this.hO) { const m = this.hO[k]; m.count = Math.min(this.nH[k], m.instanceMatrix.count); m.instanceMatrix.needsUpdate = true; }
       if (dog && !dog.hidden && (!flags.club || isMetro() || isSpire())) this.dogRig();
       this.p9Rig();
       const nC = Math.min(this.nC, 1200), nS = Math.min(this.nS, 2400);
@@ -8838,7 +8879,10 @@ import * as SPIRE from './levels/skyscraper/index.js';
     // ----- light and camera -----
     updateLights() {
       const [aR, aG, aB, ls] = lightList();
-      T3U.amb.value.set(aR, aG, aB);
+      // [read] a dark interior reads darker in 3D than in 2D (the form shading takes light off): lift its ambient by up to 0.08
+      // (a dark room full, fading out by 0.6); the street and the docks are night outdoors and keep theirs
+      const lift = isStreet() || isP9() ? 0 : 0.08 * clamp((0.6 - Math.max(aR, aG, aB)) / 0.2, 0, 1);
+      T3U.amb.value.set(aR + lift, aG + lift, aB + lift);
       for (let i = 0; i < T3.NL; i++) {
         const q = ls[i];
         if (q) {
@@ -8884,7 +8928,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       this.postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
       this.postQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)); this.postScene = new THREE.Scene(); this.postScene.add(this.postQuad);
       const G = GRADE, f = v => v.toFixed(4), vs = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
-      const U = { tSrc: { value: null }, tBloom: { value: null }, gp: { value: new THREE.Vector2(1, 1) }, view: { value: new THREE.Vector2(1, 1) }, dir: { value: new THREE.Vector2(1, 0) }, fade: { value: 1 } };
+      const U = { tSrc: { value: null }, tBloom: { value: null }, gp: { value: new THREE.Vector2(1, 1) }, view: { value: new THREE.Vector2(1, 1) }, dir: { value: new THREE.Vector2(1, 0) }, fade: { value: 1 }, bloom: { value: G.bloom } };
       const mk = fs => new THREE.ShaderMaterial({ uniforms: U, vertexShader: vs, fragmentShader: fs, depthTest: false, depthWrite: false });
       this.postU = U;
       // view: the part of the render that the view fills (uv); gp: the grid size in cells
@@ -8896,11 +8940,11 @@ import * as SPIRE from './levels/skyscraper/index.js';
           vec2 g = floor(vUv * gp); vec3 c = vec3(0.0);
           for (int k = -4; k <= 4; k++) { vec2 q = clamp(g + dir * float(k), vec2(0.0), gp - 1.0); c += texture2D(tSrc, (q + 0.5) / gp).rgb * w[k < 0 ? -k : k]; }
           gl_FragColor = vec4(c, 1.0); }`);
-      this.mComp = mk(`uniform sampler2D tSrc, tBloom; uniform vec2 gp, view; uniform float fade; varying vec2 vUv;
+      this.mComp = mk(`uniform sampler2D tSrc, tBloom; uniform vec2 gp, view; uniform float fade, bloom; varying vec2 vUv;
         void main() {
           vec2 gu = vUv;
           vec3 c = texture2D(tSrc, vUv * view).rgb, b = texture2D(tBloom, vUv).rgb;
-          c += b * ${f(G.bloom)};
+          c += b * bloom;
           float l = dot(c, vec3(0.299, 0.587, 0.114)), k = smoothstep(0.2, 0.8, l);
           c = vec3(l) + (c - vec3(l)) * ${f(G.sat)} + vec3(-0.01 + 0.04 * k, 0.015 * k, 0.035 - 0.055 * k);
           vec2 v = gu * 2.0 - 1.0; float vg = 1.0 - ${f(G.vig)} * smoothstep(0.35, 1.25, dot(v, v));
@@ -8910,7 +8954,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     post() {
       const r = this.renderer, U = this.postU, gw = Math.ceil(cam.vw / 4), gh = Math.ceil(cam.vh / 4), q = this.postQuad;
       if (this.rtA.width !== gw || this.rtA.height !== gh) { this.rtA.setSize(gw, gh); this.rtB.setSize(gw, gh); }
-      U.gp.value.set(gw, gh); U.view.value.set(1, 1); U.fade.value = 1 - clamp(fade, 0, 1);
+      U.gp.value.set(gw, gh); U.view.value.set(1, 1); U.fade.value = 1 - clamp(fade, 0, 1); U.bloom.value = GRADE.bloom * bloomK();
       r.setRenderTarget(this.rtMain); r.render(this.scene, this.camera);
       const pass = (m, src, dst) => { q.material = m; U.tSrc.value = src; r.setRenderTarget(dst); r.render(this.postScene, this.postCam); };
       pass(this.mBright, this.rtMain.texture, this.rtA);
@@ -10197,7 +10241,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       pickups: pickups.map(k => k.taken ? 1 : 0).join(''), demo: flags.demo, attract: flags.attract });
     window.__blood = { bleed, stain, GORE, PROPS, stat, SURF, PLATS, STEPS, floorBelow, particles, drips, W, GROUND, cam, get WALLM() { return WALLM; }, get T3() { return Three3D; }, open: () => ZONES.forEach(z => z.tasks.forEach(([k]) => done.add(k))) };   // (tests: the blood and what it lands on)
     window.__skipToBoss = () => { leaveTitle(); setDemo(false); skipToBoss(); };
-    window.__sim = { enc, enemies, objs, ctl, hero, quakes, ammoBoxes, thrown, charge, loot, setWeapon, done, bus, makeObj, spawnEnemy, P, get hookPull() { return hookPull; }, get diffSel() { return diffSel; },
+    window.__sim = { enc, enemies, objs, ctl, hero, cam, quakes, ammoBoxes, thrown, charge, loot, setWeapon, done, bus, makeObj, spawnEnemy, P, get hookPull() { return hookPull; }, get diffSel() { return diffSel; },
       hstr, DEF, input, btn, get slowT() { return slowT; }, get ckpt() { return ckpt; }, get ragT() { return ragT; }, get flags() { return flags; }, setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; }, retry: () => retry(),
       foc, get finE() { return finE; }, get wk() { return wk; }, equip: w => equip(w, fullCharge(w)), finCam, JUG, GRAB, FOCUS, FIN, OTG, DIVE, FLY, get hitStop() { return hitStop; },
       EMOVES, MOVES, MAL, p9, eshots, pickups, get bossMash() { return bossMash; }, get sceneOn() { return sceneOn; }, get simTime() { return simTime; }, get kos() { return kos; }, get runT() { return runS.t; } };   // (tests: the live sim state, read and poke)

@@ -621,6 +621,7 @@ export function createPalmhouse(G) {
     if (sec.id === 'dome' && S.vane && S.vane.ph >= 3) return [0.55, 0.52, 0.48];
     return sec.amb;
   }
+  M.bloomK = () => secAt(G.P[2].x).id === 'ballroom' ? 0.6 : 1;   // [read] the ballroom windows' and chandeliers' bloom cut by 40 %: the brawl reads under them
   M.lights = () => {
     const cam = G.cam, cx = cam.x + cam.vw / 2, sec = secAt(G.P[2].x), ls = [];
     const amb = ambOf(sec);
