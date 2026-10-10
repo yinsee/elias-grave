@@ -9830,7 +9830,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   async function playScene(kind, id) {
     sceneOn = true; toastEl.hidden = true; sayEl.hidden = true; objEl.hidden = true; obj.key = null;
     keys.left = keys.right = keys.shift = false; btn.p.down = btn.k.down = false; Object.assign(input, { dir: 0, run: false, jump: false, jumpHeld: false, downHeld: false, fireHeld: false, attack: null, dash: false, dashHeld: false });
-    try { const sc = await loadScript(id); return await (kind === 'dialog' ? playDialog : playPanels)(sc, { root: stage, audio: csAudio, bus }); }
+    try { const sc = await loadScript(id); return await (kind === 'dialog' ? playDialog : playPanels)(sc, { root: stage, audio: csAudio, bus, cps: TEXT_CPS[textSpeed][kind === 'dialog' ? 1 : 0] }); }
     catch (err) { console.warn('cutscene failed:', id, err); return { id, skipped: true }; }
     finally { sceneOn = false; last = FIXED ? fixedT : performance.now(); keys.left = keys.right = keys.shift = false; input.dir = 0; }
   }
@@ -9921,9 +9921,12 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // ---- the menu: a console-style list down the left. It stays up on the title screen while the demo plays; in a game, Esc opens
   // it and pauses. Settings (view, run, camera) are remembered in this browser.
   let runAlways = true, menuShown = false, menuSel = 0, menuPauseTS = null;
+  // the cutscenes' typing speed (the menu's Text speed): [panels, dialog] characters per second
+  const TEXT_SPEEDS = ['Slow', 'Normal', 'Fast'], TEXT_CPS = [[28, 27], [42, 40], [80, 76]];
+  let textSpeed = 1;
   const menuEl = document.getElementById('menu'), menuList = document.getElementById('menu-list'), ccEl = document.getElementById('controls-card');
   const SETKEY = 'eliasgrave.settings', OLD_SETKEY = 'clubnoir.settings';   // (the old key: moved over once, then removed)
-  function saveSettings() { try { localStorage.setItem(SETKEY, JSON.stringify({ view3d: mode3D, run: runAlways, zoom: zoomMode, diff: diffSel, vol: gameAudio.getVolume() })); } catch (err) {} }
+  function saveSettings() { try { localStorage.setItem(SETKEY, JSON.stringify({ view3d: mode3D, run: runAlways, zoom: zoomMode, diff: diffSel, vol: gameAudio.getVolume(), text: textSpeed })); } catch (err) {} }
   function syncRun() {   // the touch button and the controls card say what Shift does
     runBtn.firstChild.textContent = runAlways ? 'Walk ' : 'Run '; document.getElementById('cc-run').textContent = runAlways ? 'walk (you run by default)' : 'run';
   }
@@ -9937,6 +9940,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (!st) return;
     runAlways = st.run ?? true;   // (run is the default; an older save's runAlways is not read: everyone starts running)
     if (typeof st.vol === 'number') gameAudio.setVolume(st.vol);
+    if (st.text >= 0 && st.text < TEXT_SPEEDS.length) textSpeed = st.text;
     if (st.diff >= 0 && st.diff < DIFFS.length) diffSel = st.diff;
     if (st.zoom != null) setZoom(String(st.zoom));
     if (st.view3d && typeof THREE !== 'undefined') setMode3D(true);
@@ -9974,6 +9978,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       { label: 'Volume', value: () => `${Math.round(gameAudio.getVolume() * 100)}%`, change: d => {   // master volume in 10 % steps; it stops at 0 % and 100 % (a wrap from 0 to full volume is a nasty surprise)
         const v = clamp(Math.round(gameAudio.getVolume() * 10) + (d < 0 ? -1 : 1), 0, 10);
         gameAudio.setVolume(v / 10); gameAudio.sfx('ui_blip', { vol: 0.6 }); saveSettings(); } },
+      { label: 'Text speed', value: () => TEXT_SPEEDS[textSpeed], change: d => { textSpeed = clamp(textSpeed + (d < 0 ? -1 : 1), 0, TEXT_SPEEDS.length - 1); saveSettings(); } },   // the cutscenes' typing
       { label: 'Full screen', value: () => document.fullscreenElement ? 'On' : 'Off', change: toggleFull },
       { label: 'Controls', act: () => { document.getElementById('cc-run').textContent = runAlways ? 'walk (you run by default)' : 'run'; ccEl.hidden = false; } },
     ];
