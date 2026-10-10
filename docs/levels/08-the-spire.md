@@ -776,3 +776,146 @@ All features are sim-side and read by both renderers. The 3D view gets models an
 - **Nero:** far bark (muffled), closer bark, claws on marble and metal, hatch burst, leap snarl, bite and growl.
 - **Epilogue:** dawn birds, dripping gutters, light switches clicking on (resident windows), newsboy call, Low Note glass on bar, ticking watch.
 - **Voice:** Bell's barks (section 6.4), Lys and Kessel barks, Elias ("Last song.", "Stay.", "Hold.", "I am home."), VO lines for all panels.
+
+---
+
+## 10. As built (first pass, 2026-10-10)
+
+Code: `src/levels/skyscraper/` (`data.js` map and numbers, `paint.js` the static layer, `draw.js` the per-frame painters, `run.js`
+the core run, `set.js` the climb's set pieces, `crown.js` the Conductor and the ending, `three.js` the 3D blocks, `index.js`),
+`src/bosses/bell.js` (the Conductor), `src/bosses/understudies.js` (Lys Moreau, Bruno Kessel). The game calls the run's hooks (`LVH`
+in `src/legacy.js`; `isSpire()`). Chapter 8 in the menu: locked until `progress.ch8` ("Beat Lenz on the last train"). Bell's defeat
+unlocks `done`, which opens every chapter (`unlock('done')` sets `ch1`..`ch8`).
+
+### 10.1 The folded map (world 2800 x 320)
+
+The plan's 3800 px climb is folded into the engine's strip. Walls part the sections (the camera stays in the section the hero is in);
+each join is a fade.
+
+| Section | x | What is there |
+|---|---|---|
+| `lobby` | 0-520 | Revolving door x 14, the grand stair x 96-180 up to the mezzanine (y 196, x 180-396), the reception desk x 226-266 (top y 250), three back-wall mirrors, the chandelier x 300 (y 172), the katana case x 330, Lys's arena x 366-514 with her four mirrors, the axe case x 512, the lift doors x 506 |
+| `lift` | 540-820 | The glass car x 600-760 (side panes block until broken, the back pane, the roof y 210, the hatch), the drop outside both sides, the window-cleaning cradle x 774-816 (y 264) at the snap, the axe case x 748 |
+| `garden` | 840-1340 | Nero's stairwell door x 860, the pergola (y 214), three planters (top y 254), the koi pool x 1100-1150, the gardener's axe x 1046, the pavilion x 1130, Kessel's arena x 1190-1318: the gap x 1236-1268 with a beam flush with the deck, the helideck, the windbreak x 1322 and the drop behind it, the service lift x 1296 |
+| `penthouse` | 1360-1700 | The bar x 1366-1402 (the machine gun, champagne), the grand piano x 1450, the glass floor gf1 1420-1494 / gf2 1500-1574 / gf3 1580-1654 (steel mullions between), the mezzanine (MG nest) y 214 x 1612-1700, the stair rail x 1654-1668 (y 240), the vestry door x 1696 |
+| `vestry` | 1720-1840 | The 3:17 clock, the Choir katana on its rack x 1772, bandages, the soup and the smoking pipe x 1800, the hatch x 1832 |
+| `gears` | 1860-2140 | Boss phase 1: three gears (4 level tooth platforms each), two mesh points, the quarter bell (2000, 40), a 3:17 clock, the hatch the crew uses x 1872, the ladder x 2130 |
+| `pendulum` | 2160-2424 | Boss phase 2: the pendulum (pivot 2290, rod 250), two balconies with ledger boxes, the bell (2290, 30), the back of the dial x 2420 |
+| `face` (the game's "club") | 2436-2800 | Boss phase 3, outside: the cornice 2450-2720, the drop beyond, the face (centre 2730, 200; r 80) with six numeral ledges (IX, VIII, VII, X, XI, I), the minute hand (a sloped ledge), the bell above, the red beacon, Nero's hatch x 2470 |
+
+Travel: lobby → (Lys) → ↑ the lift doors ("Stay.") → the lift (floors 1-72) → the snap: the jump to the cradle → the garden →
+(Kessel) → ↑ the service lift → the penthouse → the volley and the dive → ↑ the stair door → the vestry → ↑ the hatch → the gear room
+→ ↑ the ladder → the pendulum hall → through the broken dial → the face.
+
+Checkpoints: `start` (the lobby), `sp:lift`, `sp:garden`, `sp:pent`, `sp:vestry`, `sp:gears`, `sp:pend`, `boss` (the face).
+Bell's health per checkpoint: full, 66 %, 33 %.
+
+### 10.2 The new verbs, on the existing keys
+
+| Verb | Keys | Notes |
+|---|---|---|
+| Use the lift doors, the service lift, a stair door, the hatch, the ladder | ↑ by it | A 0.7 s fade |
+| The cable snap | Jump (or roll) → onto the cradle | Slow motion 2.5 s real; a 2.2 s (game) window; fail: the brake (−25/−25/−40) and the cradle meets the car; Wicked: lethal |
+| The dive to the rail | Jump or roll → | The tile under him goes at the end of the sweep (0.8 s game grace); the rail grabs him within 40/32/24/18 px; fail on Easy and Medium: a mullion catches him once (−20) |
+| FINISH | A heavy attack on Bell (hold Q or W); any attack on Easy; a shotgun blast up close | Slow motion; 1.2/1.0/0.8 s real (Easy: until he is hit) |
+| Push the piano | Walk into it | 32 px/s; it flattens goons (40) and loads the glass under it as it rolls |
+| Squat or roll under the pendulum | ↓ or Space | The bob hits anyone standing in its path |
+
+No new key, no sign over anyone. Tells: the bell's hammer lifting and the Westminster quarter before a peal (and the HUD clock),
+a floor mark under the Escapement Drop and the Gear Ride's landing, the chain line and ring for the sweep, the reel and the spin,
+a white glint at his hand in every wind-up, the laser sweep before an Usher fires, the rain's slant and a whistle before a gust,
+the creak of a crazed glass tile, the Sabreur's metronome tick, the Cane's parry spark. Toasts explain each mechanic once.
+
+### 10.3 The Choir Proper (data: `CHOIR` in `data.js`)
+
+Every one: black tie, white gloves, +25 % hp, +20 % poise.
+
+| Variant | Base | What it does | The answer |
+|---|---|---|---|
+| Chorister | brawler | Close harmony: the next one near you strikes 0.4 s after the first | Break the pair: fight them from one side |
+| Stiletto | knife | Lunges from 90 px; backs off 40 px after a hit | Wait for the back-off, then step in |
+| Cane | pipe (cane) | Turns aside a heavy blow (15/25/35/45 %), then a 1.0 s cane-spin riposte | Light strings |
+| Sabreur | machete | A slash-slash-lunge string on a metronome tick; a missed lunge leaves him open 1.0 s | Dodge the third beat |
+| Forker | thrower | Tuning forks that ring; a miss sticks 4 s and does 6 to a glass tile; drops 3 knives | Close in; he comes down after 3 throws or 8 s |
+| Soloist | pistol | 2-round bursts, 1.4 s apart, from high ground | Rush him in the reload |
+| Bass | pistol (sawn-off) | 1.2 s tell (he breaks it open), 5 pellets at 90 px; breaks panes; drops his shotgun | Keep out of 90 px |
+| Usher | pistol (machine gun) | A 1.5 s laser sweep, then 8 rounds; stays high; drops his machine gun | Out of line, or up to him |
+| Cantor | any melee + a red pocket square | With 3+ Choir in the room: they hum (+10 % speed, 0.8x rests) | Kill him first |
+| Rappeller | spawn mode | Drops on a rope from above; 0.8 s of landing lag | Punish the landing |
+
+Caps: ranged 2/2/3/3 alive (an Usher counts 2), one Bass and one Usher at a time. Ledge goons come down (a ranged one after 3 shots or
+8 s, a melee one after 1.5 s, anyone when hit), on the hero's side unless a wall is there. Reinforcements on Hard and Wicked (`REINF`).
+
+### 10.4 Mini-bosses and the boss
+
+- **Lys Moreau** (`LYS`): cane strings, card fans (3/3/4/5). Four mirror decoys throw fans (no damage on Easy, half above); a blow or a
+  broken mirror shatters a decoy; the decoys come back every 9 s from whole mirrors. The real Lys has no reflection (every fighter in
+  front of a lobby mirror shows in it; she never does). Stilettos every 12 s on Hard and Wicked (max 2).
+- **Bruno Kessel** (`KESSEL`): the hook (110 px: pulled 80 px toward him, then a heavy chop; a miss sticks 2.0/1.4/1.4/1.0 s), the
+  chain whip (90 px, low: jump it), chops. A pull that ends over the gap drops the hero. Canes every 14 s on Hard and Wicked (max 2).
+- **Augustin Bell** (`BELL`): every move in 5.3 is in (`bellThink`/`bellSpecial`): cane strings with the feint, the Pendulum Sweep, the
+  Escapement Drop (1.3 s stuck), the Reel, the Winding (spin + the watch thrown), On the Bell (lunges with the peal: land behind him
+  for 1.2 s), the Lesson (N = 4/3/3/2 repeats of one attack family: parried, a riposte, "Left guard, boy."), the Gear Ride, the
+  Swing (he rides the bob), Unpinned (the pendulum 25 % faster for 8 s), the Taunt. Bullets turned aside 40/60/75/90 %; a shotgun up
+  close always lands and staggers him. The crown clock: Q = 60/50/40/32 s a quarter, rings 1/2/3 (+1 Wicked), "Again. From the top."
+  with a bandage on Easy and Medium (max 2 a phase), the wind forward under the line. Crew in phase 1 only (Chorister, Cane,
+  Stiletto; every 14 s, 1/1/2/2 alive, 4 in all); second wind after 1/2/2 knock-outs (none on Wicked).
+- The phase shifts are walks, not cutscenes: he climbs the ladder (follow him: ↑), he smashes the dial and steps out (follow him →).
+  Phases 1 and 2 use the mini-boss bar (big); phase 3 is the game's boss (`enc.boss`) in the club.
+- **The Last Movement** (15 %, Easy 20 %): his next Winding opens the hatch; Nero runs in and bites the flail arm (3 s stun), slow
+  motion, FINISH. A miss: Last Breath (health 1; the next heavy hit, blast or knockdown ends it). The finisher text follows the weapon
+  (katana, axe, gun, unarmed); a white flash and a hit-stop are the freeze frame.
+
+### 10.5 The ending (5.8)
+
+The finisher kills Bell through the engine (`killEnemy`: the unlock, the boss-defeated flow), then his body is taken out and the run
+draws him (`S.hang`) flying back and catching the minute hand at :59. `LVH.endTick` runs the timeline: Elias walks to the edge and Nero
+sits by him; `spire_end` (panels 1-2); the hand clunks to twelve; twelve strikes 1.2 s apart (a slipped finger on 1, the watch falls on
+4, he falls on 7; the camera holds; on 12 the rain stops and ledger pages fall); `spire_midnight` (panel 3); `epilogue` (panels 1-4
+and the title card). Then the final card: this run's results and grade (`ch9`), and a whole-story table from `eliasgrave.best`
+(every chapter's best grade and score, the total). Enter: the credits (short and plain, 28 s, Enter/Escape/click ends them), then the
+title. Esc or Enter during the timeline jumps to the epilogue.
+
+### 10.6 What was cut or folded
+
+- The lift's vertical scroll is a painted illusion: the facade strips and the floor seams scroll past a fixed car; the twin car rises
+  beside it. The twin car's Soloist does not stay behind to shoot through the glass; its crew cross in pairs with a hop.
+- The ledge-grab assist for drops is a stop at the edge for a walk; a body knocked into a drop: Easy and Medium catch the edge (−15/−20),
+  Hard and Wicked restart at the checkpoint. Goons knocked in fall as small tumbling figures (a kill).
+- Wind pushes everyone toward +x with a 1 s warning (the whistle, the rain's slant); the camera does not lean.
+- The minute hand is a ledge whose height follows the hero along it (up to 30° walkable, 30-50° sliding to the pivot, then gone). Bell
+  does not stand on it.
+- Kessel's whip and the pull are his own specials (not a shared `whip` primitive); Bell's moves are written out in `bell.js` (no
+  `defineBoss` framework exists).
+- Choir elites do not block or counter at the next difficulty's rate (the engine's block rules are shared).
+- The epilogue's playable dawn walk in the street is not built: the `epilogue` panels (with `panel:epilogue_2`) stand in.
+- The guests are drawn figures (no crowd system); they flee to the service door at the first blow or shot.
+- The hero has no machete: an axe lies on the gardener's bench instead.
+- The ledger boxes are crates; the pendulum bursts them into pages.
+
+### 10.7 Asset names used
+
+Panels: `panel:spire_intro_1..4`, `panel:spire_end_1..3`, `panel:epilogue_1..4`, `panel:title_card` (all from section 9.1).
+Portraits: `portrait:elias_cold|grieving|furious`, `portrait:lys_amused`, `portrait:kessel_grinning`,
+`portrait:bell_warm|proud|regretful|cold`. Cutscene scripts: `spire_intro`, `lys_intro`, `kessel_intro`, `bell_intro`, `spire_end`,
+`spire_midnight` (new: panel 3 on its own, after the twelve strikes), `epilogue`. Voice ids are in the scripts (none exist yet).
+Music cues (`src/audio/manifest.js`, stand-ins until files exist): `spire_lobby`, `spire_lys`, `spire_lift`, `spire_garden`,
+`spire_kessel`, `spire_penthouse`, `spire_vestry`, `boss_bell_1..3`, `ending_twelve`, `epilogue_morning`.
+Missing audio: every Spire cue above; the hour strike, the Westminster quarter, the gear grind, the cable snap and car fall, the gust
+whistle, the glass floor's stages (existing procedural sfx stand in: `bell_ting` at pitches, `ground_slam`, `chain_snap`,
+`dodge_whoosh`, `glass_crack`, `glass_creak`, `glass_burst_large`).
+
+### 10.8 Test hooks (`?manual`)
+
+`window.__spire`: `chapter()`, `start()`, `skip(where)` with where = `lys`, `lift`, `snap`, `garden`, `kessel`, `pent`, `sweep`,
+`vestry`, `gears`, `pend`, `face`, `last` (the face at 14 %), `toBoss()`, `peek()` (the level's state: waves, panes, tiles, the lift, the
+clock, Bell, the ending), `tp(x)`, `kill(n)`, `hurtBoss(n)`, `hurtMini(n)`, `hurtHero(n)`, `heal()`, `setDiff(i)`, `view3d(on)`,
+`zoom(z)`, `equip(w)`, `retry()`, `unlock(id)`, `progress`, `SR` (the run), `ENG`.
+
+### 10.9 Shared code touched
+
+`src/legacy.js`: the import, `isSpire()` in `ownWorld()`/`L3D()`, `LOOK_X` (the Choir looks), the `loadLevel` branch, `startChapter8()`,
+the Chapter 8 menu item, the `done` unlock (and `unlock('done')` opening every chapter), the results card's Enter (`LVH.next`: the
+credits), `window.__spire`; `isSpire()` added to the street-sign and club-floor guards, the club crowd's toss, the dog's draw in the club
+(2D and 3D); two generic hooks: `LVH.camZoom` and `LVH.camAim` (a level's own camera shot); `ENG.dropWeapon`, `ENG.quitToTitle`.
+`src/feedback/results.js`: `CHAPTERS.ch9`. `src/audio/manifest.js`: the music cues.
