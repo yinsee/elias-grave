@@ -6713,6 +6713,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // three.js X = world x, Y = -world y, Z = depth toward the camera (0 = the fight lane).
   // ZF: the wall; ZS: the street's front edge; STAIR, GOAL: how far the fire escape and the roof balcony stand out of the wall (the fight lane is z = 0)
   const T3 = { ZF: -34, ZS: 34, STAIR: 14, GOAL: 12, FOV: 20, PITCH: 16 * Math.PI / 180, PIX: 1, NL: 16, HEAD_YAW: 25 * Math.PI / 180 };   // HEAD_YAW: heads turn this far toward the camera
+  const T3_BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) * 16);   // a 4 x 4 ordered dither: alpha thresholds (layer())
   const T3_GROUND = GROUND - 0.5;   // the street surface (feet stand on it)
   // Pier 9's 3D-only numbers: the bollards (as pier9.js paints them), the depth of the conveyor rail and the hall lamps, the chain colour
   const T3P9 = { BOLL: [30, 220, 300, 560, 1150, 1850, 2060], RZ: -8, LZ: -12, CHAIN: C('#4a4a52') };
@@ -8633,11 +8634,13 @@ import * as SPIRE from './levels/skyscraper/index.js';
       const k = z < 0 ? (D - z) / D * 1.03 : 1, TW = Math.min(L.dw, Math.ceil(sw * k) + (z < 0 ? 4 : 0)), TH = Math.min(L.dh, Math.ceil(sh * k) + (z < 0 ? 4 : 0));
       const x0 = Math.round(sx + sw / 2 - TW / 2), y0 = Math.round(sy + sh / 2 - h * Math.min(z, 0) / D - TH / 2), gl = L.kind === 'glass';
       let any = false;
+      const dith = !!L3D();   // a level's see-through pixels (glass sheen, mist, steam): a screen-door pattern of solid pixels, not dropped by the alpha test
       for (let oy = 0; oy < TH; oy += CHMAX) for (let ox = 0; ox < TW; ox += CW) {
         const tw = Math.min(CW, TW - ox), th = Math.min(CHMAX, TH - oy);
         withView({ x: x0 + ox, y: y0 + oy, vw: tw, vh: th }, draw);
         for (let y = 0; y < th; y++) for (let x = 0, r = y * CW, o = (oy + y) * L.dw + ox; x < tw; x++) {
-          const c = buf[r + x];
+          let c = buf[r + x];
+          if (dith && c && c >>> 24 < 250) c = c >>> 24 > T3_BAYER[((y0 + oy + y) & 3) * 4 + ((x0 + ox + x) & 3)] ? (c | 0xff000000) >>> 0 : 0;   // (world-fixed, so it does not crawl)
           if (c) any = true;
           L.data[o + x] = !glow || !c ? c : EMIT.has(c) ? t3flag(c, 254) : gl && GLASS_C.has(c) ? t3flag(c, 253) : c;
         }
