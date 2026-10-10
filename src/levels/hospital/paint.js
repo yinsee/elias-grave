@@ -273,7 +273,7 @@ export function paint(api) {
 export function drawWorld(R, S) {
   const { plot, line1 } = R, t = R.t, O = HC.out;
   // the heart monitor: a green trace (red and fast in a defend, a flat line at the end)
-  { const { x, y } = D.MONITOR, inj = S.injK || 0, dead = S.flat > 0, col = dead || inj > 0 ? C('#ff4040') : HC.mon, sp = 30 + inj * 60;
+  { const { x, y } = D.MONITOR, inj = S.injK || 0, mk = Math.max(inj, S.monK || 0), dead = S.flat > 0, col = dead || inj > 0 ? C('#ff4040') : mk > 0 ? (Math.floor(t * 4) % 2 ? C('#ffb040') : HC.mon) : HC.mon, sp = 30 + mk * 60;
     for (let xx = -7; xx <= 7; xx++) { const ph = ((xx + 7) / 14 + t * sp / 40) % 1, beat = !dead && ph > 0.45 && ph < 0.55 ? Math.round(Math.sin((ph - 0.45) * 62) * 4) : 0; plot(x + xx, y + 2 - beat, col); }
     for (let xx = -8; xx <= 8; xx++) for (let yy = -6; yy <= 6; yy++) if ((xx + yy + Math.floor(t * 2)) % 9 === 0) plot(x + xx, y + yy, C('#0e2a18')); }
   // the vent: it rattles before a drop (its grille hangs open after)
@@ -319,6 +319,15 @@ export function drawWorld(R, S) {
   { const { x, y } = D.BREAKER, up = !S.breakerDown, ready = S.breakerDown && S.breakerCd <= 0;
     for (let k = 0; k < 6; k++) plot(x - 1, y + (up ? -k : k), HC.steelL); plot(x - 2, y + (up ? -6 : 6), C('#c02020'));
     if (ready && Math.floor(t * 4) % 2) plot(x + 2, y - 7, C('#ff4040')); }
+  // the door lamps over each stair door and lift: green where it goes somewhere now (blinking on the way on), red where it is shut
+  for (const L of S.lamps || []) {
+    const lift = L.x === D.SHAFT || L.x === D.LIFT, y = lift ? GROUND - 66 : GROUND - 75, on = !L.way || Math.floor(t * 3) % 2;
+    const c = L.ok ? (on ? C('#60ff88') : C('#2a9a44')) : C('#ff3030'), w = L.way ? 3 : 1;
+    for (let a = -w; a <= w; a++) for (let b = 0; b < (L.way ? 3 : 2); b++) plot(L.x + a, y - (L.way ? 1 : 0) + b, c);
+  }
+  // the dead lift: hazard tape across its doors while it is shut; pried open (a dark gap) once he has gone down
+  if (!S.d2done) for (let k = -9; k <= 9; k++) { for (const yy of [GROUND - 52 + Math.round(k * 2.4), GROUND - 52 - Math.round(k * 2.4)]) { if (yy > GROUND - 59 && yy < GROUND - 2) { plot(D.SHAFT + k, yy, (k >> 1) % 2 ? HC.yel : O); plot(D.SHAFT + k, yy + 1, (k >> 1) % 2 ? HC.yel : O); } } }
+  else if (S.shaftUsed) for (let y = GROUND - 59; y < GROUND; y++) for (let x = D.SHAFT - 4; x <= D.SHAFT + 4; x++) plot(x, y, C('#050506'));
   // the stair doors: open a beat as someone uses one
   for (const dd of S.doorFx) { if (dd.t > 0.5) continue; for (let y = GROUND - 57; y < GROUND; y++) for (let x = dd.x - 10; x <= dd.x + 10; x++) plot(x, y, Math.abs(x - dd.x) > 7 ? HC.steelD : C('#0a0a0c')); }
   // the windsock: it swings to show the wind a second before a gust
@@ -396,14 +405,24 @@ export function drawFx(R, S) {
   for (const a of S.arcs) {
     if (a.kind === 'zone') for (let k = 0; k < 6; k++) { const x = Math.round(a.x0 + ((t * 260 + k * 37 + a.x0) % Math.max(1, a.x1 - a.x0))); plot(x, GROUND + 1 + (k % 3), C('#e0f8ff')); plot(x + 1, GROUND - 1 - (k & 1) * (a.live ? 3 : 1), C('#60d0ff')); }
     else if (a.kind === 'paddle') for (let k = 0; k < 3; k++) { const x = a.x + Math.round(Math.sin(t * 50 + k) * 3), y = a.y + Math.round(Math.cos(t * 43 + k * 2) * 3); line1(a.x, a.y, x, y, k ? C('#a0e8ff') : C('#ffffff')); }
+    else if (a.kind === 'needle') {   // a syringe held high over the bed, needle down, a glint on its tip
+      for (let k = 0; k < 6; k++) plot(a.x, a.y - 1 + k, k < 1 ? C('#c8c8c8') : k < 4 ? C('#f0e060') : C('#e8f0f0'));
+      plot(a.x - 1, a.y + 4, C('#e8f0f0')); plot(a.x + 1, a.y + 4, C('#e8f0f0')); for (let k = 6; k < 9; k++) plot(a.x, a.y + k, C('#d0d8e0'));
+      if (Math.floor(t * 8) % 2) plot(a.x, a.y + 9, C('#ffffff'));
+    }
     else if (a.kind === 'bolt') { let x = a.x, y = 0; while (y < GROUND) { const nx = x + Math.round((Math.sin(y * 0.7 + a.seed) * 5)), ny = y + 12; line1(x, y, nx, ny, C('#ffffff')); line1(x + 1, y, nx + 1, ny, C('#c0e0ff')); x = nx; y = ny; } }
   }
   // floor tells: the defib's ring, a bed's path, a lightning ring, the Code Blue glow over every puddle
   for (const f of S.tells) {
     if (f.kind === 'ring') { const n = 40; for (let i = 0; i < n; i++) { if ((i + Math.floor(t * 12)) % 3 === 0) continue; const a = i / n * Math.PI * 2, x = f.x + Math.cos(a) * f.r, y = GROUND + 4 + Math.sin(a) * 3; plot(Math.round(x), Math.round(y), f.c || C('#80e0ff')); } }
     else if (f.kind === 'path') { for (let x = Math.min(f.x0, f.x1); x <= Math.max(f.x0, f.x1); x += 4) if (Math.floor(t * 10) % 2) { plot(x, GROUND + 2, C('#ffd060')); plot(x + 1, GROUND + 2, C('#ffd060')); } }
+    else if (f.kind === 'bed') {   // Mags's bed: a dim red ring while they come for it; it fills bright red as a needle goes in
+      const n = 64, r = 36; for (let i = 0; i < n; i++) { const fill = i / n < f.k, a = i / n * Math.PI * 2 - Math.PI / 2; if (!fill && (i + Math.floor(t * 6)) % 3 === 0) continue; const x = Math.round(f.x + Math.cos(a) * r), y = Math.round(GROUND + 5 + Math.sin(a) * 4); plot(x, y, fill ? C('#ff2020') : C('#8a1a1a')); plot(x + 1, y, fill ? C('#ff6050') : C('#6a1414')); }
+    }
     else if (f.kind === 'zone') { for (let x = f.x0; x <= f.x1; x++) if ((x + Math.floor(t * 20)) % 3 === 0) blendPlot(x, GROUND + 3 + (x % 5), 120, 220, 255, 0.7); }
   }
+  // the way on: green chevrons on the floor before the door that goes somewhere now
+  for (const L of S.lamps || []) if (L.way && L.ok && vis(L.x - 12, L.x + 12)) for (let k = 0; k < 3; k++) { if ((k + Math.floor(t * 4)) % 3 === 0) continue; const x = L.x - 10 + k * 8; for (let j = 0; j < 3; j++) { blendPlot(x + j, GROUND + 3 + j, 90, 255, 130, 0.8); blendPlot(x + j, GROUND + 9 - j, 90, 255, 130, 0.8); } }
   // Krieg's dart volley tell: a cyan glint on each needle; smoke from his canister
   for (const p of S.puffs) for (let i = 0; i < 6; i++) { const ph = (p.t * 0.8 + i / 6) % 1; blendPlot(Math.round(p.x + Math.sin(i * 2.1 + p.t) * 10 * ph), Math.round(p.y - ph * 30), 220, 220, 220, 0.5 * (1 - ph)); }
   // sedation: the edges of the view darken and cool, stronger with each stack

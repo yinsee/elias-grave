@@ -1919,6 +1919,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     }
     if (e.carry && !e.act) { t = t.slice(); for (const i of [8, 9, 10, 11]) t[i] = EP.carry[i]; }   // a deckhand's load: both hands up over the head
     if (e.held > 0) { t = t.slice(); t[8] = 1.4; t[9] = 1.2; t[10] = 1.5; t[11] = 1.1; t[2] = 0.15; }   // the Bosun's bear hug
+    if (e.armUp && !e.act) { t = t.slice(); t[8] = 2.8; t[9] = 0.5; t[2] += 0.12; }   // a level's held tell: the weapon hand raised high (St. Cecilia: the needle over the bed)
     if (air) t = mod(t, { f0y: 6, f1y: 5, a0s: 1.2, a1s: 1.6 });
     // the tell is reached in ~0.06 s and the strike tracks its keys closely; everything else blends softer
     // [feel] just up off the floor: settle out of the rise pose slowly, no snap to the stance
@@ -9640,7 +9641,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     spawnEnemy, hurtPlayer, damageEnemy, knockDown, killEnemy, toast, bark, setCkpt, playScene, shakeIt, dust, hitFx, slowMo, bossPhase, bStart, bSpecial, bossTell, bTell, bCd, bRand,
     eStart, eRelease, eHop, climbStep, makeObj, removeObj, damageObj, floorBelow, heroTo, equip, fullCharge, makeDog, dogStep, puff, hitsPlayer, eWeapon, plot, line1, blendPlot,
     get R9() { return R9; }, get R9T() { return R9T; }, gradeRun, rankHtml, rankName, styleM, runS, get kos() { return kos; },
-    get dog() { return dog; }, set dog(v) { dog = v; }, get hitStop() { return hitStop; }, set hitStop(v) { hitStop = v; }, get lockT() { return lockT; }, set lockT(v) { lockT = v; },
+    get dog() { return dog; }, set dog(v) { dog = v; }, get sceneOn() { return sceneOn; }, get hitStop() { return hitStop; }, set hitStop(v) { hitStop = v; }, get lockT() { return lockT; }, set lockT(v) { lockT = v; },
     get killBy() { return killBy; }, set killBy(v) { killBy = v; }, get endPh() { return endPh; }, set endPh(v) { endPh = v; }, get fadeDir() { return fadeDir; }, set fadeDir(v) { fadeDir = v; },
     get slamDone() { return slamDone; }, set bossBarK(v) { bossBarK = v; }, get ckBoss() { return ckBoss; }, set ckBoss(v) { ckBoss = v; }, bossDlg, set autoWalk(v) { autoWalk = v; },
     reset: () => reset(), retry: () => retry(), fallOut: () => fallOut(), phaseCk, atPhaseCk, dropWeapon: (e, w) => dropWeapon(e, w), quitToTitle: () => quitToTitle(),
