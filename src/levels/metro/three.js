@@ -1,7 +1,9 @@
 // Line Zero in the 3D view (src/legacy.js Three3D reads this). The world is built from the same static layer as the 2D view; this
 // names its blocks and gives each its depth (a body up on one stands on its top), and says where the trains and the handcar run in depth.
 // Only the models (the train cars, the handcar) are 3D-only; their pixels come from the shared painters (paint.js carPx, drawHandcar).
+// models(): the yard's dead gantry crane (painted on the cavern wall in 2D) stands out of it on four legs, its jib on two chords.
 import * as D from './data.js';
+import { C } from '../../core/color.js';
 
 export const metro3d = {
   // the named blocks: [x0, y0, x1, y1, depth from the wall, the surface it carries (its front face is where a climber hangs)]
@@ -26,4 +28,14 @@ export const metro3d = {
   // a train's depth: track 1 fills the fight lane (it hits whoever stands there); track 2 runs in the back lane, in front of the far ledge
   trainZ: track => track === 2 ? { z: -12, d: 10 } : { z: 0, d: 22 },
   handcarZ: { z: 0, d: 14 },
+  models(T3, S, R, cam) {
+    const out = [], ZF = T3.ZF, cx = D.CRANE_X, yel = C('#8a6a1e');   // (paint.js: the crane's yellow)
+    if (cx + 70 < cam.x - 40 || cx - 90 > cam.x + cam.vw + 40) return out;
+    for (const z of [ZF + 2, ZF + 14]) {
+      for (const lx of [cx - 6.5, cx + 6.5]) out.push({ rod: { x0: lx, y0: 40, x1: lx, y1: D.GROUND, w: 2, d: 2, z, c: yel } });   // the tower's legs
+      for (const jy of [41.5, 47.5]) out.push({ rod: { x0: cx - 80, y0: jy, x1: cx + 61, y1: jy, w: 2, d: 2, z, c: yel } });   // the jib's chords
+    }
+    out.push({ rod: { x0: cx - 39.5, y0: 49, x1: cx - 39.5, y1: 148, w: 1, d: 1, z: ZF + 8, c: C('#2a2a30') } });   // the hook's chain
+    return out;
+  },
 };
