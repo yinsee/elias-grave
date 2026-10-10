@@ -34,7 +34,7 @@ export function grauThink(M, e, dt, px, dx, adx, level, aggro) {
   if (e.guard > 0) { e.guard -= dt; e.guardT = Math.max(e.guardT, 0.1); }
   if (e.hold) { e.vx = 0; e.face = Math.sign(px - e.x) || -1; return; }
   if (e.recT > 0) { e.recT -= dt; return; }
-  if (e.reloadT > 0) return;
+  if (e.reloadT > 0) { e.reloadT -= dt; return; }   // (the punish window)
   if (!aggro || e.sp || e.act || e.hurtT > 0 || e.air || e.exposed > 0) return;
   if (e.ph === 1 && e.hp < e.maxHp * G_.ph2.below) { G.bossPhase(e, 2, G_.ph2.line); M.grauPhase2(e); return; }
   const free = G.hero.mode === 'anim';
