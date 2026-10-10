@@ -193,11 +193,15 @@ export function createSpire(G) {
           e.perchS = null; const g = D.GROUPS[e.grp ?? S.grp], ok = x => x > g[0] + 10 && x < g[1] - 10;
           const pref = ctl.x < (s.x0 + s.x1) / 2 ? [s.x0 - 8, s.x1 + 8] : [s.x1 + 8, s.x0 - 8];   // down on the hero's side, unless a wall is there
           e.dropTo = ok(pref[0]) ? pref[0] : pref[1];
+          if (s.y === D.CAR.roof && s.x0 === D.CAR.x0) e.dropTo = (D.CAR.hatch[0] + D.CAR.hatch[1]) / 2;   // the lift's roof: down through the hatch, into the car
         }
         else if (!e.down && !e.air && Math.abs(e.y + 2 - s.y) < 3) e.x = clamp(e.x, s.x0 + 4, s.x1 - 4);
       }
+      if (e.dropTo != null && !e.air && !e.down && !e.act && Math.abs(e.y + 2 - D.CAR.roof) < 3 && e.x > D.CAR.hatch[0] && e.x < D.CAR.hatch[1] && Math.abs(e.x - e.dropTo) < 4) { e.y = D.CAR.roof + 3; e.vy = 20; e.air = true; }   // (through the hatch)
       if (e.dropTo != null) { if (e.down || (!e.air && e.y > GROUND - 6)) e.dropTo = null; else { e.cdT = Math.max(e.cdT, 0.3); if (!e.act) { e.x += Math.sign(e.dropTo - e.x) * 80 * dt; e.face = Math.sign(e.dropTo - e.x) || e.face; } } }
       // a rappeller lands: 0.8 s of landing lag (a punish chance)
+      // a rappeller who lands on the lift's roof (out of Elias' reach) keeps the ledge rule: down through the hatch after 1.5 s (a gun: 3 shots or 8 s)
+      if (e.rope && !e.air && !e.perchS && e.y < GROUND - 6) { const s = G.floorBelow(e.x, e.y, 0); if (s !== G.GROUND_S) { e.perchS = s; e.perchT = 0; } }
       if (e.rope && !e.air) { e.rope = false; e.exposed = Math.max(e.exposed || 0, 0.8); e.cdT = Math.max(e.cdT, 0.8); G.dust(e.x, e.y + 1, 4); S.ropes = S.ropes.filter(r => r.e !== e); }
     }
     for (const r of S.ropes) r.y = r.e.y - 30;
