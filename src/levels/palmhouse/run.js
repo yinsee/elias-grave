@@ -312,6 +312,17 @@ export function createPalmhouse(G) {
         if ((ctl.surf === s && hero.mode === 'anim' && !ctl.air) || (e.thrN || 0) >= PERCH.shots || e.perchT > (e.R.ranged ? PERCH.time : PERCH.melee) || e.hurtT > 0 || e.down) { e.perchS = null; e.dropTo = ctl.x < (s.x0 + s.x1) / 2 ? s.x1 + 8 : s.x0 - 8; if (s.y === D.GANTRY.y) e.dropTo = D.SKY.x1 + 10; }
         else if (!e.down && !e.air && Math.abs(e.y + 2 - s.y) < 3) e.x = clamp(e.x, s.x0 + 4, s.x1 - 4);
       }
+      // the same rule for a goon on anything raised he got onto himself (a planter, a step, a crate): no shot for PERCH.time s
+      // while Elias is not up there with him, and he comes down (a spotter idled on a nave planter for minutes; the wave never ended)
+      else if (e.type === 'goon' && e.dropTo == null && !e.down && !e.air && !e.kneel && e.y < GROUND - 6 && e.y > D.ROOF_Y && !(hero.mode === 'anim' && Math.abs(ctl.y - e.y) < 6)) {
+        if ((e.thrN || 0) !== (e.highN || 0)) { e.highN = e.thrN || 0; e.highT = 0; }
+        if ((e.highT = (e.highT || 0) + dt) > PERCH.time) {
+          const s = G.floorBelow(e.x, e.y, 0), [lo, hi] = D.GROUPS[e.grp ?? grpAt(e.x)] || [0, 2800];
+          const L = s.x0 != null && s.x0 > 0 ? s.x0 - 8 : e.x - 30, R = s.x1 != null && s.x1 < 1e5 ? s.x1 + 8 : e.x + 30;
+          const near = ctl.x < e.x ? L : R, far = near === L ? R : L, ok = x => x > lo + 8 && x < hi - 8;
+          e.dropTo = ok(near) ? near : far; e.highT = 0;
+        }
+      } else e.highT = 0;
       if (e.dropTo != null) { if (e.down || (!e.air && e.y > GROUND - 6)) { e.dropTo = null; e.grp = grpAt(e.x); } else { e.cdT = Math.max(e.cdT, 0.3); if (!e.act) { e.x += Math.sign(e.dropTo - e.x) * 80 * dt; e.face = Math.sign(e.dropTo - e.x) || e.face; } } }
       if (e.kneel) { e.vx = 0; e.act = null; }
     }
