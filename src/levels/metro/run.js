@@ -417,6 +417,12 @@ export function createMetro(G) {
         else if (!e.down && !e.air && Math.abs(e.y + 2 - s.y) < 3) e.x = clamp(e.x, s.x0 + 4, s.x1 - 4);
         if (e.far && T3 && !e.R.ranged) { e.tx = null; e.vx = 0; e.cdT = Math.max(e.cdT, 0.3); }
       }
+      // the ledge rule for the rest: a goon left up on a ledge without a perch (he landed on the relay hut off the catwalk's end, he was
+      // knocked down up there, the hero he climbed after has gone) walks off its nearest end, unless the hero stands on it too
+      if (!e.perchS && e.type === 'goon' && !e.down && !e.air && e.y < GROUND - 6 && (e.dropTo == null || Math.abs(e.x - e.dropTo) < 2)) {
+        const s = G.PLATS.find(s => !s.step && s.y < GROUND - 10 && s !== surfOf(D.MEZZ) && e.x >= s.x0 - 2 && e.x <= s.x1 + 2 && Math.abs(e.y + 2 - s.y) < 4);
+        if (s && ctl.surf !== s) e.dropTo = e.x - s.x0 < s.x1 - e.x ? s.x0 - 8 : s.x1 + 8;
+      }
       if (e.dropTo != null) { if (e.down || (!e.air && e.y > GROUND - 6)) e.dropTo = null; else { e.cdT = Math.max(e.cdT, 0.3); if (!e.act) { e.x += Math.sign(e.dropTo - e.x) * 80 * dt; e.face = Math.sign(e.dropTo - e.x) || e.face; } } }   // (no attack while he climbs down)
       if (e.refuge) {   // a goon running for a niche as a train comes; it stays there while the train passes
         const n = e.refuge, busy = S.trains.some(t => t.track === 1 && t.t > -3.5 && carsOf(t).some(c => c.x1 > t.clip[0] - 600 && c.x0 < t.clip[1] + 600));
