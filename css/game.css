@@ -55,6 +55,7 @@
   .tut li::before { content: "○ "; color: var(--accent); }
   .tut li.done { color: var(--muted); text-decoration: line-through; opacity: .7; }
   .tut li.done::before { content: "✓ "; color: var(--ok); }
+  .tut li .opt { font-style: normal; color: var(--muted); }   /* an optional lesson: it does not hold the street shut */
   .tut .stage-n { display: block; font: 10px/1.2 var(--mono); color: var(--muted); margin-bottom: 2px; }
   .tut .next { margin-top: 4px; color: var(--accent); }
   .tut.lessons { max-width: min(24%, 260px); }   /* the street's whole lesson list: narrow, so it clears the objective panel */

@@ -4249,7 +4249,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (hero.act === 'fin') { const C = ctl.fin, F = FINS[C.k]; ctl.x = lerp(C.x0, C.e.x - ctl.face * F.gap * C.e.s, smooth(Math.min(1, hero.actT / 0.12))); }   // a finisher: one step to his spot
     if ((ctl.x < 10 && openT < 0) || ctl.x > W - 10) { ctl.x = clamp(ctl.x, 10, W - 10); ctl.spd = 0; }
     if (enc.arena && (ctl.x < enc.arena.x0 || ctl.x > enc.arena.x1)) { ctl.x = clamp(ctl.x, enc.arena.x0, enc.arena.x1); ctl.spd = 0; }
-    if (!flags.club && ctl.y < GOAL.y + 4 && ctl.x > KIOSK_X - 2 && ctl.x < GOAL.x1 + 30) { ctl.x = KIOSK_X - 2; ctl.spd = 0; }   // the kiosk wall: nobody walks off the roof's right end
+    if (!flags.club && !ctl.niche && ctl.y < GOAL.y + 4 && ctl.x > KIOSK_X - 2 && ctl.x < GOAL.x1 + 30) { ctl.x = KIOSK_X - 2; ctl.spd = 0; }   // the kiosk wall: nobody walks off the roof's right end
     if (ctl.surf && (ctl.surf.landing || (ctl.surf.step && ctl.surf.y < GROUND - 6)) && (ctl.x < STAIR_X0 || ctl.x > STAIR_X1) && xPrev >= STAIR_X0 && xPrev <= STAIR_X1 && (!ctl.air || ctl.y + 2 > railTop(ctl.x > STAIR_X1 ? 1 : -1, ctl.surf))) {   // the rails: they stop a walk; a jump goes over once the feet clear the rail top; once outside, nothing pulls him back
       ctl.x = clamp(ctl.x, STAIR_X0, STAIR_X1); if (!ctl.air) ctl.spd = 0;
     }
@@ -4287,6 +4287,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     }
     if (ibuf.dash > 0) { if (tryDash()) { ibuf.dash = 0; ibuf.jump = 0; } else ibuf.dash -= dt; }   // (on the ground it is the roll)
     if (ibuf.jump > 0 && !ctl.air && LVH.up && LVH.up()) ibuf.jump = 0;   // ↑ by a refuge niche (Line Zero): he steps in (or out); no jump
+    else if (ibuf.jump > 0 && !ctl.air && drillUp()) ibuf.jump = 0;   // ↑ by the side door on the club roof: into the doorway (the drill's refuge niche)
     if (ibuf.jump > 0) {
       const free = !locked || cancelOK();
       let used = true;
@@ -4852,6 +4853,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     heroBounds();
     pickupStep();
     quakeStep(dt);
+    drillStep(dt);   // (the club roof's hazard drill: the street only)
     regenStep(dt);
     laneTick();   // last: every body takes the lane of the surface it ended the step on
     finE = finFoe();   // (the goon Q finishes now)
@@ -4937,31 +4939,40 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // the tutorial: every mechanic of the game, stage by stage, left to right.
   // A task's text is 'Verb: how to do it'; [Q] in the text shows as a key cap (the objective panel shows the verb big, the how under it)
   const STREET_BANDS = [2170];   // the bandages on the street: one as the club roof stage starts, before Malaspina
+  // A third element true: an optional lesson. It shows in the list and ticks when done, but it does not hold the street shut
+  // (the grab's knee, elbow, slam and kick-away: a playtest bot spent 2 minutes on them, and the chapters never need them).
+  // way: how to reach the stage from the one before (the 'Stage clear' line says it; the default is 'Walk right [→]').
   const ZONES = [
     { x0: -99, title: '1 · Move', tasks: [['run', 'Run: [←] [→]'], ['walk', 'Walk: hold [Shift] as you move'],
       ['jump', 'Climb onto the car: jump [↑] at its side and keep [↑] held'], ['charge', 'Climb higher: hold [↑] as you jump at a roof or a scaffold'],
       ['drop', 'Drop through a roof: hold [↓] and press [Space]'], ['dodge', 'Dodge: press [Space]. Hold [←] or [→] to pick the way'], ['squatroll', 'Long roll: press [↓] as you run']] },
-    { x0: 520, title: '2 · Bare hands', tasks: [['lp', 'Jab: tap [Q]. Twice for both hands'], ['hp', 'Heavy punch: hold [Q]'], ['lk', 'Kick: tap [W]'], ['hk', 'Heavy kick: hold [W]'],
-      ['slp', 'Low jab: hold [↓], tap [Q]'], ['slk', 'Low kick: hold [↓], tap [W]'], ['sweep', 'Leg sweep: hold [↓], hold [W]'], ['airkick', 'Flying kick: jump [↑], then tap [W]'],
+    { x0: 520, title: '2 · Strikes', tasks: [['lp', 'Jab: tap [Q]. Twice for both hands'], ['hp', 'Heavy punch: hold [Q]'], ['lk', 'Kick: tap [W]'], ['hk', 'Heavy kick: hold [W]'],
+      ['slp', 'Low jab: hold [↓], tap [Q]'], ['slk', 'Low kick: hold [↓], tap [W]'], ['sweep', 'Leg sweep: hold [↓], hold [W]'], ['airkick', 'Flying kick: jump [↑], then tap [W]']] },
+    { x0: 660, title: '3 · Grabs and props', tasks: [
       ['pdodge', 'Perfect dodge: press [Space] as a goon winds up to hit you'],
       ['counter', 'Counter: hit a goon as he winds up'],
       ['ender', 'String ender: land 3 jabs, then [Q] again'], ['grab', 'Grab: walk into a goon who stumbles'],
-      ['knee', 'Knee: in a grab, tap [W]'], ['elbow', 'Elbow: in a grab, tap [Q]'], ['gthrow', 'Throw: in a grab, hold [←] or [→] and press [Q]'],
-      ['slam', 'Slam: in a grab, hold [↓] and press [Q]'], ['gkick', 'Kick away: in a grab, hold [←] or [→] and press [W]'],
+      ['gthrow', 'Throw: in a grab, hold [←] or [→] and press [Q]'],
+      ['knee', 'Knee: in a grab, tap [W]', true], ['elbow', 'Elbow: in a grab, tap [Q]', true],
+      ['slam', 'Slam: in a grab, hold [↓] and press [Q]', true], ['gkick', 'Kick away: in a grab, hold [←] or [→] and press [W]', true],
       ['smash', 'Smash a crate: hit it until it breaks'], ['split', 'Break the crate stack: hold [Q] or [W] next to it'],
       ['lift', 'Lift the dustbin: hands empty, hold [↓] next to it'], ['bash', 'Hit a goon with it: tap [Q]'], ['toss', 'Throw a dustbin: lift one, hold [Q] with no goon near'],
-      ['pocket', 'Pocket a can or a bottle: walk into it'], ['pockethit', 'Throw it at a goon: hold [Q] with no goon near'], ['kill1', 'Beat the goons: they hit back']] },
-    { x0: 900, title: '3 · Katana', tasks: [['pick1', 'Take the katana: walk over it'], ['ks', 'Slash: tap [Q]'], ['kw', 'Heavy slash: hold [Q] near a goon'], ['kh', 'Overhead finisher: tap [Q], then hold [Q]'],
+      ['pocket', 'Pocket a can or a bottle: walk into it'], ['pockethit', 'Throw it at a goon: hold [Q] with no goon near'], ['kill2', 'Beat the goons: they hit back']] },
+    { x0: 900, title: '4 · Katana', tasks: [['pick1', 'Take the katana: walk over it'], ['ks', 'Slash: tap [Q]'], ['kw', 'Heavy slash: hold [Q] near a goon'], ['kh', 'Overhead finisher: tap [Q], then hold [Q]'],
       ['sslash', 'Low cut: hold [↓], tap [Q]'], ['kair', 'Jump slash: jump [↑], then tap [Q]'], ['tw', 'Throw the blade: hold [Q] with no goon near'], ['catch', 'Get the blade back: walk over it'],
-      ['focus', 'Sandman time: fill the focus bar, it starts by itself'], ['finisher', 'Finisher: when a beaten goon staggers, press [Q]'], ['kill2', 'Cut down the goons']] },
-    { x0: 1250, title: '4 · Axe', tasks: [['pick2', 'Take the axe: walk over it'], ['al', 'Chop combo: tap [Q] again and again'], ['aw', 'Heavy chop: hold [Q] near a goon'],
+      ['focus', 'Sandman time: fill the focus bar, it starts by itself'], ['finisher', 'Finisher: when a beaten goon staggers, press [Q]'], ['kill3', 'Cut down the goons']] },
+    { x0: 1250, title: '5 · Axe', tasks: [['pick2', 'Take the axe: walk over it'], ['al', 'Chop combo: tap [Q] again and again'], ['aw', 'Heavy chop: hold [Q] near a goon'],
       ['ah', 'Slam finisher: tap [Q], then hold [Q] near a goon'], ['aair', 'Plunge: jump off the van, then tap [Q]'], ['throwhit', 'Throw it at a goon: hold [Q] from a distance'],
-      ['swap', 'Swap weapons: hold [↓] on a weapon on the ground'], ['kill3', 'Chop down the goons']] },
-    { x0: 1600, title: '5 · Shotgun', tasks: [['pick3', 'Take the shotgun: walk over it'], ['fire3', 'Fire: press [Q]'], ['runfire', 'Fire on the run: press [Q] as you run'], ['ammo', 'Reload: walk over an ammo box'], ['kill4', 'Blast the goons']] },
-    { x0: 1900, title: '6 · Machine gun', tasks: [['pick4', 'Take the machine gun: walk over it'], ['burst', 'Burst fire: hold [Q]'], ['airfire', 'Fire in the air: jump [↑], hold [Q]'],
-      ['hurl', 'Out of ammo: press [Q] to throw the gun'], ['kill5', 'Mow down the goons']] },
-    { x0: 2150, title: '7 · The club roof', tasks: [['stairs', 'Fire escape: walk up the stairs'], ['top', 'Club roof: climb to the top']] },
-    { x0: 2420, title: '8 · Boss', tasks: [['enter', 'Enter the club: walk the red carpet'], ['techroll', 'Tech-roll: knocked down, press [Space] as you land'], ['boss', 'Beat the boss: jump [↑] over his shockwave']] },
+      ['swap', 'Swap weapons: hold [↓] on a weapon on the ground'], ['kill4', 'Chop down the goons']] },
+    { x0: 1600, title: '6 · Shotgun', tasks: [['pick3', 'Take the shotgun: walk over it'], ['fire3', 'Fire: press [Q]'], ['runfire', 'Fire on the run: press [Q] as you run'], ['ammo', 'Reload: walk over an ammo box'], ['kill5', 'Blast the goons']] },
+    { x0: 1900, title: '7 · Machine gun', tasks: [['pick4', 'Take the machine gun: walk over it'], ['burst', 'Burst fire: hold [Q]'], ['airfire', 'Fire in the air: jump [↑], hold [Q]'],
+      ['hurl', 'Out of ammo: press [Q] to throw the gun'], ['kill6', 'Mow down the goons']] },
+    { x0: 2150, title: '8 · The club roof', way: 'Up the fire escape ↑', tasks: [['stairs', 'Fire escape: walk up the stairs'], ['top', 'Climb to the roof ↑: up every flight, the stairs zig-zag']] },
+    // on the club roof (no x of its own: the roof is above stage 8's street): what Line Zero and Pier 9 need. A shockwave to jump, a vent's
+    // steam blast that only the doorway shelters from (the refuge niche: ↑ steps in), a lever a blow throws (it unbolts the side door)
+    { x0: 2419, title: '9 · Hazards', way: 'Across the roof →', tasks: [['hzjump', 'Jump the shockwave: [↑] as it reaches you'], ['hzniche', 'Take cover: [↑] in the doorway as the vent lamp flashes'],
+      ['hzlever', 'Hit the lever: [Q] or [W] by it. It unbolts the door']] },
+    { x0: 2420, title: '10 · Boss', way: 'Through the side door →', tasks: [['enter', 'Enter the club: walk the red carpet'], ['techroll', 'Tech-roll: knocked down, press [Space] as you land'], ['boss', 'Beat the boss: jump [↑] over his shockwave']] },
   ];
   const TOTAL = ZONES.reduce((n, z) => n + z.tasks.length, 0);
   const TUTKEYS = new Set(ZONES.flatMap(z => z.tasks.map(([k]) => k)));   // only these count: side events (tosshit, pocket, ammo...) are not lessons
@@ -4970,7 +4981,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   const restY = w => GROUND - 8 - REST_LOW[WEAPONS[w].id];
   const pickups = PEDESTALS.map((x, i) => ({ w: i + 1, x, y: restY(i + 1), taken: false }));
   pickups.push({ w: 4, x: 2486, y: restY(4), taken: false, rack: true });   // a loaded machine gun lying on the dais inside the club door
-  const WAVES = { 1: [770, 815], 2: [1060, 1120, 1190], 3: [1340, 1410, 1570], 4: [1720, 1790, 1850, 1880], 5: [1990, 2060, 2110, 2135] };
+  const WAVES = { 2: [770, 815], 3: [1060, 1120, 1190], 4: [1340, 1410, 1570], 5: [1720, 1790, 1850, 1880], 6: [1990, 2060, 2110, 2135] };   // (by stage index; a stage's kill lesson is 'kill' + its index)
   const spawned = new Set(), zoneTs = {};   // the stages whose goons are out; the time spent in each stage
   const reinf = {};   // per fight stage: { k: reinforcement waves sent (DIF().reinf), n: goons in the last wave out }
   const reinfLeft = z => typeof z === 'number' && isStreet() && !!reinf[z] && reinf[z].k < DIF().reinf.length;   // (a stage is not clear while one is to come; the demo's own goons have none)
@@ -5017,7 +5028,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
   const FIGHT_TASKS = new Set(['pdodge', 'counter', 'ender', 'grab', 'knee', 'elbow', 'gthrow', 'slam', 'gkick', 'focus', 'finisher']);   // learned on the stage's goons: they do not hold the goons back
   const PROP_TASKS = { smash: ['crate', 'bigcrate'], split: ['stack'], lift: [...LIFTABLE], bash: [...LIFTABLE], toss: [...LIFTABLE], pocket: ['can', 'bottle'], pockethit: ['can', 'bottle'] };
   let gateT = 0;
-  const stageDone = i => ZONES[i].tasks.every(([k]) => done.has(k));
+  const stageDone = i => ZONES[i].tasks.every(([k, , opt]) => opt || done.has(k));   // (an optional lesson does not hold the stage)
+  const HZ = ZONES.length - 2;   // the hazard drill on the club roof (stage 9); the club roof's stairs are HZ - 1
   // the x a stage's goons may not pass while the gate after the stage is shut (the hero cannot reach past it); Infinity: no cap
   const stageCap = i => flags.demo || flags.attract || i + 1 >= ZONES.length || stageDone(i) ? Infinity : ZONES[i + 1].x0 - 12;
   const openStage = () => { for (let i = 0; i < ZONES.length; i++) if (!stageDone(i)) return i; return ZONES.length - 1; };
@@ -5033,7 +5045,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     }
     if ((gateT += rdt) < 1) return;
     gateT = 0;
-    const Z = ZONES[i], x1 = ZONES[i + 1].x0, todo = Z.tasks.map(([k]) => k).filter(k => !done.has(k));
+    const Z = ZONES[i], x1 = ZONES[i + 1].x0, todo = Z.tasks.filter(([k, , opt]) => !opt && !done.has(k)).map(([k]) => k);
     if (P[2].x < Z.x0 || hero.mode !== 'anim') return;   // (only while he is in the stage)
     if (WAVES[i] && spawned.has(i) && !(zoneAlive[i] > 0) && todo.some(k => GOON_TASKS.has(k))) {
       // (he comes in through a door, an alley or a car door in the stage, or from off the screen; never pops up beside the hero)
@@ -5247,8 +5259,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
   }
   // the stage panel switches with hysteresis: 24 px past a stage line going right, 24 px back over it going left, and never while the old stage's goons stand
     let zc = 0; while (zc + 1 < ZONES.length && P[2].x >= ZONES[zc + 1].x0) zc++;
-    const onRoof = ctl.surf === GOAL && stageDone(ZONES.length - 2);   // up on the club roof with stage 7 done: the red carpet is stage 8
-    if (onRoof) zc = ZONES.length - 1;
+    const onRoof = ctl.surf === GOAL && stageDone(HZ - 1);   // up on the club roof with the stairs done: the hazard drill, then (it done) the red carpet
+    if (onRoof) zc = stageDone(HZ) ? ZONES.length - 1 : HZ;
     let z = tutZone < 0 ? zc : onRoof ? zc : tutZone;
     if (tutZone >= 0 && zc !== tutZone && !(zoneAlive[tutZone] > 0)) {
       if (zc > tutZone && P[2].x >= ZONES[zc].x0 + 24) z = zc;
@@ -5294,14 +5306,14 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (!tutDirty) return;
     tutDirty = false;
     ZONES.forEach((Zc, i) => {   // a stage with every lesson done: say so, and point on
-      if (cleared.has(i) || zoneAlive[i] > 0 || !Zc.tasks.every(([k]) => done.has(k))) return;
+      if (cleared.has(i) || zoneAlive[i] > 0 || !stageDone(i)) return;
       cleared.add(i); runS.streak = 0;
-      if (i + 1 < ZONES.length) toast(`Stage ${i + 1} clear`, `Next: ${ZONES[i + 1].title.replace(/^\d+ · /, '')} →`);
+      if (i + 1 < ZONES.length) toast(`Stage ${i + 1} clear`, `Next: ${ZONES[i + 1].title.replace(/^\d+ · /, '')} · ${(ZONES[i + 1].way || 'Walk right →').replace(/[[\]]/g, '')}`);
     });
     // the stage's whole lesson list (small, top right: a peek at a stage's start, or L): done ones struck through. The objective panel carries the one to do now
     const Z = ZONES[z];
     tutEl.innerHTML = `<span class="stage-n">Stage ${z + 1} of ${ZONES.length} · <kbd class="kc">L</kbd> list</span><h2>${Z.title}</h2>`
-      + `<ul>${Z.tasks.map(([k, t]) => `<li${done.has(k) ? ' class="done"' : ''}>${keyCaps(t)}</li>`).join('')}</ul>`;
+      + `<ul>${Z.tasks.map(([k, t, opt]) => `<li${done.has(k) ? ' class="done"' : ''}>${keyCaps(t)}${opt ? ' <i class="opt">(optional)</i>' : ''}</li>`).join('')}</ul>`;
   }
   // ---------- the objective panel (DOM only: it reads the lessons, it never changes them) ----------
   // one lesson at a time, big: the first lesson of the stage not done yet. A later one done early ticks off quietly;
@@ -5315,10 +5327,11 @@ import * as SPIRE from './levels/skyscraper/index.js';
   function objShow(key, z) {
     obj.key = key; obj.z = z;
     const task = ZONES[z].tasks.find(([k]) => k === key);
-    const [verb, how] = task ? splitTask(task[1]) : ['Stage clear', z + 1 < ZONES.length ? `Next: ${ZONES[z + 1].title.replace(/^\d+ · /, '')}. Walk right [→]` : ''];
+    const [verb, how] = task ? splitTask(task[1]) : ['Stage clear', z + 1 < ZONES.length ? `Next: ${ZONES[z + 1].title.replace(/^\d+ · /, '')}. ${ZONES[z + 1].way || 'Walk right [→]'}` : ''];   // (the club roof's way is up, not right)
     objVerbEl.innerHTML = keyCaps(verb); objHowEl.innerHTML = keyCaps(how); objHowEl.hidden = !how;
     objEl.classList.remove('done', 'enter'); objEl.classList.toggle('clear', !task); void objEl.offsetWidth; objEl.classList.add('enter');   // (restart the slide-in)
   }
+  const Z_REQ = z => ZONES[z].tasks.filter(([, , opt]) => !opt);
   function objTick(rdt) {
     const z = tutZone;
     const hide = !isStreet() || z < 0 || flags.demo || flags.attract || sceneOn || openT >= 0 || !!endPh || menuShown || enc.introT >= 0 || flags.wasted || done.has('enter');
@@ -5326,12 +5339,12 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (obj.peekT > 0) obj.peekT -= rdt;
     if (obj.bump > 0) obj.bump -= rdt;
     if (hide) { obj.key = null; obj.z = -1; obj.t = 0; return; }
-    const Z = ZONES[z], n = Z.tasks.filter(([k]) => done.has(k)).length, next = Z.tasks.find(([k]) => !done.has(k)), want = next ? next[0] : '#clear';
+    const Z = ZONES[z], R = Z_REQ(z), n = R.filter(([k]) => done.has(k)).length, next = R.find(([k]) => !done.has(k)), want = next ? next[0] : '#clear';   // (the optional lessons: in the list only)
     const prog = `${z}:${n}`;
     if (obj.prog !== prog) {
       obj.prog = prog;
-      objStageEl.textContent = `Stage ${Z.title}`; objNEl.textContent = `${n} / ${Z.tasks.length}`;
-      objFill.style.width = `${(n / Z.tasks.length * 100).toFixed(1)}%`;
+      objStageEl.textContent = `Stage ${Z.title}`; objNEl.textContent = `${n} / ${R.length}`;
+      objFill.style.width = `${(n / R.length * 100).toFixed(1)}%`;
     }
     if (obj.t > 0) { if ((obj.t -= rdt) > 0) return; }   // the check plays out, then the next one comes in
     if (obj.key !== want || obj.z !== z) {
@@ -5363,9 +5376,74 @@ import * as SPIRE from './levels/skyscraper/index.js';
       if (q.t > QUAKE.life || q.x < (enc.arena ? enc.arena.x0 - 4 : 0) || q.x > (enc.arena ? enc.arena.x1 + 4 : W)) { quakes.splice(i, 1); continue; }
       particles.push({ x: q.x + (simRand() - 0.5) * 4, y: q.y - 1, vx: q.dir * (20 + simRand() * 40), vy: -60 - simRand() * 70, life: 0.25 + simRand() * 0.2, c: simRand() < 0.5 ? PAL.dust1 : PAL.out });   // (one per step: two per 60 Hz frame, as before)
       const k = 1 - q.t / QUAKE.life;   // it fades as it runs out
+      if (q.drill) {   // the roof drill's wave: it never hurts; jumped (he is over it as it passes), it ticks the lesson
+        if (q.x > KIOSK_X) { quakes.splice(i, 1); continue; }
+        if (!q.hit && hero.mode === 'anim' && Math.abs(ctl.x - q.x) < QUAKE.w && ctl.y < GOAL.y + 4) { q.hit = true; if (ctl.air) emit('feat', 'hzjump'); else { ctl.spd = 0; drillSay('wave', 'It rolled under your feet', 'Jump it: ↑ as it reaches you'); } }
+        continue;
+      }
       if (!q.hit && hero.mode === 'anim' && !ctl.air && Math.abs(ctl.y + 2 - q.y) < 6 && Math.abs(ctl.x - q.x) < QUAKE.w) {
         q.hit = true; hurtPlayer(Math.round((q.dmg ?? QUAKE.dmg) * (0.6 + 0.4 * k)), ctl.x, ctl.y - 2, q.dir, true, 1.2);
       }
+    }
+  }
+  // ---------- the hazard drill on the club roof (stage 9): what Pier 9 and Line Zero need, with nothing that hurts ----------
+  // The club's bass sends a shockwave across the roof (jump it). Then the roof vent's lamp flashes and it blasts steam along the
+  // roof: only the side door's doorway shelters him (↑ in it steps in, ← or → steps out: Line Zero's refuge niche verb). Then a
+  // blow on the lever by the door throws its bolt. A miss only says what to do. It runs while its stage is the open one and he is
+  // up on the roof, never in the demo. Shared by both views: the 2D wall pass and the 3D wall layer draw it (drawDrill).
+  const DRILL = { ventX: GOAL.x0 + 14, doorX: KIOSK_X + 5, leverX: KIOSK_X + 13, wave: 2.4, quiet: 2.2, warn: 1.4, blast: 1.0 };
+  const drill = { t: 0, ph: 'quiet', lever: 0, caught: false, nicheT: 0, nicheAtk: 0, nicheAct: null, sayT: -9 };
+  const drillOpen = () => isStreet() && !flags.club && !flags.demo && !flags.attract && openT < 0 && stageDone(HZ - 1) && !stageDone(HZ);
+  const onRoofTop = () => ctl.y < GOAL.y + 4 && ctl.x > GOAL.x0 - 6;
+  function drillSay(key, a, b) { if (simTime - drill.sayT < 4) return; drill.sayT = simTime; toast(a, b, true); }
+  function drillReset() { Object.assign(drill, { t: 0, ph: 'quiet', lever: 0, caught: false, nicheT: 0, nicheAtk: 0, nicheAct: null, sayT: -9 }); }
+  function drillUp() {   // ↑ on the roof by the side door: he steps into the doorway (or out of it); true = used, no jump
+    if (!isStreet() || flags.club || hero.mode !== 'anim' || ctl.air || ctl.surf !== GOAL) return false;
+    if (ctl.niche) { ctl.niche = false; ctl.x = KIOSK_X - 3; return true; }
+    if (!drillOpen() || ctl.x < KIOSK_X - 14 || ctl.carry || ctl.grab) return false;
+    ctl.niche = true; ctl.spd = 0; drill.nicheT = 0; drill.nicheAtk = 0; drill.nicheAct = null;
+    return true;
+  }
+  function drillStep(dt) {
+    if (ctl.niche && isStreet()) {   // in the doorway: he stays in it; ← or → (after a beat), a second blow or a jump steps him out
+      drill.nicheT += dt; ctl.x += (DRILL.doorX - ctl.x) * Math.min(1, dt * 14); ctl.spd = 0;
+      const act = MOVES[hero.act] ? hero.act : null; if (act && act !== drill.nicheAct) drill.nicheAtk++; drill.nicheAct = act;
+      if (hero.mode !== 'anim' || flags.club || (input.dir && drill.nicheT > 0.25) || drill.nicheAtk > 1 || ctl.air) { ctl.niche = false; if (ctl.x > KIOSK_X - 3) ctl.x = KIOSK_X - 3; }
+    }
+    if (!drillOpen() || !onRoofTop()) { drill.ph = 'quiet'; drill.t = 0; return; }
+    drill.t += dt;
+    if (!done.has('hzjump')) {   // a wave every few seconds, from the vent's end of the roof
+      if (drill.t >= DRILL.wave) { drill.t = 0; quakes.push({ x: DRILL.ventX + 8, y: GOAL.y, dir: 1, t: 0, hit: false, drill: true }); emit('sfx', { name: 'ground_slam', x: DRILL.ventX, vol: 0.35, pitch: 1.4 }); }
+    } else if (!done.has('hzniche')) {   // the vent: quiet, its lamp flashing (the warning), the blast
+      if (drill.ph === 'quiet' && drill.t >= DRILL.quiet) { drill.ph = 'warn'; drill.t = 0; emit('sfx', { name: 'bell_ting', x: DRILL.ventX, vol: 0.8, pitch: 1.2 }); }
+      else if (drill.ph === 'warn' && drill.t >= DRILL.warn) { drill.ph = 'blast'; drill.t = 0; drill.caught = false; emit('sfx', { name: 'douse_hiss', x: DRILL.ventX, vol: 1 }); }
+      else if (drill.ph === 'blast') {
+        if (!ctl.niche && !drill.caught && hero.mode === 'anim' && ctl.x < KIOSK_X && ctl.x < DRILL.ventX + (KIOSK_X - DRILL.ventX) * Math.min(1, drill.t / 0.25)) { drill.caught = true; ctl.spd = 0; drillSay('steam', 'The steam caught you', 'Harmless here. On Line Zero it is a train: ↑ in the doorway as the lamp flashes'); }
+        if (drill.t >= DRILL.blast) { if (ctl.niche && !drill.caught) emit('feat', 'hzniche'); drill.ph = 'quiet'; drill.t = 0; }
+      }
+    } else drill.ph = 'quiet';
+    // the lever: any blow by it throws the bolt (the drill's last lesson; done early, it stays done)
+    const m = MOVES[hero.act];
+    if (!drill.lever && m && hero.mode === 'anim' && hero.actT >= m.win[0] && hero.actT <= m.win[1] && Math.abs(ctl.x + ctl.face * 11 - DRILL.leverX) < 10) {
+      drill.lever = 1; emit('feat', 'hzlever'); emit('sfx', { name: 'lever_clunk', x: DRILL.leverX, vol: 1 }); hitStop = Math.max(hitStop, 0.04);
+      toast('The bolt slides back', 'The side door is open: walk in →');
+    }
+  }
+  function drawDrill() {   // the side door's doorway, its lamp and the lever on the kiosk; the roof vent and its steam (both views)
+    if (!isStreet() || flags.club || cam.x > KIOSK_X + 60 || cam.x + cam.vw < GOAL.x0 - 20) return;
+    const gy = GOAL.y, warn = drill.ph === 'warn' && Math.floor(simTime * 8) % 2 === 0;
+    for (let y = gy - 30; y < gy; y++) for (let x = KIOSK_X + 1; x <= KIOSK_X + 9; x++) plot(x, y, x === KIOSK_X + 1 || x === KIOSK_X + 9 || y === gy - 30 ? PAL.out : y < gy - 27 ? C('#2a2030') : C('#0c0810'));   // the doorway: a dark recess
+    for (let x = KIOSK_X + 3; x <= KIOSK_X + 7; x++) plot(x, gy - 33, warn ? C('#ff3020') : C('#e8a040'));   // its lamp
+    const lx = DRILL.leverX;   // the lever box; the handle up (bolted) or down (thrown)
+    for (let y = gy - 24; y <= gy - 14; y++) for (let x = lx - 2; x <= lx + 2; x++) plot(x, y, x === lx - 2 || x === lx + 2 || y === gy - 24 || y === gy - 14 ? PAL.out : C('#5a5e66'));
+    const a = drill.lever ? 2.3 : 0.5; line1(lx, gy - 19, Math.round(lx + Math.sin(a) * 7), Math.round(gy - 19 - Math.cos(a) * 7), C('#9aa0a8'));
+    plot(Math.round(lx + Math.sin(a) * 7), Math.round(gy - 19 - Math.cos(a) * 7), drill.lever ? C('#40c060') : C('#d02020'));
+    const vx = DRILL.ventX;   // the roof vent: a louvred box, a lamp on top
+    for (let y = gy - 10; y < gy; y++) for (let x = vx - 5; x <= vx + 5; x++) plot(x, y, x === vx - 5 || x === vx + 5 || y === gy - 10 ? PAL.out : (y - gy) % 3 === 0 ? C('#3a3e46') : C('#6a6e78'));
+    plot(vx, gy - 11, warn ? C('#ff3020') : C('#5a2020')); plot(vx + 1, gy - 11, warn ? C('#ff3020') : C('#5a2020'));
+    if (drill.ph === 'blast') {   // the steam: a band of streaks from the vent along the roof to the door
+      const reach = vx + 6 + (KIOSK_X - vx - 6) * Math.min(1, drill.t / 0.25), fade = drill.t > DRILL.blast - 0.3 ? (DRILL.blast - drill.t) / 0.3 : 1;
+      for (let x = vx + 6; x < reach; x++) for (let y = gy - 26; y < gy - 1; y++) { const n = ((x * 73 + y * 151 + Math.floor(simTime * 30 - x * 0.2) * 31) >>> 0) % 9; if (n < 2 * fade) plot(x, y, n === 0 ? C('#ffffff') : C('#b8bcc8')); }
     }
   }
   // health: back up to full after a K.O.; the regen by difficulty, more with a bandage on. Runs in the fixed step.
@@ -5402,7 +5480,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     }
   }
   function resetTutorial() {
-    done.clear(); tutDirty = true; tutZone = -1; spawned.clear(); for (const k in reinf) delete reinf[k]; for (const k in zoneTs) delete zoneTs[k]; clearEnemies(); resetRun();
+    drillReset(); done.clear(); tutDirty = true; tutZone = -1; spawned.clear(); for (const k in reinf) delete reinf[k]; for (const k in zoneTs) delete zoneTs[k]; clearEnemies(); resetRun();
     charge.fill(0); thrown.length = 0; ammoBoxes.length = 0; loot.n = 0;
     for (const k of pickups) k.taken = false;
     weaponBtns.forEach(b => { b.disabled = +b.dataset.w !== 0; });
@@ -5526,7 +5604,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     LES('smash', [{ tick: hitBox(['crate', 'bigcrate'], 'lk', true), max: 8 }, { dur: 0.9 }]),
     LES('lift', [{ tick: liftTick, max: 10 }, { dur: 0.4 }]),
     LES('toss', [{ tick: () => { if (!ctl.carry) return true; input.dir = 0; if (!MOVES[hero.act]) input.attack = 'hp'; return false; }, max: 3 }, { dur: 0.5 }]),                             // then smash a box
-    LES('kill1', [{ tick: hunt(1), max: 20 }]), { tick: smashAll(520, 900), max: 12 },   // clear the stage's crates
+    LES('kill2', [{ tick: hunt(2), max: 20 }]), { tick: smashAll(520, 900), max: 12 },   // clear the stage's crates
     // 3 · katana
     { dir: 1, run: true, until: has(1), max: 12 }, { dur: 0.5 },
     LES('ks', [{ attack: 'lp', dur: 0.4 }, { attack: 'lp', dur: 0.5 }]),
@@ -5535,7 +5613,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     LES('kair', [{ jump: true, until: () => ctl.air && hero.act === 'air', max: 1 }, { attack: 'lp', dur: 0.1 }, { until: landed_, max: 3 }, { dur: 0.3 }]),
     LES('tw', [{ attack: 'tw', fn: () => { demoLost = 1; }, dur: 0.7 }, { seek: 1, run: true, until: has(1), max: 8 }]),   // throw, then fetch it
     LES('catch', [{ seek: 1, run: true, until: has(1), max: 8 }]),
-    LES('kill2', [{ tick: hunt(2), max: 20 }]), { tick: smashAll(900, 1250), max: 12 },   // clear the stage's crates
+    LES('kill3', [{ tick: hunt(3), max: 20 }]), { tick: smashAll(900, 1250), max: 12 },   // clear the stage's crates
     // 4 · axe
     { dir: 1, run: true, until: has(2), max: 12 }, { dur: 0.5 },
     LES('al', [{ attack: 'lp', dur: 0.5 }]),
@@ -5543,17 +5621,17 @@ import * as SPIRE from './levels/skyscraper/index.js';
     LES('aair', [{ dir: 1, until: () => ctl.x >= 1425 }, { dur: 0.2 }, { dir: 1, jump: true, until: climbed_, max: 3 },   // climb up onto the van
       { dir: 1, until: () => ctl.x >= 1512 || ctl.air, max: 3 }, { dir: 1, jump: true, until: () => ctl.air && hero.act === 'air', max: 1 }, { dir: 1, attack: 'lp', dur: 0.1 },
       { until: landed_, max: 3 }, { dur: 0.5 }]),                                                         // plunge
-    LES('kill3', [{ tick: hunt(3), max: 20 }]), { tick: smashAll(1250, 1600), max: 12 },   // clear the stage's crates
+    LES('kill4', [{ tick: hunt(4), max: 20 }]), { tick: smashAll(1250, 1600), max: 12 },   // clear the stage's crates
     // 5 · shotgun
     { dir: 1, run: true, until: has(3), max: 12 }, { dur: 0.5 },
     LES('fire3', [{ attack: 'lp', dur: 0.8 }]),
     LES('runfire', [{ dir: 1, run: true, dur: 0.7 }, { dir: 1, run: true, attack: 'lp', dur: 0.8 }, { dur: 0.4 }]),
-    LES('kill4', [{ tick: hunt(4), max: 20 }]), { tick: smashAll(1600, 1900), max: 12 },   // clear the stage's crates
+    LES('kill5', [{ tick: hunt(5), max: 20 }]), { tick: smashAll(1600, 1900), max: 12 },   // clear the stage's crates
     // 6 · machine gun
     { dir: 1, run: true, until: has(4), max: 12 }, { dur: 0.5 },
     LES('burst', [{ fire: true, attack: 'lp', dur: 1.0 }]),
     LES('airfire', [{ fire: true, jump: true, dur: 0.4 }, { fire: true, until: landed_, max: 3 }]),
-    LES('kill5', [{ tick: hunt(5), max: 20 }]), { tick: smashAll(1900, 2150), max: 12 },   // clear the stage's crates
+    LES('kill6', [{ tick: hunt(6), max: 20 }]), { tick: smashAll(1900, 2150), max: 12 },   // clear the stage's crates
     // 7 · trampoline, then onto the flag ledge
     LES('top', [{ to: STAIR_X0 - 4, run: true, max: 14 }, { tick: climbTick, max: 40 }, { dur: 0.6 }]),
     // 8 · boss
@@ -6540,6 +6618,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     drawTramp();
     drawBag();
     drawDoor();   // the club door is in the wall behind everyone
+    drawDrill();   // the club roof: the side door's doorway, the lever, the vent (the hazard drill)
     drawGate();
     for (const L of [LANE.PLAT, LANE.FIGHT, LANE.FRONT]) {   // the lanes, back to front
       if (L === LANE.FRONT) drawTossed();   // pocket throws in flight: the front lane
@@ -8782,7 +8861,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       const { ZF } = T3;
       if (flags.club && isStreet()) this.layer(this.lClub, () => { drawClub(); drawDancers(); }, { glow: true, z: ZF - 0.6 }); else this.lClub.mesh.visible = false;   // (the hall's wall is a mesh: p9Build)
       R9.models3d = !!(L3D() && L3D().models);   // (the movers a level models in 3D stay off its wall layer)
-      this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); if (LVH.drawWorld) LVH.drawWorld(); }, { glow: true, z: flags.club && !ownWorld() ? ZF - 0.3 : ZF + 0.3 });
+      this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); drawDrill(); if (LVH.drawWorld) LVH.drawWorld(); }, { glow: true, z: flags.club && !ownWorld() ? ZF - 0.3 : ZF + 0.3 });
       R9.models3d = false;
       if (L3D()) this.liveOnProps();
       this.layer(this.lSign, drawSign, { glow: true, z: ZF + 5.05 });
@@ -10270,6 +10349,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       pickups: pickups.map(k => k.taken ? 1 : 0).join(''), demo: flags.demo, attract: flags.attract });
     window.__blood = { bleed, stain, GORE, PROPS, stat, SURF, PLATS, STEPS, floorBelow, particles, drips, W, GROUND, cam, get WALLM() { return WALLM; }, get T3() { return Three3D; }, open: () => ZONES.forEach(z => z.tasks.forEach(([k]) => done.add(k))) };   // (tests: the blood and what it lands on)
     window.__skipToBoss = () => { leaveTitle(); setDemo(false); skipToBoss(); };
+    window.__tut = { ZONES, done, stageDone, openStage, start: () => startTutorial(), get zone() { return tutZone; } };   // (tests: the tutorial's stages and lessons, read only; start() is the menu's Start game)
     window.__sim = { enc, enemies, objs, ctl, hero, cam, quakes, ammoBoxes, thrown, charge, loot, setWeapon, done, bus, makeObj, spawnEnemy, P, get hookPull() { return hookPull; }, get diffSel() { return diffSel; },
       hstr, DEF, input, btn, get slowT() { return slowT; }, get ckpt() { return ckpt; }, get ragT() { return ragT; }, get flags() { return flags; }, setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; }, retry: () => retry(),
       foc, get finE() { return finE; }, get wk() { return wk; }, equip: w => equip(w, fullCharge(w)), finCam, JUG, GRAB, FOCUS, FIN, OTG, DIVE, FLY, get hitStop() { return hitStop; },
