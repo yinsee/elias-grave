@@ -217,34 +217,17 @@ function drawGuest(plot, g, t) {
 // ---- per frame, on the wall behind everyone ----
 export function drawWorld(R, S) {
   const { plot, line1 } = R, t = R.t, O = PC.out, cam = R.cam, vis = (x0, x1) => x1 > cam.x - 20 && x0 < cam.x + cam.vw + 20;
-  for (const g of S.guests) if (g.st !== 'gone' && vis(g.x - 6, g.x + 6)) drawGuest(plot, g, t);
+  const m3 = R.models3d;   // (the 3D view: the movers are models there, three.js models(); its wall layer leaves them out)
+  if (!m3) for (const g of S.guests) if (g.st !== 'gone' && vis(g.x - 6, g.x + 6)) drawGuest(plot, g, t);
   // the doors as they open: a dark gap (a warm one indoors)
   for (const d of D.DOORS) if (S.open[d.id]) { for (let y = GROUND - 55; y < GROUND; y++) for (let x = d.x - 5; x <= d.x + 4; x++) plot(x, y, x === d.x + 4 ? PC.woodD : C('#3a2a1a')); }
   for (const dd of S.doorFx) { if (dd.t > 0.6) continue; const w = dd.w || 8; for (let y = GROUND - 60; y < GROUND; y++) for (let x = dd.x - w; x <= dd.x + w; x++) plot(x, y, dd.blue && Math.floor(t * 12) % 2 ? C('#4a7aff') : C('#0c0c12')); }
-  // champagne towers
-  for (const tw of S.towers) {
-    if (!vis(tw.x - 12, tw.x + 12)) continue;
-    rect2(plot, tw.x - 10, GROUND - 22, tw.x + 10, GROUND - 1, (x, y) => y === GROUND - 22 ? O : y < GROUND - 19 ? PC.white : x === tw.x - 9 || x === tw.x + 9 ? PC.woodD : 0);
-    if (!tw.broken) for (let row = 0; row < 5; row++) { const n = 5 - row, y = GROUND - 25 - row * 4; for (let k = 0; k < n; k++) { const gx = tw.x - (n - 1) * 2 + k * 4; plot(gx, y, C('#f8f0c0')); plot(gx, y - 1, C('#e8d070')); plot(gx - 1, y - 2, C('#c0d0e0')); plot(gx + 1, y - 2, C('#c0d0e0')); } }
-    else for (let k = 0; k < 6; k++) plot(tw.x - 8 + k * 3, GROUND - 23, C('#c0d0e0'));
+  if (!m3) {   // champagne towers, chandeliers, statues, misting pipes
+    for (const tw of S.towers) if (vis(tw.x - 12, tw.x + 12)) drawTower(R, tw);
+    for (const ch of S.chands) if (vis(ch.x - 20, ch.x + 20)) { drawChandChain(R, ch); drawChand(R, ch); }
+    for (const st of S.statues) if (vis(st.x - 80, st.x + 80)) drawStatue(R, st);
+    for (const p of S.pipes) if (vis(p.x - 12, p.x + 12)) drawPipe(R, p);
   }
-  // chandeliers: hanging (a chain to the ceiling), falling, or a wreck on the floor
-  for (const ch of S.chands) {
-    if (!vis(ch.x - 20, ch.x + 20)) continue;
-    const y = ch.st === 'down' ? GROUND - 8 : ch.st === 'fall' ? D.CHAND_Y + (GROUND - 8 - D.CHAND_Y) * Math.min(1, ch.t / 0.35) ** 2 : D.CHAND_Y;
-    if (ch.st === 'hang' || ch.st === 'warn') for (let yy = 40; yy < y - 10; yy++) plot(ch.x, yy, (yy >> 1) % 2 ? PC.goldD : PC.gold);
-    if (ch.st === 'down') { for (let k = -18; k <= 18; k++) { plot(ch.x + k, GROUND - 2 - (Math.abs(k) % 5), k % 3 ? PC.gold : C('#d8e8f8')); plot(ch.x + k, GROUND - 1, PC.goldD); } continue; }
-    for (let yy = -10; yy <= 6; yy++) for (let k = -16; k <= 16; k++) { const r = (k / 16) ** 2 + ((yy - 2) / 8) ** 2; if (r < 1 && (yy < -6 ? Math.abs(k) < 4 : true) && (r > 0.6 || yy === 2)) plot(ch.x + k, y + yy, (k + yy + Math.floor(t * 3)) % 5 === 0 ? C('#ffffff') : (k % 4 === 0 ? C('#d8e8f8') : PC.gold)); }
-    for (let k = -14; k <= 14; k += 4) plot(ch.x + k, y + 8, C('#fff0c0'));
-  }
-  // statues: standing (cover; a wall), falling, fallen (low cover)
-  for (const st of S.statues) {
-    if (!vis(st.x - 80, st.x + 80)) continue;
-    if (st.st === 'up') { rect2(plot, st.x - 7, GROUND - 10, st.x + 7, GROUND - 1, (x, y) => y === GROUND - 10 ? PC.stoneL : PC.stoneD); rect2(plot, st.x - 4, GROUND - 52, st.x + 4, GROUND - 11, (x, y) => y < GROUND - 46 ? (Math.hypot(x - st.x, y - (GROUND - 49)) < 3.5 ? PC.stoneL : 0) : x === st.x - 4 || x === st.x + 4 ? PC.stoneD : PC.stone); plot(st.x + 5, GROUND - 40, PC.stone); plot(st.x + 6, GROUND - 41, PC.stone); }
-    else { const k = st.st === 'fall' ? Math.min(1, st.t / 0.5) : 1, a = k * Math.PI / 2 * st.dir; for (let s = 0; s < 52; s++) { const x = st.x + Math.sin(a) * s, y = GROUND - 10 - Math.cos(a) * s; for (let w = -3; w <= 3; w++) plot(Math.round(x + Math.cos(a) * w), Math.round(y + Math.sin(a) * w * (st.dir)), s > 46 ? PC.stoneL : PC.stone); } rect2(plot, st.x - 7, GROUND - 10, st.x + 7, GROUND - 1, () => PC.stoneD); }
-  }
-  // the misting pipes: a valve; burst, it hangs open
-  for (const p of S.pipes) { if (!vis(p.x - 12, p.x + 12)) continue; for (let x = p.x - 30; x <= p.x + 30; x++) { plot(x, p.y, PC.ironL); plot(x, p.y + 1, PC.iron); } for (let yy = p.y; yy < GROUND; yy++) plot(p.x + 30, yy, PC.iron); rect2(plot, p.x - 3, p.y - 3, p.x + 3, p.y + 4, (x, y) => p.burst ? (x === p.x ? O : PC.ironD) : (x + y) % 2 ? C('#c03030') : PC.iron); }
   // the waiter's tray, the desk things: the folder, the ashtray, the lamp, the phone (it shakes when it rings)
   { const Dk = D.DESK; if (vis(Dk.x0, Dk.x1)) {
     if (!S.dossier) for (let k = 0; k < 8; k++) { plot(Dk.dossier - 4 + k, Dk.top - 1, C('#c8b070')); plot(Dk.dossier - 4 + k, Dk.top - 2, k === 3 ? C('#c02020') : C('#d8c080')); }
@@ -258,14 +241,49 @@ export function drawWorld(R, S) {
   { const { x, y } = D.CLOCK; const hand = (a, len) => line1(x, y, x + Math.sin(a) * len, y - Math.cos(a) * len, O); hand((3 + 17 / 60) / 12 * Math.PI * 2, 4); hand(17 / 60 * Math.PI * 2, 6); plot(x, y, C('#b02a2a')); }
   if (S.haleLight) { const h = D.HALE; for (let yy = h.y0 + 2; yy < GROUND; yy++) for (let xx = h.x0 + 1; xx < h.x1; xx++) if ((xx - h.x0 - 30) ** 2 / 900 + (yy - h.y0 - 20) ** 2 / 2500 < 1) plot(xx, yy, mix(C('#5a4a2a'), C('#2a2218'), (yy - h.y0) / 80)); rect2(plot, h.x0 + 34, h.y0 + 16, h.x0 + 40, h.y0 + 20, () => C('#ffe0a0'));
     if (!S.haleGone) { const hx = h.x0 + 18; rect2(plot, hx - 4, GROUND - 40, hx + 4, GROUND - 1, () => C('#0c0c10')); rect2(plot, hx - 3, GROUND - 48, hx + 3, GROUND - 41, () => C('#0c0c10')); rect2(plot, hx - 6, GROUND - 49, hx + 6, GROUND - 48, () => C('#0c0c10')); plot(hx + 4, GROUND - 44, C('#0c0c10')); plot(hx + 5, GROUND - 45, C('#0c0c10')); } }
-  if (S.lantern && S.lantern.st !== 'gone') {
-    const L = S.lantern, ly = L.st === 'down' ? GROUND - 18 : L.st === 'fall' ? 150 + (GROUND - 18 - 150) * Math.min(1, L.t / 0.4) ** 2 : 150;
-    if (L.st === 'hang' || L.st === 'warn') for (let yy = D.LANTERN.chainY; yy < ly - 8; yy++) plot(D.LANTERN.x, yy, (yy >> 1) % 2 ? PC.iron : PC.ironL);
-    rect2(plot, D.LANTERN.x - 9, ly - 8, D.LANTERN.x + 9, ly + 17, (x, y) => x === D.LANTERN.x - 9 || x === D.LANTERN.x + 9 || y === ly - 8 || y === ly + 17 ? O : (x + y) % 4 === 0 ? PC.ironL : y < ly + 4 ? C('#e8c070') : PC.iron);
-  }
+  if (!m3 && S.lantern && S.lantern.st !== 'gone') { drawLanternChain(R, S.lantern); drawLantern(R, S.lantern); }
   if (S.shieldDrop) { const sx = Math.round(S.shieldDrop.x); for (let k = -10; k <= 10; k++) { plot(sx + k, GROUND - 2, C('#9ab8d8')); plot(sx + k, GROUND - 3, Math.abs(k) === 10 ? O : C('#c8e0f0')); } }
   if (!S.gateOpen) for (let y = 164; y < GROUND; y += 3) for (let x = D.GATE + 3; x <= D.GATE + 8; x++) plot(x, y, x % 2 ? PC.ironL : PC.ironD);
 }
+// ---- the movers, one painter each (the 2D wall layer, and the 3D view's models: src/levels/palmhouse/three.js) ----
+export function drawTower(R, tw) {   // a champagne tower on its table
+  const { plot } = R, O = PC.out;
+  rect2(plot, tw.x - 10, GROUND - 22, tw.x + 10, GROUND - 1, (x, y) => y === GROUND - 22 ? O : y < GROUND - 19 ? PC.white : x === tw.x - 9 || x === tw.x + 9 ? PC.woodD : 0);
+  if (!tw.broken) for (let row = 0; row < 5; row++) { const n = 5 - row, y = GROUND - 25 - row * 4; for (let k = 0; k < n; k++) { const gx = tw.x - (n - 1) * 2 + k * 4; plot(gx, y, C('#f8f0c0')); plot(gx, y - 1, C('#e8d070')); plot(gx - 1, y - 2, C('#c0d0e0')); plot(gx + 1, y - 2, C('#c0d0e0')); } }
+  else for (let k = 0; k < 6; k++) plot(tw.x - 8 + k * 3, GROUND - 23, C('#c0d0e0'));
+}
+export const chandY = ch => ch.st === 'down' ? GROUND - 8 : ch.st === 'fall' ? D.CHAND_Y + (GROUND - 8 - D.CHAND_Y) * Math.min(1, ch.t / 0.35) ** 2 : D.CHAND_Y;
+export function drawChandChain(R, ch) {   // its chain to the ceiling, while it hangs
+  const y = chandY(ch);
+  if (ch.st === 'hang' || ch.st === 'warn') for (let yy = 40; yy < y - 10; yy++) R.plot(ch.x, yy, (yy >> 1) % 2 ? PC.goldD : PC.gold);
+}
+export function drawChand(R, ch) {   // a chandelier: hanging, falling, or a wreck on the floor
+  const { plot } = R, t = R.t, y = chandY(ch);
+  if (ch.st === 'down') { for (let k = -18; k <= 18; k++) { plot(ch.x + k, GROUND - 2 - (Math.abs(k) % 5), k % 3 ? PC.gold : C('#d8e8f8')); plot(ch.x + k, GROUND - 1, PC.goldD); } return; }
+  for (let yy = -10; yy <= 6; yy++) for (let k = -16; k <= 16; k++) { const r = (k / 16) ** 2 + ((yy - 2) / 8) ** 2; if (r < 1 && (yy < -6 ? Math.abs(k) < 4 : true) && (r > 0.6 || yy === 2)) plot(ch.x + k, y + yy, (k + yy + Math.floor(t * 3)) % 5 === 0 ? C('#ffffff') : (k % 4 === 0 ? C('#d8e8f8') : PC.gold)); }
+  for (let k = -14; k <= 14; k += 4) plot(ch.x + k, y + 8, C('#fff0c0'));
+}
+export function drawStatue(R, st) {   // a statue: standing (cover; a wall), falling, fallen (low cover)
+  const { plot } = R;
+  if (st.st === 'up') { rect2(plot, st.x - 7, GROUND - 10, st.x + 7, GROUND - 1, (x, y) => y === GROUND - 10 ? PC.stoneL : PC.stoneD); rect2(plot, st.x - 4, GROUND - 52, st.x + 4, GROUND - 11, (x, y) => y < GROUND - 46 ? (Math.hypot(x - st.x, y - (GROUND - 49)) < 3.5 ? PC.stoneL : 0) : x === st.x - 4 || x === st.x + 4 ? PC.stoneD : PC.stone); plot(st.x + 5, GROUND - 40, PC.stone); plot(st.x + 6, GROUND - 41, PC.stone); }
+  else { const k = st.st === 'fall' ? Math.min(1, st.t / 0.5) : 1, a = k * Math.PI / 2 * st.dir; for (let s = 0; s < 52; s++) { const x = st.x + Math.sin(a) * s, y = GROUND - 10 - Math.cos(a) * s; for (let w = -3; w <= 3; w++) plot(Math.round(x + Math.cos(a) * w), Math.round(y + Math.sin(a) * w * (st.dir)), s > 46 ? PC.stoneL : PC.stone); } rect2(plot, st.x - 7, GROUND - 10, st.x + 7, GROUND - 1, () => PC.stoneD); }
+}
+export function drawPipe(R, p) {   // a misting pipe along the wall: a valve; burst, it hangs open
+  const { plot } = R, O = PC.out;
+  for (let x = p.x - 30; x <= p.x + 30; x++) { plot(x, p.y, PC.ironL); plot(x, p.y + 1, PC.iron); } for (let yy = p.y; yy < GROUND; yy++) plot(p.x + 30, yy, PC.iron);
+  rect2(plot, p.x - 3, p.y - 3, p.x + 3, p.y + 4, (x, y) => p.burst ? (x === p.x ? O : PC.ironD) : (x + y) % 2 ? C('#c03030') : PC.iron);
+}
+export const lanternY = L => L.st === 'down' ? GROUND - 18 : L.st === 'fall' ? 150 + (GROUND - 18 - 150) * Math.min(1, L.t / 0.4) ** 2 : 150;
+export function drawLanternChain(R, L) {   // its chain, while it hangs
+  const ly = lanternY(L);
+  if (L.st === 'hang' || L.st === 'warn') for (let yy = D.LANTERN.chainY; yy < ly - 8; yy++) R.plot(D.LANTERN.x, yy, (yy >> 1) % 2 ? PC.iron : PC.ironL);
+}
+export function drawLantern(R, L) {   // the great iron lantern
+  const ly = lanternY(L), O = PC.out;
+  rect2(R.plot, D.LANTERN.x - 9, ly - 8, D.LANTERN.x + 9, ly + 17, (x, y) => x === D.LANTERN.x - 9 || x === D.LANTERN.x + 9 || y === ly - 8 || y === ly + 17 ? O : (x + y) % 4 === 0 ? PC.ironL : y < ly + 4 ? C('#e8c070') : PC.iron);
+}
+export const drawGuestR = (R, g) => drawGuest(R.plot, g, R.t);
+
 function rect2(plot, x0, y0, x1, y1, f) { for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) { const c = f(x, y); if (c) plot(x, y, c); } }
 
 // ---- over the lit scene, unlit ----

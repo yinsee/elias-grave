@@ -31,6 +31,7 @@ function clock317(R, x, y) {   // a Bell & Sons clock stopped at 3:17 (the bible
 export function drawWorld(R, S) {
   const { plot, line1, blendPlot } = R, t = R.t, O = SC.out, cam = R.cam;
   const vis = (x0, x1) => x1 > cam.x - 10 && x0 < cam.x + cam.vw + 10;
+  const m3 = R.models3d;   // (the 3D view: the movers below are models there, three.js models(); its wall layer leaves them out)
   // the lift: the facade scrolls past the car (it rises; after the snap it falls); the clouds; the twin car; the cradle
   if (vis(530, 830) && S.lift) {
     const L = S.lift, off = ((Math.floor(L.floor * 64) % 64) + 64) % 64;
@@ -55,15 +56,7 @@ export function drawWorld(R, S) {
     if (!L.gone) { for (let x = D.CAR.x0; x <= D.CAR.x1; x++) { plot(x, D.CAR.ceil, SC.steelL); plot(x, D.CAR.ceil + 1, SC.steelD); } if (!L.snapped) line1(680, D.CAR.ceil, 680, 0, SC.steelD); for (let x = D.CAR.hatch[0]; x <= D.CAR.hatch[1]; x++) plot(x, D.CAR.ceil + 2, SC.steel); }
   }
   // the chandelier: crystal on a chain; it falls; then a glittering slip patch
-  if (S.chand && vis(250, 350)) {
-    const c = S.chand, x = D.CHAND.x, y = Math.round(c.y);
-    if (c.st !== 'down') {
-      if (c.st === 'hang') line1(x, 40, x, y - 10, SC.goldD);
-      for (let k = -16; k <= 16; k++) { const yy = y + Math.round(Math.abs(k) * 0.3); plot(x + k, yy, SC.gold); if (k % 4 === 0) for (let d = 1; d < 6; d++) plot(x + k, yy + d, d === 5 ? SC.lamp : SC.whiteD); }
-      for (let k = -8; k <= 8; k++) plot(x + k, y - 6 + Math.round(Math.abs(k) * 0.5), SC.goldL);
-    }
-    else for (let k = -18; k <= 18; k++) { plot(x + k, GROUND - 2 - (Math.abs(k) < 8 ? 2 : 0) + (k % 3 === 0 ? 1 : 0), k % 4 === 0 ? SC.whiteD : SC.goldD); if (k % 5 === 0) plot(x + k, GROUND - 5 + (k & 1), SC.gold); }   // the wreck
-  }
+  if (S.chand && vis(250, 350) && !m3) drawChandelier(R, S.chand);
   if (S.slip && S.slip.t > 0) for (let x = S.slip.x0; x <= S.slip.x1; x += 2) if (((x + Math.floor(t * 3)) % 5) < 2) plot(x, GROUND - 1, (x % 4) ? SC.white : SC.goldL);
   // mirrors: glass, cracks, and the reflections of everyone in front of them (never the real Lys: she has no reflection)
   for (const p of S.panes || []) {
@@ -86,16 +79,10 @@ export function drawWorld(R, S) {
   // the penthouse guests: they flee to the service door
   for (const g of S.guests || []) if (!g.gone && vis(g.x - 4, g.x + 4)) figure(R, g.x, GROUND - 1, g.run ? Math.sin(t * 16 + g.x) : 0, [g.dress, SKIN, g.dress], g.run ? 0.9 : 0.1, 0.95);
   // the grand piano: a pushable heavy; when its tile goes, it falls with a last chord
-  if (S.piano && !S.piano.gone && vis(S.piano.x - 24, S.piano.x + 24)) {
-    const x = Math.round(S.piano.x), y = Math.round(S.piano.y ?? GROUND);
-    for (let yy = y - 24; yy < y - 8; yy++) for (let xx = x - 20; xx <= x + 20; xx++) plot(xx, yy, yy === y - 24 || xx === x - 20 || xx === x + 20 ? O : (xx + yy) % 13 === 0 ? SC.blackL : SC.black);
-    for (let xx = x - 18; xx <= x - 2; xx++) plot(xx, y - 13, xx % 2 ? SC.white : SC.blackL);
-    for (const lx of [x - 17, x + 17]) for (let yy = y - 8; yy < y; yy++) plot(lx, yy, SC.blackL);
-    line1(x + 4, y - 24, x + 18, y - 34, SC.blackL);   // the open lid
-  }
+  if (S.piano && !S.piano.gone && vis(S.piano.x - 24, S.piano.x + 24) && !m3) drawPiano(R, S.piano);
   // the glass floor over ninety floors: cracks by stage; a broken tile is the drop
   for (const g of S.tiles || []) {
-    if (!vis(g.x0, g.x1)) continue;
+    if (!vis(g.x0, g.x1) || m3) continue;   // (3D: a tile is a model on the floor, three.js)
     for (let x = g.x0; x <= g.x1; x++) for (let y = GROUND; y < GROUND + 8; y++) {
       if (g.broken) { plot(x, y, (x * 5 + y * 3) % 13 === 0 ? SC.cityL : SC.city); continue; }
       plot(x, y, y === GROUND ? SC.glassL : (x * 7 + y * 5) % 17 === 0 ? SC.cityL : mix(SC.glass, SC.city, 0.5));
@@ -117,17 +104,13 @@ export function drawWorld(R, S) {
       for (let s = 0; s < 6; s++) { const a = a0 + s / 6 * Math.PI * 2; line1(g.cx, g.cy, Math.round(g.cx + Math.cos(a) * (g.r - 3)), Math.round(g.cy + Math.sin(a) * (g.r - 3)), SC.brassD); }
       for (let dx = -3; dx <= 3; dx++) for (let dy = -3; dy <= 3; dy++) if (dx * dx + dy * dy < 10) plot(g.cx + dx, g.cy + dy, SC.brassL);
     });
-    for (const th of S.teeth || []) { const s = th.s, y0 = Math.round(s.y); for (let x = Math.round(s.x0); x <= Math.round(s.x1); x++) for (let y = y0; y < y0 + 5; y++) plot(x, y, y === y0 ? SC.brassL : x === Math.round(s.x0) || x === Math.round(s.x1) ? O : SC.brass); }
+    if (!m3) for (const th of S.teeth || []) drawTooth(R, th);
     for (const m of D.MESH) for (let k = -1; k <= 1; k++) plot(m.x + k, m.y, Math.floor(t * 6) % 2 ? C('#ff4030') : SC.redD);
     clock317(R, ...D.GEAR_ARENA.clock);
   }
   if (vis(2160, 2430)) {
     bell(...D.PEND_ARENA.bell);
-    if (S.pend) {
-      const p = S.pend, [px, py] = D.PEND.pivot, bx = Math.round(p.x), by = Math.round(p.y), r = D.PEND.r;
-      line1(px, Math.max(0, py), bx, by, SC.brassD); line1(px + 1, Math.max(0, py), bx + 1, by, SC.brass);
-      for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) { const r2 = dx * dx + dy * dy; if (r2 <= r * r) plot(bx + dx, by + dy, r2 > (r - 2) ** 2 ? O : r2 < 20 ? SC.lamp : (dx + dy) % 7 === 0 ? SC.brassL : SC.brass); }
-    }
+    if (S.pend && !m3) drawPend(R, S.pend);
     if (S.dialBroken) for (let y = 30; y < GROUND; y += 2) for (let x = D.PEND_ARENA.dial - 2; x <= D.PEND_ARENA.dial + 2; x++) if ((x + y) % 5 === 0) plot(x, y, SC.sky1);
     if (S.clutch > 0) for (let k = 0; k < 6; k++) blendPlot(2290 + Math.round(Math.sin(t * 9 + k) * 6), 130 - k * 6, 230, 230, 230, 0.4);
   }
@@ -136,9 +119,9 @@ export function drawWorld(R, S) {
     const F = D.FACE;
     for (let dy = -F.r; dy <= F.r; dy++) for (let dx = -F.r; dx <= F.r; dx++) { const r2 = dx * dx + dy * dy; if (r2 > F.r * F.r) continue; const x = F.cx + dx, y = F.cy + dy; if (y >= GROUND - 6) continue; plot(x, y, r2 > (F.r - 3) ** 2 ? SC.brass : (dx * 3 + dy * 5) % 29 === 0 ? SC.amber : mix(SC.brassD, SC.amberD, 0.35 + 0.25 * Math.sin((dx + dy) * 0.05))); }
     for (let h = 1; h <= 12; h++) { const a = h / 12 * Math.PI * 2, x = Math.round(F.cx + Math.sin(a) * (F.r - 10)), y = Math.round(F.cy - Math.cos(a) * (F.r - 10)); if (y < GROUND - 6) for (let k = -2; k <= 2; k++) { plot(x + k, y, SC.black); plot(x + k, y + 1, SC.black); } }
-    for (const n of D.NUMERALS) for (let k = -13; k <= 13; k++) { plot(n.x + k, n.y, SC.brassL); plot(n.x + k, n.y + 1, SC.brassD); }
+    if (!m3) for (const n of D.NUMERALS) for (let k = -13; k <= 13; k++) { plot(n.x + k, n.y, SC.brassL); plot(n.x + k, n.y + 1, SC.brassD); }   // (ledges)
     line1(F.cx, F.cy, F.cx, F.cy - 50, SC.black); line1(F.cx + 1, F.cy, F.cx + 1, F.cy - 50, SC.black);
-    if (S.hand) { const h = S.hand; for (let w = -1; w <= 1; w++) line1(F.cx, F.cy + w, Math.round(h.tx), Math.round(h.ty) + w, w ? SC.black : SC.blackL); }
+    if (S.hand && !m3) drawHand(R, S.hand);
     for (let dx = -3; dx <= 3; dx++) for (let dy = -3; dy <= 3; dy++) if (dx * dx + dy * dy < 10) plot(F.cx + dx, F.cy + dy, SC.brassL);
     bell(...F.bell);
     if (Math.floor(t * 1.5) % 2) for (let k = -1; k <= 1; k++) plot(F.cx + k, 6, SC.beacon);
@@ -158,6 +141,39 @@ export function drawWorld(R, S) {
     line1(bx + 4, GROUND - 13, bx + 10, GROUND - 13, C('#7a3a20'));
     for (let k = 0; k < 5; k++) blendPlot(bx + 10 + Math.round(Math.sin(t * 1.5 + k * 0.8) * 2), GROUND - 15 - k * 3, 200, 200, 210, 0.3);   // the cherry-wood pipe, still smoking
   }
+}
+
+// ---- the movers, one painter each (the 2D wall layer, and the 3D view's models: src/levels/skyscraper/three.js) ----
+export function drawChandelier(R, c) {   // the lobby chandelier: crystal on a chain; it falls; the wreck
+  const { plot, line1 } = R, x = D.CHAND.x, y = Math.round(c.y);
+  if (c.st !== 'down') {
+    if (c.st === 'hang') line1(x, 40, x, y - 10, SC.goldD);
+    for (let k = -16; k <= 16; k++) { const yy = y + Math.round(Math.abs(k) * 0.3); plot(x + k, yy, SC.gold); if (k % 4 === 0) for (let d = 1; d < 6; d++) plot(x + k, yy + d, d === 5 ? SC.lamp : SC.whiteD); }
+    for (let k = -8; k <= 8; k++) plot(x + k, y - 6 + Math.round(Math.abs(k) * 0.5), SC.goldL);
+  }
+  else for (let k = -18; k <= 18; k++) { plot(x + k, GROUND - 2 - (Math.abs(k) < 8 ? 2 : 0) + (k % 3 === 0 ? 1 : 0), k % 4 === 0 ? SC.whiteD : SC.goldD); if (k % 5 === 0) plot(x + k, GROUND - 5 + (k & 1), SC.gold); }   // the wreck
+}
+export function drawPiano(R, piano) {   // the grand piano: a pushable heavy
+  const { plot, line1 } = R, O = SC.out;
+  const x = Math.round(piano.x), y = Math.round(piano.y ?? GROUND);
+  for (let yy = y - 24; yy < y - 8; yy++) for (let xx = x - 20; xx <= x + 20; xx++) plot(xx, yy, yy === y - 24 || xx === x - 20 || xx === x + 20 ? O : (xx + yy) % 13 === 0 ? SC.blackL : SC.black);
+  for (let xx = x - 18; xx <= x - 2; xx++) plot(xx, y - 13, xx % 2 ? SC.white : SC.blackL);
+  for (const lx of [x - 17, x + 17]) for (let yy = y - 8; yy < y; yy++) plot(lx, yy, SC.blackL);
+  line1(x + 4, y - 24, x + 18, y - 34, SC.blackL);   // the open lid
+}
+export function drawTooth(R, th) {   // a gear tooth: a ledge riding the gear's rim
+  const { plot } = R, O = SC.out, s = th.s, y0 = Math.round(s.y);
+  for (let x = Math.round(s.x0); x <= Math.round(s.x1); x++) for (let y = y0; y < y0 + 5; y++) plot(x, y, y === y0 ? SC.brassL : x === Math.round(s.x0) || x === Math.round(s.x1) ? O : SC.brass);
+}
+export function drawPend(R, p, rod = true) {   // the pendulum: its rod from the pivot (the 3D model has a real rod), the bob
+  const { plot, line1 } = R, O = SC.out;
+  const [px, py] = D.PEND.pivot, bx = Math.round(p.x), by = Math.round(p.y), r = D.PEND.r;
+  if (rod) { line1(px, Math.max(0, py), bx, by, SC.brassD); line1(px + 1, Math.max(0, py), bx + 1, by, SC.brass); }
+  for (let dx = -r; dx <= r; dx++) for (let dy = -r; dy <= r; dy++) { const r2 = dx * dx + dy * dy; if (r2 <= r * r) plot(bx + dx, by + dy, r2 > (r - 2) ** 2 ? O : r2 < 20 ? SC.lamp : (dx + dy) % 7 === 0 ? SC.brassL : SC.brass); }
+}
+export function drawHand(R, h) {   // the minute hand on the face
+  const F = D.FACE;
+  for (let w = -1; w <= 1; w++) R.line1(F.cx, F.cy + w, Math.round(h.tx), Math.round(h.ty) + w, w ? SC.black : SC.blackL);
 }
 
 export function drawFx(R, S) {

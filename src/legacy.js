@@ -6738,6 +6738,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // three.js X = world x, Y = -world y, Z = depth toward the camera (0 = the fight lane).
   // ZF: the wall; ZS: the street's front edge; STAIR, GOAL: how far the fire escape and the roof balcony stand out of the wall (the fight lane is z = 0)
   const T3 = { ZF: -34, ZS: 34, STAIR: 14, GOAL: 12, FOV: 20, PITCH: 16 * Math.PI / 180, PIX: 1, NL: 16, HEAD_YAW: 25 * Math.PI / 180 };   // HEAD_YAW: heads turn this far toward the camera
+  const T3_BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5].map(v => (v + 0.5) * 16);   // a 4 x 4 ordered dither: alpha thresholds (layer())
   const T3_GROUND = GROUND - 0.5;   // the street surface (feet stand on it)
   // Pier 9's 3D-only numbers: the bollards (as pier9.js paints them), the depth of the conveyor rail and the hall lamps, the chain colour
   const T3P9 = { BOLL: [30, 220, 300, 560, 1150, 1850, 2060], RZ: -8, LZ: -12, CHAIN: C('#4a4a52') };
@@ -7476,10 +7477,49 @@ import * as SPIRE from './levels/skyscraper/index.js';
       }
       // a vehicle or a scaffold is not one slab: wheels are tyres at its two sides, the cabin is narrower than the body,
       // a scaffold is two open frames with the deck between them (VPARTS, recorded as the street was drawn)
-      const parts = (Z, px, w, h) => {
-        const V = Z.z0 === ZF && Z.z1 - Z.z0 > 10 ? VPARTS.filter(v => v.x0 <= Z.x1 && v.x1 >= Z.x0) : [];
+      // a level's block (L3D) is not one slab either: what is solid in 2D (a box, a slab, a deck: 3 x 3 px or more) goes through the
+      // block's depth; a rail, a post, a rung, a hanger or a brace (thinner) is a bar 2 px deep, as the street's scaffold poles are: at
+      // the back above a ledge on the block (its front edge stays open, so a body up there shows), at the back and the front under it
+      // (a post at each corner), in the middle of a block with no ledge over it (a lamp stand, a ladder)
+      const thin = (Z, px, w, h) => {
         const d = Z.z1 - Z.z0, zc = (Z.z0 + Z.z1) / 2;
-        if (!V.length) return [{ px, d, z: zc }];
+        if (d < 6) return [{ px, d, z: zc }];
+        const L = PLATS.filter(s => s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 - 1 && s.y <= Z.y1);
+        // a block named solid (three.js: a counter whose face is painted in the wall's own colour, so those pixels are no props) is
+        // filled in where its props close the face in on all four sides
+        if (Z.solid) {
+          const lo = new Int16Array(w).fill(h), hi = new Int16Array(w).fill(-1), zid = this.zones.indexOf(Z);
+          for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) if (px[y * w + x]) { if (lo[x] === h) lo[x] = y; hi[x] = y; }
+          for (let y = 0; y < h; y++) {
+            let l = -1, r = -1; for (let x = 0; x < w; x++) if (px[y * w + x]) { if (l < 0) l = x; r = x; }
+            for (let x = l + 1; x < r; x++) { const o = y * w + x; if (!px[o] && y > lo[x] && y < hi[x]) { const i = (Z.y0 + y) * W + Z.x0 + x; if (stat[i] && zone[i] < 0) { px[o] = t3glow(stat[i]); zone[i] = zid; LIFT[i] = 1; } } }
+          }
+        }
+        const thick = new Uint8Array(w * h);
+        for (let y = 0; y + 3 <= h; y++) for (let x = 0; x + 3 <= w; x++) {
+          let ok = true;
+          for (let j = 0; j < 3 && ok; j++) for (let i = 0; i < 3; i++) if (!px[(y + j) * w + x + i]) { ok = false; break; }
+          if (ok) for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) thick[(y + j) * w + x + i] = 1;
+        }
+        const full = new Uint32Array(w * h), back = new Uint32Array(w * h), front = new Uint32Array(w * h), mid = new Uint32Array(w * h);
+        for (let x = 0; x < w; x++) {
+          const wx = Z.x0 + x; let deck = null;
+          for (const s of L) if (wx >= s.x0 - 1 && wx <= s.x1 + 1 && (deck == null || s.y < deck)) deck = s.y;
+          for (let y = 0; y < h; y++) {
+            const o = y * w + x, c = px[o]; if (!c) continue;
+            const wy = Z.y0 + y;
+            if (thick[o] || (deck != null && wy >= deck - 1 && wy <= deck + 3)) full[o] = c;   // (the deck a body stands on is never a bar)
+            else if (deck == null) mid[o] = c;
+            else if (wy < deck) back[o] = c;
+            else { back[o] = c; front[o] = c; }
+          }
+        }
+        return [{ px: full, d, z: zc }, { px: back, d: 2, z: Z.z0 + 1.2 }, { px: front, d: 2, z: Z.z1 - 1.2 }, { px: mid, d: 2, z: zc }];
+      };
+      const parts = (Z, px, w, h) => {
+        const V = !custom && Z.z0 === ZF && Z.z1 - Z.z0 > 10 ? VPARTS.filter(v => v.x0 <= Z.x1 && v.x1 >= Z.x0) : [];   // (VPARTS are the street's: a level's block at the same x is no car)
+        const d = Z.z1 - Z.z0, zc = (Z.z0 + Z.z1) / 2;
+        if (!V.length) return L3D() ? thin(Z, px, w, h) : [{ px, d, z: zc }];
         const full = new Uint32Array(w * h), cab = new Uint32Array(w * h), wheel = new Uint32Array(w * h), frame = new Uint32Array(w * h), low = new Uint32Array(w * h);
         for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
           const c = px[y * w + x]; if (!c) continue;
@@ -7503,7 +7543,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
         for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) { const i = (Z.y0 + y) * W + Z.x0 + x; if (zone[i] === id) px[y * w + x] = t3glow(stat[i]); }
         // the vehicles in this block get their real model (t3vehicle); their pixels leave the extrusion, the rest of the block
         // (a bar a car is parked against) is extruded as before
-        const cars = Z.z0 === ZF && Z.z1 - Z.z0 > 10 ? VPARTS.filter(v => (v.car || v.bed) && v.x0 <= Z.x1 && v.x1 >= Z.x0) : [];
+        const cars = !custom && Z.z0 === ZF && Z.z1 - Z.z0 > 10 ? VPARTS.filter(v => (v.car || v.bed) && v.x0 <= Z.x1 && v.x1 >= Z.x0) : [];
         const owns = (v, x, y) => v.car ? x >= v.car.L - 2 && x <= v.car.R + 2 && y >= v.car.top(x) - 1 : x >= v.bed.x0 - 2 && x <= v.bed.x1 + 1 && y >= v.bed.tilt - 1;
         for (const v of cars) {
           for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (px[y * w + x] && owns(v, Z.x0 + x, Z.y0 + y)) px[y * w + x] = 0;
@@ -7591,6 +7631,23 @@ import * as SPIRE from './levels/skyscraper/index.js';
       box(BLADE.x0, BLADE.y0, BLADE.x1 + 1, BLADE.y1 + 1, ZF, ZF + 4, C('#140b1a'));
       box(CHEV_X - 9, GROUND - 56, CHEV_X + 10, GROUND - 21, ZF, ZF + 4, C('#120d18'));
     },
+    // a level's live wall pixels (drawWorld: a door sliding, a screen, a board over a hole) that land on a block lie on its front face,
+    // as the 2D view paints them over the prop; the blood on the block shows where nothing live is drawn (the same sheets)
+    liveOnProps() {
+      const L = this.lWall, x0 = cam.x - 40, x1 = cam.x + cam.vw + 40;
+      for (const Z of this.zones) {
+        if (!Z.sheets || Z.x1 < x0 || Z.x0 > x1) continue;
+        for (const sh of Z.sheets) {
+          let dirty = false;
+          for (let k = 0; k < sh.wi.length; k++) {
+            const wi = sh.wi[k], lx = wi % W - L.wx0, ly = (wi / W | 0) - L.wy0;
+            const c = (lx >= 0 && ly >= 0 && lx < L.tw && ly < L.th && L.data[ly * L.dw + lx]) || GORE[wi];
+            if (sh.g[sh.ti[k]] !== c) { sh.g[sh.ti[k]] = c; dirty = true; }
+          }
+          if (dirty) sh.tex.needsUpdate = true;
+        }
+      }
+    },
     updateGore(rdt) {
       if ((this.goreT -= rdt) > 0) return;
       this.goreT = 0.2;
@@ -7602,7 +7659,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
         c.tw.needsUpdate = c.tf.needsUpdate = true;
       }
       for (const Z of [...this.zones, ...this.awnG]) {
-        if (!Z.sheets || !inView(Z.x0, Z.x1)) continue;
+        if (!Z.sheets || !inView(Z.x0, Z.x1) || L3D()) continue;   // (a level's blocks: liveOnProps, every frame)
         for (const s of Z.sheets) { for (let k = 0; k < s.wi.length; k++) s.g[s.ti[k]] = GORE[s.wi[k]]; s.tex.needsUpdate = true; }
       }
     },
@@ -7812,7 +7869,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     // ----- Line Zero (src/levels/metro/three.js): its named blocks; the trains and the handcar as models clipped at the portals -----
     mZones(zone, LIFT, mkZone) {
       for (const B of L3D().blocks(T3)) {
-        const id = mkZone(B.z0, B.z1), Z = this.zones[id];
+        const id = mkZone(B.z0, B.z1), Z = this.zones[id]; Z.solid = !!B.solid;
         for (let y = Math.max(0, B.y0); y <= Math.min(GROUND - 1, B.y1); y++) for (let x = Math.max(0, B.x0); x <= Math.min(W - 1, B.x1); x++) {
           const i = y * W + x; if (!PROPS[i] || !stat[i] || zone[i] >= 0) continue;
           LIFT[i] = 1; zone[i] = id;
@@ -8536,6 +8593,17 @@ import * as SPIRE from './levels/skyscraper/index.js';
       }
       m.position.set(ox + size / 2, -(oy + size / 2), z);
     },
+    rod(q) {   // a straight bar from (x0, y0) to (x1, y1), w px across and d px deep about depth z (a level's chain, rod, tooth or clock hand)
+      const dx = q.x1 - q.x0, dy = q.y1 - q.y0, len = Math.max(0.5, Math.round(Math.hypot(dx, dy) * 2) / 2);
+      const m = this.model(this.geo('rod' + len + '|' + q.w + '|' + q.d + '|' + q.c, () => t3box(-q.w / 2, -len, -q.d / 2, q.w / 2, 0, q.d / 2, q.c)));
+      m.position.set(q.x0, -q.y0, q.z); m.rotation.set(0, 0, Math.atan2(dx, dy));
+      return m;
+    },
+    box(b, c) {   // a box over 2D x0..x1, y0..y1 and depths z0..z1 (a level's floor tile)
+      const [x0, y0, z0, x1, y1, z1] = b, m = this.model(this.geo('box' + b.join(',') + '|' + c, () => t3box(x0, -y1, z0, x1, -y0, z1, c)));
+      m.position.set(0, 0, 0); m.rotation.set(0, 0, 0);
+      return m;
+    },
     tunaModel(x, y, a, z, len = 22) {   // a frozen tuna (p9TunaGeo: hung from its tail) laid along a (its nose's way, 2D angle) and centred on (x, y)
       const m = this.model(this.geo('tuna' + len, () => this.p9TunaGeo(len)));
       m.position.set(x - Math.cos(a) * len / 2, -(y - Math.sin(a) * len / 2), z); m.rotation.set(0, 0, Math.PI / 2 - a);
@@ -8582,7 +8650,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
       for (const b of eshots) if (b.k === 't') this.tunaModel(b.x, b.y, Math.atan2(b.vy, b.vx), this.ease(b, this.laneZ[LANE.FIGHT]), 20);   // Marchetti's lobbed tuna
       for (const b of eshots) if (b.k === 'k') { const m = this.model(this.knifeGeo); m.position.set(b.x, -b.y, this.ease(b, this.laneZ[b.lane ?? LANE.FIGHT])); m.rotation.set(0, 0, -(b.t * 22)); }
       this.p9Models(); this.mModels();
-      if (LVH.sprites3d) for (const q of LVH.sprites3d(T3)) this.sprite(q.size, q.x, q.y, q.draw, q.d, q.z, q.slot);   // a level's moving models (the Leviathan: the hanging catwalks, the hoist's pallet, the bait cage)
+      if (LVH.sprites3d) for (const q of LVH.sprites3d(T3)) this.sprite(q.size, q.x, q.y, q.draw, q.d, q.z, q.slot);
+      { const LM = L3D(); if (LM && LM.models && LVH.S) for (const q of LM.models(T3, LVH.S, R9, cam)) { if (q.rod) this.rod(q.rod); else if (q.box) this.box(q.box, q.c); else this.sprite(q.size, q.x, q.y, q.draw, q.d, q.z, q.slot); } }   // a level's movers modelled in its three.js (the Palm House)   // a level's moving models (the Leviathan: the hanging catwalks, the hoist's pallet, the bait cage)
       for (let i = this.nM; i < this.mpool.length; i++) this.mpool[i].visible = false;
       if (this.gpool) for (let i = this.nG; i < this.gpool.length; i++) this.gpool[i].visible = false;
     },
@@ -8608,6 +8677,9 @@ import * as SPIRE from './levels/skyscraper/index.js';
       this.lBlade = mk(true, 0, true, '', 0, 2);       // the blade sign and the chevrons, on their boxes
       this.lRail = mk(true, 0, true, '', 0, 2);        // the fire escape's outer rail, at its front edge
       this.lClub = mk(true, 0, true, '', 0, 2);        // the club's back wall and the crowd, on the wall (not a screen-space backdrop)
+      // these layers write no depth, so they must draw after the wall they lie on: by material age alone they did only for the
+      // world built first (a level loaded later made a newer wall, drawn over them: its tanks, statues, doors were gone in 3D)
+      for (const L of [this.lWall, this.lSign, this.lBlade, this.lRail, this.lClub]) L.mesh.renderOrder = 1;
       // the club's dance floor: one fixed sheet over the whole club (not the camera window), so its edges stay out of the view
       const fw = 512, fx0 = W + 64 - fw, fd = new Uint32Array(fw * (STREET + 1)), ft = t3tex(fd, fw, STREET + 1);
       const fm = new THREE.Mesh(t3flat(fx0, fx0 + fw, T3_GROUND - 0.05, T3.ZF, T3.ZS, 0, 0, 1, 1), t3mat({ map: ft }, 0, 'floor'));
@@ -8626,15 +8698,18 @@ import * as SPIRE from './levels/skyscraper/index.js';
       const k = z < 0 ? (D - z) / D * 1.03 : 1, TW = Math.min(L.dw, Math.ceil(sw * k) + (z < 0 ? 4 : 0)), TH = Math.min(L.dh, Math.ceil(sh * k) + (z < 0 ? 4 : 0));
       const x0 = Math.round(sx + sw / 2 - TW / 2), y0 = Math.round(sy + sh / 2 - h * Math.min(z, 0) / D - TH / 2), gl = L.kind === 'glass';
       let any = false;
+      const dith = !!L3D();   // a level's see-through pixels (glass sheen, mist, steam): a screen-door pattern of solid pixels, not dropped by the alpha test
       for (let oy = 0; oy < TH; oy += CHMAX) for (let ox = 0; ox < TW; ox += CW) {
         const tw = Math.min(CW, TW - ox), th = Math.min(CHMAX, TH - oy);
         withView({ x: x0 + ox, y: y0 + oy, vw: tw, vh: th }, draw);
         for (let y = 0; y < th; y++) for (let x = 0, r = y * CW, o = (oy + y) * L.dw + ox; x < tw; x++) {
-          const c = buf[r + x];
+          let c = buf[r + x];
+          if (dith && c && c >>> 24 < 250) c = c >>> 24 > T3_BAYER[((y0 + oy + y) & 3) * 4 + ((x0 + ox + x) & 3)] ? (c | 0xff000000) >>> 0 : 0;   // (world-fixed, so it does not crawl)
           if (c) any = true;
           L.data[o + x] = !glow || !c ? c : EMIT.has(c) ? t3flag(c, 254) : gl && GLASS_C.has(c) ? t3flag(c, 253) : c;
         }
       }
+      L.wx0 = x0; L.wy0 = y0; L.tw = any ? TW : 0; L.th = TH;   // (liveOnProps reads the wall layer back in world pixels)
       if (!any) { L.mesh.visible = false; return; }   // nothing drawn: no upload, no plane
       L.tex.needsUpdate = true;
       const p = L.mesh.geometry.attributes.position, uv = L.mesh.geometry.attributes.uv;
@@ -8646,7 +8721,10 @@ import * as SPIRE from './levels/skyscraper/index.js';
     updateLayers() {
       const { ZF } = T3;
       if (flags.club && isStreet()) this.layer(this.lClub, () => { drawClub(); drawDancers(); }, { glow: true, z: ZF - 0.6 }); else this.lClub.mesh.visible = false;   // (the hall's wall is a mesh: p9Build)
+      R9.models3d = !!(L3D() && L3D().models);   // (the movers a level models in 3D stay off its wall layer)
       this.layer(this.lWall, () => { drawSpawnFx(); drawDoor(); if (LVH.drawWorld) LVH.drawWorld(); }, { glow: true, z: flags.club && !ownWorld() ? ZF - 0.3 : ZF + 0.3 });
+      R9.models3d = false;
+      if (L3D()) this.liveOnProps();
       this.layer(this.lSign, drawSign, { glow: true, z: ZF + 5.05 });
       this.layer(this.lBlade, drawStairSign, { glow: true, z: ZF + 4.05 });
       if (!flags.club && cam.x < STAIR_X1 + 160 && cam.x + cam.vw > STAIR_X0 - 160) this.layer(this.lRail, drawStairRails, { z: ZF + T3.STAIR + 0.4 }); else this.lRail.mesh.visible = false;

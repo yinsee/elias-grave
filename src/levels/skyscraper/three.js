@@ -1,7 +1,10 @@
 // The Spire in the 3D view (src/legacy.js Three3D reads this). The world is built from the same static layer as the 2D view; this
 // names its blocks and gives each its depth (a body up on one stands on its top). The movers (the gear teeth, the pendulum, the
-// minute hand, the cradle, the piano) are drawn by the shared painters (draw.js) on the wall layer: nothing here is 3D-only but depths.
+// minute hand, the cradle, the piano) are drawn by the shared painters (draw.js); the gear teeth, the minute hand, the pendulum, the
+// numeral ledges, the glass floor's tiles, the lobby chandelier and the piano are models of them here (models()): only the models and the depths are 3D-only.
 import * as D from './data.js';
+import { SC } from './paint.js';
+import * as P from './draw.js';
 
 export const spire3d = {
   blocks(T3) {
@@ -16,5 +19,31 @@ export const spire3d = {
       [D.PH_MEZZ.x0, D.PH_MEZZ.y - 9, D.PH_MEZZ.x1, D.PH_MEZZ.y + 5, 22, D.PH_MEZZ],
       ...D.BALCONIES.map(b => [b.x0, b.y - 8, b.x1, b.y + 5, 12, b]),
     ].map(([x0, y0, x1, y1, d, s]) => ({ x0, y0, x1, y1, z0: ZF, z1: ZF + d, s }));
+  },
+  // the movers as models (src/legacy.js updateModels; the wall layer leaves them out: R.models3d). A tooth and the minute hand are
+  // ledges: a bar through the platform lane (a body up on one stands inside it); the pendulum swings through the fight lane (it hits
+  // there); the chandelier hangs and the piano stands behind the fight lane
+  models(T3, S, R, cam) {
+    const out = [], ZF = T3.ZF, PZ = ZF + 8, near = (x0, x1) => x1 > cam.x - 60 && x0 < cam.x + cam.vw + 60;
+    for (const th of S.teeth || []) { const s = th.s; if (s.y < 900 && near(s.x0, s.x1)) out.push({ rod: { x0: s.x0, y0: s.y + 2.5, x1: s.x1 + 1, y1: s.y + 2.5, w: 5, d: 16, z: PZ, c: SC.brass } }); }
+    const F = D.FACE;
+    if (near(F.cx - F.r - 20, F.cx + F.r)) for (const n of D.NUMERALS) out.push({ rod: { x0: n.x - 13, y0: n.y + 1, x1: n.x + 14, y1: n.y + 1, w: 2, d: 16, z: PZ, c: SC.brass } });   // the numeral ledges
+    if (S.hand && near(F.cx - F.r, F.cx + F.r)) out.push({ rod: { x0: F.cx, y0: F.cy + 0.5, x1: S.hand.tx, y1: S.hand.ty + 0.5, w: 3, d: 16, z: PZ, c: SC.black } });
+    if (S.pend && near(S.pend.x - 40, S.pend.x + 40)) {
+      const p = S.pend, [px, py] = D.PEND.pivot, r = D.PEND.r, bx = Math.round(p.x), by = Math.round(p.y), sz = 2 * r + 8;
+      out.push({ rod: { x0: px + 0.5, y0: py, x1: p.x + 0.5, y1: p.y, w: 2, d: 2, z: -4, c: SC.brass } });
+      out.push({ size: sz, x: bx - sz / 2, y: by - sz / 2, draw: () => P.drawPend(R, p, false), d: 12, z: -4, slot: 'spPend' });
+    }
+    const c = S.chand;
+    if (c && near(D.CHAND.x - 20, D.CHAND.x + 20)) {
+      const y = Math.round(c.y);
+      out.push({ size: 48, x: D.CHAND.x - 24, y: c.st === 'down' ? D.GROUND - 24 : y - 24, draw: () => P.drawChandelier(R, { ...c, st: c.st === 'hang' ? 'fall' : c.st }), d: 12, z: -10, slot: 'spChand' });
+      if (c.st === 'hang') out.push({ rod: { x0: D.CHAND.x + 0.5, y0: 40, x1: D.CHAND.x + 0.5, y1: y - 10, w: 1, d: 1, z: -10, c: SC.goldD } });
+    }
+    // the glass floor's tiles: a pane on the floor from the wall to the fight lane, as the 2D strip under the wall; cracked, paler; gone, the city
+    for (const g of S.tiles || []) if (near(g.x0, g.x1)) out.push({ box: [g.x0, D.GROUND - 0.7, ZF, g.x1 + 1, D.GROUND - 0.45, 2], c: g.broken ? SC.city : g.stage >= 1 ? SC.glassL : SC.glass });
+    const pn = S.piano;
+    if (pn && !pn.gone && near(pn.x - 24, pn.x + 24)) { const x = Math.round(pn.x), y = Math.round(pn.y ?? D.GROUND); out.push({ size: 48, x: x - 24, y: y - 40, draw: () => P.drawPiano(R, pn), d: 14, z: -8, slot: 'spPiano' }); }
+    return out;
   },
 };
