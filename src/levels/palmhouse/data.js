@@ -65,7 +65,7 @@ export const GUNCAB = { x: 1588, y0: hy(56), y1: hy(16) };
 export const BOILER = { x0: 1612, x1: 1690, over: hy(80) };       // the overhang is sniper cover for anyone under it
 export const COAL = { x0: 1698, x1: 1738, top: hy(30) };
 export const STAIR = { x0: 1744, n: 32, step: 4 };                 // 32 treads rising right: the top tread at x 1872, y 152
-export const GANTRY = { x0: 1876, x1: 1990, y: GROUND - (STAIR.n + 1) * STAIR.step };   // outside the glass, in the snow
+export const GANTRY = { x0: 1866, x1: 1990, y: GROUND - STAIR.n * STAIR.step };   // outside the glass, in the snow
 export const SKY = { x0: 1990, x1: 2030 };                          // the skylight pane at the gantry's end (it holds a man, not a round)
 export const ROOF_DOOR = 1878;                                      // the roof door at the top of the stairs (shut until the yard is clear)
 // the nave: the koi bridge, the gallery, its step, the statue, palms, the Door's arena, the gate
@@ -195,7 +195,7 @@ export const CHOIR = {
 // shield damage by what hit it (docs 4: the shield table); anything else from the front only sparks
 export const SHIELD_DMG = { light: 0, heavy: 25, katanaHeavy: 35, axeHeavy: 60, flying: 50, bullet: 10, shotNear: 60, shotFar: 20, thrown: 100, sniper: 120 };
 export const NAMES = ['Kessler', 'Ruiz', 'Vandermeer', 'Holt', 'Szabo', 'Marsh', 'Dekker', 'Pryce', 'Lowe', 'Okafor', 'Brandis', 'Fenn', 'Quill', 'Ashby', 'Tobin', 'Varga', 'Hearne', 'Iles'];
-export const LINES = ["Malaspina's bags. Load them and shut up.", 'Who invited the Sandman?', 'Get the guests out! Get him down!', 'Shields! Form up!', 'Hold the line.', 'Commissioner wants him breathing. Barely.'];
+export const LINES = ['Who invited the Sandman?', 'Hold the line.', 'Commissioner wants him breathing. Barely.', 'Sandman. In black tie.', 'Close him in!'];
 
 // waves: roster by difficulty; from: sources (kind 'door' x | 'edge' dir | 'ledge' x (a perch) | 'placed' x); a source is used in turn.
 // High roles (pistol, spotter) take the ledge sources when a wave has them. line: the first goon out says it

@@ -4,6 +4,7 @@
 // Sgt. Brandt "the Door" (mini-boss), Commissioner Vane under the great dome (boss), the ending and the results card.
 // The game (src/legacy.js) builds an engine API G and calls the hooks this returns. All sim randomness comes from G.simRand.
 import * as D from './data.js';
+import { C } from '../../core/color.js';
 import * as A from './paint.js';
 import { installSet } from './set.js';
 import { BRANDT, brandtThink, brandtSpecial } from '../../bosses/brandt.js';
@@ -20,7 +21,7 @@ export function createPalmhouse(G) {
   const dif = () => G.diffSel;
   const pickN = a => a[Math.floor(G.simRand() * a.length)];
   const sfx = (name, x, vol = 1, pitch = 1) => G.emit('sfx', { name, x, vol, pitch });
-  const grpAt = (x, y = GROUND) => G.flags.club ? 6 : (y < D.ROOF_Y && x >= D.GANTRY.x0) ? 5 : x < D.WALLS[0] ? 0 : x < D.WALLS[1] ? 1 : x < D.WALLS[2] ? 2 : x < D.WALLS[3] ? 3 : x < D.WALLS[4] ? 4 : 5;
+  const grpAt = (x, y = GROUND) => G.flags.club ? 6 : (y < D.ROOF_Y && x >= D.ROOF_DOOR) ? 5 : x < D.WALLS[0] ? 0 : x < D.WALLS[1] ? 1 : x < D.WALLS[2] ? 2 : x < D.WALLS[3] ? 3 : x < D.WALLS[4] ? 4 : 5;
   M.grpAt = grpAt;
   const secAt = x => G.flags.club ? D.SECTIONS[6] : D.SECTIONS.find(s => x >= s.x0 && x < s.x1) || D.SECTIONS[0];
   const alive = id => G.zoneAlive[id] || 0;
@@ -332,7 +333,7 @@ export function createPalmhouse(G) {
       sfx('glass_burst_large', ctl.x, 1); G.slowMo(D.DROP.slow, 'drop'); sfx('slowmo_in', ctl.x, 0.9); G.emit('feat', 'drop');
       placeDrop(); say('drop', 'The Drop', 'Fire on the way down', true);
     }
-    if (S.drop && !S.landed && hero.mode === 'anim' && !ctl.air && ctl.y > GROUND - 10) {
+    if (S.drop && !S.landed && hero.mode === 'anim' && !ctl.air && ctl.y > D.ROOF_Y + 20) {
       S.landed = true; S.dropped = true; S.grp = 5; G.dust(ctl.x, GROUND - 1, 6); sfx('slowmo_out', ctl.x, 0.8);
       if (!G.flags.demo) G.setCkpt('p:nave', 0, true);
       setDots('nave', D.SNIPER.dots.nave[dif()]); setObjective('The nave', 'Warm air, palms, glass overhead. Get to the far gate.');
@@ -370,6 +371,7 @@ export function createPalmhouse(G) {
     enc.arena = { x0: D.ARENA.x0, x1: D.ARENA.x1 }; enc.spawnT = 99; enc.arenaSpawned = 0;
     const e = G.spawnEnemy('boss', 2690, 'boss', { boss: VANE });
     Object.assign(e, { alert: true, face: -1, hold: true, chgCd: 4, markCd: 3, arrCd: 5, shkCd: 5, revCd: 2, whT: 8, shield: true, S: { shield: { turn: VANE.turn[dif()] } } });
+    e.pal.hair = C('#c8ccd6');   // (a boss's hair is dark by default: hers is silver)
     S.vane = e; S.vShp = VANE.shieldHp[dif()]; S.kos0 = G.kos;
     enc.boss = e; enc.introT = -1; G.bossBarK = 1;
     G.dog = G.makeDog(2470, 1); S.nero.mode = 'wait'; S.nero.tx = 2480;
@@ -515,7 +517,7 @@ export function createPalmhouse(G) {
     if (S.grp === 2 && S.nero.mode === 'lead' && Math.abs(ctl.x - D.WALLS[2]) < 60 && S.open.office) S.nero.mode = 'heel';
     // the boiler yard: the dots; then the roof door
     if (S.w.yard2.out && allDown('yard2') && !S.roofOpen) { S.roofOpen = true; setDots(null, 0); M.dotsOut(); sfx('door_open', D.ROOF_DOOR, 0.8); G.toast('The roof door', 'Up the iron stairs → the gantry', true); setObjective('The boiler yard', 'Up the iron stairs · the roof door'); S.nero.mode = 'wait'; S.nero.tx = D.BOILER.x0 + 30; }
-    if (S.roofOpen && !S.onGantry && ctl.y < D.ROOF_Y && ctl.x >= D.GANTRY.x0 && hero.mode === 'anim') {
+    if (S.roofOpen && !S.onGantry && ctl.y < D.ROOF_Y && ctl.x >= D.ROOF_DOOR && hero.mode === 'anim') {
       S.onGantry = true; S.grp = 5; startWave('gantry'); setDots('nave', D.SNIPER.dots.nave[dif()]); G.dog = null;
       G.toast('VO', '"Under the glass, summer. Over it, the snipers. I chose the short way down."', true);
       setObjective('The gantry', 'Outside the glass, in the snow');
@@ -558,7 +560,7 @@ export function createPalmhouse(G) {
   // ---------------- the fixed step ----------------
   M.step = dt => {
     if (!G.flags.club && Math.abs(ctl.x - S.prevX) > 30 && !S.fade) { S.grp = grpAt(ctl.x, ctl.y); S.prevX = ctl.x; }
-    if (!G.flags.club && hero.mode === 'anim' && ctl.y < D.ROOF_Y && ctl.x >= D.GANTRY.x0) S.grp = 5;
+    if (!G.flags.club && hero.mode === 'anim' && ctl.y < D.ROOF_Y && ctl.x >= D.ROOF_DOOR) S.grp = 5;
     if (!G.flags.club && S.grp === 5 && ctl.y > D.ROOF_Y && ctl.x < D.WALLS[4] && hero.mode === 'anim') S.grp = 4;   // (back down the stairs)
     for (let i = S.queue.length - 1; i >= 0; i--) { const q = S.queue[i]; if ((q.t -= dt) <= 0) { S.queue.splice(i, 1); spawnOne(q); } }
     for (const dd of S.doorFx) dd.t += dt; while (S.doorFx.length && S.doorFx[0].t > 0.8) S.doorFx.shift();
@@ -718,6 +720,7 @@ export function createPalmhouse(G) {
     if (where === 'office') { S.dossier = false; S.phone = 'off'; S.open.back = false; G.heroTo(1516); arriveOffice(); return; }
     if (where === 'boiler') { S.w.yard2 = { out: false, n: 0 }; G.heroTo(1620); arriveBoiler(); return; }
     if (where === 'gantry') { markDone(['yard2']); S.roofOpen = true; G.heroTo(1700); S.grp = 4; S.nero.mode = 'wait'; S.nero.tx = 1660; return; }
+    if (where === 'nave' || where === 'brandt') setObjective('The nave', 'Warm air, palms, glass overhead. Get to the far gate.');
     if (where === 'nave') { S.w.drop = { out: false, n: 0 }; G.heroTo(2000); S.grp = 5; placeDrop(); setDots('nave', D.SNIPER.dots.nave[dif()]); return; }
     if (where === 'brandt') { G.heroTo(D.BRANDT_ARENA.x0 - 30); S.grp = 5; spawnBrandt(); return; }
     if (where === 'dome') { G.heroTo(D.GATE - 30); S.grp = 5; G.autoWalk = true; return; }

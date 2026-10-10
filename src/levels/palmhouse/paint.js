@@ -102,6 +102,13 @@ export function paint(api) {
   // lamp posts with globes
   for (const lx of D.LAMPS_PARK) { for (let y = 196; y < GROUND; y++) { put(lx, y, PC.ironD); put(lx + 1, y, PC.iron); } rect(lx - 3, 189, lx + 4, 196, (x, y) => (x - lx) ** 2 + (y - 192) ** 2 < 14 ? LAMP_GLASS : 0); }
 
+  // palms on the back wall of the nave and the dome (behind everyone): a ringed trunk, a crown of fronds
+  const palm = (px, top, k = 1) => {
+    for (let y = top; y < GROUND; y++) { const w = 3 + (y - top) / 60, sx = px + Math.sin((y - top) / 40) * 3 * k; for (let x = Math.round(sx - w); x <= sx + w; x++) put(x, y, (y % 6 === 0) ? PC.woodD : x < sx ? PC.wood : PC.woodL); }
+    for (let f = 0; f < 9; f++) { const a = -Math.PI / 2 + (f - 4) * 0.42, L = (34 + (f % 3) * 8) * k; for (let s = 0; s < L; s++) { const x = px + Math.cos(a) * s, y = top + Math.sin(a) * s * 0.55 + (s / L) ** 2 * 22 * k; for (let w = -2; w <= 2; w++) if (Math.abs(w) < 3 - s / L * 2) put(Math.round(x), Math.round(y + w), (s + w) % 4 === 0 ? PC.leafD : s > L * 0.7 ? PC.leafL : PC.leaf); } }
+  };
+  for (const px of [1950, 2066, 2230, 2340]) palm(px, 176);
+  palm(2620, 132, 1.3);
   const pre = b.slice();   // everything after this is a solid prop (blood sticks to it; the 3D view makes blocks of it)
 
   // the yard: the snowy botanist, the riot vans, the shed with its axe rack

@@ -110,7 +110,7 @@ export function installSet(M) {
     return out;
   };
   M.underCover = (x, y) => D.COVER.some(c => c.y < y - 4 && x >= c.x0 && x <= c.x1 && (c.x1 - c.x0) > 40);   // under a gallery, an overhang, a van (shards stop there)
-  const blockedLine = (nest, x, y) => { for (const c of M.covers()) { if (c.y >= y - 2) continue; const xa = nest.x + (x - nest.x) * (c.y - nest.y) / (y - nest.y); if (xa >= c.x0 && xa <= c.x1) return true; } return false; };
+  const blockedLine = (nest, x, y) => { for (const c of M.covers()) { if (c.y >= y - 2) continue; const xa = nest.x + (x - nest.x) * (c.y - nest.y) / (y - nest.y); if (xa >= c.x0 - 6 && xa <= c.x1 + 6) return true; } return false; };   // (a little give: the eaves and the rails)
   const underPalm = x => (S().room === 'nave' || G.flags.club) && D.PALMS.some(p => Math.abs(x - p) < 18);
 
   // ---------------- the snipers' dots ----------------
