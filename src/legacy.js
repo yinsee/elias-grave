@@ -40,6 +40,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   const SEED = QS.has('seed') ? +QS.get('seed') >>> 0 : AUTOTEST ? 1 : null;
   // the simulation's own random numbers (never Math.random: three.js and the audio use that, and must not shift the sim's sequence)
   const simRand = SEED != null ? rng(SEED) : Math.random;   // (mulberry32: the same seed gives the same run)
+  const fxRand = SEED != null ? rng((SEED ^ 0x9e3779b9) >>> 0) : Math.random;   // view-only effects (rain drops, ripples): their draws depend on the view, so they must not touch the sim's RNG
   // the event bus (core/events.js, docs/architecture.md 2.5): the sim emits, synchronously; UI, audio and lessons listen.
   // Listeners outside the sim must not change sim state (the autotest hashes stay the same with or without them).
   const emit = bus.emit;
@@ -6329,7 +6330,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (rain.flash > 0) rain.flash -= dt;
     else if (rain.k > 0.55 && simRand() < dt * 0.05) rain.flash = 0.3;   // lightning over the roofs
     const want = flags.club ? 0 : Math.round(rain.k * 170);
-    while (rain.drops.length < want) rain.drops.push({ x: cam.x + simRand() * (cam.vw + 60), y: cam.y - simRand() * cam.vh, v: 250 + simRand() * 90 });
+    while (rain.drops.length < want) rain.drops.push({ x: cam.x + fxRand() * (cam.vw + 60), y: cam.y - fxRand() * cam.vh, v: 250 + fxRand() * 90 });
     if (rain.drops.length > want) rain.drops.length = want;
     for (const d of rain.drops) {
       d.x -= 45 * dt; d.y += d.v * dt;
@@ -6337,9 +6338,9 @@ import * as SPIRE from './levels/skyscraper/index.js';
       if (d.y >= fl || d.y > cam.y + cam.vh + 10 || d.x < cam.x - 30) {
         if (d.y >= fl && d.y < cam.y + cam.vh) {
           rain.splash.push({ x: d.x, y: fl - 1, t: 0 });
-          if (fl === GROUND && simRand() < 0.5) rain.rip.push({ x: d.x, d: 1 + Math.floor(simRand() * (STREET - 2)), t: 0 });
+          if (fl === GROUND && fxRand() < 0.5) rain.rip.push({ x: d.x, d: 1 + Math.floor(fxRand() * (STREET - 2)), t: 0 });
         }
-        d.x = cam.x + simRand() * (cam.vw + 60); d.y = cam.y - simRand() * 30; d.v = 250 + simRand() * 90;
+        d.x = cam.x + fxRand() * (cam.vw + 60); d.y = cam.y - fxRand() * 30; d.v = 250 + fxRand() * 90;
       }
     }
     for (let i = rain.splash.length - 1; i >= 0; i--) if ((rain.splash[i].t += dt) > 0.12) rain.splash.splice(i, 1);
@@ -9752,14 +9753,14 @@ import * as SPIRE from './levels/skyscraper/index.js';
   function sleetStep(dt) {   // Pier 9 weather: steady sleet outdoors (the rain system, slower and heavier), none in the hall
     rain.k += (0.8 - rain.k) * (1 - Math.exp(-0.4 * dt)); rain.flash = 0;
     const want = flags.club ? 0 : Math.round(rain.k * 150);
-    while (rain.drops.length < want) rain.drops.push({ x: cam.x + simRand() * (cam.vw + 90), y: cam.y - simRand() * cam.vh, v: 110 + simRand() * 70, flake: simRand() < 0.3 });
+    while (rain.drops.length < want) rain.drops.push({ x: cam.x + fxRand() * (cam.vw + 90), y: cam.y - fxRand() * cam.vh, v: 110 + fxRand() * 70, flake: fxRand() < 0.3 });
     if (rain.drops.length > want) rain.drops.length = want;
     for (const d of rain.drops) {
       d.x -= 62 * dt; d.y += d.v * dt;
       const fl = d.y > cam.y + 10 ? floorBelow(d.x, d.y - 6, 0).y : 1e9;
       if (d.y >= fl || d.y > cam.y + cam.vh + 10 || d.x < cam.x - 40) {
-        if (d.y >= fl && d.y < cam.y + cam.vh) { rain.splash.push({ x: d.x, y: fl - 1, t: 0 }); if (fl === GROUND && simRand() < 0.4) rain.rip.push({ x: d.x, d: 1 + Math.floor(simRand() * (STREET - 2)), t: 0 }); }
-        d.x = cam.x + simRand() * (cam.vw + 90); d.y = cam.y - simRand() * 30; d.v = 110 + simRand() * 70;
+        if (d.y >= fl && d.y < cam.y + cam.vh) { rain.splash.push({ x: d.x, y: fl - 1, t: 0 }); if (fl === GROUND && fxRand() < 0.4) rain.rip.push({ x: d.x, d: 1 + Math.floor(fxRand() * (STREET - 2)), t: 0 }); }
+        d.x = cam.x + fxRand() * (cam.vw + 90); d.y = cam.y - fxRand() * 30; d.v = 110 + fxRand() * 70;
       }
     }
     for (let i = rain.splash.length - 1; i >= 0; i--) if ((rain.splash[i].t += dt) > 0.12) rain.splash.splice(i, 1);
