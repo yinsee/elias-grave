@@ -8568,6 +8568,17 @@ import * as SPIRE from './levels/skyscraper/index.js';
       }
       m.position.set(ox + size / 2, -(oy + size / 2), z);
     },
+    rod(q) {   // a straight bar from (x0, y0) to (x1, y1), w px across and d px deep about depth z (a level's chain, rod, tooth or clock hand)
+      const dx = q.x1 - q.x0, dy = q.y1 - q.y0, len = Math.max(0.5, Math.round(Math.hypot(dx, dy) * 2) / 2);
+      const m = this.model(this.geo('rod' + len + '|' + q.w + '|' + q.d + '|' + q.c, () => t3box(-q.w / 2, -len, -q.d / 2, q.w / 2, 0, q.d / 2, q.c)));
+      m.position.set(q.x0, -q.y0, q.z); m.rotation.set(0, 0, Math.atan2(dx, dy));
+      return m;
+    },
+    box(b, c) {   // a box over 2D x0..x1, y0..y1 and depths z0..z1 (a level's floor tile)
+      const [x0, y0, z0, x1, y1, z1] = b, m = this.model(this.geo('box' + b.join(',') + '|' + c, () => t3box(x0, -y1, z0, x1, -y0, z1, c)));
+      m.position.set(0, 0, 0); m.rotation.set(0, 0, 0);
+      return m;
+    },
     tunaModel(x, y, a, z, len = 22) {   // a frozen tuna (p9TunaGeo: hung from its tail) laid along a (its nose's way, 2D angle) and centred on (x, y)
       const m = this.model(this.geo('tuna' + len, () => this.p9TunaGeo(len)));
       m.position.set(x - Math.cos(a) * len / 2, -(y - Math.sin(a) * len / 2), z); m.rotation.set(0, 0, Math.PI / 2 - a);
@@ -8615,7 +8626,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       for (const b of eshots) if (b.k === 'k') { const m = this.model(this.knifeGeo); m.position.set(b.x, -b.y, this.ease(b, this.laneZ[b.lane ?? LANE.FIGHT])); m.rotation.set(0, 0, -(b.t * 22)); }
       this.p9Models(); this.mModels();
       if (LVH.sprites3d) for (const q of LVH.sprites3d(T3)) this.sprite(q.size, q.x, q.y, q.draw, q.d, q.z, q.slot);
-      { const LM = L3D(); if (LM && LM.models && LVH.S) for (const q of LM.models(T3, LVH.S, R9, cam)) this.sprite(q.size, q.x, q.y, q.draw, q.d, q.z, q.slot); }   // a level's movers modelled in its three.js (the Palm House)   // a level's moving models (the Leviathan: the hanging catwalks, the hoist's pallet, the bait cage)
+      { const LM = L3D(); if (LM && LM.models && LVH.S) for (const q of LM.models(T3, LVH.S, R9, cam)) { if (q.rod) this.rod(q.rod); else if (q.box) this.box(q.box, q.c); else this.sprite(q.size, q.x, q.y, q.draw, q.d, q.z, q.slot); } }   // a level's movers modelled in its three.js (the Palm House)   // a level's moving models (the Leviathan: the hanging catwalks, the hoist's pallet, the bait cage)
       for (let i = this.nM; i < this.mpool.length; i++) this.mpool[i].visible = false;
       if (this.gpool) for (let i = this.nG; i < this.gpool.length; i++) this.gpool[i].visible = false;
     },
