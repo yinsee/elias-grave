@@ -326,3 +326,26 @@
   .controls-card small { display: block; margin-top: 10px; color: var(--muted); }
   /* small screens: the pixel font steps down a grid size (24 -> 16), never to an in-between size */
   @media (max-width: 900px) { .menu button { font-size: 16px; } .menu button .v { font-size: 12px; } .card b { font-size: 16px; } }
+  /* touch controls (src/ui/touch.js): a d-pad on the left, Q / W / Space on the right, Esc and Enter top left; see-through, over the view */
+  .touch { --tk: clamp(44px, 10vmin, 68px); position: fixed; inset: 0; z-index: 20; pointer-events: none; }
+  .touch .tk { all: unset; box-sizing: border-box; position: absolute; width: var(--tk); height: var(--tk); display: grid; place-items: center; pointer-events: auto; touch-action: none;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; border-radius: 12px; border: 2px solid rgba(239, 230, 216, .38); background: rgba(16, 12, 26, .42);
+    color: rgba(239, 230, 216, .9); font: 500 18px/1 var(--display); text-shadow: 0 1px 0 #000; }
+  .touch .tk.held { background: rgba(255, 179, 71, .55); border-color: var(--accent); color: #fff; }
+  .touch .pad.l { left: 12px; bottom: calc(12px + var(--tk)); }
+  .touch .pad.r { left: calc(12px + 2 * var(--tk)); bottom: calc(12px + var(--tk)); }
+  .touch .pad.u { left: calc(12px + var(--tk)); bottom: calc(12px + 2 * var(--tk)); }
+  .touch .pad.d { left: calc(12px + var(--tk)); bottom: 12px; }
+  .touch .pad.sh { left: 12px; bottom: calc(12px + 2 * var(--tk)); height: calc(var(--tk) * .6); font: 500 11px/1 var(--mono); }
+  .touch .act.q { right: calc(18px + var(--tk)); bottom: calc(18px + var(--tk) * .8); width: calc(var(--tk) * 1.1); height: calc(var(--tk) * 1.1); border-radius: 50%; font-size: 24px; }
+  .touch .act.w { right: 12px; bottom: calc(24px + var(--tk) * 1.5); width: calc(var(--tk) * 1.1); height: calc(var(--tk) * 1.1); border-radius: 50%; font-size: 24px; }
+  .touch .act.s { right: 12px; bottom: 12px; width: calc(var(--tk) * 1.6); height: calc(var(--tk) * .7); font-size: 14px; font-family: var(--mono); }
+  .touch .sys { top: 4px; width: 56px; height: 26px; font: 500 12px/1 var(--mono); border-radius: 8px; }   /* top centre: clear of the HP bar, the menu and the objective panel */
+  .touch .sys.esc { left: calc(50% - 60px); } .touch .sys.ent { left: calc(50% + 4px); }
+  .attract .touch .pad, .attract .touch .act { display: none; }   /* the title screen: tap the menu (Esc and Enter stay) */
+  .touch-rot { display: none; position: absolute; left: 50%; top: 40px; transform: translateX(-50%); margin: 0; padding: 6px 12px; background: rgba(16, 12, 26, .85); border: 1px solid var(--line);
+    font: 12px/1.3 var(--mono); color: var(--muted); white-space: nowrap; }
+  @media (orientation: portrait) { .touch-rot { display: block; } }
+  /* with the touch controls up, the weapon readout and the kill feed step out of their way */
+  .touch-on .hud-weapon { bottom: calc(24px + 3 * clamp(44px, 10vmin, 68px)); }
+  .touch-on .feed { bottom: calc(30px + 2.6 * clamp(44px, 10vmin, 68px)); }
