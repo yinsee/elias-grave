@@ -239,7 +239,7 @@ export function createTrain(G) {
     ctl.x = F.x; ctl.y = F.y0 + 260 * F.t * F.t; ctl.air = true; ctl.vu = 0; ctl.spd = 0; S.prevX = ctl.x;
     if (F.t > 0.45 && !F.out) {
       F.out = true; const d = dif();
-      if (D.FALL.perma[d]) { G.toast('Fallen', 'The track took him. From the last checkpoint.', false); S.fall = null; G.retry(); return; }
+      if (D.FALL.perma[d]) { G.fallOut(); return; }   // (the game's fall rule: Hard back to the checkpoint, never healed; Wicked the Wasted card. The restart clears S.fall)
       const dmg = S.grp === 8 ? 35 : D.FALL.dmg[d];
       teleport(F.back, () => { hero.hp = Math.max(1, hero.hp - dmg); G.toast('He catches the edge', `-${dmg} · he climbs back`, true); if (S.grp === 4 && S.stub.st !== 'idle' && !S.onStub) resetStub(); });
       later(() => { S.fall = null; }, 0.35);

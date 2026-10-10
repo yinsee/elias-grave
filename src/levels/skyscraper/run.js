@@ -400,7 +400,7 @@ export function createSpire(G) {
   }
   H.fallHero = fallHero;
   function fallTick(rdt) {
-    const F = S.fall; if (!F) return;
+    const F = S.fall; if (!F || F.out) return;   // (out: the Wasted card is up; the restart clears it)
     F.t += rdt;
     if (fadeEl) fadeEl.style.opacity = Math.min(1, F.t / 0.5).toFixed(2);
     if (F.t >= 0.6 && !F.done) {
@@ -408,7 +408,7 @@ export function createSpire(G) {
       const d = dif(), assist = D.VOID_FALL.assist[d] && !F.force;
       if (X.onFall && X.onFall(F)) { /* a set piece's own fail branch */ }
       else if (assist) { G.heroTo(catchX()); hero.hp = Math.max(1, hero.hp - D.VOID_FALL.dmg[d]); G.toast('He catches the edge', `−${D.VOID_FALL.dmg[d]}`, true); }
-      else { S.fall = null; if (fadeEl) fadeEl.style.opacity = 0; G.retry(); return; }
+      else { if (fadeEl) fadeEl.style.opacity = 0; if (G.DIF().perma) F.out = true; else S.fall = null; G.fallOut(); return; }   // (the game's fall rule: Hard back to the checkpoint, never healed; Wicked the Wasted card over the fall)
     }
     if (F.t >= 0.9) { if (fadeEl) fadeEl.style.opacity = 0; S.fall = null; }
   }
