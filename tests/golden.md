@@ -18,6 +18,8 @@ Each URL run twice in headless Chrome (`PORT=8765 sh tools/golden.sh`); each pai
   attack, a chained or a low one too, starts the way the stick points) changed the two demo URLs on purpose: the attract demo's bot
   holds a direction while a swing plays, so the hero now turns there. Before: demo state `c4892f44`, buf `e1b927a6` (2D),
   `bd8fc5f8` / l3 `1438e83d` (3D). The boss URLs kept their hashes. Two runs each, each pair matched, 2D state = 3D state.
+- Levels 3-5 merged (22a5642: the casino, the aquarium, the hospital; ownWorld()/L3D() list the module levels) kept all four URLs'
+  hashes (state, buf, l3); 2D state = 3D state. (2D runs timed out under load and matched on re-runs.)
 - Main at fb19376 (the street blood fixes merged; never recorded here) already gives these four hashes: checked on a worktree of
   fb19376. The blood fixes are the cause of the change from the db738f4 table below (see "Street blood" for why).
 - The boss set pieces merge (10b2262) kept them: the attract demo never reaches a boss, the boss autotest leaves the club roof
