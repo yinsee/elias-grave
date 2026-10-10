@@ -1,0 +1,256 @@
+[
+ {
+  "out": "assets/art/characters/vane/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 57,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {vane}, three-quarter view, upper body, standing on a balcony of a grand ballroom in a glass palm house, warm gold chandelier light and snow outside the glass, a stern commanding stare, no text, blank signs"
+ },
+ {
+  "out": "assets/art/characters/brandt/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 58,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {brandt}, three-quarter view, upper body, standing in front of an iron gate in a snowy glass palm house at night, his riot helmet held under one arm, a gruff grim stare, no text, blank signs"
+ },
+ {
+  "out": "assets/art/characters/lenz/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 59,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {lenz}, three-quarter view, upper body, standing in falling snow at night in front of a glowing glass greenhouse, a serene faint smile, cold blue light, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/palmhouse/palmhouse_intro_01.png",
+  "seed": 6101,
+  "post": {
+   "out": "assets/art/panels/palmhouse/palmhouse_intro_01.png"
+  },
+  "prompt": "Wide shot at night of a huge Victorian glass palm house with a great glass dome glowing warm gold in a snowy park, the first snow falling. Black limousines arrive in front. Rich guests in fur coats and evening gowns climb red-carpeted stone steps. Policemen in dark uniforms stand at the columned portico, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/palmhouse/palmhouse_intro_02.png",
+  "seed": 6102,
+  "post": {
+   "out": "assets/art/panels/palmhouse/palmhouse_intro_02.png"
+  },
+  "prompt": "Medium shot at night in falling snow at the red-carpet entrance of a glass palm house. {elias} in his black suit, snow on his shoulders, walks among rich guests in furs. A waiter in a white jacket offers him a glass of champagne on a silver tray. {nero} walks at his side off the leash, head high, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/palmhouse/palmhouse_toast_03.png",
+  "seed": 6103,
+  "post": {
+   "out": "assets/art/panels/palmhouse/palmhouse_toast_03.png"
+  },
+  "prompt": "A grand ballroom under a glass roof with palms and gold chandeliers. On a balcony, {vane} raises a champagne glass in a toast. Policemen in dark uniforms line the walls below. In the foreground a guest's gloved hand holds a cream gala programme card closed with a red wax seal, no text, blank signs",
+  "face": "vane"
+ },
+ {
+  "out": "assets/art-src/panels/palmhouse/palmhouse_toast_04.png",
+  "seed": 6104,
+  "post": {
+   "out": "assets/art/panels/palmhouse/palmhouse_toast_04.png"
+  },
+  "prompt": "Close-up in a dim corridor. {nero} lifts his nose at a closed dark wooden door, whining and pawing at it. A thin curl of grey pipe smoke drifts out from under the door. A small blank brass plate on the door. Warm dim light, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/palmhouse/palmhouse_toast_05.png",
+  "seed": 6105,
+  "post": {
+   "out": "assets/art/panels/palmhouse/palmhouse_toast_05.png"
+  },
+  "prompt": "Medium close shot from below of {vane} on a ballroom balcony. She lowers her champagne glass and touches a small radio clipped to her shoulder, her cold grey eyes staring straight at the viewer. Gold chandelier light, palms, snow on the glass roof, no text, blank signs",
+  "face": "vane"
+ },
+ {
+  "out": "assets/art-src/panels/palmhouse/palmhouse_office_01.png",
+  "seed": 6106,
+  "post": {
+   "out": "assets/art/panels/palmhouse/palmhouse_office_01.png"
+  },
+  "prompt": "Insert close-up on a dark wooden desk under a green banker's lamp. A closed manila folder with a blank red stamp mark on its cover. Beside it, a glass ashtray with grey pipe ash and the round red lid of a tobacco tin. A thin curl of cherry-red smoke, dark office, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/palmhouse/palmhouse_outro_01.png",
+  "seed": 6111,
+  "post": {
+   "out": "assets/art/panels/palmhouse/palmhouse_outro_01.png"
+  },
+  "prompt": "A wrecked Victorian palm house at night. Snow falls through the broken glass dome onto tall palms. {vane} kneels on a floor covered in shattered glass, beaten, her uniform torn, the medals ripped from her chest. In the background on an iron pillar hangs a small round wall clock whose hour hand points just past three and minute hand to seventeen past, no text, blank signs",
+  "face": "vane"
+ },
+ {
+  "out": "assets/art-src/panels/palmhouse/palmhouse_outro_02.png",
+  "seed": 6132,
+  "post": {
+   "out": "assets/art/panels/palmhouse/palmhouse_outro_02.png"
+  },
+  "prompt": "Shot through a large pane of glass at night. In the foreground on this side of the glass, the back and head of a German shepherd dog with a red collar, growling at the glass, hackles up. On the far side of the glass wall, inside a small dim office, a man in a grey trench coat and a grey fedora stands with his back to the viewer, holding a telephone receiver to his ear, his face not visible. Reflections on the glass, cold blue light, palms, falling snow, plain blank walls, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/palmhouse/palmhouse_outro_03.png",
+  "seed": 6113,
+  "post": {
+   "out": "assets/art/panels/palmhouse/palmhouse_outro_03.png"
+  },
+  "prompt": "Shocking dramatic panel. A thin steel sabre blade bursts through a pane of glass, spider-web cracks around it, and pierces a man in a grey trench coat and fedora hat from behind. Behind the cracked glass, {lenz} gives a slight elegant bow, then turns to leave into the falling snow. Cold blue light, glass shards in the air, no text, blank signs",
+  "face": "lenz"
+ },
+ {
+  "out": "assets/art-src/panels/palmhouse/palmhouse_outro_04.png",
+  "seed": 6114,
+  "post": {
+   "out": "assets/art/panels/palmhouse/palmhouse_outro_04.png"
+  },
+  "prompt": "Close-up of a man's hand in a black suit sleeve holding a small bloody pocket notebook open, the pages blank with smears of blood. Below, the nose of {nero} sniffs a grey trench coat on the floor and whines. Snow and broken glass, cold blue light, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/palmhouse/palmhouse_outro_05.png",
+  "seed": 6115,
+  "post": {
+   "out": "assets/art/panels/palmhouse/palmhouse_outro_05.png"
+  },
+  "prompt": "Close-up of an old black telephone receiver hanging from its coiled cord, swinging slowly over a floor covered in broken glass and snow. Dark office, cold blue light, a sense of an open line, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/portraits/vane_stern.png",
+  "seed": 6201,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/vane_stern.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {vane}, stern, raising a black riot shield beside her face, laser sight red dots on the glass roof behind her, cold night light, dark background, no text, blank signs",
+  "face": "vane"
+ },
+ {
+  "out": "assets/art-src/portraits/vane_contemptuous.png",
+  "seed": 6202,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/vane_contemptuous.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {vane}, contemptuous, lip curled, looking down her nose at the viewer, gold chandelier light, dark background, no text, blank signs",
+  "face": "vane"
+ },
+ {
+  "out": "assets/art-src/portraits/vane_shocked.png",
+  "seed": 6203,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/vane_shocked.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {vane}, shocked, eyes wide, mouth open, red laser dots on the glass behind her, cold light, dark background, no text, blank signs",
+  "face": "vane"
+ },
+ {
+  "out": "assets/art-src/portraits/vane_furious.png",
+  "seed": 6204,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/vane_furious.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {vane}, furious, shouting an order, teeth bared, a police whistle on a chain at her collar, red laser dots and snow, dark background, no text, blank signs",
+  "face": "vane"
+ },
+ {
+  "out": "assets/art-src/portraits/vane_broken.png",
+  "seed": 6205,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/vane_broken.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {vane}, beaten and broken, her silver hair messy, a cut on her cheek, her uniform torn and the medals gone, snow falling on her, cold blue light, dark background, no text, blank signs",
+  "face": "vane"
+ },
+ {
+  "out": "assets/art-src/portraits/elias_furious_quiet.png",
+  "seed": 6206,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/elias_furious_quiet.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Bust portrait of {elias}, quiet cold fury, eyes narrowed, jaw tight, snow melting on his dark hair and black suit, cold blue light, dark background, no text, blank signs",
+  "face": "elias"
+ },
+ {
+  "out": "assets/art-src/portraits/hale_tired_phone.png",
+  "seed": 6207,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/hale_tired_phone.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {hale}, tired, holding a telephone receiver to his ear, the upper half of his face in the deep shadow of his hat brim, only his moustache and mouth lit, dim office light, dark background, no text, blank signs",
+  "face": "hale"
+ },
+ {
+  "out": "assets/art-src/portraits/hale_careful_phone.png",
+  "seed": 6208,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/hale_careful_phone.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {hale}, careful and wary, holding a telephone receiver to his ear, eyes glancing sideways under his hat brim, half his face in shadow, dim office light, dark background, no text, blank signs",
+  "face": "hale"
+ },
+ {
+  "out": "assets/art-src/portraits/brandt_gruff.png",
+  "seed": 6209,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/brandt_gruff.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {brandt}, gruff, planting his tower shield beside him, his riot helmet visor raised, snow in the air, cold blue light, dark background, no text, blank signs",
+  "face": "brandt"
+ },
+ {
+  "out": "assets/art-src/portraits/brandt_grim.png",
+  "seed": 6210,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/brandt_grim.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {brandt}, grim, racking a combat shotgun beside his face, his riot helmet visor raised, cold blue light, dark background, no text, blank signs",
+  "face": "brandt"
+ }
+]

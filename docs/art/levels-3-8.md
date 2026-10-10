@@ -41,3 +41,11 @@ Panels and portraits follow section 9 of `05-st-cecilia.md`, without the `panel:
 
 - `hospital_outro_02`: the phone screen and the envelope are blank. The game must draw "Silence the bartender. - A.V." and "Winter Gala, Royal Conservatory".
 - `elias_furious`, `hale_hat` and `mags_weak` are new. Level 6 asks for `elias_furious_quiet` "from L5": Level 6 makes it as its own portrait.
+
+## Level 6: palmhouse
+
+Panels and portraits follow section 9 of `06-palm-house.md`, without the `panel:` prefix.
+
+- `palmhouse_office_01` and `palmhouse_outro_04`: the folder, the tobacco tin and the notebook are blank. The game must draw "SILENT NIGHT" and "Meridian Express, 23:40, Platform 9".
+- `elias_furious_quiet` is its own portrait (Level 5 has `elias_furious`). Level 7 uses it again.
+- The Lenz reference (`lenz/ref.png`) is made here, because Lenz first shows in `palmhouse_outro_03`.
