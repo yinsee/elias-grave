@@ -1,0 +1,67 @@
+{
+  "id": "train_reveal",
+  "title": "The Last Train",
+  "music": "music:train_outro",
+  "musicLoop": false,
+  "_todo": "Panels 3-5 of the end (docs 6.5): the workshop, the gramophone, the Spire. Voice lines train_outro_03, bell_gramophone_01, train_outro_05 do not exist yet.",
+  "pages": [
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:train_outro_03",
+          "shot": "The last car's door opens. Inside, a perfect copy of Bell's workshop: warm lamplight, the same bench, every clock stopped at 3:17. Nero growls.",
+          "lines": [
+            {
+              "type": "vo",
+              "pos": "top",
+              "text": "Only one man ever corrected my left guard.",
+              "voice": "train_outro_03"
+            }
+          ],
+          "minTime": 1.5,
+          "tint": "sepia"
+        }
+      ]
+    },
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:train_outro_04",
+          "shot": "Close-up. A brass gramophone horn. The needle drops. A pipe rests on the bench, still smoking cherry tobacco.",
+          "lines": [
+            {
+              "type": "say",
+              "speaker": "Bell (recording)",
+              "pos": "bottom",
+              "text": "Hello, Elias. Midnight. The Spire. We'll finish the lesson.",
+              "voice": "bell_gramophone_01"
+            }
+          ],
+          "minTime": 1.5,
+          "tint": "sepia"
+        }
+      ]
+    },
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:train_outro_05",
+          "shot": "Wide, through the train window: across the valley, the Meridian Spire pierces the storm clouds, its giant clock face lit.",
+          "lines": [
+            {
+              "type": "vo",
+              "pos": "bottom",
+              "text": "Bell was alive. And he had been conducting me the whole time.",
+              "voice": "train_outro_05"
+            }
+          ],
+          "minTime": 1.5,
+          "rain": true
+        }
+      ]
+    }
+  ]
+}

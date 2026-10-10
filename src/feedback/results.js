@@ -43,4 +43,5 @@ export function rankHtml(r) {
 
 export const rankName = (i) => (i < 0 ? '-' : `${RANKS[i].id} · ${RANKS[i].name}`);
 CHAPTERS.ch6 = { par: 660, kills: 55 };   // St. Cecilia (src/levels/hospital/)
+CHAPTERS.ch8 = { par: 720, kills: 50 };   // The Last Train (src/levels/train/)
 CHAPTERS.ch9 = { par: 960, kills: 70 };   // The Spire (src/levels/skyscraper/), the final level

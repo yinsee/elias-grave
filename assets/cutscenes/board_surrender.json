@@ -1,0 +1,78 @@
+{
+  "id": "board_surrender",
+  "title": "The Board",
+  "music": "music:train_aisle",
+  "_todo": "Portraits kern_terrified, kern_pointing, aldane_sweating, aldane_hollow, mayor_whining, elias_furious_quiet (the art agent); elias_cold exists. The right side is the Board: each line names its speaker (name) and portrait. Voice lines board_01..05, elias_silent, elias_nero, elias_who do not exist yet.",
+  "left": {
+    "id": "elias",
+    "name": "ELIAS GRAVE",
+    "role": "The Sandman",
+    "portrait": "portrait:elias_cold"
+  },
+  "right": {
+    "id": "board",
+    "name": "THE BOARD",
+    "role": "The Board · Valmora's rulers",
+    "portrait": "portrait:kern_terrified"
+  },
+  "lines": [
+    {
+      "speaker": "board",
+      "name": "JUDGE KERN",
+      "mood": "terrified",
+      "portrait": "portrait:kern_terrified",
+      "voice": "board_01",
+      "text": "Don't. We can pay. Name a number."
+    },
+    {
+      "speaker": "elias",
+      "mood": "cold",
+      "voice": "elias_silent",
+      "text": "Silent Night."
+    },
+    {
+      "speaker": "board",
+      "name": "CORNELIUS ALDANE",
+      "mood": "sweating",
+      "portrait": "portrait:aldane_sweating",
+      "voice": "board_02",
+      "text": "It was real. The old man had to go. The city was for sale, and we were the only buyers."
+    },
+    {
+      "speaker": "board",
+      "name": "THE MAYOR",
+      "mood": "whining",
+      "portrait": "portrait:mayor_whining",
+      "voice": "board_03",
+      "text": "Malaspina took the dog. A lever, that's all. Just a lever."
+    },
+    {
+      "speaker": "elias",
+      "mood": "furious_quiet",
+      "voice": "elias_nero",
+      "text": "Nero."
+    },
+    {
+      "speaker": "board",
+      "name": "CORNELIUS ALDANE",
+      "mood": "hollow",
+      "portrait": "portrait:aldane_hollow",
+      "voice": "board_04",
+      "text": "Don't you see it? Every man you broke was one of ours. In order. Someone has been reading you our guest list."
+    },
+    {
+      "speaker": "elias",
+      "mood": "cold",
+      "voice": "elias_who",
+      "text": "Who."
+    },
+    {
+      "speaker": "board",
+      "name": "JUDGE KERN",
+      "mood": "pointing",
+      "portrait": "portrait:kern_pointing",
+      "voice": "board_05",
+      "text": "Ask the man on the roof. He isn't ours."
+    }
+  ]
+}

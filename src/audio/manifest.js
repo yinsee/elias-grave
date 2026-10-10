@@ -46,6 +46,11 @@ export const MUSIC_CUES = {
   'music:brask_wheel': 'boss_marchetti',      // TODO: tango, bandoneon, ball-clatter percussion
   'music:brask_allin': 'boss_marchetti',      // TODO: strings join, tempo up
   'music:casino_end': 'prologue',             // TODO: solo piano over rain
+  // The Last Train (docs/levels/07-last-train.md 9.4): no files yet; the nearest existing tracks stand in
+  'music:train': 'docks_explore',             // TODO: noir jazz on a rail rhythm, 140 bpm
+  'music:train_aisle': 'docks_explore',       // TODO: the slowed cue, one sustained string chord
+  'music:lenz': 'boss_marchetti',             // TODO: a strict waltz, 84/104/126 bpm stems
+  'music:train_outro': 'prologue',            // TODO: a scratchy 1930s gramophone waltz
   // The Spire (docs/levels/08-the-spire.md 9.4): no files yet; the nearest existing tracks stand in
   'music:spire_lobby': 'docks_explore',       // TODO: "Black Tie": noir jazz in a tuxedo
   'music:spire_lys': 'boss_marchetti',        // TODO

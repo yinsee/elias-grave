@@ -1,0 +1,106 @@
+{
+  "id": "train_intro",
+  "title": "The Last Train",
+  "music": "music:train",
+  "musicLoop": false,
+  "_todo": "Panel art: assets/art/panels/train/train_intro_0N.png (the art agent). Voice lines train_intro_01, _03, _04 and elias_stay do not exist yet.",
+  "pages": [
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:train_intro_01",
+          "shot": "Wide. A black armoured train with gold trim at a steam-filled platform. Platform clock: 23:39. Ushers in grey suits load iron ledger boxes. At the far end, two Ushers carry a long crate stencilled with a small clock face into the last car.",
+          "lines": [
+            {
+              "type": "vo",
+              "pos": "top",
+              "text": "The Board was leaving with the city's memory in iron boxes.",
+              "voice": "train_intro_01"
+            }
+          ],
+          "minTime": 1.5,
+          "rain": true,
+          "tint": "cold"
+        }
+      ]
+    },
+    {
+      "layout": "row",
+      "panels": [
+        {
+          "image": "panel:train_intro_02",
+          "shot": "The hero, low on the platform behind a luggage cart, tucks a pistol into his belt. Nero sits at his side. He kneels to the dog.",
+          "lines": [
+            {
+              "type": "say",
+              "speaker": "Elias",
+              "pos": "bottom",
+              "text": "Stay. Go home.",
+              "voice": "elias_stay"
+            }
+          ],
+          "minTime": 1.5
+        },
+        {
+          "image": "panel:train_intro_03",
+          "shot": "Nero refuses; he sits harder, staring. The hero almost smiles.",
+          "lines": [
+            {
+              "type": "vo",
+              "pos": "bottom",
+              "text": "Elena's dog. Just as stubborn as her.",
+              "voice": "train_intro_03"
+            }
+          ],
+          "minTime": 1.5
+        }
+      ]
+    },
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:train_intro_04",
+          "shot": "The train pulls out. From the platform's end footbridge, the hero drops toward the roof of the baggage car behind the locomotive. Below, Nero leaps through the baggage car's open side door. Steam swallows the station.",
+          "lines": [
+            {
+              "type": "vo",
+              "pos": "top",
+              "text": "Last train. No return ticket.",
+              "voice": "train_intro_04"
+            }
+          ],
+          "minTime": 1.5,
+          "rain": true
+        }
+      ]
+    },
+    {
+      "layout": "full",
+      "panels": [
+        {
+          "image": "panel:train_intro_05",
+          "shot": "Night, rain. On the roof of the last car, unseen, a pale man in a white suit sits on a closed violin case. A brass metronome ticks beside him.",
+          "lines": [
+            {
+              "type": "vo",
+              "pos": "bottom",
+              "text": "tick... tick... tock."
+            }
+          ],
+          "minTime": 1.5,
+          "rain": true,
+          "tint": "cold",
+          "sfx": {
+            "text": "TOCK",
+            "at": [
+              72,
+              24
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -26,6 +26,7 @@ import { aqua3d } from './levels/aquarium/three.js';
 import * as CASINO from './levels/casino/index.js';
 import { casino3d } from './levels/casino/three.js';
 import * as HOSP from './levels/hospital/index.js';
+import * as TRAIN from './levels/train/index.js';
 import * as SPIRE from './levels/skyscraper/index.js';
 
 (() => {
@@ -94,8 +95,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // the level being played: isLv(id). The street is the tutorial (this file's own painter and data); every other level is a module
   // (src/levels/*) whose run hooks are LVH (Pier 9's run still lives in this file: its isP9() branches)
   const isLv = id => LV.id === id, isP9 = () => isLv('pier9'), isMetro = () => isLv('metro'), isAqua = () => isLv('aquarium'), isCasino = () => isLv('casino'), isStreet = () => isLv('street');
-  const isHosp = () => isLv('hospital'), isSpire = () => isLv('skyscraper'), ownWorld = () => isMetro() || isAqua() || isCasino() || isHosp() || isSpire();   // a module level whose static layer is the whole world, the club's part too
-  const L3D = () => isMetro() ? metro3d : isAqua() ? aqua3d : isCasino() ? casino3d : isHosp() ? HOSP.hospital3d : isSpire() ? SPIRE.spire3d : null;   // a level module's named 3D blocks
+  const isHosp = () => isLv('hospital'), isTrain = () => isLv('train'), isSpire = () => isLv('skyscraper'), ownWorld = () => isMetro() || isAqua() || isCasino() || isHosp() || isTrain() || isSpire();   // a module level whose static layer is the whole world, the club's part too
+  const L3D = () => isMetro() ? metro3d : isAqua() ? aqua3d : isCasino() ? casino3d : isHosp() ? HOSP.hospital3d : isTrain() ? TRAIN.train3d : isSpire() ? SPIRE.spire3d : null;   // a level module's named 3D blocks
   let LVH = {};   // the level run's hooks (Line Zero: src/levels/metro/run.js); {} for the street and Pier 9
   const KIOSK_X = GOAL.x1 - 70;   // the left wall of the rooftop kiosk: the club's side door is in it, facing the roof   // the flat roof of the club building; the club door is in the kiosk at its right end
   const PLATS = [
@@ -1791,7 +1792,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   };
   let hudTarget = null, hudTargetT = 0;
   const BODY_MAX = 99;
-  const LOOK_X = { ...LOOK, ...P9.SALT_LOOKS, ...METRO.RAT_LOOKS, ...AQUA.AQUA_LOOKS, ...CASINO.HOUSE_LOOKS, ...HOSP.LOOKS, ...SPIRE.LOOKS };   // the street's outfits, Pier 9's Saltmen, Line Zero's Tunnel Rats, the Undertow, the House, St. Cecilia's Orderlies
+  const LOOK_X = { ...LOOK, ...P9.SALT_LOOKS, ...METRO.RAT_LOOKS, ...AQUA.AQUA_LOOKS, ...CASINO.HOUSE_LOOKS, ...HOSP.LOOKS, ...TRAIN.LOOKS, ...SPIRE.LOOKS };   // the street's outfits, Pier 9's Saltmen, Line Zero's Tunnel Rats, the Undertow, the House, St. Cecilia's Orderlies
   // opts (Pier 9): { role, look, R: role overrides } for a Saltman; { boss: P9.MARCHETTI } for a level boss. The street passes none.
   function spawnEnemy(type, x, zone, opts) {
     const T = ETYPE[type];
@@ -2262,7 +2263,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (e === enc.boss) {
       enc.bossBeaten = true; enc.arena = null; emit('feat', 'boss'); crowdReact(e.x, 0, 'big'); slowMo(FOCUS.boss, 'boss');
       emit('boss:defeated', { boss: e, x: e.x });
-      if (!flags.demo && !flags.attract) unlock(isP9() ? 'ch2' : isMetro() ? 'ch3' : isCasino() ? 'ch4' : isAqua() ? 'ch5' : isHosp() ? 'ch6' : isSpire() ? 'done' : 'ch1');   // a real win opens the next chapter
+      if (!flags.demo && !flags.attract) unlock(isP9() ? 'ch2' : isMetro() ? 'ch3' : isCasino() ? 'ch4' : isAqua() ? 'ch5' : isHosp() ? 'ch6' : isTrain() ? 'ch8' : isSpire() ? 'done' : 'ch1');   // a real win opens the next chapter
       for (const g of enemies) if (!g.dead && g.zone === 'arena') killEnemy(g, Math.sign(g.x - e.x) || 1, 200, 0.5);
     }
   }
@@ -4995,7 +4996,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   });
   bus.on('ko', p => { const n = hero.wind; if (!p.perma && (n > 0 || flags.demo)) toast('K.O.', n > 1 ? `Second wind · ${n - 1} left` : 'Second wind · that was the last one'); });
   bus.on('kill', p => { if (!p.isBoss) { kills.push({ name: p.enemy.name, w: p.weapon, t: simTime }); feedDirty = true; } });
-  bus.on('boss:defeated', () => isP9() ? toast('Marchetti is down', 'The collector has been collected.') : isMetro() ? toast('Switch is down', 'The 23:10 is coming.') : isCasino() ? toast('Brask is down', 'The wheel slows.') : isAqua() ? toast('Kalt is down', 'The sea takes her back.') : isHosp() ? toast('Krieg is down', 'The storm breaks over the helipad.') : isSpire() ? toast('Midnight', 'The great bell is about to strike.') : toast('Boss defeated', 'Club Noir is yours. The street is yours.'));
+  bus.on('boss:defeated', () => isP9() ? toast('Marchetti is down', 'The collector has been collected.') : isMetro() ? toast('Switch is down', 'The 23:10 is coming.') : isCasino() ? toast('Brask is down', 'The wheel slows.') : isAqua() ? toast('Kalt is down', 'The sea takes her back.') : isHosp() ? toast('Krieg is down', 'The storm breaks over the helipad.') : isTrain() ? toast('Lenz is down', 'The metronome slows. The rain is louder.') : isSpire() ? toast('Midnight', 'The great bell is about to strike.') : toast('Boss defeated', 'Club Noir is yours. The street is yours.'));
   bus.on('boss:intro', () => !isStreet() ? gameAudio.playMusic('boss_marchetti', { volume: 0.85 }) : gameAudio.playMusic('docks_explore', { volume: 0.85 }));   // the street: the same track, up (Line Zero: Marchetti's track until 'switch' exists)
   bus.on('run:over', p => { if (p.result === 'wasted') gameAudio.stopMusic(2); });
   bus.on('boss:phase', p => { if (isStreet() && p.phase === 2) toast('The coat comes off', 'He is faster. Jump the low cane sweep and the shockwaves; dodge the charge, then punish.'); });   // (Pier 9: its lever pulls tell the story)
@@ -6003,7 +6004,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (tails) for (const t of tails) for (const p of t) { p.x += dx; p.px += dx; p.y += dy; p.py += dy; }
     cam.xf = CLUB_X; cam.yf = GROUND - 120; cam.v.x = cam.v.y = cam.v.z = 0;
     rain.drops.length = 0; rain.splash.length = 0;
-    emit('section:enter', isP9() ? { from: 'bay', to: 'hall' } : isMetro() ? { from: 'yard', to: 'junction' } : isCasino() ? { from: 'hall', to: 'roulette' } : isAqua() ? { from: 'dock', to: 'tunnel' } : isHosp() ? { from: 'theatre', to: 'roof' } : isSpire() ? { from: 'pendulum', to: 'face' } : { from: 'street', to: 'club' });
+    emit('section:enter', isP9() ? { from: 'bay', to: 'hall' } : isMetro() ? { from: 'yard', to: 'junction' } : isCasino() ? { from: 'hall', to: 'roulette' } : isAqua() ? { from: 'dock', to: 'tunnel' } : isHosp() ? { from: 'theatre', to: 'roof' } : isTrain() ? { from: 'vault', to: 'roof_boss' } : isSpire() ? { from: 'pendulum', to: 'face' } : { from: 'street', to: 'club' });
   }
   let malDlg = false, malDlgDone = false;   // the street boss's entrance dialog: started, closed
   function clubTick(rdt) {
@@ -6097,7 +6098,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   };
   const SIGN = { x0: 2176, x1: 2330, y0: GOAL.y - 100, y1: GOAL.y - 60 };   // 2.7 m clear above the roof: the hero walks under it
   function drawSign() {
-    if (isP9() || isCasino() || isHosp() || isSpire()) return;   // (the street's signs and rails: not in the casino's hall or St. Cecilia)
+    if (isP9() || isCasino() || isHosp() || isTrain() || isSpire()) return;   // (the street's signs and rails: not in the casino's hall or St. Cecilia)
     if (flags.club || cam.x > SIGN.x1 + 40 || cam.x + cam.vw < SIGN.x0 - 40) return;
     const t = simTime, { x0, x1, y0, y1 } = SIGN;
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) plot(x, y, x === x0 || x === x1 || y === y0 || y === y1 ? PAL.out : x === x0 + 1 || x === x1 - 1 || y === y0 + 1 || y === y1 - 1 ? C('#3a3a48') : C('#160d1c'));
@@ -6128,7 +6129,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // at the foot of the fire escape: a blade sign (a neon cocktail over NOIR) hangs off the corner of the club, and three chevrons on the wall climb toward the roof
   const BLADE = { x0: 2163, x1: 2179, y0: 116, y1: 194 }, CHEV_X = STAIR_X0 + 10;
   function drawStairSign() {
-    if (isP9() || isCasino() || isHosp() || isSpire()) return;
+    if (isP9() || isCasino() || isHosp() || isTrain() || isSpire()) return;
     if (flags.club || cam.x > STAIR_X0 + 60 || cam.x + cam.vw < BLADE.x0 - 20) return;
     const t = simTime, { x0, x1, y0, y1 } = BLADE, iron = C('#2a2a34'), ironL = C('#4a4a58');
     // two iron arms hold the blade off the wall
@@ -6175,7 +6176,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     flush(); return out;
   })();
   function drawStairRails() {
-    if (isP9() || isCasino() || isHosp() || isSpire()) return;
+    if (isP9() || isCasino() || isHosp() || isTrain() || isSpire()) return;
     if (flags.club || cam.x > STAIR_X1 + 20 || cam.x + cam.vw < STAIR_X0 - 20) return;
     const top = C('#7c7c96'), post = C('#34343f');
     for (const [ax, ay, bx, by, run] of RAILSEG) {
@@ -8627,7 +8628,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       if (flags.club && !isMetro() && !isAqua() && !isHosp() && !isSpire()) {   // drawClubFloor in camera-sized strips across the sheet
         const F = this.lFloor, S = STREET + 1, step = 256;
         for (let ox = 0; ox < F.w; ox += step) {
-          withView({ x: F.x0 + ox, y: GROUND, vw: step, vh: S }, isP9() ? () => P9.drawHallFloor(R9, p9.ice) : isCasino() ? modFloor : drawClubFloor);
+          withView({ x: F.x0 + ox, y: GROUND, vw: step, vh: S }, isP9() ? () => P9.drawHallFloor(R9, p9.ice) : isCasino() || isTrain() ? modFloor : drawClubFloor);
           for (let y = 0; y < S; y++) for (let x = 0; x < step; x++) { const c = buf[y * CW + x]; F.data[y * F.w + ox + x] = t3glow(c); }
         }
         F.tex.needsUpdate = true;
@@ -8946,7 +8947,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (sceneOn) return;   // a cutscene is loading or playing: its own controller has the keys (Escape must not open the menu between scenes)
     if (menuKey(e)) { e.preventDefault(); return; }   // the menu has the keys while it is open (the title screen, or Esc in a game)
     if (openT >= 0) { if ((c === 'Escape' || c === 'Enter') && !e.repeat) endOpening(); return; }
-    if (!isStreet() && endPh === 'done' && !flags.wasted) { if (c === 'Enter' && !e.repeat && !resultsEl.hidden) { if (isP9() && progress.ch2) startChapter2(); else if (isMetro() && progress.ch3) startChapter3(); else if (isCasino() && progress.ch4) startChapter4(); else if (isAqua() && progress.ch5) startChapter5(); else if (isSpire() && LVH.next && LVH.next()) { /* the credits */ } else quitToTitle(); } return; }   // Pier 9 cleared: on to Line Zero; Line Zero: back to the menu   // Pier 9 cleared: Enter goes back to the menu
+    if (!isStreet() && endPh === 'done' && !flags.wasted) { if (c === 'Enter' && !e.repeat && !resultsEl.hidden) { if (isP9() && progress.ch2) startChapter2(); else if (isMetro() && progress.ch3) startChapter3(); else if (isCasino() && progress.ch4) startChapter4(); else if (isAqua() && progress.ch5) startChapter5(); else if (isTrain() && progress.ch8) startChapter8(); else if (isSpire() && LVH.next && LVH.next()) { /* the credits */ } else quitToTitle(); } return; }   // Pier 9 cleared: on to Line Zero; Line Zero: back to the menu   // Pier 9 cleared: Enter goes back to the menu
     if (flags.wasted) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) retry(); return; }   // the Wasted card: retry from the checkpoint (Wicked: a restart); Esc opens the menu above
     if (endPh === 'done' && !resultsEl.hidden) { if (!e.repeat && c === 'Enter') startChapter1(); else if (!e.repeat && c === 'KeyR') reset(); return; }   // Club cleared: Enter goes on with the story (prologue, then Pier 9), R plays the tutorial again
     if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) { if (isP9()) p9Outro(); else if (LVH.outro) LVH.outro(); else endFinish(); } return; }   // the ending: Esc or Enter jumps to the card
@@ -9288,6 +9289,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
   let streetSnap = null, p9Data = null, metroData = null, MR = null, aquaData = null, AR = null, casinoData = null, CR = null;   // CR: House Always Wins' run (CASINO.createCasino(G))   // AR: the Leviathan's run (AQUA.createAquarium(G))   // MR: Line Zero's run (METRO.createMetro(G))
   const HOSP_LV = { id: 'hospital', title: 'St. Cecilia', startX: 250, drops: HOSP.DROPS };
   let hospData = null, HR = null;   // HR: St. Cecilia's run (HOSP.createHospital(G))
+  const TRAIN_LV = { id: 'train', title: 'The Last Train', startX: 40, drops: TRAIN.DROPS };
+  let trainData = null, TR = null;   // TR: The Last Train's run (TRAIN.createTrain(G))
   const SPIRE_LV = { id: 'skyscraper', title: 'The Spire', startX: 60, drops: SPIRE.DROPS };
   let spireData = null, SR = null;   // SR: the Spire's run (SPIRE.createSpire(G))
   function loadLevel(id) {
@@ -9336,6 +9339,14 @@ import * as SPIRE from './levels/skyscraper/index.js';
           pickups: HOSP.PICKUPS.map(k => ({ w: k.w, x: k.x, y: restY(k.w), taken: false, rack: !!k.rack, hidden: k.hidden || null, hide0: k.hidden || null })) };
       }
       d = hospData; LV = HOSP_LV;
+    } else if (id === 'train') {
+      if (!trainData) {
+        const pt = TRAIN.paint({ W, H, GROUND, PAL });
+        trainData = { stat: pt.b, PROPS: pt.props, STAT_BG: pt.bg, GOAL: { x0: -999, x1: -998, y: -999 }, PLATS: TRAIN.surfaces(), STEPS: [], LAMPS: [], WINL: pt.winl, FEAT: [], VPARTS: [],
+          HOUSEWIN: [], DOORS: [], ALLEYS: [], CARDOORS: [], CLUB_DOORS: TRAIN.BOSS_LADDERS, OBJ_START: TRAIN.OBJ_START, VEH: [], PUDDLE: pt.pud, WALLM: null, stairs: { x0: -999, x1: -998 },
+          pickups: TRAIN.PICKUPS.map(k => ({ w: k.w, x: k.x, y: restY(k.w), taken: false, rack: !!k.rack, hidden: k.hidden || null, hide0: k.hidden || null })) };
+      }
+      d = trainData; LV = TRAIN_LV;
     } else if (id === 'skyscraper') {
       if (!spireData) {
         const pt = SPIRE.paint({ W, H, GROUND, PAL, LAMP_GLASS, WIN_A, WIN_B, WIN_C });
@@ -9350,7 +9361,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     Object.assign(STAIR_R, d.stairs || { x0: STAIR_X0, x1: STAIR_X1 });
     SURF.length = 0; SURF.push(GROUND_S, ...PLATS, ...TRAMPS);
     for (const w of HOUSEWIN) { w.off = false; w.peek = false; w.t = 0; w.lv = 1; }
-    if (id === 'metro') { if (!MR) MR = METRO.createMetro(ENG); LVH = MR; } else if (id === 'aquarium') { if (!AR) AR = AQUA.createAquarium(ENG); LVH = AR; } else if (id === 'casino') { if (!CR) CR = CASINO.createCasino(ENG); LVH = CR; } else if (id === 'hospital') { if (!HR) HR = HOSP.createHospital(ENG); LVH = HR; } else if (id === 'skyscraper') { if (!SR) SR = SPIRE.createSpire(ENG); LVH = SR; } else LVH = {};
+    if (id === 'metro') { if (!MR) MR = METRO.createMetro(ENG); LVH = MR; } else if (id === 'aquarium') { if (!AR) AR = AQUA.createAquarium(ENG); LVH = AR; } else if (id === 'casino') { if (!CR) CR = CASINO.createCasino(ENG); LVH = CR; } else if (id === 'hospital') { if (!HR) HR = HOSP.createHospital(ENG); LVH = HR; } else if (id === 'train') { if (!TR) TR = TRAIN.createTrain(ENG); LVH = TR; } else if (id === 'skyscraper') { if (!SR) SR = SPIRE.createSpire(ENG); LVH = SR; } else LVH = {};
     document.title = id === 'street' ? 'Elias Grave' : `${LV.title} · Elias Grave`;   // the browser tab names the level (the street is the title screen and the tutorial)
   }
   // the engine for a level module (src/levels/metro/run.js): the sim's state and functions, read and called from there
@@ -9694,6 +9705,16 @@ import * as SPIRE from './levels/skyscraper/index.js';
     gameAudio.playMusic('docks_explore', { volume: 0.4 });
     toast('St. Cecilia', '04:10. A storm. Mags in Room 314, Nero at her bed.');
   }
+  // Chapter 7: The Last Train. Its intro panels, then the level (Level 6's results card leads here)
+  async function startChapter7() {
+    if (sceneOn) return;
+    leaveTitle(); setDemo(false); hideMenu(); resultsEl.hidden = true;
+    loadLevel('train'); reset();
+    sceneOn = true;   // (the level waits behind the panels)
+    await playScene('panels', TRAIN.LEVEL.intro);
+    gameAudio.playMusic('docks_explore', { volume: 0.45 });
+    toast('The Last Train', '23:40. Platform 9. The Meridian Express.');
+  }
   // Chapter 8: The Spire, the final level. Its intro panels, then the level (Level 7's results card leads here)
   async function startChapter8() {
     if (sceneOn) return;
@@ -9745,12 +9766,13 @@ import * as SPIRE from './levels/skyscraper/index.js';
       progress.ch3 ? { label: 'Chapter 3: House Always Wins', act: () => { menuPage = 'main'; startChapter3(); } } : lockedItem('Chapter 3: House Always Wins', 'Switch on Line Zero'),
       progress.ch4 ? { label: 'Chapter 4: Leviathan', act: () => { menuPage = 'main'; startChapter4(); } } : lockedItem('Chapter 4: Leviathan', 'Count Brask in the casino'),
       progress.ch5 ? { label: 'Chapter 5: St. Cecilia', act: () => { menuPage = 'main'; startChapter5(); } } : lockedItem('Chapter 5: St. Cecilia', 'Kalt at the aquarium'),
+      progress.ch7 ? { label: 'Chapter 7: The Last Train', act: () => { menuPage = 'main'; startChapter7(); } } : lockedItem('Chapter 7: The Last Train', 'Commissioner Vane at the Palm House'),
       progress.ch8 ? { label: 'Chapter 8: The Spire', act: () => { menuPage = 'main'; startChapter8(); } } : lockedItem('Chapter 8: The Spire', 'Lenz on the last train'),
       { label: 'Back', act: () => { menuPage = 'main'; menuSel = 0; } },
     ];
     const items = [
       { label: flags.attract ? 'Start game' : 'Resume', act: () => flags.attract ? endAttract() : hideMenu() },
-      { label: 'Chapter', value: () => !isStreet() && !flags.attract ? LV.title : 'Choose', act: () => { menuPage = 'chapter'; menuSel = isP9() ? 1 : isMetro() ? 2 : isCasino() ? 3 : isAqua() ? 4 : isHosp() ? 5 : isSpire() ? menuItems().findIndex(it => /^Chapter 8/.test(it.label)) : 0; } },
+      { label: 'Chapter', value: () => !isStreet() && !flags.attract ? LV.title : 'Choose', act: () => { menuPage = 'chapter'; menuSel = isP9() ? 1 : isMetro() ? 2 : isCasino() ? 3 : isAqua() ? 4 : isHosp() ? 5 : isTrain() ? menuItems().findIndex(it => /^Chapter 7/.test(it.label)) : isSpire() ? menuItems().findIndex(it => /^Chapter 8/.test(it.label)) : 0; } },
       { label: 'Difficulty', value: () => DIFFS[diffSel].name + (flags.attract ? '' : ' · locked'), change: d => {   // set on the title menu only: a run keeps its difficulty (no Wicked permadeath dodge)
         if (!flags.attract) { toast('Difficulty is locked during a run', 'Quit to title to change it'); return; }
         diffSel = (diffSel + d + DIFFS.length) % DIFFS.length; charge.forEach((c, w) => { charge[w] = Math.min(c, fullCharge(w)); }); saveSettings(); } },
@@ -10095,6 +10117,14 @@ import * as SPIRE from './levels/skyscraper/index.js';
         enemies: enemies.filter(e => !e.dead).map(e => [e.hv || e.kind || e.role, Math.round(e.x), Math.round(e.y), Math.round(e.hp), e.zone, e.down ? 'down' : e.act || e.sp || '', e.caged ? 'caged' : '']), ...(HR ? HR.peek() : {}) }),
       kill: n => window.__pier9.kill(n), setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; }, hurtBoss: n => window.__pier9.hurtBoss(n), hurtMini: n => { const m = HR && HR.mini(); if (m) m.hp = Math.max(1, m.hp - n); }, hurtHero: n => window.__pier9.hurtHero(n),
       view3d: on => setMode3D(!!on), zoom: z => setZoom(String(z)), equip: w => equip(w, fullCharge(w)), retry: () => retry(), get HR() { return HR; }, get ENG() { return ENG; } };
+    // The Last Train (tests): start the chapter (its intro panels) or the level at once; skip to a car; read its state
+    const tGo = () => { leaveTitle(); setDemo(false); hideMenu(); resultsEl.hidden = true; loadLevel('train'); };
+    window.__train = { chapter: () => startChapter7(), start: () => { tGo(); reset(); }, skip: where => { tGo(); TR.skipTo(where); }, toBoss: () => { tGo(); TR.skipToBoss(); },
+      tp: x => heroTo(x), peek: () => ({ level: LV.id, scene: sceneOn, x: Math.round(ctl.x), y: Math.round(ctl.y), surf: ctl.surf === GROUND_S ? 'ground' : PLATS.indexOf(ctl.surf), mode: hero.mode, act: hero.act, hp: Math.round(hero.hp), wind: hero.wind, weapon: hero.weapon, club: flags.club, endPh, kills: runS.kills, kos, wasted: flags.wasted, lockT: +lockT.toFixed(2),
+        boss: enc.boss ? { hp: Math.round(enc.boss.hp), max: enc.boss.maxHp, ph: enc.boss.ph, sp: enc.boss.sp, act: enc.boss.act, x: Math.round(enc.boss.x), dead: enc.boss.dead } : null, ckpt: ckpt ? ckpt.kind + ':' + ckpt.i : null,
+        enemies: enemies.filter(e => !e.dead).map(e => [e.hv || e.kind || e.role, Math.round(e.x), Math.round(e.y), Math.round(e.hp), e.zone, e.down ? 'down' : e.act || e.sp || e.gst || '', e.seated ? 'seated' : e.kneel ? 'kneel' : '']), ...(TR && isTrain() ? TR.peek() : {}) }),
+      kill: n => window.__pier9.kill(n), setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; }, hurtBoss: n => window.__pier9.hurtBoss(n), hurtMini: n => { const m = TR && TR.mini(); if (m) m.hp = Math.max(1, m.hp - n); }, hurtHero: n => window.__pier9.hurtHero(n), heal: () => { hero.hp = 100; },
+      view3d: on => setMode3D(!!on), zoom: z => setZoom(String(z)), equip: w => equip(w, fullCharge(w)), retry: () => retry(), unlock: id => unlock(id), get progress() { return progress; }, input, get TR() { return TR; }, get ENG() { return ENG; } };
     // The Spire (tests): start the chapter (its intro panels) or the level at once; skip to a beat; read its state
     const sGo = () => { leaveTitle(); setDemo(false); hideMenu(); resultsEl.hidden = true; loadLevel('skyscraper'); };
     window.__spire = { chapter: () => startChapter8(), start: () => { sGo(); reset(); }, skip: where => { sGo(); SR.skipTo(where); }, toBoss: () => { sGo(); SR.skipToBoss(); },
