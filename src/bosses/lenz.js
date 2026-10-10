@@ -20,7 +20,7 @@ export const LENZ = {
   R: { w: 'machete', len: 12, off: -1.1, reach: 30 },
   bpm: [84, 104, 126], meter: 3,
   punish: [2, 1.5, 1, 1],            // beats after a strike
-  lunge: { dmg: 18, v: 300, t: 0.3 }, waltz: { dmg: [12, 12, 16] }, bow: { rip: [14, 22, 26, 30] }, caseThrow: { dmg: 14, stun: 1 },
+  lunge: { dmg: 18, v: 300, t: 0.3 }, waltz: { dmg: [12, 12, 16] }, bow: { rip: [22, 22, 22, 22] }, caseThrow: { dmg: 14, stun: 1 },
   pizz: { dmg: 8, h: ['high', 'low', 'high'] }, vault: { dmg: 18 }, cadenza: { dmg: 12, n: 6, rest: 1.6 }, rubato: { v: 320, dmg: 20, below: 0.1 },
   gantryHit: { k: 0.12, stun: 2 },
   ph2: { below: 0.65 }, ph3: { below: 0.3 },

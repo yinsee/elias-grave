@@ -36,7 +36,7 @@ export const KALT = {
   chain: { windup: 1.1, hold: 5, fall: 4 },
   dive: { tell: 0.9, dmg: 24, cling: [1.6, 1.0, 0.85, 0.7], knock: 1.2, decoy: [0, 0, 1, 1] },
   cage: { tell: 1.0, dmg: 30, w: 26 },
-  shark: { fin: [2.2, 1.5, 1.2, 1.0], bite: [14, 22, 26, 30], blood: 2, herBite: 20 },
+  shark: { fin: [2.2, 1.5, 1.2, 1.0], bite: [22, 22, 22, 22], blood: 2, herBite: 20 },
   crew: { every: 6, every2: 7, alive1: [1, 1, 2, 2], alive2: [1, 2, 2, 3], max: 8, paneDivers: [0, 1, 1, 2] },
   lines: { flood: 'Swim, Sandman.', taunt: 'You smell like the sea now.', reel: 'Hold still.', cut: '—!', cling: 'Not yet...' },
 };

@@ -423,7 +423,7 @@ export function createCasino(G) {
     S.burners.length = 0;
     if (S.flare > 0) S.flare -= dt;
     // the hero on the hot top
-    if (hero.mode === 'anim' && !ctl.air && on(ctl.x) && Math.abs(ctl.y + 2 - R_.top) < 3) { hero.hp -= D.FIRE.heroDps[dif()] * dt; S.heroBurn = 0.4; if (hero.hp <= 0) { hero.hp = 0.01; G.hurtPlayer(1, ctl.x, ctl.y - 10, -ctl.face, true, 1, { kind: 'fire' }); } if (!S.said.has('range')) { S.said.add('range'); G.toast('The gas range', 'It burns. Knock them onto it.', true); } }
+    if (hero.mode === 'anim' && !ctl.air && on(ctl.x) && Math.abs(ctl.y + 2 - R_.top) < 3) { hero.hp -= G.heroDmg(D.FIRE.heroDps[dif()]) * dt; S.heroBurn = 0.4; if (hero.hp <= 0) { hero.hp = 0.01; G.hurtPlayer(1, ctl.x, ctl.y - 10, -ctl.face, true, 1, { kind: 'fire' }); } if (!S.said.has('range')) { S.said.add('range'); G.toast('The gas range', 'It burns. Knock them onto it.', true); } }
     if (S.heroBurn > 0) { S.heroBurn -= dt; if (hero.mode !== 'rag') S.burners.push({ x: G.P[1].x, y: G.P[1].y + 8, w: 6, h: 9 }); }
     // goons: standing on the top, or down on it (knocked onto it): burning, they stagger and run
     for (const e of G.enemies) {

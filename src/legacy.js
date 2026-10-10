@@ -2028,7 +2028,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (src && src.low) lowHint();
     hstr.n = 0; hstr.t = -9;   // hit: his string is broken
     if (ctl.grab) grabFree(30);   // hit in the clinch: he lets go
-    hero.hp = Math.max(0, hero.hp - dmg); hero.invT = 0.45;
+    hero.hp = Math.max(0, hero.hp - dmg * DIF().dmg); hero.invT = 0.45;   // (the difficulty scales what it costs him, not how hard it moves him)
     if (LVH.hurt) LVH.hurt(dmg, src);
     const vx = ctl.air ? ctl.face * ctl.spd : ctl.face * ctl.spd, into = Math.max(0, -dirx * vx);
     const braced = hero.act === 'squat' || hero.act === 'guard' ? 0.7 : 1;
@@ -9406,6 +9406,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     get diffSel() { return diffSel; }, DIF, get simTime() { return simTime; }, simRand, emit, bus, get timeScale() { return timeScale; },
     ctl, hero, P, enemies, enc, objs, eshots, particles, sparks, waves, quakes, bullets, flashes, pickups, ammoBoxes, thrown, tossed, input, flags, zoneAlive, rain, cam, charge, WINL,
     LANE, GROUND, W, H, DT, DOOR_X, STREET_END, PLATS, SURF, GROUND_S, RUN, WALK, MOVES, EMOVES, WEAPONS, DEF, PAL,
+    heroDmg: n => n * DIF().dmg,   // what a blow or a burn of n costs him on this difficulty (a level's own HP drains go through it; a fall is a rule, not scaled)
     spawnEnemy, hurtPlayer, damageEnemy, knockDown, killEnemy, toast, bark, setCkpt, playScene, shakeIt, dust, hitFx, slowMo, bossPhase, bStart, bSpecial, bossTell, bTell, bCd, bRand,
     eStart, eRelease, eHop, climbStep, makeObj, removeObj, damageObj, floorBelow, heroTo, equip, fullCharge, makeDog, dogStep, puff, hitsPlayer, eWeapon, plot, line1, blendPlot,
     get R9() { return R9; }, get R9T() { return R9T; }, gradeRun, rankHtml, rankName, styleM, runS, get kos() { return kos; },

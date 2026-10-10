@@ -600,7 +600,7 @@ export function createAquarium(G) {
     if (d >= 40 && !S.climb) {
       S.breath += dt; S.breathShow = { x: G.P[0].x + ctl.face * 2, y: G.P[0].y };
       if (!S.said.has('breath')) say('breath', 'Under water', 'Your breath runs out: get up high', true);
-      if (S.breath > D.BREATH.t[dif()] && hero.hp > 0) { hero.hp -= D.BREATH.dps * dt; if (hero.hp <= 0) { hero.hp = 0.01; G.hurtPlayer(1, ctl.x, ctl.y - 10, -ctl.face, true, 1, { kind: 'drown' }); } }
+      if (S.breath > D.BREATH.t[dif()] && hero.hp > 0) { hero.hp -= G.heroDmg(D.BREATH.dps) * dt; if (hero.hp <= 0) { hero.hp = 0.01; G.hurtPlayer(1, ctl.x, ctl.y - 10, -ctl.face, true, 1, { kind: 'drown' }); } }
       if (G.simRand() < dt * 1.5) sfx('bubbles_rise', ctl.x, 0.4);
     } else { if (S.breath > 4) sfx('breath_gasp', ctl.x, 0.7); S.breath = d >= 40 ? S.breath : Math.max(0, S.breath - dt * 4); if (d < 40 && S.breath > 4) S.breath = 4; }
   }
@@ -702,7 +702,7 @@ export function createAquarium(G) {
     const d = S.dunk; if (!d || hero.mode !== 'anim' || e.hurtT > 0.3) { S.dunk = null; return false; }
     d.t += dt; ctl.spd = 0; ctl.x += (e.x + e.face * 15 - ctl.x) * Math.min(1, dt * 12); ctl.face = -e.face;
     if (hero.atkId !== d.atk) { d.atk = hero.atkId; d.n++; }
-    hero.hp = Math.max(1, hero.hp - TEAGUE.dunk.dps * dt); S.breathShow = { x: G.P[0].x, y: G.P[0].y };
+    hero.hp = Math.max(1, hero.hp - G.heroDmg(TEAGUE.dunk.dps) * dt); S.breathShow = { x: G.P[0].x, y: G.P[0].y };
     if (G.simRand() < dt * 6) G.particles.push({ x: ctl.x + (G.simRand() - 0.5) * 8, y: GROUND - 2, vx: (G.simRand() - 0.5) * 30, vy: -40, life: 0.3, c: 0xffd8eef8 });
     if (d.n >= TEAGUE.dunk.mash[dif()]) { S.dunk = null; e.stunT = e.recT = 0.8; G.emit('feat', 'dunkfree'); return false; }
     if (d.t >= TEAGUE.dunk.t) { S.dunk = null; G.hurtPlayer(4, ctl.x, ctl.y - 20, e.face, true, 1.5, { e, kind: 'grab' }); return false; }
@@ -1040,7 +1040,7 @@ export function createAquarium(G) {
     const T = S.tun;
     if (T.y !== T.to) { const v = Math.abs(T.v || 8); T.y = T.y > T.to ? Math.max(T.to, T.y - v * dt) : Math.min(T.to, T.y + v * dt); }
     if (S.pinSpray && (S.pinSpray.t -= dt) > 0 && hero.mode === 'anim' && ctl.x >= S.pinSpray.x0 && ctl.x <= S.pinSpray.x1 && ctl.y > D.TUN.roofB && (S.pinDps = (S.pinDps || 0) - dt) <= 0) {
-      S.pinDps = 0.5; hero.hp = Math.max(1, hero.hp - KALT.pin.dps * 0.5); G.emit('hurt', { dmg: 2, x: ctl.x, y: ctl.y - 30, dir: 1, heavy: false, outcome: 'stagger' });
+      S.pinDps = 0.5; hero.hp = Math.max(1, hero.hp - G.heroDmg(KALT.pin.dps) * 0.5); G.emit('hurt', { dmg: 2, x: ctl.x, y: ctl.y - 30, dir: 1, heavy: false, outcome: 'stagger' });
     }
     if (S.pinSpray && S.pinSpray.t <= 0) S.pinSpray = null;
     for (let i = S.chum.length - 1; i >= 0; i--) if ((S.chum[i].t -= dt) <= 0) S.chum.splice(i, 1);

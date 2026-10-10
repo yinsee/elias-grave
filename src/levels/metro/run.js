@@ -316,7 +316,7 @@ export function createMetro(G) {
     // the hero burning (a flare's hit, Tinder's torch, the slick): HP drains, no stagger
     if (S.heroBurn > 0) {
       S.heroBurn -= dt;
-      if (hero.mode === 'anim' && hero.hp > 0) { hero.hp -= (S.heroBurnDps || 4) * dt; if (hero.hp <= 0) { hero.hp = 0.01; G.hurtPlayer(1, ctl.x, ctl.y - 10, -ctl.face, true, 1, { kind: 'fire' }); } }
+      if (hero.mode === 'anim' && hero.hp > 0) { hero.hp -= G.heroDmg(S.heroBurnDps || 4) * dt; if (hero.hp <= 0) { hero.hp = 0.01; G.hurtPlayer(1, ctl.x, ctl.y - 10, -ctl.face, true, 1, { kind: 'fire' }); } }
       if (S.heroBurn <= 0) S.heroBurnDps = 0;
     }
   }

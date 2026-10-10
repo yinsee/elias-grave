@@ -180,7 +180,7 @@ export const DROPS = {
 // ---- trains (the shared hazard): cars and their lengths (px); the cue chain before every train (s before it arrives) ----
 export const CAR = { loco: { len: 64, h: 70 }, box: { len: 56, h: 66 }, flat: { len: 50, h: 24 }, tank: { len: 52, h: 58 }, empty: { len: 56, h: 64 } };
 export const CUES = { nero: 5, hum: 3.5, horn: 2.5, beam: 1.2 };
-export const TRAIN_DMG = [30, 50, 70, 80];
+export const TRAIN_DMG = [40, 40, 48, 54];   // times DIFFS[].dmg: 28 / 40 / 55 / 70 (one train is a hard lesson, not a K.O.; the hero fire and the third rail are flat: the difficulty scales them)
 export const TRAINS = {
   T1: { track: 1, from: 1, cars: ['loco', 'box', 'box', 'box'], v: 220, gap: 4 },
   T2: { track: 1, from: -1, cars: ['loco', 'box', 'box', 'flat', 'box'], v: 240, gap: 4 },
@@ -194,8 +194,8 @@ export const TRAINS = {
 export const DIVE = { magnet: 60, t: 0.55, slow: 2.4, aim: 4 };
 
 // fire (the oil slick, the fuel pool, a fire bottle's patch)
-export const FIRE = { spread: 300, burn: [6, 5, 5, 4], goonDps: 25, heroDps: [10, 14, 18, 22], pool: 4, patch: 3, patchW: 40 };
+export const FIRE = { spread: 300, burn: [6, 5, 5, 4], goonDps: 25, heroDps: [14, 14, 14, 14], pool: 4, patch: 3, patchW: 40 };
 // the third rail and the live wet zone: shock damage and the stun (s) by difficulty; the phase 1 cycle (s)
-export const RAIL = { dmg: [8, 12, 16, 20], stun: [0.4, 0.6, 0.7, 0.8], live: 2, dead: 1.5, crackle: 0.5 };
+export const RAIL = { dmg: [12, 12, 12, 12], stun: [0.4, 0.6, 0.7, 0.8], live: 2, dead: 1.5, crackle: 0.5 };
 // Nero: the hold's cooldown (s) by difficulty, how long he pins a goon
 export const NERO = { holdCd: [15, 20, 20, 25], hold: 3, holdR: 120, bark: 140, warn: 5 };

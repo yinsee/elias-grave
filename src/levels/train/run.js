@@ -266,7 +266,7 @@ export function createTrain(G) {
     if (h && !(h.held > 0)) {
       S.heldBy = null;
       if (Math.abs(ctl.x - (Z.x0 + Z.x1) / 2) < 46) {
-        S.doorCatch = { t: 0 }; hero.hp = Math.max(1, hero.hp - h.S.grab.door); G.lockT = Math.max(G.lockT, 1.0); hero.invT = Math.max(hero.invT, 1.4);
+        S.doorCatch = { t: 0 }; hero.hp = Math.max(1, hero.hp - G.heroDmg(h.S.grab.door)); G.lockT = Math.max(G.lockT, 1.0); hero.invT = Math.max(hero.invT, 1.4);
         G.toast('Thrown at the door', 'He catches the frame and climbs back in', true); sfx('hook_clank', Z.x0, 0.9, 0.7); G.shakeIt(0.25, 2);
       }
     }

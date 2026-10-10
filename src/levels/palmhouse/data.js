@@ -100,7 +100,7 @@ export const PANES = [
 ];
 export const NAVE_ROOF = { x0: 1884, n: 10, w: 52, y0: ROOF_Y - 4, y1: ROOF_Y + 4 };   // panes nave1..nave10
 export const DOME_ROOF = { x0: 2446, n: 10, w: 34.4, y0: 106, y1: 118 };              // panes dome1..dome10
-export const SHARD = { warn: 0.9, dmg: [10, 14, 16, 18], melt: 4, meltW: 40 };
+export const SHARD = { warn: 0.9, dmg: [14, 14, 14, 14], melt: 4, meltW: 40 };
 
 // ---- surfaces (ledges) ----
 export function surfaces() {

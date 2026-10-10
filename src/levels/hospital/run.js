@@ -525,7 +525,7 @@ export function createHospital(G) {
     if ((g.t -= dt) > 0) return;
     const e = g.e;
     if (e.dead || e.down || hero.mode !== 'anim' || Math.abs(ctl.x - e.x) > e.reach + 10 || Math.abs(ctl.y - e.y) > 14) { S.grind = null; return; }
-    hero.hp = Math.max(1, hero.hp - g.dmg); sfx('saw_grind', ctl.x, 0.7);
+    hero.hp = Math.max(1, hero.hp - G.heroDmg(g.dmg)); sfx('saw_grind', ctl.x, 0.7);
     for (let k = 0; k < 4; k++) G.particles.push({ x: ctl.x + (G.simRand() - 0.5) * 6, y: G.P[1].y, vx: (G.simRand() - 0.5) * 80, vy: -40 - G.simRand() * 50, life: 0.35, c: k % 2 ? 0xff2020a0 : 0xff40a0ff });
     if (--g.n <= 0) S.grind = null; else g.t = g.gap;
   }

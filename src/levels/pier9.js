@@ -137,7 +137,8 @@ export const MARCHETTI = {
   // the hero; fill s; he goes back to the lever `back` s after the hero clears it
   fog: { dense: [0.6, 0.85, 0.9, 0.95], warm: 0.6, split: 2640, bubble: [90, 60, 50, 40], fill: 6, clear: 2, back: 4,
     barks: ['Cold, Grave?', 'I can hear you breathe.', 'Nobody sleeps in my freezer.'] },
-  tuna: { warn: 1.0, v: 210, dmg: [8, 14, 18, 24], every: [6, 9], bossDmg: 40 },
+  tuna: { warn: 1.0, v: 210, dmg: [14, 14, 14, 14],   // (flat: DIFFS[].dmg scales what a hit costs him)
+    every: [6, 9], bossDmg: 40 },
   // his crew: none in phase 1; phase 2 one per `every` s, at most DIFFS[].crew.alive at once and DIFFS[].crew.n in all (the street boss's
   // numbers); phase 3 none (Wicked: two filleters at its start)
   crew: { ph2: { every: 6 }, ph3Wicked: ['filleter', 'filleter'],
