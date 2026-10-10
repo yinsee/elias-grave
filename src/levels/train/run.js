@@ -668,7 +668,7 @@ export function createTrain(G) {
     S.bc = { bpm: LENZ.bpm[e.ph - 1], t: 0, n: 2, bar: -1, silent: 0 }; S.nextG = 6; S.nextT = 11; S.bcrewBar = 3;
     G.setMusic('boss_marchetti', 0.85);
     const go = () => { e.hold = false; e.cdT = 0.6; S.bc.t = 0; S.bc.n = 2; say('lenzTip', 'Viktor Lenz', 'He moves on the metronome: tick, tick, TOCK. He strikes on the TOCK. Count, and answer on 3.', false); };
-    if (!again && !G.flags.demo) G.playScene('dialog', 'lenz_intro').then(go); else go();
+    if (!again && !G.flags.demo) later(() => G.playScene('dialog', 'lenz_intro').then(go), 0.9); else go();   // (after the fade from the ladder: lightning over the dam behind him)
   }
   function bossStep(dt) {
     const e = S.lenz; if (!e) return;
@@ -905,6 +905,7 @@ export function createTrain(G) {
   M.drawWorld = () => A.drawWorld(R(), S, M);
   M.drawDoor = () => {};
   M.drawFx = () => A.drawFx(R(), S, M);
+  M.drawFloor = () => A.drawFloor(R(), S, M);
   M.camBounds = () => D.GROUPS[G.flags.club ? 8 : S.grp];
 
   // ---------------- the ending: the metronome winds down, panels 1-2, the brake, the last car, the gramophone, panels 3-5, the card ----------------
@@ -988,7 +989,7 @@ export function createTrain(G) {
     if (where === 'dining') { restoreTo(0); go(584, 2, arriveDining); return; }
     if (where === 'sleepers') { restoreTo(1); S.w.s1 = S.w.s2 = S.w.s3 = { out: false, n: 0 }; S.comp3 = false; go(906, 3, arriveSleepers); return; }
     if (where === 'roof') { restoreTo(1); go(1170, 4, arriveRoofMid); return; }
-    if (where === 'cut') { restoreTo(1); markDone(['rm1', 'rm2']); go(D.DECOUPLE_AT - 20, 4, () => { S.sec = 'roof_mid'; S.secT = 60; }); return; }
+    if (where === 'cut') { restoreTo(1); markDone(['rm1', 'rm2']); go(D.DECOUPLE_AT - 20, 4, () => { S.sec = 'roof_mid'; S.secT = 60; D.SWEEP.roof_mid.forEach((s, k) => { S.swFired['roof_mid' + k] = S.swFired['roof_mid' + k + 'w'] = true; }); }); return; }
     if (where === 'dome') { restoreTo(2); go(1800, 5, arriveDome); return; }
     if (where === 'vault') { restoreTo(3); go(2064, 6, arriveVault); return; }
     if (where === 'boss') { restoreTo(3); go(D.VAULT_LADDER - 4, 6, () => { S.sec = 'vault'; }); G.fadeDir = 1; return; }

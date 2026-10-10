@@ -6097,7 +6097,7 @@ import * as TRAIN from './levels/train/index.js';
   };
   const SIGN = { x0: 2176, x1: 2330, y0: GOAL.y - 100, y1: GOAL.y - 60 };   // 2.7 m clear above the roof: the hero walks under it
   function drawSign() {
-    if (isP9() || isCasino() || isHosp()) return;   // (the street's signs and rails: not in the casino's hall or St. Cecilia)
+    if (isP9() || isCasino() || isHosp() || isTrain()) return;   // (the street's signs and rails: not in the casino's hall or St. Cecilia)
     if (flags.club || cam.x > SIGN.x1 + 40 || cam.x + cam.vw < SIGN.x0 - 40) return;
     const t = simTime, { x0, x1, y0, y1 } = SIGN;
     for (let y = y0; y <= y1; y++) for (let x = x0; x <= x1; x++) plot(x, y, x === x0 || x === x1 || y === y0 || y === y1 ? PAL.out : x === x0 + 1 || x === x1 - 1 || y === y0 + 1 || y === y1 - 1 ? C('#3a3a48') : C('#160d1c'));
@@ -6128,7 +6128,7 @@ import * as TRAIN from './levels/train/index.js';
   // at the foot of the fire escape: a blade sign (a neon cocktail over NOIR) hangs off the corner of the club, and three chevrons on the wall climb toward the roof
   const BLADE = { x0: 2163, x1: 2179, y0: 116, y1: 194 }, CHEV_X = STAIR_X0 + 10;
   function drawStairSign() {
-    if (isP9() || isCasino() || isHosp()) return;
+    if (isP9() || isCasino() || isHosp() || isTrain()) return;
     if (flags.club || cam.x > STAIR_X0 + 60 || cam.x + cam.vw < BLADE.x0 - 20) return;
     const t = simTime, { x0, x1, y0, y1 } = BLADE, iron = C('#2a2a34'), ironL = C('#4a4a58');
     // two iron arms hold the blade off the wall
@@ -6175,7 +6175,7 @@ import * as TRAIN from './levels/train/index.js';
     flush(); return out;
   })();
   function drawStairRails() {
-    if (isP9() || isCasino() || isHosp()) return;
+    if (isP9() || isCasino() || isHosp() || isTrain()) return;
     if (flags.club || cam.x > STAIR_X1 + 20 || cam.x + cam.vw < STAIR_X0 - 20) return;
     const top = C('#7c7c96'), post = C('#34343f');
     for (const [ax, ay, bx, by, run] of RAILSEG) {
@@ -8622,11 +8622,11 @@ import * as TRAIN from './levels/train/index.js';
       this.layer(this.lSign, drawSign, { glow: true, z: ZF + 5.05 });
       this.layer(this.lBlade, drawStairSign, { glow: true, z: ZF + 4.05 });
       if (!flags.club && cam.x < STAIR_X1 + 160 && cam.x + cam.vw > STAIR_X0 - 160) this.layer(this.lRail, drawStairRails, { z: ZF + T3.STAIR + 0.4 }); else this.lRail.mesh.visible = false;
-      this.lFloor.mesh.visible = flags.club && !isMetro() && !isAqua() && !isHosp() && !isTrain();   // (the casino draws its live floor here: modFloor)
-      if (flags.club && !isMetro() && !isAqua() && !isHosp() && !isTrain()) {   // drawClubFloor in camera-sized strips across the sheet
+      this.lFloor.mesh.visible = flags.club && !isMetro() && !isAqua() && !isHosp();   // (the casino draws its live floor here: modFloor)
+      if (flags.club && !isMetro() && !isAqua() && !isHosp()) {   // drawClubFloor in camera-sized strips across the sheet
         const F = this.lFloor, S = STREET + 1, step = 256;
         for (let ox = 0; ox < F.w; ox += step) {
-          withView({ x: F.x0 + ox, y: GROUND, vw: step, vh: S }, isP9() ? () => P9.drawHallFloor(R9, p9.ice) : isCasino() ? modFloor : drawClubFloor);
+          withView({ x: F.x0 + ox, y: GROUND, vw: step, vh: S }, isP9() ? () => P9.drawHallFloor(R9, p9.ice) : isCasino() || isTrain() ? modFloor : drawClubFloor);
           for (let y = 0; y < S; y++) for (let x = 0; x < step; x++) { const c = buf[y * CW + x]; F.data[y * F.w + ox + x] = t3glow(c); }
         }
         F.tex.needsUpdate = true;

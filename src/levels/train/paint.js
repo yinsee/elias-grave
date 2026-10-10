@@ -144,7 +144,7 @@ export function paint(api) {
   rect(D.VAULT_LADDER - 4, CE - 20, D.VAULT_LADDER + 4, GROUND - 1, (x, y) => x === D.VAULT_LADDER - 4 || x === D.VAULT_LADDER + 4 ? T.steelL : y % 7 === 0 ? T.steel : 0);
   // workshop: the bench, clocks on the wall
   rect(D.BENCH.x0, D.BENCH.top, D.BENCH.x1, GROUND - 1, (x, y) => y === D.BENCH.top ? O : y < D.BENCH.top + 4 ? T.woodL : (x === D.BENCH.x0 + 3 || x === D.BENCH.x1 - 3) ? T.woodD : 0);
-  text(put, 'BELL & SONS', 2232, 192, T.brass);
+  text(put, 'BELL AND SONS', 2228, 192, T.brass);
   // ---- clocks (Bell & Sons, every one stopped at 3:17): the dome over the bar, the safe door, the workshop's wall ----
   const clock = (cx, cy, r) => {
     rect(cx - r, cy - r, cx + r, cy + r, (x, y) => { const d = Math.hypot(x - cx, y - cy); return d > r + 0.4 ? 0 : d > r - 1 ? T.brassD : T.cream; });
@@ -155,7 +155,7 @@ export function paint(api) {
   for (const [cx, cy, r] of [[2236, 214, 5], [2256, 208, 6], [2276, 216, 4], [2372, 210, 6], [2392, 220, 5], [2400, 200, 4]]) clock(cx, cy, r);
 
   // ---- the floor band: the car floors inside; outside, the car roofs (riveted plates) over the black car bodies with gold trim ----
-  const roofX = x => (x >= 0 && x <= 300) || (x >= D.CARA.x0 && x <= D.CARA.x1) || (x >= D.CARB.x0 && x <= D.CARB.x1) || (x >= D.VROOF.x0 && x < D.VROOF.x1) || (x >= D.PLATFORM.x0 - 2 && x < W);
+  const roofX = x => (x >= 0 && x <= 300) || (x >= D.CARA.x0 && x <= D.CARA.x1) || (x >= D.CARB.x0 && x <= D.CARB.x1) || (x >= D.STUB.x0 && x <= D.GROUPS[4][1] + 8) || x >= D.VROOF.x0;   // (the stub and the last car are roofs at rest; drawFloor opens their gaps live)
   const roofSec = x => inG(x, 0) || inG(x, 4) || x >= 2420;
   for (let x = 0; x < W; x++) for (let y = GROUND; y < H; y++) {
     const d = y - GROUND; let c;
@@ -216,7 +216,6 @@ export function drawWorld(R, S, M) {
   // ---- roof_mid: the coupling; the tail stub (the dome car's front, a mover) ----
   if (S.grp === 4) {
     const sx = M.stubX();
-    roofBand(R, sx, D.GROUPS[4][1] + 8, cam, true);
     // the dome's glass rising behind the stub (it cracks under him at the end)
     rect(sx + 30, GROUND - 16, D.GROUPS[4][1] + 8, GROUND - 1, (x, y) => (x - sx) % 18 === 0 || y === GROUND - 16 ? T.steelD : S.crack ? (noise2(x, y + Math.floor(t * 20)) < 0.2 ? T.white : T.glass) : T.glass);
     if (S.stub.st === 'idle') { rect(D.CARB.x1, GROUND + 6, sx, GROUND + 10, (x, y) => y === GROUND + 6 ? O : T.steelD); plot(D.CARB.x1 + 10, GROUND + 4, T.brass); }
@@ -224,10 +223,7 @@ export function drawWorld(R, S, M) {
   }
   // ---- the boss roof: the gangway plate, the last car (its front edge breathes in phase 3), the lantern, the metronome, the platform ----
   if (S.grp === 8) {
-    const lx = D.VROOF.x1 + (S.plate ? 0 : S.lgap);
-    roofBand(R, S.plate ? D.VROOF.x1 : lx, D.PLATFORM.x0, cam, false);
-    if (S.plate) rect(D.PLATE.x0, GROUND, D.PLATE.x1, GROUND + 3, (x, y) => y === GROUND ? T.steelL : T.steelD);
-    else { const n = 8, sag = Math.max(0, 14 - S.lgap / 8); for (let k = 0; k <= n; k++) plot(D.VROOF.x1 + Math.round(k * S.lgap / n), GROUND + 10 + Math.round(Math.sin(k / n * Math.PI) * sag), (k % 2) ? T.steelL : T.steel); }
+    if (!S.plate) { const n = 8, sag = Math.max(0, 14 - S.lgap / 8); for (let k = 0; k <= n; k++) plot(D.VROOF.x1 + Math.round(k * S.lgap / n), GROUND + 10 + Math.round(Math.sin(k / n * Math.PI) * sag), (k % 2) ? T.steelL : T.steel); }
     // the lantern: Bell & Sons' clock behind its glass (3:17), the brass metronome on top, its pendulum on the beat
     const L = D.LANTERN, lxx = L.x;
     rect(lxx - 8, L.y, lxx + 8, GROUND - 1, (x, y) => x === lxx - 8 || x === lxx + 8 || y === L.y ? O : T.brassD);
@@ -286,6 +282,8 @@ function roofBand(R, x0, x1, cam, glass) {
 export function drawFx(R, S, M) {
   const { plot, line1, blendPlot, cam } = R, t = R.t, T = TC, O = T.out;
   const vx0 = cam.x - 8, vx1 = cam.x + cam.vw + 8;
+  // inside a car: the cars beyond its ends are dark (a narrow car is smaller than the view)
+  if (!D.SECTIONS[S.grp].out || S.grp === 5) { const [g0, g1] = D.GROUPS[S.grp], y0 = Math.max(0, cam.y), y1 = Math.min(H - 1, cam.y + cam.vh); for (let y = y0; y <= y1; y++) { for (let x = cam.x; x < g0 - 4; x++) plot(x, y, 0xff050507); for (let x = g1 + 5; x <= cam.x + cam.vw; x++) plot(x, y, 0xff050507); } }
   // gantries: a steel truss (its legs off the train) with the beam at y 236-262; tunnels: the mouth, the low roof inside
   for (const sw of S.sweeps) {
     if (sw.kind === 'gantry') {
@@ -317,4 +315,18 @@ export function drawFx(R, S, M) {
   if (S.steam > 0 && S.grp === 2) for (let k = 0; k < 40; k++) blendPlot(D.STEAM.x - k, D.STEAM.y + Math.round(Math.sin(t * 30 + k) * (k / 10)), 240, 240, 240, 0.5 * (1 - k / 40));
   // the sabre's glint on beat 2 (a white line along the blade)
   if (S.glint && S.glint.e.J && !S.glint.e.dead) { const g = M.G.eWeapon(S.glint.e, S.glint.e.J), k = 1 - S.glint.t / 0.25; const x = g.x + (g.tx - g.x) * k, y = g.y + (g.ty - g.y) * k; plot(Math.round(x), Math.round(y), 0xffffffff); plot(Math.round(x) + 1, Math.round(y), 0xffffffff); }
+}
+
+// ---- per frame: the floor band's live parts (both views: in 3D the boss roof's floor is drawn through this): the decoupled gap and the
+// tail stub (roof_mid), the gangway plate and the breathing gap before the last car (the boss roof)
+export function drawFloor(R, S, M) {
+  const { plot, cam } = R, T = TC;
+  const voidCol = (x, d) => d < 20 ? T.void : d < 24 ? T.ballast : (((x + Math.floor(S.sc)) % 8 + 8) % 8 < 3 ? T.sleeper : T.ballast);
+  const span = (x0, x1, f) => { for (let x = Math.max(Math.round(x0), cam.x - 2); x <= Math.min(Math.round(x1), cam.x + cam.vw + 2); x++) for (let d = 0; d < 40; d++) plot(x, GROUND + d, f(x, d)); };
+  if (S.grp === 4) { const sx = M.stubX(); span(D.CARB.x1 + 1, sx - 1, voidCol); span(sx, sx, () => T.out); }
+  if (S.grp === 8) {
+    if (S.plate) span(D.PLATE.x0, D.PLATE.x1, (x, d) => d === 0 ? T.steelL : d < 3 ? T.steelD : d < 20 ? T.void : voidCol(x, d));
+    else { const lx = D.VROOF.x1 + S.lgap; span(D.VROOF.x1 + 1, lx - 1, voidCol); span(lx, lx, () => T.out); }
+  }
+  void roofBand;
 }
