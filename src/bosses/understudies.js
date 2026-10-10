@@ -52,7 +52,7 @@ export function understudyThink(M, e, dt, px, dx, adx, level, aggro) {
     const K = KESSEL;
     if (e.hookCd <= 0 && adx > 40 && adx < K.hook.reach && free) { e.hookCd = G.bRand(K.hook.cd); G.bSpecial(e, 'hook', G.bTell(K.hook.windup), 'hook'); G.bark(e, K.lines.hook); G.emit('sfx', { name: 'chain_spin', x: e.x, vol: 0.7 }); return; }
     if (e.whipCd <= 0 && adx > 30 && adx < K.whip.reach) { e.whipCd = G.bRand(K.whip.cd); G.bSpecial(e, 'whip', G.bTell(K.whip.windup), 'whip'); return; }
-    if (adx > e.reach + 1) { const t = px - dir * e.reach * 0.7; e.tx = M.safeX(e, t); return; }
+    if (adx > e.reach + 1) { e.tx = px - dir * e.reach * 0.7; return; }
     e.face = dir;
     if (free && e.cdT <= 0) { const Cb = K.combos; e.combo = Cb[G.simRand() < 0.55 ? 0 : 1]; e.ci = 0; G.bStart(e, e.combo[0], G.bTell(e.windup), 'hook'); }
   }

@@ -300,7 +300,11 @@ export function installCrown(X) {
     for (const pg of S.pages) { pg.t += dt; pg.x += pg.vx * dt; pg.y += pg.vy * dt; pg.vy = Math.min(30, pg.vy + 40 * dt); pg.vx *= Math.exp(-0.5 * dt); } S.pages = S.pages.filter(p => p.t < 6);
     neroStep(dt, rdt);
   };
-  X.crownStep = dt => { gearsStep(dt); if (S.grp === 6 || S.pend) pendStep(dt); faceStep(dt); clockStep(dt); crewStep(dt); if (S.bell && S.bell.stuck > 0) S.bell.stuck -= dt; };
+  function offTooth(e) {   // a staggered Conductor left up on a tooth steps off it (he fights on the floor; the teeth are his ride)
+    const t = S.teeth.find(t => Math.abs(e.y + 2 - t.s.y) < 2 && e.x >= t.s.x0 - 1 && e.x <= t.s.x1 + 1); if (!t) return;
+    e.x = ctl.x < e.x ? t.s.x0 - 4 : t.s.x1 + 4; e.air = true;
+  }
+  X.crownStep = dt => { gearsStep(dt); if (S.bph === 1 && S.bell && !S.bell.dead && !S.bell.sp && !S.bell.air && S.bell.y < GROUND - 20 && (S.offT = (S.offT || 0) + dt) > 0.6) { S.offT = 0; offTooth(S.bell); } if (S.grp === 6 || S.pend) pendStep(dt); faceStep(dt); clockStep(dt); crewStep(dt); if (S.bell && S.bell.stuck > 0) S.bell.stuck -= dt; };
   X.arenaWall = () => {
     const A_ = G.enc.arena; if (!A_ || !S.bell || S.bell.dead || hero.mode !== 'anim') return;
     if (ctl.x < A_.x0 + 4) { ctl.x = A_.x0 + 4; ctl.spd = 0; } else if (ctl.x > A_.x1 - 4 && !G.flags.club) { ctl.x = A_.x1 - 4; ctl.spd = 0; }
@@ -342,6 +346,8 @@ export function installCrown(X) {
     }
     if (d && E.ph !== 'walk' && !d.hidden) G.dogStep(d, rdt);
   };
+  M.camZoom = () => S.end && S.end.ph !== 'card' ? 0.45 : null;   // the ending: a wide shot of the face, the hand, the edge
+  M.camAim = () => S.end && S.end.ph !== 'card' ? { x: 2680, y: 170 } : null;
   M.outro = async () => {
     if (S.end && (S.end.ph === 'scenes' || S.end.ph === 'card')) return;
     if (!S.end) S.end = { ph: 'scenes', t: 0, n: 12 }; S.end.ph = 'scenes';
@@ -375,7 +381,7 @@ export function installCrown(X) {
       'Made with JavaScript, canvas pixels and three.js', 'Every sprite and set painted in code', 'Comic panels and portraits made with ComfyUI', '', 'Thank you for playing.', '', '<i>Time moves on.</i>'];
     el.innerHTML = `<div style="position:absolute;left:0;right:0;top:100%;transition:transform 26s linear">${lines.map(l => `<div>${l || '&nbsp;'}</div>`).join('')}</div>`;
     host.appendChild(el);
-    const roll = el.firstChild; requestAnimationFrame(() => requestAnimationFrame(() => { roll.style.transform = `translateY(-${(roll.offsetHeight || 500) + host.clientHeight + 40}px)`; }));
+    const roll = el.firstChild; setTimeout(() => { roll.style.transform = `translateY(-${(roll.offsetHeight || 500) + host.clientHeight + 40}px)`; }, 60);
     const end = () => { if (!S.credits) return; S.credits = null; removeEventListener('keydown', onKey, true); el.remove(); G.quitToTitle(); };
     const onKey = ev => { if (ev.key === 'Enter' || ev.key === 'Escape' || ev.key === ' ') { ev.preventDefault(); ev.stopPropagation(); end(); } };
     addEventListener('keydown', onKey, true); el.addEventListener('click', end);
@@ -402,7 +408,8 @@ export function installCrown(X) {
   M.skipTo = where => {   // tests: jump to a beat with what came before done
     G.reset();
     const at = { lift: 1, snap: 1, garden: 2, kessel: 2, pent: 3, sweep: 3, vestry: 4, gears: 5, pend: 6, face: 7, last: 7 }[where] || 0;
-    if (where === 'lys') { X.restoreSet(0); for (const id of ['l1', 'l2a', 'l2b']) S.w[id] = { out: true, n: 0, reinf: true }; G.killAll && G.killAll(); G.heroTo(380); return; }
+    S.queue.length = 0; G.enemies.length = 0; for (const k in G.zoneAlive) G.zoneAlive[k] = 0;   // (the lobby's first goons go)
+    if (where === 'lys') { for (const id of ['l1', 'l2a', 'l2b']) S.w[id] = { out: true, n: 0, reinf: true }; G.heroTo(380); return; }
     X.restoreSet(Math.min(at, 4));
     if (at === 1) { G.heroTo(660); S.grp = 1; X.arriveLift(true); if (where === 'snap') { for (const id of ['e1', 'e2', 'e3']) S.w[id] = { out: true, n: 0, reinf: true }; for (const e of G.enemies) e.dead = true; G.enemies.length = 0; G.zoneAlive.e1 = 0; S.lift.st = 'up72'; S.lift.floor = 70; } return; }
     if (at === 2) { G.heroTo(860); S.grp = 2; X.arriveGarden(true); if (where === 'kessel') { S.w.g1 = { out: true, n: 0, reinf: true }; S.w.g2 = { out: true, n: 0, reinf: true }; G.heroTo(1180); } return; }

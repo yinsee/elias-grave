@@ -6647,7 +6647,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     return 0.4 - 0.15 * run;
   }
   function updateCamera(rdt) {
-    const punch = finCam.t > 0, want = punch ? 1 : zoomMode === 'auto' ? autoZoom() : zoomMode;   // a finisher: the camera punches in close
+    const punch = finCam.t > 0, want = punch ? 1 : (LVH.camZoom && LVH.camZoom()) || (zoomMode === 'auto' ? autoZoom() : zoomMode);   // (a level's own shot: the Spire's ending)   // a finisher: the camera punches in close
     // the zoom glides: out over about a second, back in a little slower so it never pumps (it eases on the scale, so 100 -> 25 % feels even)
     const cx0 = cam.xf + cam.vw / 2, cy0 = cam.yf + cam.vh / 2;   // zoom about the view centre
     if (bossBeat > 0) bossBeat -= rdt;
@@ -6670,6 +6670,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (bossBeat > 0 && enc.boss && !enc.boss.dead) tx = enc.boss.x * 0.7 + P[2].x * 0.3;   // the phase change: on the boss
     ty = bx.y1 - bx.y0 <= cam.vh - 10 ? clamp(ty, bx.y1 - cam.vh / 2 + 5, bx.y0 + cam.vh / 2 - 5) : (bx.y0 + bx.y1) / 2;
     if (punch) { tx = finCam.x; ty = finCam.y; }
+    if (LVH.camAim) { const a = LVH.camAim(); if (a) { tx = a.x; ty = a.y; } }   // (a level's own framing: the Spire's ending)
     let cx = smoothDamp(cx0, tx, cam.v, 'x', punch ? 0.08 : 0.32, rdt), cy = smoothDamp(cy0, ty, cam.v, 'y', punch ? 0.08 : 0.4, rdt);
     cam.xf = cx - cam.vw / 2; cam.yf = cy - cam.vh / 2;
     let lo = flags.club ? CLUB_X : 0, hi = flags.club ? W - cam.vw : Math.min(W, CLUB_X) - cam.vw;

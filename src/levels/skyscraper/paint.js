@@ -35,8 +35,9 @@ export function paint(api) {
   const storm = (x, y, top = 0) => { const n = noise2(x >> 3, y >> 3) * 0.6 + noise2(x >> 4, y >> 2) * 0.4; return n > 0.72 ? SC.cloudL : n > 0.5 ? SC.cloud : mix(SC.sky0, SC.sky1, Math.min(1, (y - top) / 200)); };
   const cityFar = (x, y, y0) => {   // the city far below: a dark grid with lit windows and street lamps
     if (y < y0) return null;
-    const gx = x % 9, gy = (y - y0) % 7; if (gx === 0 || gy === 0) return noise2(x >> 2, y) < 0.15 ? SC.cityL : SC.city;
-    return noise2(x, y) < 0.08 ? (noise2(x + 1, y) < 0.5 ? SC.cityL : SC.cityC) : mix(SC.city, SC.sky0, 0.3);
+    const gx = x % 11, gy = (y - y0) % 9, far = Math.max(0, 1 - (y - y0) / 60) * 0.5;   // (a haze over the near rows)
+    if (gx === 0 || gy === 0) return noise2(x >> 2, y) < 0.03 ? mix(SC.cityL, SC.sky0, 0.4 + far) : mix(SC.city, SC.sky1, far);
+    return noise2(x, y) < 0.025 ? mix(noise2(x + 1, y) < 0.6 ? SC.cityL : SC.cityC, SC.sky0, 0.35 + far) : mix(SC.city, SC.sky0, 0.45 + far * 0.5);
   };
 
   for (let x = 0; x < W; x++) for (let y = 0; y < GROUND; y++) {

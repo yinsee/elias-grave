@@ -360,7 +360,7 @@ export function createSpire(G) {
     if (S.coyote > 0) S.coyote -= dt;
     if (!S.fall && !G.endPh) {
       const onGround = hero.mode === 'anim' && !ctl.air && ctl.surf === G.GROUND_S;
-      if (hero.mode === 'anim' && onGround && inVoid(ctl.x, V)) {
+      if (hero.mode === 'anim' && onGround && inVoid(ctl.x, V) && !S.pull) {   // (a hook's pull drags him across; where it leaves him counts)
         if (!inVoid(S.prevX, V) && S.coyote <= 0 && !S.landing) { ctl.x = S.prevX; ctl.spd = 0; }   // the edge: he stops (a teeter)
         else if (S.coyote <= 0) fallHero();
       }
@@ -371,7 +371,7 @@ export function createSpire(G) {
     for (const e of G.enemies) {
       if (e.fell || e.type === 'boss' && !e.dead) { if (e.type === 'boss' && !e.dead && !e.air && inVoid(e.x, V)) e.x = e.ppx ?? e.x; continue; }
       const bx = e.dead ? (e.pts ? e.pts[2].x : e.x) : e.x, by = e.dead ? (e.pts ? e.pts[2].y : e.y) : e.y;
-      if (!inVoid(bx, V) || by < GROUND - 14) continue;
+      if (!inVoid(bx, V) || by < GROUND - 14 || G.floorBelow(bx, by - 1, 0) !== G.GROUND_S) continue;   // (on the beam, a tooth or a ledge: no drop)
       if (!e.dead && !e.down && e.hurtT <= 0 && !e.air) { e.x = e.ppx ?? e.x; if (e.vx) e.vx = 0; continue; }
       makeFaller(e);
     }
@@ -496,8 +496,8 @@ export function createSpire(G) {
     add(1384, GROUND - 40, 80, 1.1, 0.9, 0.6, 10, 2); add(1500, 60, 140, 0.8, 0.85, 1.0, 10, 2);
     add(1780, 200, 90, 1.2, 0.75, 0.4, 15, 3);
     add(2000, 90, 200, 1.1, 0.7, 0.3, 20, 2);
-    if (S.pend) add(S.pend.x, S.pend.y, 90, 1.3, 0.8, 0.4, 20, 4);
-    if (cam.x + cam.vw > 2436) { add(D.FACE.cx, D.FACE.cy, 180, 1.2, 0.9, 0.5, 20, 3); if (Math.floor(G.simTime * 1.5) % 2) add(D.FACE.cx, 6, 40, 1.6, 0.2, 0.2, 20, 2); }
+    if (S.pend) add(S.pend.x, S.pend.y, 90, 1.0, 0.7, 0.35, 6, 4);
+    if (cam.x + cam.vw > 2436) { add(D.FACE.cx, D.FACE.cy, 110, 0.7, 0.55, 0.3, 0, 3); if (Math.floor(G.simTime * 1.5) % 2) add(D.FACE.cx, 6, 40, 1.6, 0.2, 0.2, 20, 2); }
     if (X.extraLights) X.extraLights(add);
     add(G.P[2].x, G.P[2].y - 12, 40, 0.3, 0.3, 0.32, 0, 2);
     ls.sort((a, b) => b[7] - a[7] || Math.abs(a[0] + cam.x - cx) - Math.abs(b[0] + cam.x - cx));

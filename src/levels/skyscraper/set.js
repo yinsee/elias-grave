@@ -283,7 +283,7 @@ export function installSet(X) {
       p.vx *= Math.exp(-2.5 * dt); if (Math.abs(p.vx) < 2) { p.vx = 0; p.hit.clear(); }
       sfx('tuna_creak', p.x, 0.15, 0.5);
     }
-    const t = H.tileAt(p.x); if (t) H.tileHit(t, 5 * dt);
+    const t = H.tileAt(p.x); if (t && Math.abs(p.vx) > 1) H.tileHit(t, 5 * dt);   // (its weight tells on the glass as it rolls)
     if (S.tiles.some(t => t.broken && p.x >= t.x0 - 4 && p.x <= t.x1 + 4)) {   // its tile is gone: the piano goes through, with a last chord
       p.gone = true; H.dropSurf(p.surf); sfx('chandelier_crash', p.x, 1, 0.5); sfx('perc_kick', p.x, 1, 0.4);
       S.fallers.push({ x: p.x, y: GROUND, vx: 0, vy: 0, t: 0, cols: [C('#141216'), C('#141216'), C('#141216')] });
