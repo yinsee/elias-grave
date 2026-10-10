@@ -5099,7 +5099,13 @@ import * as SPIRE from './levels/skyscraper/index.js';
   let fallKeep = null;   // after a fall's retry: the second winds he has left (the level re-arriving at the same checkpoint does not refill them)
   function setCkpt(kind, i = 0, quiet) {
     const same = !!ckpt && ckpt.lv === LV.id && ckpt.kind === kind && ckpt.i === i;
-    ckpt = { lv: LV.id, kind, i, w: hero.weapon, ch: charge.slice(), taken: pickups.map(k => k.taken) };
+    // first arrival at a section or boss checkpoint: HP up to DIF().ckHp (he does not walk into a boss with 3 HP); a phase checkpoint
+    // (a boss's, i > 0) does not heal him mid-fight, but its retry gives him the same floor. hp = what a retry from here gives: the HP
+    // he arrived with, never more (dying never pays better than arriving)
+    const phase = kind === 'boss' && i > 0, floor = DIF().ckHp || 0;
+    if (!same && kind !== 'start' && !phase) hero.hp = Math.max(hero.hp, floor);
+    const hp = same ? ckpt.hp : kind === 'start' ? 100 : Math.max(1, Math.round(hero.hp), phase ? floor : 0);
+    ckpt = { lv: LV.id, kind, i, w: hero.weapon, ch: charge.slice(), taken: pickups.map(k => k.taken), hp };
     hero.wind = DIF().wind;
     if (fallKeep != null && same) hero.wind = Math.min(hero.wind, fallKeep); else fallKeep = null;
     if (!quiet && !flags.demo && !flags.attract) toast('Checkpoint', DIF().perma ? 'Wicked: one life, no second wind' : `Second winds: ${hero.wind}`, true);
@@ -5137,7 +5143,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       if (boss) { enterClub(); slamDone = true; clubT = 1; fade = 0; fadeDir = 0; ckBoss = true; if (isP9()) bossDlg.on = bossDlg.done = true; }
       else heroTo(!isP9() ? ZONES[C.i].x0 + 20 : C.kind === 'wave' ? P9.WAVES[C.i].at - 60 : P9.MARKET.shutter[0] - 40);
     }
-    ckpt = C; hero.wind = DIF().wind; hero.hp = 100;
+    ckpt = C; hero.wind = DIF().wind; hero.hp = C.hp ?? 100;   // (the HP he had there: dying never gives more than arriving)
     toast('Retry', `From ${ckptName()} · second winds: ${hero.wind}`);
   }
   const retry = () => DIF().perma ? reset() : retryCkpt();
