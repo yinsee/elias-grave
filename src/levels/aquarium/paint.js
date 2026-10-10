@@ -10,6 +10,7 @@
 // R: { plot, line1, blendPlot, cam, t } (world coordinates); S: the level's run state (src/levels/aquarium/run.js)
 import { C } from '../../core/color.js';
 import * as D from './data.js';
+import { TEAGUE } from '../../bosses/teague.js';
 
 const GROUND = D.GROUND, H = 320, STREET = 14;
 
@@ -426,7 +427,7 @@ export function drawFx(R, S) {
     const hd = T.J[0], cx = Math.round(hd.x), cy = Math.round(hd.y), f = T.face, r = 6;
     for (let yy = -r - 1; yy <= r + 1; yy++) for (let xx = -r - 1; xx <= r + 1; xx++) { const d = Math.hypot(xx, yy); if (d <= r + 0.5) plot(cx + xx, cy + yy, d > r - 0.6 ? AC.brassD : (xx * f > 1 && Math.hypot(xx - f * 2.5, yy) < 3.4) ? (S.plate.broken ? C('#1a1a20') : C('#6aa0b8')) : yy < -2 ? AC.brassL : AC.brass); }
     for (const k of [-1, 0, 1]) plot(cx + f * 2 + k, cy + r + 1, AC.brassD);
-    if (!S.plate.broken) { const st = S.plate.hp < 27 ? 3 : S.plate.hp < 54 ? 2 : S.plate.hp < 80 ? 1 : 0; for (let i = 0; i < st * 2; i++) plot(cx + f * (1 + (i % 3)), cy - 2 + i, AC.crack); }
+    if (!S.plate.broken) { const pk = S.plate.hp / TEAGUE.plate.hp, st = pk < 1 / 3 ? 3 : pk < 2 / 3 ? 2 : pk < 1 ? 1 : 0; for (let i = 0; i < st * 2; i++) plot(cx + f * (1 + (i % 3)), cy - 2 + i, AC.crack); }
     else if (S.plate.spill > 0) for (let i = 0; i < 4; i++) { const ph = (t * 3 + i * 0.25) % 1; blendPlot(Math.round(cx + f * (3 + ph * 4)), Math.round(cy + ph * 18), 180, 220, 245, 0.8); }
   }
   // the hero's breath under water: bubbles from his mouth

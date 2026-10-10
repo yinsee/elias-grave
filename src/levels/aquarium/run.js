@@ -744,7 +744,7 @@ export function createAquarium(G) {
       } else if (!S.said.has('plate')) say('plate', 'The faceplate', 'Head blows, shots and throws crack the glass; low blows always land', true);
       return null;
     }
-    return Math.max(1, Math.round(dmg * TEAGUE.plate.bodyK));
+    return Math.max(1, Math.round(dmg * TEAGUE.plate.bodyK[dif()]));
   };
 
   // ---------------- the shark tunnel (Kalt's arena) ----------------
