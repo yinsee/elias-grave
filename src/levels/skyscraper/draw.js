@@ -73,7 +73,12 @@ export function drawWorld(R, S) {
       plot(x, y, (x + y * 2) % 23 === 0 ? SC.mirrorL : y < p.y0 + 6 ? mix(SC.mirror, SC.mirrorL, 0.4) : SC.mirror);
     }
     if (p.broken) continue;
-    for (const f of S.reflect || []) if (f.x >= p.x0 - 2 && f.x <= p.x1 + 2) for (let y = Math.round(f.y - f.h); y <= Math.min(p.y1, Math.round(f.y)); y++) for (let dx = -2; dx <= 2; dx++) { const x = Math.round(f.x) + dx; if (x >= p.x0 && x <= p.x1 && y >= p.y0) plot(x, y, Math.abs(dx) === 2 ? SC.mirrorD : f.c); }
+    const cx = cam.x + cam.vw / 2;
+    for (const f of S.reflect || []) {   // a reflection sits a little smaller and higher, and slides with the view (a mirror at the back)
+      const rx = Math.round(f.x + (f.x - cx) * 0.25), ry = Math.round(f.y - 6), rh = Math.round(f.h * 0.82);
+      if (rx < p.x0 - 3 || rx > p.x1 + 3) continue;
+      for (let y = ry - rh; y <= Math.min(p.y1, ry); y++) { const w = y < ry - rh + 5 ? 1 : 2; for (let dx = -w; dx <= w; dx++) { const x = rx + dx; if (x >= p.x0 && x <= p.x1 && y >= p.y0) plot(x, y, Math.abs(dx) === w ? SC.mirrorD : f.c); } }
+    }
     for (const c of p.cracks) { line1(c.x, c.y, c.x + c.dx * 6, c.y + Math.round(c.dy * 8), SC.white); line1(c.x, c.y, c.x - c.dx * 4, c.y - 5, SC.whiteD); }
     if (p.ripple > 0) for (let y = p.y0; y <= p.y1; y += 3) plot(p.x0 + Math.floor((y + t * 60) % (p.x1 - p.x0 + 1)), y, SC.white);
   }

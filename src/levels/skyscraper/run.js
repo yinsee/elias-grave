@@ -559,8 +559,8 @@ export function createSpire(G) {
     // reflections: everyone in front of a mirror shows in it (Lys never does)
     S.reflect.length = 0;
     if (S.grp === 0) {
-      S.reflect.push({ x: ctl.x, y: ctl.y, h: 34, c: 0xff3a3020 });
-      for (const e of G.enemies) if (!e.dead && e.kind !== 'lys') S.reflect.push({ x: e.x, y: e.y, h: 34 * (e.s || 1), c: e.decoy ? 0xffd8d0c8 : 0xff2a2626 });
+      S.reflect.push({ x: ctl.x, y: ctl.y, h: 34, c: 0xff504840 });
+      for (const e of G.enemies) if (!e.dead && e.kind !== 'lys') S.reflect.push({ x: e.x, y: e.y, h: 34 * (e.s || 1), c: e.decoy ? 0xffe0dcd8 : 0xff4a4644 });
     }
   };
 
