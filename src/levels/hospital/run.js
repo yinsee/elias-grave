@@ -30,7 +30,7 @@ export function createHospital(G) {
   const allDown = id => S.w[id].out && !alive(id) && !queued(id);
   const aliveN = f => G.enemies.filter(e => !e.dead && f(e)).length;
   const say = (key, title, sub, soft = true) => { if (S.said.has(key)) return; S.said.add(key); G.toast(title, sub, soft); };
-  const pa = (line) => G.toast('KRIEG (PA)', `"${line}"`, true);
+  const pa = (line, hard) => G.toast('KRIEG (PA)', `"${line}"`, !hard);   // (hard: it waits its turn behind the bark)
   const timers = [];
   G.bus.on('shot', p => { if (p && p.by === 'hero') S.shotAt = G.simTime; });   // (a shot starts the gurney ride too)
   const later = (fn, t) => timers.push({ fn, t });
@@ -70,13 +70,13 @@ export function createHospital(G) {
     for (const k of G.pickups) k.hidden = k.hide0 || null;
     for (const it of D.ITEMS) if (it.band || it.ammo) G.ammoBoxes.push({ band: !!it.band, x: it.x, y: it.y - 4, vx: 0, vy: 0, life: 1e6, placed: true });
     for (const o of G.objs) if (o.kind === 'barrel') o.oxy = true;
-    S.gurney.surf = { x0: 0, x1: 0, y: D.GURNEY.top, box: true }; G.SURF.push(S.gurney.surf); syncGurney();
+    S.gurney.surf = { x0: 0, x1: 0, y: D.GURNEY.top }; G.SURF.push(S.gurney.surf); syncGurney();   // (not a crate: its top is 24 px up, past a jump, so a held ↑ climbs onto it)
     G.dog = G.makeDog(D.NERO.x, 1); G.dog.st = 'sit';
     G.rain.k = G.rain.goal = 0.7; G.rain.drops.length = 0; G.rain.flash = 0;
     G.heroTo(250); ctl.face = -1; S.prevX = ctl.x;
     if (fadeEl) fadeEl.style.opacity = 0;
     hud();
-    setObjective('Room 314', 'Take the torch from the nurse station');
+    S.way = null; wayStep(0);
   };
   function dropSurfs() {   // the movers' tops are surfaces in the game's list while they exist
     const rm = s => { if (!s) return; const i = G.SURF.indexOf(s); if (i >= 0) G.SURF.splice(i, 1); };
@@ -90,6 +90,7 @@ export function createHospital(G) {
     const html = `<span class="stage-n">${LV_N}</span><h2>${h}</h2>${sub ? `<div class="next">${sub}</div>` : ''}`;
     if (S.obj !== html) { S.obj = html; G.dom.tut.innerHTML = html; }
   }
+  // the defend HUD (under the boss bar): Mags's hearts, labelled, and what the bar means now (the time before they reach her bed, or the needle)
   function hud() {
     const el = G.dom.countdown; if (!el) return;
     const Df = S.def, on = !!(Df && Df.ph !== 'done') && !G.endPh;
@@ -97,11 +98,87 @@ export function createHospital(G) {
     if (!on) return;
     const max = D.DEFEND.hearts[dif()], h = Math.max(0, S.hearts), hearts = '♥'.repeat(h) + '♡'.repeat(Math.max(0, max - h));
     const warn = Df.ph === 'warn', k = warn ? Df.t / Df.max : S.injK;
-    const txt = warn ? `MAGS ${hearts} · ${Math.max(0, Math.ceil(Df.t))}s` : `MAGS ${hearts}`;
+    let what;
+    if (warn) what = `THEY COME IN ${Math.max(0, Math.ceil(Df.t))}s`;
+    else if (S.heartT > 0) what = 'A HEART LOST';
+    else if (S.injK > 0) what = 'NEEDLE! HIT HIM';
+    else what = `${defLeft()} LEFT`;
+    const txt = `MAGS ${hearts} · ${what}`;
     if (el.firstChild.textContent !== txt) el.firstChild.textContent = txt;
     el.lastChild.firstChild.style.width = (clamp(k, 0, 1) * 100).toFixed(1) + '%';
-    el.classList.toggle('low', warn ? Df.t < 5 : S.injK > 0.4);
+    el.classList.toggle('low', warn ? Df.t < 5 : S.injK > 0 || S.heartT > 0);
   }
+  const defLeft = () => { const Df = S.def; if (!Df) return 0; const later_ = Df.subs.slice(Df.si).reduce((n, id) => n + ((D.WAVES[id].roster || [])[dif()] || []).length, 0); return Df.subs.reduce((n, id) => n + alive(id), 0) + S.queue.filter(q => Df.subs.includes(q.wave)).length + later_; };
+
+  // ---------------- the way on: one answer to "where now?" for the objective line, the edge arrow, Nero's lead and the door lamps ----------------
+  const side = x => Math.abs(x - ctl.x) < 11 ? 'here' : x < ctl.x ? '←' : '→';   // (here: he is at it; ↑ uses it)
+  // the stair door back to Ward 3 on the floor he is on (the wing, the morgue, the ER); null in the ward itself
+  const backDoor = () => { const id = secAt(ctl.x).id; return id === 'iso' ? D.ISO_STAIR : id === 'morgue' ? D.MORGUE_STAIR : id === 'er' || id === 'bay' ? D.ER_STAIR : null; };
+  function route() {
+    const sec = secAt(ctl.x).id, inWard = sec === 'ward', Df = S.def && S.def.ph !== 'done' ? S.def : null;
+    const go = (h, sub, x, label) => ({ h, sub, goal: x == null ? null : { x, label } });
+    const inWardTo = (h, sub, x, label) => sec === 'iso' ? go('The isolation wing', `Back to Ward 3 ${side(D.EAST_DOOR)}`, D.EAST_DOOR - 6, 'WARD 3') : go(h, sub, x, label);
+    if (G.flags.club) return go('The helipad', G.enc.boss && !G.enc.boss.dead ? `Beat ${KRIEG.name}` : 'The storm', null);
+    if (Df) {
+      const bd = backDoor(), t = Math.max(0, Math.ceil(Df.t));
+      if (Df.ph === 'warn') return bd == null ? go('Nero is barking', `Stand by Mags's bed ${side(D.BED.x)} · they come in ${t} s`, D.BED.x, 'MAGS')
+        : go('Nero is barking', `Back to Mags: the stair door ${side(bd)} · ${t} s`, bd, 'STAIR DOOR');
+      return bd == null ? go('Defend Mags', `Hit anyone at her bed · ${defLeft()} left`, D.BED.x, 'MAGS') : go('Defend Mags', `They are at her bed! The stair door ${side(bd)}`, bd, 'STAIR DOOR');
+    }
+    if (!S.torch) return go('Room 314', `Take the torch from the nurse station ${side(D.TORCH_X)}`, D.TORCH_X, 'TORCH');
+    if (!S.d1done) return go('Room 314', 'Stay by her bed: someone is coming', D.BED.x, 'MAGS');
+    if (!S.w.w3.out) return go('Ward 3', `The closed wing: the east door ${side(D.EAST_DOOR + 12)}`, D.EAST_DOOR + 12, 'CLOSED WING');
+    if (!allDown('w3') || !allDown('w3b')) return go('The isolation wing', 'Dark. Wait for the glint before a blow.', null);
+    if (!S.w4) return go('The isolation wing', `On down the wing ${side(700)}`, 700, 'ON');
+    if (!allDown('w4')) return go('The fishbowl', 'Figures behind the glass. Break a pane to bring one out.', null);
+    if (S.gurney.st === 'park' && !paneById('ward5').broken) return go('Ward 5', `Climb on the gurney ${side(D.GURNEY.x)} (hold ↑), then attack: ride it through the glass`, D.GURNEY.x, 'GURNEY');
+    if (!S.d2done) return go('Ward 5', 'Clear the room', null);
+    if (!S.shaftUsed) return sec === 'ward' ? go('Ward 3', `Back to the wing: the stair door ${side(D.WARD_STAIR)}`, D.WARD_STAIR, 'STAIR DOOR')
+      : go('The isolation wing', `The dead lift ${side(D.SHAFT)} · ↑ by it to pry it open`, D.SHAFT, 'DEAD LIFT');
+    if (!S.porterDone) return S.porter && !S.porter.dead ? go('B1 · The generator hall', `Beat ${PORTER.name}`, null)
+      : go('B1 · The morgue', `Find the generator ${side(D.GENERATOR.x1)}`, D.GENERATOR.x1, 'GENERATOR');
+    if (S.leverArmed) return go('B1 · The generator', `Pull the lever ${side(D.LEVER)} (↑ or a blow by it)`, D.LEVER, 'LEVER');
+    if (!S.d3done) return go('B1 · The generator', S.power ? 'The lights are back' : 'It coughs...', null);
+    if (S.phone === 'ring') return inWardTo('Ward 3', `The payphone ${side(D.PAYPHONE)} is ringing · ↑ by it`, D.PAYPHONE, 'PAYPHONE');
+    if (S.grp < 2 && !S.w.w11a.out) return inWardTo('Ward 3', `Down to the ER: the stair door ${side(D.WARD_STAIR)}`, D.WARD_STAIR, 'STAIR DOOR');
+    if (S.grp === 2 && !S.liftOpen) return S.w.w11b.out ? go('The ambulance bay', 'They come out of the ambulance', null) : go('The ER', `Hold the ground floor · the bay ${side(D.SLIDE)}`, null);
+    if (S.grp === 2) return go('The ambulance bay', `The trauma lift ${side(D.LIFT)} · ↑ by it`, D.LIFT, 'LIFT');
+    if (S.grp === 3) {
+      if (!S.introPlayed) return go('Theatre 1', `Up to the observation gallery ${side(D.GALLERY.x0 + 50)} (hold ↑ to climb)`, D.GALLERY.x0 + 50, 'GALLERY');
+      if (S.roofOpen) return go('Theatre 1', `After him: the roof stair door ${side(D.ROOF_STAIR)}`, D.ROOF_STAIR, 'ROOF');
+      return go('Theatre 1', `Beat ${KRIEG.name}`, null);
+    }
+    return null;
+  }
+  // the edge arrow: a small HUD pointer at the side of the screen while the goal is off it (never over anyone)
+  const arrowEl = (() => {
+    if (typeof document === 'undefined') return null;
+    const el = document.createElement('div'); el.className = 'hospital-way'; el.hidden = true;
+    el.style.cssText = 'position:absolute;top:46%;padding:3px 6px;font:500 12px/1 var(--mono,monospace);letter-spacing:.08em;color:#9effb0;background:rgba(0,0,0,.45);border:1px solid rgba(120,255,150,.5);pointer-events:none;z-index:5;text-shadow:0 1px 0 #000';
+    const host = (G.dom.card && G.dom.card.parentElement) || document.body; host.appendChild(el); return el;
+  })();
+  function wayStep(dt) {
+    const r = route(); S.way = r;
+    if (r) setObjective(r.h, r.sub);
+    // the arrow: only while the goal is off screen, in play
+    const g = r && r.goal, cam = G.cam, play = hero.mode === 'anim' && !S.fade && !G.endPh && !G.sceneOn;
+    const off = g && play ? (g.x < cam.x + 6 ? -1 : g.x > cam.x + cam.vw - 6 ? 1 : 0) : 0;
+    if (arrowEl) {
+      if (arrowEl.hidden === !!off) arrowEl.hidden = !off;
+      if (off) {
+        const txt = off < 0 ? `◀ ${g.label}` : `${g.label} ▶`; if (arrowEl.textContent !== txt) arrowEl.textContent = txt;
+        arrowEl.style.left = off < 0 ? '10px' : ''; arrowEl.style.right = off > 0 ? '10px' : '';
+        arrowEl.style.opacity = (0.65 + 0.35 * Math.sin(G.simTime * 6)).toFixed(2);
+        clearTimeout(S.arrowTO); S.arrowTO = setTimeout(() => { arrowEl.hidden = true; }, 2000);   // (it goes when the level stops ticking: a menu, another level)
+      }
+    }
+    // Nero leads to a door of the ward (he trots to it and barks at it), then goes back to her bed
+    const lead = g && !(S.def && S.def.ph !== 'done') && secAt(ctl.x).id === 'ward' && g.x < 396 && g.label !== 'MAGS' && g.label !== 'TORCH' && Math.abs(ctl.x - g.x) > 30;
+    S.lead = lead ? clamp(g.x + (g.x < D.NERO.x ? 16 : -16), 20, 380) : null;
+    // the door lamps: green where a door goes somewhere now (bright and blinking on the way on), red where it is shut
+    S.lamps = DOORS.filter(d => d.lamp).map(d => ({ x: d.x, ok: !!(d.lampOk || d.ok)(), way: !!(g && Math.abs(g.x - d.x) < 12) }));
+  }
+  M.way = () => S.way;   // (tests)
 
   // ---------------- waves ----------------
   function startWave(id) {
@@ -243,19 +320,20 @@ export function createHospital(G) {
 
   // ---------------- stair doors, the shaft, the lift, the payphone (↑ by one) ----------------
   const DOORS = [
-    { id: 'wardStair', x: D.WARD_STAIR, ok: () => !!S.route, no: 'The stairwell. Nowhere to go yet.', go: () => teleport(S.route === 'iso' ? D.ISO_STAIR - 14 : S.route === 'morgue' ? D.MORGUE_STAIR + 14 : D.ER_STAIR + 14, S.route === 'er' ? arriveER : null) },
-    { id: 'isoStair', x: D.ISO_STAIR, ok: () => true, go: () => teleport(40) },
-    { id: 'shaft', x: D.SHAFT, ok: () => S.d2done, no: 'The dead lift. Not now: Nero is uneasy.', go: () => pry() },
-    { id: 'morgueStair', x: D.MORGUE_STAIR, ok: () => S.shaftUsed, go: () => teleport(40) },
-    { id: 'erStair', x: D.ER_STAIR, ok: () => true, go: () => teleport(40) },
-    { id: 'lift', x: D.LIFT, ok: () => S.liftOpen, no: 'The trauma lift is dead while they hold the bay.', go: () => teleport(D.LIFT_OUT, arriveTheatre) },
+    { id: 'wardStair', x: D.WARD_STAIR, lamp: 1, ok: () => !!S.route, no: 'The stairwell. Nowhere to go yet.', go: () => teleport(S.route === 'iso' ? D.ISO_STAIR - 14 : S.route === 'morgue' ? D.MORGUE_STAIR + 14 : D.ER_STAIR + 14, S.route === 'er' ? arriveER : null) },
+    { id: 'isoStair', x: D.ISO_STAIR, lamp: 1, ok: () => true, go: () => teleport(40) },
+    { id: 'shaft', x: D.SHAFT, lamp: 1, ok: () => S.d2done, no: 'The dead lift. Not now: Nero is uneasy.', go: () => pry() },
+    { id: 'morgueStair', x: D.MORGUE_STAIR, lamp: 1, ok: () => S.shaftUsed, go: () => teleport(40) },
+    { id: 'erStair', x: D.ER_STAIR, lamp: 1, ok: () => true, go: () => teleport(40) },
+    { id: 'lift', x: D.LIFT, lamp: 1, ok: () => S.liftOpen, no: 'The trauma lift is dead while they hold the bay.', go: () => teleport(D.LIFT_OUT, arriveTheatre) },
     { id: 'phone', x: D.PAYPHONE, ok: () => S.phone === 'ring', go: () => answerPhone() },
     { id: 'lever', x: D.LEVER, ok: () => S.leverArmed, go: () => pullLever() },
+    { id: 'roofStair', x: D.ROOF_STAIR, lamp: 1, ok: () => false, lampOk: () => S.roofOpen, go: () => {} },   // (the roof: he walks through once Krieg has run; a lamp only)
     { id: 'breaker', x: D.BREAKER.x, ok: () => S.breakerDown && S.breakerCd <= 0, go: () => throwBreaker() },
   ];
   M.up = () => {   // ↑ on the ground by a door: through it (true = used, no jump)
     if (hero.mode !== 'anim' || ctl.air || ctl.surf !== G.GROUND_S || S.fade || S.dive || G.flags.club) return false;
-    const dd = DOORS.find(d => Math.abs(ctl.x - d.x) < 11);
+    const near = DOORS.filter(d => Math.abs(ctl.x - d.x) < 11), dd = near.find(d => d.ok()) || near[0];   // (the lever stands by the morgue's stair door)
     if (!dd) return false;
     if (!dd.ok()) { if (dd.no && (S.noT || 0) < G.simTime) { S.noT = G.simTime + 3; G.toast(dd.no, '', true); } return false; }
     dd.go(); return true;
@@ -282,35 +360,47 @@ export function createHospital(G) {
     G.lockT = Math.max(G.lockT, 1.1); hero.invT = Math.max(hero.invT, 1.2); sfx('hook_clank', D.SHAFT, 0.8, 0.6);
     for (let k = 0; k < 6; k++) G.sparks.push({ x: D.SHAFT + (G.simRand() - 0.5) * 6, y: GROUND - 30 - G.simRand() * 20, t: 0 });
     say('pry', 'The shaft', 'He pries the doors and drops into the dark', true);
-    later(() => { teleport(D.SHAFT_LAND); S.fade.drop = true; S.fade.after = () => { S.shaftUsed = true; sfx('body_fall', D.SHAFT_LAND, 0.9, 0.7); G.shakeIt(0.2, 2); setObjective('B1 · The morgue', 'Find the generator'); }; }, 0.9);
+    later(() => { teleport(D.SHAFT_LAND); S.fade.drop = true; S.fade.after = () => { S.shaftUsed = true; sfx('body_fall', D.SHAFT_LAND, 0.9, 0.7); G.shakeIt(0.2, 2); }; }, 0.9);
   }
   function answerPhone() {
     S.phone = 'done'; sfx('ui_confirm', D.PAYPHONE, 0.6);
-    if (!G.flags.demo) G.playScene('dialog', 'hale_call').then(() => { setObjective('Ward 3', 'The ER · the stair door ←'); });
+    if (!G.flags.demo) G.playScene('dialog', 'hale_call');
   }
   function arriveER() { S.grp = 2; if (S.erT < 0 && !S.w.w11a.out) S.erT = 1.5; if (!G.flags.demo && !S.w.w11a.out) G.setCkpt('h:er', 0); G.setMusic('docks_explore', 0.55); }
   function arriveTheatre(quiet) {
-    S.grp = 3; S.clockT = 1.2; sfx('bell_ting', D.CLOCK.x, 0.9); setObjective('Theatre 1', 'Up to the observation gallery');
+    S.grp = 3; S.clockT = 1.2; sfx('bell_ting', D.CLOCK.x, 0.9);
     if (!S.kr && !S.krGone) spawnKrieg();
     if (!G.flags.demo) G.setCkpt('h:theatre', 0, !!quiet);
     G.setMusic('docks_explore', 0.3);
   }
 
   // ---------------- the defends: Mags's bed, Nero, the bark ----------------
+  // each defend is one clear event: the bark (where to go, how long), the alarm as they come, the needle at the bed, a heart lost, the end
   function defendStart(id) {
     const subs = id === 'd3' ? ['d3a', 'd3b', 'd3c'] : [id], warn = id === 'd1' ? 0 : D.DEFEND.warn[id][dif()];
-    S.def = { id, ph: warn ? 'warn' : 'fight', t: warn, max: warn || 1, subs, si: 0, subT: 0 };
-    S.hearts = D.DEFEND.hearts[dif()];
+    S.def = { id, ph: warn ? 'warn' : 'fight', t: warn, max: warn || 1, subs, si: 0, subT: 0, n0: 0 };
+    S.hearts = D.DEFEND.hearts[dif()]; S.heartT = 0;
     if (warn) {
-      S.nero.barkN = 3; S.nero.barkT = 0;
-      say('bark', 'Nero is barking', 'They are going for Mags. ↑ at a red EXIT door: back to Room 314.', false);
-    } else { S.def.si = 1; startWave(subs[0]); }
-    say('defend', 'Defend Mags', 'An Orderly at her bed injects her: hit him to stop it. Nero holds one at a time.', true);
+      S.nero.barkN = 3; S.nero.barkT = 0; sfx('alarm_bell', ctl.x, 0.6);
+      const bd = backDoor();
+      G.toast('Nero is barking', `They are coming for Mags's bed in ${warn} s. Back to Ward 3: the stair door ${bd != null ? side(bd) : ''} (the green light)`, false);
+    } else {
+      S.def.si = 1; startWave(subs[0]); sfx('alarm_bell', D.BED.x, 0.7);
+      G.toast('Defend Mags', "They are coming for her bed. Hit anyone at the bed: it stops the needle.", false);
+    }
     G.setMusic('boss_marchetti', 0.45);
   }
   function defTick(dt) {
     const Df = S.def; if (!Df || Df.ph === 'done') return;
-    if (Df.ph === 'warn') { if ((Df.t -= dt) <= 0) { Df.ph = 'fight'; Df.si = 1; Df.subT = 0; startWave(Df.subs[0]); } return; }
+    if (S.heartT > 0) S.heartT -= dt;
+    if (Df.ph === 'warn') {
+      if ((Df.t -= dt) <= 0) {   // they are in the ward now: the alarm; where they are and what to do
+        Df.ph = 'fight'; Df.si = 1; Df.subT = 0; startWave(Df.subs[0]); sfx('alarm_bell', D.BED.x, 0.8);
+        if (grpAt(ctl.x) === 0 && secAt(ctl.x).id === 'ward') G.toast('Here they come', 'Hit anyone at her bed: it stops the needle', false);
+        else { const bd = backDoor(); G.toast('They are at her bed', `Back to Ward 3: the stair door ${bd != null ? side(bd) : ''}`, false); }
+      }
+      return;
+    }
     if (Df.si < Df.subs.length) {
       Df.subT += dt;
       const prev = Df.subs[Df.si - 1], left = alive(prev) + S.queue.filter(q => q.wave === prev).length;
@@ -323,22 +413,24 @@ export function createHospital(G) {
   }
   function defendDone(id) {
     S.injK = 0; hud();
-    G.setMusic('docks_explore', 0.4);
-    if (id === 'd1') { S.d1done = true; G.toast('Room 314 holds', 'The east door: the closed wing', true); setObjective('Ward 3', 'The closed isolation wing →'); }
-    if (id === 'd2') { S.d2done = true; S.route = 'iso'; G.toast('Back', 'The stair door takes you back to the wing', true); setObjective('Ward 3', 'Back to the wing · the dead lift'); }
+    G.setMusic('docks_explore', 0.4); sfx('heartbeat', D.MONITOR.x, 0.7, 1);
+    const next = { d1: `The closed wing: the east door ${side(D.EAST_DOOR + 12)}`, d2: `Back to the wing: the stair door ${side(D.WARD_STAIR)}, then the dead lift`, d3: `The payphone ${side(D.PAYPHONE)} is ringing` }[id];
+    G.toast('Mags is safe, for now', next, false);
+    if (id === 'd1') S.d1done = true;
+    if (id === 'd2') { S.d2done = true; S.route = 'iso'; }
     if (id === 'd3') {
       S.d3done = true; S.wardLit = true; S.route = 'er'; S.phone = 'ring';
       for (const it of [{ band: true, x: 300 }, { band: true, x: 330 }, { band: false, x: 280 }]) G.ammoBoxes.push({ band: it.band, x: it.x, y: GROUND - 8, vx: 0, vy: 0, life: 1e6, placed: true });
       S.items.push({ id: 'adren', x: 344, y: GROUND, taken: false });
-      later(() => G.toast('Mags', '"Elias... the cops... in the club..."', true), 1.5);
-      later(() => { sfx('bell_ting', D.PAYPHONE, 0.8, 1.6); say('phone', 'The payphone rings', '↑ by it to answer', true); }, 4);
-      setObjective('Ward 3', 'The payphone is ringing · then the ER');
+      sfx('bell_ting', D.PAYPHONE, 0.8, 1.6);
+      later(() => G.toast('Mags', '"Elias... the cops... in the club..."', true), 3);
+      later(() => { if (S.phone === 'ring') sfx('bell_ting', D.PAYPHONE, 0.8, 1.6); }, 4);
     }
   }
   function injectDone(e) {
-    S.hearts--; sfx('ui_blip', D.BED.x, 1, 0.5); G.shakeIt(0.1, 1);
+    S.hearts--; S.heartT = 1.2; sfx('ui_blip', D.BED.x, 1, 0.5); sfx('flatline', D.MONITOR.x, 0.35, 1.6); G.shakeIt(0.15, 2); S.flash = Math.max(S.flash, 0.3);
     e.slide += (Math.sign(e.x - D.BED.x) || 1) * D.DEFEND.push; e.inj = 0; e.cdT = Math.max(e.cdT, 1);
-    if (S.hearts > 0) G.toast('Mags is hurt', `${S.hearts} left: stop the injection`, true);
+    if (S.hearts > 0) G.toast('Mags is hurt', `${S.hearts} ${S.hearts > 1 ? 'hearts' : 'heart'} left. Hit the one at her bed.`, false);
     else defFail();
   }
   function defFail() {
@@ -360,6 +452,14 @@ export function createHospital(G) {
       G.dogStep(d, dt); return;
     }
     let tx = D.NERO.x, still = false, run = 1;
+    // the way on: he trots to the ward's next door and barks at it (S.lead, set by wayStep), then goes back to her bed
+    if (S.lead != null && !N.pin) {
+      tx = S.lead; run = 1.2;
+      if (Math.abs(d.x - tx) < 6 && (N.leadT = (N.leadT ?? 0) - dt) <= 0) { N.leadT = 2.4; sfx('nero_bark', d.x, 0.7); d.headDip = 2.5; }
+    } else N.leadT = 0.4;
+    // a needle at her bed: he barks at the one holding it
+    const ij = S.injE && !S.injE.dead && S.injE.inj > 0 ? S.injE : null;
+    if (ij && !N.pin && (N.injT = (N.injT ?? 0) - dt) <= 0) { N.injT = 0.8; sfx('nero_bark', d.x, 1, 1.1); d.headDip = 2.5; d.face = Math.sign(ij.x - d.x) || d.face; }
     if (!N.pin && N.cd <= 0) {
       const g = G.enemies.filter(e => !e.dead && !e.down && e.type === 'goon' && e.x > D.BED.x0 - 40 && e.x < D.NERO.hold + 80 && e.y > GROUND - 8 && grpAt(e.x) === 0)
         .sort((a, b) => Math.abs(a.x - D.BED.x) - Math.abs(b.x - D.BED.x))[0];
@@ -383,7 +483,7 @@ export function createHospital(G) {
     if (N.hp <= 0) { N.down = D.NERO.down; N.pin = null; sfx('nero_whine', d.x, 1); say('nerodown', 'Nero is down', 'He will get up. Mags has no guard now.', true); }
     const dx = tx - d.x;
     if (Math.abs(dx) > 4 && !still) { d.st = 'walk'; d.face = Math.sign(dx); const want = clamp(dx * 3, -95 * run, 95 * run); d.vx += (want - d.vx) * (1 - Math.exp(-7 * dt)); d.x += d.vx * dt; }
-    else { d.vx = 0; d.st = S.def && S.def.ph !== 'done' ? 'stand' : 'sit'; if (!still) d.face = S.def && S.def.ph !== 'done' ? 1 : -1; }
+    else { d.vx = 0; d.st = S.def && S.def.ph !== 'done' || S.lead != null ? 'stand' : 'sit'; if (!still) d.face = ij ? Math.sign(ij.x - d.x) || 1 : S.lead != null ? (S.lead < D.NERO.x ? -1 : 1) : S.def && S.def.ph !== 'done' ? 1 : -1; }
     d.wag = N.pin ? 0.3 : S.def && S.def.ph !== 'done' ? 0.2 : 0.8;
     G.dogStep(d, dt);
   }
@@ -420,6 +520,7 @@ export function createHospital(G) {
         if (!e.lootDone) { e.lootDone = true; if (e.hv === 'scalpel') for (let k = 0; k < 2; k++) { const o = G.makeObj('knife', e.x + (k - 0.5) * 8, GROUND - 4); o.vx = (G.simRand() - 0.5) * 60; o.vy = -60; o.safeT = 0.3; } else if (e.hv === 'orderly' && G.simRand() < 0.3) { const o = G.makeObj('can', e.x, GROUND - 4); o.vy = -50; o.safeT = 0.3; } }
         continue;
       }
+      e.armUp = !!(e.defend && e.inj > 0);   // the needle raised over her bed (the pose; drawFx adds the syringe)
       const V = e.S, dx = ctl.x - e.x, adx = Math.abs(dx), level = Math.abs(ctl.y - e.y) < 14, free = hero.mode === 'anim' && !ctl.air && !e.act && !e.down && e.hurtT <= 0 && !e.caged && !e.sp;
       // the Restrainer's strap: a 0.6 s reach, then the hold (mash Q, W or Space to break it)
       if (e.hv === 'restrainer') {
@@ -446,7 +547,7 @@ export function createHospital(G) {
       // a goon on a ledge comes down: a thrower after 3 throws or 8 s; anyone at once when the hero climbs up, or when hit
       if (e.perchS) {
         const s = e.perchS; e.perchT = (e.perchT || 0) + dt;
-        if ((ctl.surf === s && hero.mode === 'anim' && !ctl.air) || (e.thrN || 0) >= PERCH.throws || e.perchT > (e.R.ranged ? PERCH.time : PERCH.melee) || e.hurtT > 0 || e.down) { e.perchS = null; e.dropTo = ctl.x < (s.x0 + s.x1) / 2 ? s.x1 + 8 : s.x0 - 8; }
+        if ((ctl.surf === s && hero.mode === 'anim' && !ctl.air) || (e.thrN || 0) >= PERCH.throws || e.perchT > (e.R.ranged ? PERCH.time : PERCH.melee) || e.hurtT > 0 || e.down) { e.perchS = null; const dir = ctl.x < (s.x0 + s.x1) / 2 ? 1 : -1; let to = dir > 0 ? s.x1 + 8 : s.x0 - 8; for (let k = 0; k < 6 && G.floorBelow(to, s.y, 0).y < GROUND - 6; k++) to += dir * 8; e.dropTo = to; }   // (down to the floor: past a step beside the ledge, the walkway's cabinet)
         else if (!e.down && !e.air && Math.abs(e.y + 2 - s.y) < 3) e.x = clamp(e.x, s.x0 + 4, s.x1 - 4);
       }
       if (e.dropTo != null) { if (e.down || (!e.air && e.y > GROUND - 6)) e.dropTo = null; else { e.cdT = Math.max(e.cdT, 0.3); if (!e.act) { e.x += Math.sign(e.dropTo - e.x) * 80 * dt; e.face = Math.sign(e.dropTo - e.x) || e.face; } } }
@@ -643,8 +744,8 @@ export function createHospital(G) {
       if (b.shoveT > 0) b.shoveT -= dt;
       // the wind on the roof rolls the beds
       if (b.wind && S.wind && S.wind.on && !b.tipped) b.vx += S.wind.dir * 160 * dt, b.vx = clamp(b.vx, -KRIEG.wind.bed, KRIEG.wind.bed);
-      // the hero pushes a bed he walks into
-      if (hero.mode === 'anim' && !ctl.air && ctl.surf === G.GROUND_S && !b.tipped && Math.abs(ctl.x - b.x) < b.w / 2 + 5) {
+      // the hero pushes a bed he walks into (not once Krieg has run for the roof: the beds stand behind the lane, so the stair door stays open)
+      if (hero.mode === 'anim' && !ctl.air && ctl.surf === G.GROUND_S && !b.tipped && !S.krGone && !(S.kr && S.kr.sp === 'flee') && Math.abs(ctl.x - b.x) < b.w / 2 + 5) {
         const side = Math.sign(ctl.x - b.x) || 1;
         ctl.x = b.x + side * (b.w / 2 + 5); S.prevX = ctl.x;
         if (ctl.spd > 10 && ctl.face === -side) b.vx = -side * Math.max(Math.abs(b.vx), 55);
@@ -723,7 +824,7 @@ export function createHospital(G) {
     if (e.x >= D.ROOF_STAIR - 6) {
       S.krHp = Math.max(1, e.hp); S.krGone = true; S.roofOpen = true; S.doorFx.push({ x: D.ROOF_STAIR, t: 0 });
       const i = G.enemies.indexOf(e); if (i >= 0) G.enemies.splice(i, 1); if (G.zoneAlive.krieg > 0) G.zoneAlive.krieg--;
-      S.kr = null; G.toast('He ran for the roof', 'The stair door →', true); setObjective('Theatre 1', 'Up to the roof · the stair door →');
+      S.kr = null; G.toast('He ran for the roof', 'The stair door →', true);
     }
     return true;
   };
@@ -831,6 +932,7 @@ export function createHospital(G) {
     if (y == null) S.doorFx.push({ x, t: 0 });
   }
 
+  const WAY_GLOW = new Set(['STAIR DOOR', 'DEAD LIFT', 'LIFT', 'ROOF', 'CLOSED WING', 'WARD 3', 'PAYPHONE', 'LEVER']);
   // ---------------- lighting: ambient by section and power, lightning, lamps, the torch, penlights, Krieg's headlamp ----------------
   function ambOf(sec) {
     const id = sec.id;
@@ -872,10 +974,10 @@ export function createHospital(G) {
       if (S.genT >= 1 && S.gen < 1) S.gen = 1;
       if (S.genT >= 2.4) { S.gen = 2; S.genT = -1; S.power = true; sfx('tubes_on', 1400, 1); G.toast('Power', 'The generator runs. The lifts have power.', true); S.d3T = 3; }
     }
-    if (S.d3T > 0 && (S.d3T -= dt) <= 0) { S.d3T = -1; d3Start(); }
+    if (S.d3T > 0 && (S.d3T -= dt) <= 0) { if (alive('porterAdds') || queued('porterAdds')) S.d3T = 0.5; else { S.d3T = -1; d3Start(); } }   // (the bark waits for the hall to be clear)
   }
-  function d2Start(quiet) { if (!G.flags.demo) G.setCkpt('h:d2', 0, quiet === true); pa('Visiting hours are over, Mr. Grave.'); defendStart('d2'); setObjective('Nero is barking', 'Back to Room 314 · the stair door (EXIT) by Ward 5'); }
-  function d3Start(quiet) { if (!G.flags.demo) G.setCkpt('h:d3', 0, quiet === true); pa("Power's back. Good. I prefer to see my work."); defendStart('d3'); setObjective('Nero is barking', 'Back to Room 314 · the stair door (EXIT) by the lift shaft'); }
+  function d2Start(quiet) { if (!G.flags.demo) G.setCkpt('h:d2', 0, quiet === true); defendStart('d2'); pa('Visiting hours are over, Mr. Grave.', true); }
+  function d3Start(quiet) { if (!G.flags.demo) G.setCkpt('h:d3', 0, quiet === true); defendStart('d3'); pa("Power's back. Good. I prefer to see my work.", true); }
   M.bloomK = () => secAt(G.P[2].x).id === 'theatre' ? 0.6 : 1;   // [read] the surgical lamp's bloom cut by 40 %: Krieg's wind-up glint reads under it
   M.lights = () => {
     const cam = G.cam, cx = cam.x + cam.vw / 2, sec = secAt(G.P[2].x), ls = [];
@@ -892,6 +994,7 @@ export function createHospital(G) {
       add(D.NURSE.x1 - 12, D.NURSE.top - 16, 50, 1.0, 0.75, 0.4, 10, 2);
     }
     for (const dx of [D.WARD_STAIR, D.ISO_STAIR, D.MORGUE_STAIR, D.ER_STAIR, D.ROOF_STAIR]) add(dx, GROUND - 66, 24, 0.8, 0.1, 0.08, 6, 1);   // the EXIT signs
+    { const g = S.way && S.way.goal; if (g && WAY_GLOW.has(g.label)) add(g.x, GROUND - 30, 44, 0.15, 0.9 + 0.3 * Math.sin(G.simTime * 6), 0.3, 10, 4); }   // the way on: a green glow at its door
     // the morgue: the generator's beacons, then sodium lamps
     if (S.gen >= 1) for (const bx of [1300, 1380, 1460]) add(bx, 108, S.gen >= 2 ? 110 : 60, S.gen >= 2 ? 1.0 : 0.9 * (Math.sin(G.simTime * 8 + bx) > 0 ? 1 : 0.2), S.gen >= 2 ? 0.7 : 0.4, 0.25, 15, 2);
     // the ER: tubes, the TV; the bay: the ambulance's turning light bar, the neon cross, the canopy lamp
@@ -910,6 +1013,7 @@ export function createHospital(G) {
       if (e.kind === 'krieg' && (e.ph !== 2 || e.roof) && e.sp !== 'flee') add(e.J[0].x + e.face * 18, e.J[0].y + 4, 50, 0.75, 0.75, 0.7, 6, 5);   // [read] -40 %: under the theatre lamp it blew him out to a white blob
       if (e.paddles) add(e.x, e.y - 14, 70, 0.5, 0.9, 1.6, 20, 6);
       if (e.hv === 'syringe' || e.pen) add(e.J[6].x, e.J[6].y, 28, 0.9, 0.9, 0.6, 6, 4);   // a penlight
+      if (e.armUp) add(e.J[0].x, e.J[0].y - 4, 34, 1.0, 0.45, 0.4, 8, 6);   // the needle over her bed: the monitor's red light catches him
       if (e.hv === 'anaesthetist') add(e.J[0].x + e.face * 14, e.J[0].y + 2, 40, 1.0, 1.0, 0.9, 6, 4);   // a headlamp
       if ((e.hv === 'bonesaw' || e.kind === 'krieg') && e.act && e.actT < 0) add(e.J[6].x, e.J[6].y, 24, 1.4, 0.7, 0.2, 10, 5);   // saw sparks
     }
@@ -966,7 +1070,7 @@ export function createHospital(G) {
     }
   }
   const shotNear = (x, y, r) => G.bullets.some(b => Math.abs(b.x - x) < r && Math.abs(b.y - y) < r + 6);
-  function pullLever() { if (!S.leverArmed) return false; S.leverArmed = false; S.lever = 1; S.genT = 0; sfx('lever_clunk', D.LEVER, 1); G.emit('feat', 'generator'); setObjective('B1 · The generator', 'It coughs...'); return true; }
+  function pullLever() { if (!S.leverArmed) return false; S.leverArmed = false; S.lever = 1; S.genT = 0; sfx('lever_clunk', D.LEVER, 1); G.emit('feat', 'generator'); return true; }
   function throwBreaker() {
     const d = dif(); if (!S.breakerDown || S.breakerCd > 0) return false;
     S.breakerT = KRIEG.breaker.on[d]; S.breakerCd = KRIEG.breaker.cd[d]; sfx('breaker_clunk', D.BREAKER.x, 1); sfx('tubes_on', D.OR_LAMP.x, 0.8); G.emit('feat', 'breaker'); return true;
@@ -983,13 +1087,13 @@ export function createHospital(G) {
   // ---------------- the beats (per frame, the UI clock) ----------------
   function beats(dt) {
     const px = ctl.x, g = grpAt(px);
-    if (S.d1T > 0 && (S.d1T -= dt) <= 0) { S.d1T = -1; pa('Code Black, room three-fourteen. Thank you, team.'); defendStart('d1'); setObjective('Code Black', 'Defend Room 314'); }
+    if (S.d1T > 0 && (S.d1T -= dt) <= 0) { S.d1T = -1; pa('Code Black, room three-fourteen. Thank you, team.', true); defendStart('d1'); }
     // the wing: the sheets, the fishbowl, the gurney and Ward 5
-    if (S.d1done && g === 0 && px >= 410 && !S.w.w3.out) { startWave('w3'); setObjective('The isolation wing', 'Dark. Wait for the glint before a blow.'); }
+    if (S.d1done && g === 0 && px >= 410 && !S.w.w3.out) { startWave('w3'); }
     if (S.w.w3.out && !S.w.w3b.out && S.w.w3.n && alive('w3') <= S.w.w3.n / 2 && !queued('w3')) startWave('w3b');
     if (allDown('w3') && allDown('w3b') && px >= 690 && !S.w4) startFishbowl();
     if (S.w4) fishTick(dt);
-    if (S.w.w4.out && allDown('w4') && !S.w5out) { placeW5(); setObjective('The isolation wing', 'Ward 5 · ride the gurney through its glass'); }
+    if (S.w.w4.out && allDown('w4') && !S.w5out) { placeW5(); G.toast('The gurney', 'Hold ↑ by it to climb on, then attack: it rolls through Ward 5\'s glass', false); }
     if (S.w5out && allDown('w5') && !S.d2T && !S.d2done && (!S.def || S.def.ph === 'done')) { S.d2T = 2; }
     if (S.d2T > 0 && (S.d2T -= dt) <= 0) { S.d2T = -1; d2Start(); }
     // the morgue: the drawers, the Porter, the generator
@@ -1000,13 +1104,13 @@ export function createHospital(G) {
     if (P_ && !P_.dead && P_.hp < P_.maxHp * PORTER.adds && !S.w.porterAdds.out) startWave('porterAdds');
     if (P_ && P_.dead && !S.porterDone) {
       S.porterDone = true; G.enc.arena = null; S.leverArmed = true; G.bark(P_, PORTER.lines.defeat); G.slowMo(1.0, 'boss');
-      G.setMusic('docks_explore', 0.4); later(() => G.toast('The generator', 'Pull the lever (↑ or a blow by it)', true), 1.5); setObjective('B1 · The generator', 'Hit the lever');
+      G.setMusic('docks_explore', 0.4); later(() => G.toast('The generator', 'Pull the lever → (↑ or a blow by it)', false), 1.5);
     }
     // the ER and the bay
-    if (S.erT > 0 && (S.erT -= dt) <= 0) { S.erT = -1; startWave('w11a'); setObjective('The ER', 'Hold the ground floor'); }
+    if (S.erT > 0 && (S.erT -= dt) <= 0) { S.erT = -1; startWave('w11a'); }
     if (S.w.w11a.out && !S.w.w11c.out && S.w.w11a.n && alive('w11a') <= S.w.w11a.n / 2 && !queued('w11a')) startWave('w11c');
-    if (S.w.w11a.out && !S.w.w11b.out && px >= 1826 && alive('w11a') <= 1 && !queued('w11a')) { startWave('w11b'); setObjective('The ambulance bay', 'They come out of the ambulance'); }
-    if (S.w.w11b.out && ['w11a', 'w11b', 'w11c'].every(allDown) && !S.liftOpen) { S.liftOpen = true; sfx('bell_ting', D.LIFT, 0.8); G.toast('The trauma lift', 'It goes straight up to the theatres · ↑ by it', true); setObjective('The ambulance bay', 'The trauma lift →'); }
+    if (S.w.w11a.out && !S.w.w11b.out && px >= 1826 && alive('w11a') <= 1 && !queued('w11a')) { startWave('w11b'); }
+    if (S.w.w11b.out && ['w11a', 'w11b', 'w11c'].every(allDown) && !S.liftOpen) { S.liftOpen = true; sfx('bell_ting', D.LIFT, 0.8); G.toast('The trauma lift', 'It goes straight up to the theatres · ↑ by it', true); }
     if (S.ambT >= 0) { S.ambT += dt; S.ambOpen = Math.min(1, S.ambT / 0.6); }
     // the theatre: the gallery, the fight, the stair to the roof
     const K_ = S.kr;
@@ -1025,7 +1129,6 @@ export function createHospital(G) {
     for (const v of roster) { const p = v === 'anaesthetist' ? fish[2] : fish[k++ % 3]; if (p.broken) { const e = spawnOrd(v, (p.x0 + p.x1) / 2, 'w4'); e.cdT = 1; } else p.who.push(v); }
     S.w4 = { t: 0, next: 0, dartT: 2 };
     say('fish', 'The fishbowl', 'Figures wait behind the glass. Break a pane first to bring one out on your terms.', true);
-    setObjective('The isolation wing', 'The fishbowl');
   }
   function fishTick(dt) {
     const F = S.w4; F.t += dt;
@@ -1050,14 +1153,13 @@ export function createHospital(G) {
     defTick(dt);
     // the injection meter: the worst one at the bed
     S.injK = 0; for (const e of G.enemies) if (!e.dead && e.inj > 0) S.injK = Math.max(S.injK, e.inj / D.DEFEND.inject[dif()]);
-    if (S.injK > 0 && (S.beepT = (S.beepT || 0) - dt) <= 0) { S.beepT = 0.5 - 0.38 * S.injK; sfx('ui_blip', D.MONITOR.x, 0.5, 1.2 + S.injK); }
+    const warnK = S.def && S.def.ph === 'warn' ? 1 - S.def.t / S.def.max : 0;   // her monitor beeps faster as they come, and fast while a needle is in
+    if ((S.injK > 0 || warnK > 0) && (S.beepT = (S.beepT || 0) - dt) <= 0) { S.beepT = S.injK > 0 ? 0.5 - 0.38 * S.injK : 0.9 - 0.6 * warnK; sfx('ui_blip', D.MONITOR.x, 0.5, 1.2 + S.injK + warnK * 0.3); }
+    S.monK = Math.max(S.injK, warnK * 0.5);
     if (S.flat > 0) S.flat -= dt;
     if (S.clockT > 0) S.clockT -= dt;
-    // the objective line while fighting
-    if (S.def && S.def.ph === 'fight' && grpAt(ctl.x) === 0) setObjective('Code Black', `Defend Room 314 · Orderlies: ${S.def.subs.reduce((n, id) => n + alive(id), 0) + S.queue.filter(q => S.def.subs.includes(q.wave)).length}`);
-    else if (G.flags.club) setObjective('The helipad', G.enc.boss && !G.enc.boss.dead ? `Beat ${KRIEG.name}` : 'The storm');
-    else if (S.krFight && S.kr && !S.kr.dead) setObjective('Theatre 1', `Beat ${KRIEG.name}`);
-    else if (S.porter && !S.porter.dead) setObjective('B1 · The generator hall', `Beat ${PORTER.name}`);
+    // the way on: the objective line, the edge arrow, Nero's lead, the door lamps
+    wayStep(dt);
   };
   function timerStep(dt) { for (let i = timers.length - 1; i >= 0; i--) if ((timers[i].t -= dt) <= 0) { const f = timers[i].fn; timers.splice(i, 1); f(); } }
 
@@ -1097,7 +1199,7 @@ export function createHospital(G) {
       e.tx = null; e.vx = 0; e.face = Math.sign(D.BED.x - e.x) || e.face; if (e.tok) G.eRelease(e);
       const ij = S.injE; if (ij && ij !== e && !ij.dead && !ij.down && ij.inj > 0) { e.inj = 0; return true; }   // one needle at a time: the others wait their turn
       S.injE = e;
-      if (!(e.inj > 0)) say('inject', 'At the bed', 'He is injecting Mags: any hit stops him', true);
+      if (!(e.inj > 0) && !S.said.has('inject')) { S.said.add('inject'); G.toast('At her bed', 'He raises the needle over Mags: any hit stops him', false); }
       e.inj = (e.inj || 0) + dt;
       if (e.inj >= D.DEFEND.inject[dif()]) injectDone(e);
       return true;
@@ -1124,7 +1226,9 @@ export function createHospital(G) {
       if (e.stk === 'wind') for (const s of [-1, 1]) S.strike.push({ x: Math.round(e.J[0].x + s * 2), y: Math.round(e.J[0].y), k: 0.5 });   // two quick glints at the edge of the light
       if (e.paddles) { S.arcs.push({ kind: 'paddle', x: Math.round(e.J[4].x), y: Math.round(e.J[4].y) }); S.arcs.push({ kind: 'paddle', x: Math.round(e.J[6].x), y: Math.round(e.J[6].y) }); }
       if (e.kind === 'krieg' && e.sp === 'defib' && e.spT < 0) S.tells.push({ kind: 'ring', x: e.x, r: KRIEG.defib.r });
+      if (e.armUp) { const h = e.J[4].y < e.J[6].y ? e.J[4] : e.J[6]; S.arcs.push({ kind: 'needle', x: Math.round(h.x), y: Math.round(h.y) }); }
     }
+    if (S.def && S.def.ph !== 'done') S.tells.push({ kind: 'bed', x: D.BED.x, k: S.injK });   // her bed: a red ring on the floor; it fills with the needle
     if (S.cbWarn) for (const w of D.WATER) if (w.live) S.tells.push({ kind: 'zone', x0: w.x0, x1: w.x1 });
     if (S.bolt) S.tells.push({ kind: 'ring', x: S.bolt.x, r: (S.bolt.x1 - S.bolt.x0) / 2, c: 0xffffe0a0 });
     for (const t of S.tellT) { if (t.kind === 'path') S.tells.push(t); else if (t.kind === 'zap') S.arcs.push({ kind: 'zone', x0: t.x0, x1: t.x1, live: true }); }
@@ -1192,11 +1296,10 @@ export function createHospital(G) {
   M.retry = C => {
     const lv = ORDER.indexOf(C.kind); if (lv < 0) return null;
     restoreTo(lv);
-    // the objective line at once (the beats below set it a second or two later; until then it showed Room 314's first line)
-    if (lv === 0) { setObjective('Code Black', 'Defend Room 314'); later(() => { pa('Code Black, room three-fourteen. Thank you, team.'); defendStart('d1'); }, 2); return 250; }
-    if (lv === 1) { setObjective('Nero is barking', 'Back to Room 314 · the stair door (EXIT) by Ward 5'); later(() => d2Start(true), 1); return 930; }
-    if (lv === 2) { setObjective('Nero is barking', 'Back to Room 314 · the stair door (EXIT) by the lift shaft'); later(() => d3Start(true), 1); return 1450; }
-    if (lv === 3) { setObjective('The ER', 'Hold the ground floor'); S.grp = 2; S.erT = 1.5; return 1520; }
+    if (lv === 0) { later(() => { pa('Code Black, room three-fourteen. Thank you, team.', true); defendStart('d1'); }, 2); return 250; }
+    if (lv === 1) { later(() => d2Start(true), 1); return 930; }
+    if (lv === 2) { later(() => d3Start(true), 1); return 1450; }
+    if (lv === 3) { S.grp = 2; S.erT = 1.5; return 1520; }
     if (lv === 4) { later(() => arriveTheatre(true), 0.01); return D.LIFT_OUT; }
     return null;   // the roof: the game puts him through the door (enterClub); the boss comes on the next frame
   };
