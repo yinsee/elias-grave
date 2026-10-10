@@ -5076,8 +5076,11 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (soft) { if (toastT > 0 || simTime - softT < 4 || enc.introT >= 0 || flags.attract) return; softT = simTime; }
     else if (toastT > 1.8 && !toastSoft) { if (toastQ.length < 4 && !toastQ.some(q => q[0] === title)) toastQ.push([title, sub]); return; }
     toastEl.innerHTML = `${title}<small>${sub}</small>`; toastEl.hidden = false; toastT = 2.6; toastSoft = !!soft;
+    toastEl.className = /^["“]/.test(title) ? 'toast line' : 'toast';   // a spoken line (a PA, a shout): up in the top band, clear of the fight lane
     return true;
   }
+  // a toast from the title menu (why a chapter is locked): shown at once, over the title screen, which hides the game's toasts
+  function menuToast(title, sub) { toastEl.innerHTML = `${title}<small>${sub}</small>`; toastEl.className = 'toast ui'; toastEl.hidden = false; toastT = 2.6; toastSoft = false; toastQ.length = 0; }
   // this run: time, kills, damage taken, knock-outs; shown on a results card after the boss
   const resultsEl = document.getElementById('results');
   let kos = 0;
@@ -9945,7 +9948,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   const progress = (() => { try { return JSON.parse(localStorage.getItem(PROGKEY) || '{}') || {}; } catch (err) { return {}; } })();
   function unlock(id) { if (id === 'done') for (let i = 1; i <= 8; i++) unlock('ch' + i);   // the Conductor beaten: the whole story is open
     if (progress[id]) return; progress[id] = true; try { localStorage.setItem(PROGKEY, JSON.stringify(progress)); } catch (err) {} }
-  const lockedItem = (label, boss) => ({ label, value: () => 'Locked', act: () => toast('Locked', `Beat ${boss} to open this chapter`) });
+  const lockedItem = (label, boss) => ({ label, value: () => 'Locked', fixed: true, act: () => menuToast('Locked', `Beat ${boss} to open this chapter`) });
   function menuItems() {
     if (menuPage === 'chapter') return [
       { label: 'Tutorial: The Street', act: () => { menuPage = 'main'; startTutorial(); } },
@@ -9962,15 +9965,15 @@ import * as SPIRE from './levels/skyscraper/index.js';
     const items = [
       { label: flags.attract ? 'Start game' : 'Resume', act: () => flags.attract ? endAttract() : hideMenu() },
       { label: 'Chapter', value: () => !isStreet() && !flags.attract ? LV.title : 'Choose', act: () => { menuPage = 'chapter'; menuSel = isP9() ? 1 : isMetro() ? 2 : isCasino() ? 3 : isAqua() ? 4 : isHosp() ? 5 : isPalm() ? menuItems().findIndex(it => /^Chapter 6/.test(it.label)) : isTrain() ? menuItems().findIndex(it => /^Chapter 7/.test(it.label)) : isSpire() ? menuItems().findIndex(it => /^Chapter 8/.test(it.label)) : 0; } },
-      { label: 'Difficulty', value: () => DIFFS[diffSel].name + (flags.attract ? '' : ' · locked'), change: d => {   // set on the title menu only: a run keeps its difficulty (no Wicked permadeath dodge)
+      { label: 'Difficulty', value: () => DIFFS[diffSel].name + (flags.attract ? '' : ' · locked'), fixed: !flags.attract, change: d => {   // set on the title menu only: a run keeps its difficulty (no Wicked permadeath dodge)
         if (!flags.attract) { toast('Difficulty is locked during a run', 'Quit to title to change it'); return; }
         diffSel = (diffSel + d + DIFFS.length) % DIFFS.length; charge.forEach((c, w) => { charge[w] = Math.min(c, fullCharge(w)); }); saveSettings(); } },
       { label: 'View', value: () => mode3D ? '3D' : '2D', change: () => { setMode3D(!mode3D); saveSettings(); } },
       { label: 'Shift', value: () => runAlways ? 'to walk' : 'to run', change: () => { runAlways = !runAlways; saveSettings(); syncRun(); } },
       { label: 'Camera', value: () => zoomMode === 'auto' ? 'Auto' : `${Math.round(zoomMode * 100)}%`, change: d => cycleZoom(d) },
-      { label: 'Volume', value: () => `${Math.round(gameAudio.getVolume() * 100)}%`, change: d => {   // master volume in 10 % steps (a click past 100 % goes to 0 %)
-        const v = Math.round(gameAudio.getVolume() * 10) + (d < 0 ? -1 : 1);
-        gameAudio.setVolume((v > 10 ? 0 : v < 0 ? 10 : v) / 10); gameAudio.sfx('ui_blip', { vol: 0.6 }); saveSettings(); } },
+      { label: 'Volume', value: () => `${Math.round(gameAudio.getVolume() * 100)}%`, change: d => {   // master volume in 10 % steps; it stops at 0 % and 100 % (a wrap from 0 to full volume is a nasty surprise)
+        const v = clamp(Math.round(gameAudio.getVolume() * 10) + (d < 0 ? -1 : 1), 0, 10);
+        gameAudio.setVolume(v / 10); gameAudio.sfx('ui_blip', { vol: 0.6 }); saveSettings(); } },
       { label: 'Full screen', value: () => document.fullscreenElement ? 'On' : 'Off', change: toggleFull },
       { label: 'Controls', act: () => { document.getElementById('cc-run').textContent = runAlways ? 'walk (you run by default)' : 'run'; ccEl.hidden = false; } },
     ];
@@ -9983,7 +9986,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     items.forEach((it, i) => {
       const li = document.createElement('li'), b = document.createElement('button');
       b.className = i === menuSel ? 'sel' : ''; b.type = 'button';
-      b.innerHTML = `<span>${it.label}</span>${it.value ? `<span class="v">${it.value()}</span>` : ''}`;
+      b.innerHTML = `<span>${it.label}</span>${it.value ? `<span class="v${it.fixed ? ' fixed' : ''}">${it.value()}</span>` : ''}`;   // (fixed: a value that cannot change here shows no ◀ ▶)
       b.addEventListener('mouseenter', () => { if (menuSel !== i) { menuSel = i; drawMenu(); } });
       b.addEventListener('click', e => { e.preventDefault(); menuSel = i; menuDo(0); b.blur(); });
       li.appendChild(b); menuList.appendChild(li);
