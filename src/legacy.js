@@ -6653,32 +6653,47 @@ import * as SPIRE from './levels/skyscraper/index.js';
       const J = e.dead ? e.pts : e.J; if (!J) continue;
       add(J[0].x, J[0].y, 10 * e.s); add(J[2].x, J[2].y, 10 * e.s);
     }
+    for (const e of enemies) if (keyFoe(e, cx)) { add(e.x, e.J ? e.J[0].y : e.y - 30, 12); add(e.x, e.y, 12); }   // [read] who can hit him next is in the shot
     if (typeof eshots !== 'undefined') for (const b of eshots) if (Math.abs(b.x - cx) < 230) add(b.x, b.y, 8);
     for (const t of thrown) if (!t.stuck && Math.abs(t.x - cx) < 230) add(t.x, t.y, 10);
     return sBox = { x0, x1, y0, y1 };
   }
+  // the foes the fight camera must keep in frame (view only: it reads the sim, never changes it): a goon holding an attack
+  // token, a shooter or thrower winding up, a ranged goon who has him in his sights, the boss
+  function keyFoe(e, cx) {
+    if (e.dead || e.intro) return false;
+    const adx = Math.abs(e.x - cx);
+    if (e === enc.boss) return adx < 320;
+    if (e.tok || e.act === 'shoot' || e.act === 'throw') return adx < 320;
+    return !!(e.R && e.R.ranged && e.aggro && adx < 260);
+  }
   // the auto zoom (1 = 100 %: 160 world px across): a fight sits between 100 % and 75 %, framed to fit everyone in it;
   // otherwise 75 % walking (or standing), out to 50 % at a full run to see further ahead. (Further out the fighters turn into
   // specks; the menu still offers a fixed 25 %.)
-  // the auto camera: cinematics close (100 %), a fight framed at 40-60 %, walking 40 % out to 25 % at a full run
+  // the auto camera: cinematics close (100 %), a fight framed at 36-60 % (45 % or wider with 2+ goons on him), walking 40 % out to 25 % at a full run
   const cinematic = () => openT >= 0 || !!endPh || !!(enc.boss && enc.boss.intro);   // the opening, the ending, the boss's entrance
+  let zCrowd = 0;   // goons on him at the last auto zoom (2+: the camera widens fast, e.g. back out after a finisher's punch-in)
   function autoZoom() {
+    zCrowd = 0;
     if (cinematic()) return 1;
     if (bossBeat > 0 && enc.boss && !enc.boss.dead) return 0.85;   // a boss's phase change: the camera punches in on him
     const px = P[2].x, fight = flags.club || enemies.some(e => !e.dead && Math.abs(e.x - px) < 190 && e.zone !== 'arena' || (!e.dead && e === enc.boss && Math.abs(e.x - px) < 260));
-    if (fight) {
-      const bx = sceneBox();
-      return clamp(Math.min(1, 160 / (bx.x1 - bx.x0 + 24), 160 * CH / CW / (bx.y1 - bx.y0 + 20)), 0.4, 0.6);
-    }
     const run = hero.mode === 'anim' ? clamp((Math.abs(ctl.spd) - WALK) / (RUN - WALK), 0, 1) : 0;
-    return 0.4 - 0.15 * run;
+    let z = 0.4 - 0.15 * run;
+    if (fight) {   // [read] framed to fit the fight and every key foe (sceneBox); never tighter than 352 px with 2+ goons on him, never wider than 448 px (the hero stays readable)
+      const bx = sceneBox(), crowd = zCrowd = enemies.filter(e => !e.dead && e.aggro && Math.abs(e.x - px) < 200).length;
+      z = clamp(Math.min(1, 160 / (bx.x1 - bx.x0 + 24), 160 * CH / CW / (bx.y1 - bx.y0 + 20)), 160 / 448, crowd >= 2 ? 160 / 352 : 0.6);
+    }
+    const rb = LVH.roomBounds ? LVH.roomBounds() : LVH.camBounds ? LVH.camBounds() : null;   // (the room itself: the Palm House widens its camBounds to the view)
+    if (rb) z = Math.max(z, 160 / Math.max(160, rb[1] - rb[0]));   // a walled room: never wider than the room (no world past its walls)
+    return z;
   }
   function updateCamera(rdt) {
     const punch = finCam.t > 0, want = punch ? 1 : (LVH.camZoom && LVH.camZoom()) || (zoomMode === 'auto' ? autoZoom() : zoomMode);   // (a level's own shot: the Spire's ending)   // a finisher: the camera punches in close
     // the zoom glides: out over about a second, back in a little slower so it never pumps (it eases on the scale, so 100 -> 25 % feels even)
     const cx0 = cam.xf + cam.vw / 2, cy0 = cam.yf + cam.vh / 2;   // zoom about the view centre
     if (bossBeat > 0) bossBeat -= rdt;
-    const lz = smoothDamp(Math.log(cam.zoom), Math.log(want), cam.v, 'z', punch ? 0.09 : want < cam.zoom ? 0.9 : zoomMode === 'auto' && (cinematic() || bossBeat > 0) ? 0.35 : 1.3, rdt);   // (a cinematic is short: it closes in fast)
+    const lz = smoothDamp(Math.log(cam.zoom), Math.log(want), cam.v, 'z', punch ? 0.09 : want < cam.zoom ? (zCrowd >= 2 ? 0.45 : 0.9) : zoomMode === 'auto' && (cinematic() || bossBeat > 0) ? 0.35 : 1.3, rdt);   // (a cinematic is short: it closes in fast)
     cam.zoom = clamp(Math.exp(lz), 0.25, 1);
     // [feel] even view sizes: the centre stays on the same pixel as the view grows, so a zoom never jitters by 1 px
     cam.vw = Math.min(CW, 2 * Math.round(80 / cam.zoom)); cam.vh = Math.min(CHMAX, 2 * Math.round(cam.vw * CH / CW / 2));   // (taller than the world when far out: the sky fills the top)
@@ -10119,7 +10134,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       pickups: pickups.map(k => k.taken ? 1 : 0).join(''), demo: flags.demo, attract: flags.attract });
     window.__blood = { bleed, stain, GORE, PROPS, stat, SURF, PLATS, STEPS, floorBelow, particles, drips, W, GROUND, cam, get WALLM() { return WALLM; }, get T3() { return Three3D; }, open: () => ZONES.forEach(z => z.tasks.forEach(([k]) => done.add(k))) };   // (tests: the blood and what it lands on)
     window.__skipToBoss = () => { leaveTitle(); setDemo(false); skipToBoss(); };
-    window.__sim = { enc, enemies, objs, ctl, hero, quakes, ammoBoxes, thrown, charge, loot, setWeapon, done, bus, makeObj, spawnEnemy, P, get hookPull() { return hookPull; }, get diffSel() { return diffSel; },
+    window.__sim = { enc, enemies, objs, ctl, hero, cam, quakes, ammoBoxes, thrown, charge, loot, setWeapon, done, bus, makeObj, spawnEnemy, P, get hookPull() { return hookPull; }, get diffSel() { return diffSel; },
       hstr, DEF, input, btn, get slowT() { return slowT; }, get ckpt() { return ckpt; }, get ragT() { return ragT; }, get flags() { return flags; }, setDiff: i => { diffSel = i; hero.wind = DIFFS[i].wind; }, retry: () => retry(),
       foc, get finE() { return finE; }, get wk() { return wk; }, equip: w => equip(w, fullCharge(w)), finCam, JUG, GRAB, FOCUS, FIN, OTG, DIVE, FLY, get hitStop() { return hitStop; },
       EMOVES, MOVES, MAL, p9, eshots, pickups, get bossMash() { return bossMash; }, get sceneOn() { return sceneOn; }, get simTime() { return simTime; }, get kos() { return kos; }, get runT() { return runS.t; } };   // (tests: the live sim state, read and poke)
