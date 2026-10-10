@@ -9,7 +9,7 @@
 
 export const TINDER = {
   kind: 'tinder', name: 'Mattias "Tinder" Rook', title: 'Bomb-maker of the Tunnel Rats', look: 'tinder',
-  hp: [520, 640, 760, 880],   // (x2: he was over in 7-15 s)
+  hp: [390, 480, 570, 660],   // (x1.5: he was over in 7-15 s; x2 with the 2-hit strings cost the bots the fight on Medium)
   s: 1.05, m: 2.5, speed: 30, reach: 21, dmg: 10, heavyDmg: 15, poise: 16, windup: 0.3, cd: [0.8, 1.5],
   R: { w: 'flare', len: 7, off: -0.4, reach: 21 },
   combos: [['slash', 'slash'], ['slash', 'stab'],   // (every torch string is at least a 2-hit chain)
