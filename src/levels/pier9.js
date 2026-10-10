@@ -515,8 +515,8 @@ export function drawLever(R, x, k, lit) {
   for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) plot(Math.round(hx) + dx, Math.round(hy) + dy, lit ? 0xff4040ff : 0xff2020b0);
 }
 // the freezer fog: d(x) = its density over world column x; a clear bubble round the hero (hx, hy, rad).
-// dither: opaque pixels in an ordered pattern instead of see-through ones (the 3D view's layers are cut-outs)
-export function drawFog(R, d, hx, hy, rad, dither = false) {
+// (3D: the same see-through pixels on the fx layer, blended for real)
+export function drawFog(R, d, hx, hy, rad) {
   const { cam } = R, t = R.t, y0 = Math.max(cam.y, GROUND - 150), y1 = Math.min(cam.y + cam.vh - 1, GROUND + 14);
   for (let vx = 0; vx < cam.vw; vx++) {
     const wx = vx + cam.x, dd = d(wx); if (dd <= 0.02) continue;
@@ -525,8 +525,7 @@ export function drawFog(R, d, hx, hy, rad, dither = false) {
       const b = Math.hypot(wx - hx, (wy - hy) * 1.4), clear = clamp01((b - rad * 0.6) / (rad * 0.5));
       const a = dd * low * wisp * clear * 0.85;
       if (a <= 0.03) continue;
-      if (!dither) R.blendPlot(wx, wy, 196, 212, 222, Math.min(0.92, a));
-      else if (a * 0.55 > (BAYER[(wy & 3) * 4 + (wx & 3)] + 0.5) / 16) R.plot(wx, wy, (wx + wy) & 1 ? 0xffded4c4 : 0xffe8e0d4);
+      R.blendPlot(wx, wy, 196, 212, 222, Math.min(0.92, a));
     }
   }
 }

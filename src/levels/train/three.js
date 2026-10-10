@@ -2,6 +2,8 @@
 // names its solid blocks and gives each its depth (a body up on one stands on its top). The moving backdrop, the roof props, the tail
 // stub and the last car are drawn live on the wall layer (paint.js drawWorld), the same pixels in both views.
 import * as D from './data.js';
+import { paneCracks } from './paint.js';
+import { C } from '../../core/color.js';
 
 export const train3d = {
   // the named blocks: [x0, y0, x1, y1, depth from the wall, the surface it carries]
@@ -16,5 +18,17 @@ export const train3d = {
       [D.SAFE.x - 14, D.SAFE.y - 30, D.SAFE.x + 26, G - 1, 14, null],
       [D.BENCH.x0, D.BENCH.top, D.BENCH.x1, G - 1, 14, { x0: D.BENCH.x0, y: D.BENCH.top }],
     ].map(([x0, y0, x1, y1, d, s]) => ({ x0, y0, x1, y1, z0: ZF, z1: ZF + d, s }));
+  },
+  // the glass as real panes (paint.js leaves its cracks out: R.glass3d): the dining car's windows and the dome car's roof panes, on
+  // the car's side (the world outside runs past behind them); their cracks on the glass
+  models(T3, S, R, cam) {
+    const out = [], ZF = T3.ZF, near = (x0, x1) => x1 > cam.x - 40 && x0 < cam.x + cam.vw + 40;
+    for (const p of S.panes) {
+      if ((p.kind === 'window') !== (S.grp === 2) && !(p.kind === 'roof' && S.grp === 5)) continue;
+      if (p.broken || !near(p.x0, p.x1)) continue;
+      const n = p.cracks.length;
+      out.push({ pane: { x0: p.x0, x1: p.x1, y0: p.y0, y1: p.y1, z0: ZF + 1, z1: ZF + 2, tint: C('#c0dcf0'), op: p.kind === 'roof' ? 0.08 : 0.05, crack: n ? { key: 'tr' + p.id + ':' + n, draw: Rc => paneCracks(Rc, p) } : null } });
+    }
+    return out;
   },
 };

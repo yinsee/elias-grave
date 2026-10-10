@@ -199,7 +199,8 @@ export function paint(api) {
 
 // ---- per frame, on the wall behind everyone (both views: in 3D on the wall layer) ----
 const inView = (R, x0, x1) => x1 >= R.cam.x - 2 && x0 <= R.cam.x + R.cam.vw + 2;
-function cracks(R, p, st) {   // a pane's cracks: rays from where it was hit, longer and more of them each stage; rings from stage 2
+// (3D: R.glass3d: the glass, its cracks, sheen and flash are the pane models of three.js; the painters leave them out)
+export function cracks(R, p, st) {   // a pane's cracks: rays from where it was hit, longer and more of them each stage; rings from stage 2
   if (st <= 0) return;
   const seed = hashS(p.id), cx = p.hx ?? (p.x0 + p.x1) / 2, cy = p.hy ?? (p.y0 + p.y1) / 2, n = st === 1 ? 3 : st === 2 ? 6 : 9, L = (st === 1 ? 10 : st === 2 ? 22 : 40) * Math.min(1, (p.x1 - p.x0) / 50 + 0.4);
   for (let i = 0; i < n; i++) {
@@ -252,18 +253,20 @@ function tankPane(R, p, S) {
     R.plot(x, y - 6, C('#c8a080')); R.plot(x + 1, y - 7, C('#5a7a8a')); if (k > 0.6) { R.plot(x - 4, y - 2, AC.steelL); R.plot(x - 5, y - 2, AC.steelL); }
   }
   // the glass: a pale sheen down one side, the cracks, a flash where it was hit; a leak spurts from a stage-2 crack
-  for (let y = p.y0; y <= p.y1; y++) R.blendPlot(p.x0 + 2, y, 200, 240, 255, 0.25);
-  cracks(R, p, st);
-  if (p.flash > 0) for (let y = p.y0; y <= p.y1; y += 2) for (let x = p.x0; x <= p.x1; x += 2) R.blendPlot(x, y, 255, 255, 255, 0.25);
+  if (!R.glass3d) {
+    for (let y = p.y0; y <= p.y1; y++) R.blendPlot(p.x0 + 2, y, 200, 240, 255, 0.25);
+    cracks(R, p, st);
+    if (p.flash > 0) for (let y = p.y0; y <= p.y1; y += 2) for (let x = p.x0; x <= p.x1; x += 2) R.blendPlot(x, y, 255, 255, 255, 0.25);
+  }
   if (p.glow > 0) for (let y = p.y0; y <= p.y1; y++) { R.blendPlot(p.x0, y, 255, 240, 160, 0.7 * p.glow); R.blendPlot(p.x1, y, 255, 240, 160, 0.7 * p.glow); }
 }
 function casePane(R, p) {
   if (!inView(R, p.x0 - 2, p.x1 + 2)) return;
   for (let x = p.x0 - 1; x <= p.x1 + 1; x++) { R.plot(x, p.y1 + 1, AC.out); R.plot(x, p.y1, AC.brassD); }
   if (p.burst) { for (let x = p.x0; x <= p.x1; x += 2) R.plot(x, p.y1 - 1 - ((x * 3) % 3), AC.glassD); return; }
-  for (let y = p.y0; y < p.y1; y++) for (let x = p.x0; x <= p.x1; x++) { const edge = x === p.x0 || x === p.x1 || y === p.y0; if (edge) R.plot(x, y, AC.frameL); else if ((x + y) % 7 === 0) R.blendPlot(x, y, 220, 240, 255, 0.35); }
+  for (let y = p.y0; y < p.y1; y++) for (let x = p.x0; x <= p.x1; x++) { const edge = x === p.x0 || x === p.x1 || y === p.y0; if (edge) R.plot(x, y, AC.frameL); else if ((x + y) % 7 === 0 && !R.glass3d) R.blendPlot(x, y, 220, 240, 255, 0.35); }
   if (p.id !== 'katanaCase') for (let k = 0; k < 3; k++) R.plot(p.x0 + 4 + k * 5, p.y1 - 3, k % 2 ? C('#e8e0f0') : C('#a0c0e0'));   // snow globes and trinkets
-  cracks(R, p, D.paneStage(p));
+  if (!R.glass3d) cracks(R, p, D.paneStage(p));
 }
 function cylPane(R, p, S) {   // the moon-jelly cylinder (and the small wall columns): a magenta-cyan glow that pulses every 4 s
   if (!inView(R, p.x0 - 3, p.x1 + 3)) return;
@@ -288,21 +291,22 @@ function cylPane(R, p, S) {   // the moon-jelly cylinder (and the small wall col
     for (let xx = -1; xx <= 1; xx++) R.blendPlot(x + xx, y - 1, 250, 230, 255, 0.85);
     for (const xx of [-1, 1]) R.blendPlot(x + xx, y + 2, 220, 180, 240, 0.5);
   }
-  for (let y = p.y0; y <= p.y1; y++) R.blendPlot(p.x0 + 2, y, 230, 200, 255, 0.3);
-  cracks(R, p, st);
+  if (!R.glass3d) { for (let y = p.y0; y <= p.y1; y++) R.blendPlot(p.x0 + 2, y, 230, 200, 255, 0.3); cracks(R, p, st); }
   if (p.armed && big && !p.burst) {   // the glass is ready: a glint runs up the crack
     const gy = Math.round(p.y1 - ((t * 120) % (p.y1 - p.y0)));
     for (let k = -2; k <= 2; k++) R.blendPlot(p.x0 + 12 + k, gy + k, 255, 255, 255, 0.9 - Math.abs(k) * 0.2);
   }
-  if (p.flash > 0) for (let y = p.y0; y <= p.y1; y += 2) for (let x = p.x0; x <= p.x1; x += 2) R.blendPlot(x, y, 255, 255, 255, 0.3);
+  if (p.flash > 0 && !R.glass3d) for (let y = p.y0; y <= p.y1; y += 2) for (let x = p.x0; x <= p.x1; x += 2) R.blendPlot(x, y, 255, 255, 255, 0.3);
 }
 function roofPane(R, p) {   // the tunnel roof: a band of thick glass with the tank over it
   if (!inView(R, p.x0, p.x1)) return;
   if (p.burst) { for (let x = p.x0 + 2; x < p.x1 - 1; x++) for (let y = p.y0; y <= p.y1; y++) R.plot(x, y, (x + y) % 5 ? C('#0e3a54') : C('#1a5a7a')); for (let x = p.x0 + 2; x < p.x1 - 1; x += 3) R.plot(x, p.y1 + ((x * 3) % 3), AC.glassD); return; }
-  for (let x = p.x0 + 2; x < p.x1 - 1; x++) for (let y = p.y0; y <= p.y1; y++) R.blendPlot(x, y, 170, 220, 240, y === p.y1 ? 0.6 : 0.25);
-  cracks(R, { ...p, hy: p.hy ?? p.y1 - 2 }, D.paneStage(p));
+  if (!R.glass3d) {
+    for (let x = p.x0 + 2; x < p.x1 - 1; x++) for (let y = p.y0; y <= p.y1; y++) R.blendPlot(x, y, 170, 220, 240, y === p.y1 ? 0.6 : 0.25);
+    cracks(R, { ...p, hy: p.hy ?? p.y1 - 2 }, D.paneStage(p));
+  }
   if (p.glow > 0) for (let x = p.x0 + 2; x < p.x1 - 1; x++) R.blendPlot(x, p.y1, 255, 220, 120, p.glow);
-  if (p.flash > 0) for (let x = p.x0 + 2; x < p.x1 - 1; x += 2) R.blendPlot(x, p.y0 + 4, 255, 255, 255, 0.6);
+  if (p.flash > 0 && !R.glass3d) for (let x = p.x0 + 2; x < p.x1 - 1; x += 2) R.blendPlot(x, p.y0 + 4, 255, 255, 255, 0.6);
 }
 function shark(R, s, k = 1) {   // a great white in silhouette: a long body, a high fin, a crescent tail; k: the size
   const L = Math.round(46 * k), x0 = Math.round(s.x), y0 = Math.round(s.y), d = s.dir;
@@ -393,6 +397,7 @@ export function drawGround(R, S) {
 
 // ---- over the lit scene, unlit (both views: in 3D on the fx layer) ----
 function waterBody(R, x0, x1, top, bottom, a = 0.32) {   // a body of water: see-through teal over what is in it, a bright moving line on top
+  if (R.glass3d) return;   // (3D: a water volume, three.js)
   x0 = Math.max(Math.ceil(x0), R.cam.x - 1); x1 = Math.min(Math.floor(x1), R.cam.x + R.cam.vw + 1);
   const y0 = Math.max(Math.ceil(top), R.cam.y - 1), y1 = Math.min(bottom, R.cam.y + R.cam.vh + 1);
   for (let y = y0; y <= y1; y++) { const k = Math.min(1, (y - top) / 60); for (let x = x0; x <= x1; x++) R.blendPlot(x, y, 20, 70 + 20 * (1 - k), 100 + 20 * (1 - k), a + 0.2 * k); }

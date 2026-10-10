@@ -4,7 +4,8 @@
 // models are 3D-only. models(): the wall tanks' steel frames stand out of the wall (the water stays on the wall layer, set back
 // behind them), and the pump hall's two big pipes are round bars along the wall (in 2D both are painted on the wall).
 import * as D from './data.js';
-import { AC } from './paint.js';
+import { AC, cracks } from './paint.js';
+import { C } from '../../core/color.js';
 
 const G = D.GROUND;
 export const aqua3d = {
@@ -41,6 +42,21 @@ export const aqua3d = {
       f(p.x0 - 1.5, p.y0 - 3, p.x0 - 1.5, p.y1 + 3); f(p.x1 + 1.5, p.y0 - 3, p.x1 + 1.5, p.y1 + 3);
     }
     if (!S.club && near(1462, 1884)) for (const py of [70, 84]) out.push({ rod: { x0: 1462, y0: py + 4, x1: 1884, y1: py + 4, w: 9, d: 9, z: ZF + 4.5, c: AC.pipe } });
+    // the glass as real panes (paint.js leaves its sheen, cracks and flash out: R.glass3d): a tank's front in its frame, a case's box,
+    // the jelly cylinder and columns, the tunnel's roof lying flat over the walk; the cracks are the painter's own, on the pane
+    for (const id in S.panes) {
+      const p = S.panes[id]; if (p.burst || (p.club && !S.club) || !near(p.x0, p.x1)) continue;
+      const st = D.paneStage(p), roof = p.kind === 'roof', q = roof ? { ...p, hy: p.hy ?? p.y1 - 2 } : p;
+      const crack = st > 0 ? { key: `aq${id}:${st}:${q.hx | 0},${q.hy | 0}`, y0: p.y0, rows: p.y1 - p.y0 + 1, draw: R => cracks(R, q, st) } : null;
+      const flash = p.flash > 0 ? 0.3 : 0;
+      if (p.kind === 'tank') out.push({ pane: { x0: p.x0, x1: p.x1, y0: p.y0, y1: p.y1, z0: ZF + 3, z1: ZF + 3.8, tint: C('#a8e0f0'), op: 0.05, flash, crack } });
+      else if (p.kind === 'case') out.push({ pane: { x0: p.x0, x1: p.x1, y0: p.y0, y1: p.y1 - 1, z0: ZF + 1, z1: ZF + 11, tint: C('#c8e4f4'), op: 0.06, flash, crack } });
+      else if (roof) out.push({ pane: { x0: p.x0 + 2, x1: p.x1 - 2, y0: p.y0, y1: p.y1, z0: ZF, z1: 22, flat: true, tint: C('#78c8e0'), op: 0.16, flash, crack } });
+      else out.push({ pane: { x0: p.x0, x1: p.x1, y0: p.y0, y1: p.y1 - (p.kind === 'cyl' ? 9 : 0), z0: ZF + 1, z1: ZF + (p.kind === 'cyl' ? 14 : 5), tint: C('#d0a8f0'), op: 0.05, flash, crack } });
+    }
+    // the water bodies (the flooding halls, the pump hall, the sea channel, the tunnel): a volume over the floor, from the wall to the
+    // street's front edge; a body that runs below the floor line (the channel) is its surface strip only
+    for (const w of S.waters) if (near(w.x0, w.x1)) out.push({ pane: { x0: w.x0, x1: w.x1, y0: w.y, y1: D.GROUND, z0: ZF + 0.5, z1: T3.ZS, kind: 'water', tint: C('#1a5a78'), op: (w.a ?? 0.32) + 0.1 } });
     return out;
   },
 };

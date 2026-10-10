@@ -264,13 +264,14 @@ function drawMirror(R, m, S, G, frameC) {
   for (let y = m.y0; y <= m.y1; y++) for (let x = m.x0; x <= m.x1; x++) {
     const edge = x === m.x0 || x === m.x1 || y === m.y0 || y === m.y1;
     if (edge) { plot(x, y, frameC); continue; }
+    if (R.glass3d && !broken) continue;   // (3D: the silver, its reflections and cracks are a mirror pane, three.js)
     if (broken) { const sh = noise2(x, y) < 0.18 && y > m.y1 - 18 ? CC.mirrorD : (noise2(x >> 1, y >> 1) < 0.06 ? CC.mirrorD : C('#141418')); plot(x, y, sh); continue; }
     const band = ((x * 0.8 + y - cam.x * 0.3) % 30 + 30) % 30;
     let c = band < 2 ? CC.mirrorL : (y - m.y0) / (m.y1 - m.y0) > 0.75 ? CC.mirrorD : CC.mirror;
     if (m.ripple > 0 && Math.abs(((y - m.y0) - (1 - m.ripple / 0.6) * (m.y1 - m.y0))) < 3) c = C('#f0f6ff');
     plot(x, y, c);
   }
-  if (broken) return;
+  if (broken || R.glass3d) return;
   // who stands before it: the hero and every goon (a decoy has no reflection: the real Count does)
   const off = Math.round(((m.x0 + m.x1) / 2 - (cam.x + cam.vw / 2)) * 0.08);
   const near = q => q > m.x0 - 22 && q < m.x1 + 22;
@@ -279,11 +280,20 @@ function drawMirror(R, m, S, G, frameC) {
     if (e.dead || e.decoy || !e.J || !near(e.x)) continue;
     ghost(R, e.J, { top: e.pal.top, pants: e.pal.pants, skin: e.pal.skin, hair: e.pal.hair }, m, off, 0.55);
   }
-  if (crack) {   // cracks: lines from a hit point
-    const n = m.hp < m.maxHp * 0.5 ? 6 : 3, cx = (m.x0 + m.x1) >> 1, cy = m.y0 + ((m.y1 - m.y0) * 0.45 | 0);
-    for (let k = 0; k < n; k++) { const a = k * 2.1 + m.x0, L = 6 + (k * 7) % 12; for (let i = 0; i < L; i++) plot(Math.round(cx + Math.cos(a) * i), Math.round(cy + Math.sin(a) * i * 1.4), C('#e8f0ff')); }
-  }
+  if (crack) mirrorCracks(R, m);
   void t;
+}
+export function mirrorCracks(R, m) {   // cracks: lines from a hit point (3D: on the mirror pane)
+  const n = m.hp < m.maxHp * 0.5 ? 6 : 3, cx = (m.x0 + m.x1) >> 1, cy = m.y0 + ((m.y1 - m.y0) * 0.45 | 0);
+  for (let k = 0; k < n; k++) { const a = k * 2.1 + m.x0, L = 6 + (k * 7) % 12; for (let i = 0; i < L; i++) R.plot(Math.round(cx + Math.cos(a) * i), Math.round(cy + Math.sin(a) * i * 1.4), C('#e8f0ff')); }
+}
+// the mirrors as the 3D view models them (three.js): every mirror pane in view, with its own box (the frame stays painted)
+export function mirrorList(S, vis) {
+  const out = [];
+  for (const p of S.pillars) if (p.hp > 0 && vis(p.x - 8, p.x + 8)) out.push({ x0: p.x - D.PILLAR.w, x1: p.x + D.PILLAR.w, y0: GROUND - D.PILLAR.h, y1: GROUND - 1, hp: p.hp, maxHp: p.maxHp, ripple: 0, id: 'pl' + p.x });
+  for (const sw of S.swivels) if (sw.hp > 0 && vis(sw.x - 10, sw.x + 10)) out.push({ x0: sw.x - 7, x1: sw.x + 7, y0: GROUND - 44, y1: GROUND - 11, hp: sw.hp, maxHp: sw.maxHp, ripple: S.ripple || 0, id: 'sw' + sw.x });
+  for (const m of S.mirrors) if (m.hp > 0 && vis(m.x0, m.x1)) out.push({ ...m, id: m.id });
+  return out;
 }
 
 // ---- a chandelier: tiers of crystal on a gold frame; or falling; or a heap of crystal on the floor ----
@@ -369,11 +379,12 @@ export function drawWorld(R, S, G) {
   if (vis(D.BOOTH.x0 - 4, D.BOOTH.x0 + 4)) for (const p of S.panes) {
     for (let y = p.y0; y <= p.y1; y++) for (let x = D.BOOTH.x0; x <= D.BOOTH.x0 + 5; x++) {
       if (p.hp > 0 && (x === D.BOOTH.x0 || x === D.BOOTH.x0 + 5)) { plot(x, y, CC.steelD); continue; }   // the frame
+      if (p.hp > 0 && R.glass3d) continue;   // (3D: the glass is a pane, three.js)
       if (p.hp <= 0) { if (noise2(x, y) < 0.12) plot(x, y, CC.glassL); continue; }
       const st = p.hp > 66 ? 0 : p.hp > 33 ? 1 : 2;
       plot(x, y, (st >= 1 && (y * 7 + x * 3) % (st === 2 ? 4 : 9) === 0) ? C('#f0f8ff') : ((y + x * 2) % 13 < 2 ? CC.glassL : CC.glass));
     }
-    if (p.flash > 0) for (let y = p.y0; y <= p.y1; y += 2) plot(D.BOOTH.x0 + 1, y, C('#ffffff'));
+    if (p.flash > 0 && !R.glass3d) for (let y = p.y0; y <= p.y1; y += 2) plot(D.BOOTH.x0 + 1, y, C('#ffffff'));
   }
   // mirror pillars in the lobby; swivel mirrors in the hall
   for (const p of S.pillars) {
@@ -395,7 +406,8 @@ export function drawWorld(R, S, G) {
   if (vis(D.END_WALL - 14, D.END_WALL + 2)) {
     for (let y = 40; y < GROUND; y++) for (let x = D.END_WALL - 12; x <= D.END_WALL; x++) {
       if (S.wallBroken) { plot(x, y, y > 120 ? (noise2(x, y) < 0.1 ? CC.mirrorD : C('#2a0a10')) : (noise2(x, y) < 0.3 ? CC.mirrorD : C('#0a0a0c'))); continue; }
-      plot(x, y, x === D.END_WALL - 12 || (y - 40) % 40 === 0 ? CC.goldL : ((x * 0.8 + y - cam.x * 0.3) % 30 + 30) % 30 < 2 ? CC.mirrorL : CC.mirror);
+      if (x === D.END_WALL - 12 || (y - 40) % 40 === 0) plot(x, y, CC.goldL);
+      else if (!R.glass3d) plot(x, y, ((x * 0.8 + y - cam.x * 0.3) % 30 + 30) % 30 < 2 ? CC.mirrorL : CC.mirror);   // (3D: a mirror pane, three.js)
     }
   }
   // chandeliers (hanging, shaking, falling, wrecked)
@@ -408,7 +420,7 @@ export function drawWorld(R, S, G) {
   if (S.dealer && S.dealer.st !== 'gone' && vis(S.dealer.x - 8, S.dealer.x + 8)) {
     const d = S.dealer, pose = d.st === 'hands' || d.st === 'give' ? 'hands' : d.st === 'run' ? 'run' : 'stand';
     figure(R, Math.round(d.x), GROUND - 1, d.face, pose, DEALER);
-    if (d.st === 'smoke') { plot(Math.round(d.x) + 3, GROUND - 13, Math.floor(t * 2) % 2 ? C('#ff6020') : C('#a03010')); for (let i = 0; i < 3; i++) { const ph = (t * 0.5 + i / 3) % 1; blendPlot(Math.round(d.x + 3 + Math.sin(t + i) * 2), Math.round(GROUND - 16 - ph * 14), 200, 200, 210, 0.4 * (1 - ph)); } }
+    if (d.st === 'smoke') { plot(Math.round(d.x) + 3, GROUND - 13, Math.floor(t * 2) % 2 ? C('#ff6020') : C('#a03010')); for (let i = 0; i < 3; i++) { const ph = (t * 0.5 + i / 3) % 1, x = d.x + 3 + Math.sin(t + i) * 2, y = GROUND - 16 - ph * 14; if (R.soft) R.soft(x, y, 1.5 + ph * 3, 200, 200, 210, 0.35 * (1 - ph)); else blendPlot(Math.round(x), Math.round(y), 200, 200, 210, 0.4 * (1 - ph)); } }
     if (d.st === 'give') for (let k = 0; k < 3; k++) plot(Math.round(d.x) + d.face * (4 + k), GROUND - 18, CC.goldL);   // the brass key card
   }
   // across the river: a green coupé's headlights flash twice (Mags)

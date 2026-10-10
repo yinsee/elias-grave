@@ -40,6 +40,23 @@ export const casino3d = {
       out.push({ size: 64, x: x - 32, y: down ? G - 32 : y - 29, draw: () => P.chandelier(R, c, big, false), d: big ? 18 : 12, z: -10, slot: 'csChand' + i });
       if (c.st === 'hang' || c.st === 'warn') out.push({ rod: { x0: c.x + 0.5, y0: 30, x1: c.x + 0.5, y1: c.y - 8, w: 1, d: 1, z: -10, c: P.CC.goldD } });
     });
+    // the mirrors: real mirror panes in their painted frames (paint.js leaves the silver out: R.glass3d); whoever stands before one
+    // shows in it (a glass decoy does not: src/legacy.js reflect()); the cracks are the painter's own; the ripple runs down the glass
+    const ZF = T3.ZF;
+    for (const m of P.mirrorList(S, near)) {
+      const st = m.hp < m.maxHp * 0.5 ? 2 : m.hp < m.maxHp ? 1 : 0;
+      out.push({ pane: { x0: m.x0 + 1, x1: m.x1 - 1, y0: m.y0 + 1, y1: m.y1 - 1, z0: ZF + 0.5, z1: ZF + 1.2, kind: 'mirror', tint: P.CC.mirror,
+        rip: m.ripple > 0 ? 1 - m.ripple / 0.6 : -1, crack: st ? { key: 'csm' + m.id + ':' + st, draw: R => P.mirrorCracks(R, m) } : null } });
+    }
+    // the hall's end wall: a wall of mirror across the hall (until the phase shift breaks it)
+    if (!S.wallBroken && near(D.END_WALL - 12, D.END_WALL)) out.push({ pane: { x0: D.END_WALL - 11, x1: D.END_WALL, y0: 41, y1: G - 1, z0: ZF, z1: 24, kind: 'mirror', tint: P.CC.mirror } });
+    // the cashier booth's bulletproof glass: across the lane at its front (it stops shots and blows there), two panes, three stages
+    if (near(D.BOOTH.x0 - 4, D.BOOTH.x0 + 6)) for (const p of S.panes) {
+      if (p.hp <= 0) continue;
+      const st = p.hp > 66 ? 0 : p.hp > 33 ? 1 : 2;
+      out.push({ pane: { x0: D.BOOTH.x0 + 1, x1: D.BOOTH.x0 + 4, y0: p.y0, y1: p.y1, z0: ZF, z1: 12, tint: P.CC.glassL, op: 0.1, flash: p.flash > 0 ? 0.35 : 0,
+        crack: st ? { key: 'csb' + p.id + ':' + st, ax: 'zy', n: st === 2 ? 7 : 3, seed: p.id.charCodeAt(1) * 31 } : null } });
+    }
     return out;
   },
 };

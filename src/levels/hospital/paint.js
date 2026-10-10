@@ -359,20 +359,21 @@ export function drawGurney(R, g) {
 
 // ---- over the lit scene, unlit (both views: in 3D on the fx layer) ----
 const GLASS = [C('#a8c8e0'), C('#d8ecf8')];
+export function paneCracks(R, p) { if (p.cracks) for (const ck of p.cracks) { let x = ck.x, y = ck.y; for (let k = 0; k < 8; k++) { const nx = x + ck.dx * 2 + (k % 2 ? 1 : -1), ny = y + ck.dy * 2; R.line1(x, y, nx, ny, GLASS[1]); x = nx; y = ny; } } }
 export function drawFx(R, S) {
   const { plot, blendPlot, line1 } = R, t = R.t, cam = R.cam, vis = (x0, x1) => x1 > cam.x - 8 && x0 < cam.x + cam.vw + 8;
   // glass: intact panes as a faint sheen with a highlight; cracks; the fishbowl's silhouettes show in a flash
   for (const p of S.panes) {
     if (p.broken || !vis(p.x0, p.x1)) continue;
     const back = !!p.def.back, lit = S.lightNear(p.x0, p.x1) ? 1 : 0.35, fl = S.flash || 0, a = (back ? 0.07 : 0.1) * lit, h = 0.2 * lit;
-    for (let y = p.y0; y <= p.y1; y++) for (let x = p.x0; x <= p.x1; x++) {
+    if (!R.glass3d) for (let y = p.y0; y <= p.y1; y++) for (let x = p.x0; x <= p.x1; x++) {   // (3D: the glass is a pane, three.js)
       const hl = ((x - p.x0) + (p.y1 - y)) % 23 === 0 || ((x - p.x0) + (p.y1 - y)) % 23 === 1;
       blendPlot(x, y, 170, 200, 220, (hl ? h : a) + fl * 0.3);
     }
     if (p.def.id.startsWith('fish') && p.who && p.who.length && (fl > 0.2 || S.lightNear(p.x0, p.x1))) {   // figures behind the glass: seen only in light
       p.who.forEach((v, i) => { const fx = p.x0 + 14 + i * 20; for (let y = GROUND - 30; y < GROUND - 4; y++) for (let x = fx - 3; x <= fx + 3; x++) if (y > GROUND - 26 || Math.abs(x - fx) < 2) blendPlot(x, y, 10, 12, 14, 0.85); });
     }
-    if (p.cracks) for (const ck of p.cracks) { let x = ck.x, y = ck.y; for (let k = 0; k < 8; k++) { const nx = x + ck.dx * 2 + (k % 2 ? 1 : -1), ny = y + ck.dy * 2; line1(x, y, nx, ny, GLASS[1]); x = nx; y = ny; } }
+    if (!R.glass3d) paneCracks(R, p);
   }
   // the quarantine sheets: hanging plastic, swaying; a bulge before a goon pushes through; torn after
   for (const sh of S.sheets) {
@@ -405,7 +406,10 @@ export function drawFx(R, S) {
     else if (f.kind === 'zone') { for (let x = f.x0; x <= f.x1; x++) if ((x + Math.floor(t * 20)) % 3 === 0) blendPlot(x, GROUND + 3 + (x % 5), 120, 220, 255, 0.7); }
   }
   // Krieg's dart volley tell: a cyan glint on each needle; smoke from his canister
-  for (const p of S.puffs) for (let i = 0; i < 6; i++) { const ph = (p.t * 0.8 + i / 6) % 1; blendPlot(Math.round(p.x + Math.sin(i * 2.1 + p.t) * 10 * ph), Math.round(p.y - ph * 30), 220, 220, 220, 0.5 * (1 - ph)); }
+  for (const p of S.puffs) for (let i = 0; i < 6; i++) {
+    const ph = (p.t * 0.8 + i / 6) % 1, x = p.x + Math.sin(i * 2.1 + p.t) * 10 * ph, y = p.y - ph * 30;
+    if (R.soft) R.soft(x, y, 2 + ph * 5, 220, 220, 220, 0.4 * (1 - ph)); else blendPlot(Math.round(x), Math.round(y), 220, 220, 220, 0.5 * (1 - ph));   // (3D: a soft puff)
+  }
   // sedation: the edges of the view darken and cool, stronger with each stack
   if (S.sedK > 0) {
     const k = S.sedK, x0 = cam.x, y0 = cam.y, w = cam.vw, h = cam.vh;
