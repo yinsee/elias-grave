@@ -50,5 +50,38 @@
  },
  "house": {
   "desc": "casino security men in black tuxedos with white shirts, black bow ties and coiled earpieces"
+ },
+ "kalt": {
+  "desc": "Nerissa Kalt, a tall cold smuggler queen around forty-five with short grey-blonde hair slicked back wet, pale ice-blue eyes, high cheekbones and thin lips, in a black neoprene wetsuit under a long open dark olive oilskin coat, a diving knife strapped to her thigh, holding a pneumatic harpoon gun",
+  "ref": "assets/art/characters/kalt/ref.png"
+ },
+ "teague": {
+  "desc": "Hollis Teague, a huge barrel-chested dockmaster in an old brass deep-sea diving helmet with a round glass faceplate showing a scarred bearded face, a heavy canvas diving suit, lead boots, a short iron anchor on a chain over his shoulder",
+  "ref": "assets/art/characters/teague/ref.png"
+ },
+ "undertow": {
+  "desc": "smugglers in black wetsuits and dark oilskin jackets"
+ },
+ "krieg": {
+  "desc": "Dr. Anselm Krieg, a gaunt very tall surgeon around sixty with sparse grey hair combed straight back, a long pale waxy face with sunken cheeks, deep-set pale eyes and thin bloodless lips, a surgical headlamp strapped on his forehead, in a pale green surgical gown open over a dark grey three-piece suit, latex gloves, a battery bone saw in his right hand",
+  "ref": "assets/art/characters/krieg/ref.png"
+ },
+ "orderlies": {
+  "desc": "hospital orderlies in white coats and pale green scrubs with surgical masks over their faces and latex gloves"
+ },
+ "vane": {
+  "desc": "Commissioner Augusta Vane, a stern upright woman around fifty-five with short neatly styled silver hair, a hard handsome face with a strong jaw, cold grey eyes and thin pressed lips, in a dark navy police dress uniform with gold braid on the shoulders and rows of medals on her chest, white gloves",
+  "ref": "assets/art/characters/vane/ref.png"
+ },
+ "brandt": {
+  "desc": "Sergeant Ruud Brandt, a huge broad riot police sergeant around fifty with a grey crew cut, a thick grey walrus moustache, a weathered square face and a scar through one eyebrow, in black riot armour with shoulder pads, holding a full-height steel tower shield with a gun slot and a combat shotgun",
+  "ref": "assets/art/characters/brandt/ref.png"
+ },
+ "lenz": {
+  "desc": "Viktor Lenz, a slim pale young man around thirty with slicked-back white-blond hair, a pale beautiful cold face, high cheekbones and light grey eyes, in an immaculate white three-piece suit with a thin black tie, carrying a black violin case",
+  "ref": "assets/art/characters/lenz/ref.png"
+ },
+ "bluechoir": {
+  "desc": "corrupt riot policemen in dark navy uniforms and black riot helmets with visors"
  }
 }

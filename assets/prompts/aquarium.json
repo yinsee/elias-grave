@@ -1,0 +1,220 @@
+[
+ {
+  "out": "assets/art/characters/kalt/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 54,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {kalt}, three-quarter view, upper body, standing in a glass underwater tunnel with blue water and a shark shadow overhead, cold blue-green light, a calm bored stare, no text, blank signs"
+ },
+ {
+  "out": "assets/art/characters/teague/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 55,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {teague}, three-quarter view, upper body, standing on a wet basement boat dock with a green work lamp, water dripping from the brass helmet, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/aquarium/aquarium_intro_01.png",
+  "seed": 4101,
+  "post": {
+   "out": "assets/art/panels/aquarium/aquarium_intro_01.png"
+  },
+  "prompt": "Exterior at night in a storm. A dark aquarium building with a huge facade shaped like a whale on a stone sea wall, its blank neon sign half dead. Huge storm waves smash over the sea wall in white spray. In the foreground an old dark green 1960s coupe car is parked with its headlights off and its wipers moving, rain, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/aquarium/aquarium_intro_02.png",
+  "seed": 4102,
+  "post": {
+   "out": "assets/art/panels/aquarium/aquarium_intro_02.png"
+  },
+  "prompt": "Close interior shot inside an old car at night, rain running down the windscreen. On the left, {elias} sits in the passenger seat. On the right, {mags} in the driver's seat strikes a match to light a cigarette, the small match flame lights both their faces warm orange in the dark. Between the two front seats, the head of {nero} pokes forward from the back seat, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/aquarium/aquarium_intro_03.png",
+  "seed": 4123,
+  "post": {
+   "out": "assets/art/panels/aquarium/aquarium_intro_03.png"
+  },
+  "prompt": "Medium shot at night in a storm. On the right, {elias} stands at a broken steel staff door in the concrete side wall of an aquarium, the lock smashed, and looks back over his shoulder toward the street. On the left at the curb, an old dark green 1960s hardtop coupe car with its doors closed; inside the car, the head of {nero} presses his nose against the closed rain-streaked side window, watching. Rain, a dim caged wall lamp, plain blank walls, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/aquarium/aquarium_intro_04.png",
+  "seed": 4104,
+  "post": {
+   "out": "assets/art/panels/aquarium/aquarium_intro_04.png"
+  },
+  "prompt": "Wide shot inside a curved glass underwater tunnel in a dark aquarium at night, deep blue water all around. {elias} stands alone in the tunnel looking up. A huge great white shark glides overhead across the glass, its dark shadow sliding across his face. Shafts of blue light ripple on the floor, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/aquarium/aquarium_intro_05.png",
+  "seed": 4125,
+  "post": {
+   "out": "assets/art/panels/aquarium/aquarium_intro_05.png"
+  },
+  "prompt": "Dark basement boat dock under an aquarium, black water, a green work lamp, plain blank concrete walls. In the background, smugglers in black wetsuits load wooden crates onto a small motor boat. In the foreground, a diver in a black wetsuit and diving mask points a pneumatic harpoon gun straight at the viewer, the harpoon tip aimed into the camera, strong foreshortening, menace. Full-bleed image with no border, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/aquarium/aquarium_manifest.png",
+  "seed": 4106,
+  "post": {
+   "out": "assets/art/panels/aquarium/aquarium_manifest.png"
+  },
+  "prompt": "Close-up of a waterproof shipping manifest sheet of paper with blank lines lying on a wet steel table under the bright cone of a dive lamp. At the bottom of the page, a red wax seal pressed with a tuning fork emblem. Water drops on the paper, dark background, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/aquarium/aquarium_kalt_freeze.png",
+  "seed": 4107,
+  "post": {
+   "out": "assets/art/panels/aquarium/aquarium_kalt_freeze.png"
+  },
+  "prompt": "Dramatic slow-motion freeze frame under water in a flooded glass tunnel. {elias} floats above, diving down with a pistol in his hand, his black suit and long dark hair flowing in the water. Below him, {kalt} sinks with her harpoon gun, bubbles rising. Shattered glass shards and glowing pale jellyfish drift between them, lit by a single red emergency lamp, deep blue-green water, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/aquarium/aquarium_outro_01.png",
+  "seed": 4111,
+  "post": {
+   "out": "assets/art/panels/aquarium/aquarium_outro_01.png"
+  },
+  "prompt": "High angle shot of a flooded glass aquarium tunnel, blue-green water, broken glass. {kalt} floats face-down in the water among broken glass shards and drifting pale jellyfish, her oilskin coat spread out. Above her, through the broken tunnel roof, {elias}, soaked and dripping, climbs out onto a steel catwalk, no text, blank signs",
+  "face": "elias"
+ },
+ {
+  "out": "assets/art-src/panels/aquarium/aquarium_outro_02.png",
+  "seed": 4112,
+  "post": {
+   "out": "assets/art/panels/aquarium/aquarium_outro_02.png"
+  },
+  "prompt": "Dark empty aquarium lobby at night. A huge whale skeleton hangs from the ceiling above. On the wall an old black payphone, its receiver on the hook, shaking as it rings. A trail of wet footprints on the marble floor passes the phone and goes out toward the glass doors. Blue moonlight, rain on the windows, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/aquarium/aquarium_outro_03.png",
+  "seed": 4113,
+  "post": {
+   "out": "assets/art/panels/aquarium/aquarium_outro_03.png"
+  },
+  "prompt": "Exterior at night in a storm. An old dark green 1960s coupe car speeds along a stone sea wall with its headlights on, huge waves crashing beside it in white spray. A thin red laser sight beam cuts through the rain and a small red laser dot slides across the car's windscreen, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/aquarium/aquarium_outro_04.png",
+  "seed": 4114,
+  "post": {
+   "out": "assets/art/panels/aquarium/aquarium_outro_04.png"
+  },
+  "prompt": "Close-up through the shattered windscreen of an old car at night, a bullet hole with spider-web cracks in the glass. Inside, {mags} slumps in her seat, clutching her bloody shoulder, her face pale with pain. In the back seat {nero} barks wildly, teeth bared. Red and blue storm light, rain, no text, blank signs",
+  "face": "mags"
+ },
+ {
+  "out": "assets/art-src/panels/aquarium/aquarium_outro_05.png",
+  "seed": 4115,
+  "post": {
+   "out": "assets/art/panels/aquarium/aquarium_outro_05.png"
+  },
+  "prompt": "Interior of an old car at night in the rain, view from the back seat. {elias} drives with one hand on the wheel and holds the shoulder of a wounded red-haired woman slumped beside him with his other hand. Ahead through the cracked rain-streaked windscreen, a big red neon cross glows on top of a tall old hospital building in the dark city, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/portraits/kalt_bored.png",
+  "seed": 4211,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/kalt_bored.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Extreme close-up head-and-shoulders portrait, the face fills the frame, cropped at the shoulders. Nerissa Kalt, a cold woman around forty-five with realistic proportions, short grey-blonde hair slicked back wet, pale ice-blue eyes, high cheekbones and thin lips, the high collar of a black neoprene wetsuit under the collar of an open dark olive oilskin coat, cool and bored, half-lidded eyes, the steel tip of a harpoon bolt held up beside her cheek, blue-green underwater tunnel light, plain dark background, no text, blank signs",
+  "face": "kalt"
+ },
+ {
+  "out": "assets/art-src/portraits/kalt_amused.png",
+  "seed": 4212,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/kalt_amused.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Extreme close-up head-and-shoulders portrait, the face fills the frame, cropped at the shoulders. Nerissa Kalt, a cold woman around forty-five with realistic proportions, short grey-blonde hair slicked back wet, pale ice-blue eyes, high cheekbones and thin lips, the high collar of a black neoprene wetsuit under the collar of an open dark olive oilskin coat, a slight amused cold smile, one eyebrow raised, blue-green underwater light, the blurred shadow of a shark behind her, plain dark background, no text, blank signs",
+  "face": "kalt"
+ },
+ {
+  "out": "assets/art-src/portraits/kalt_sharp.png",
+  "seed": 4213,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/kalt_sharp.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Extreme close-up head-and-shoulders portrait, the face fills the frame, cropped at the shoulders. Nerissa Kalt, a cold woman around forty-five with realistic proportions, short grey-blonde hair slicked back wet, pale ice-blue eyes, high cheekbones and thin lips, the high collar of a black neoprene wetsuit under the collar of an open dark olive oilskin coat, a sharp cold glare straight at the viewer, the muzzle of a harpoon gun raised beside her face, blue-green underwater light, plain dark background, no text, blank signs",
+  "face": "kalt"
+ },
+ {
+  "out": "assets/art-src/portraits/kalt_hurt.png",
+  "seed": 4214,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/kalt_hurt.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Extreme close-up head-and-shoulders portrait, the face fills the frame, cropped at the shoulders. Nerissa Kalt, a cold woman around forty-five with realistic proportions, short grey-blonde hair slicked back wet, pale ice-blue eyes, high cheekbones and thin lips, the high collar of a black neoprene wetsuit under the collar of an open dark olive oilskin coat, half-drowned and hurt, soaked dripping hair stuck to her forehead, a cut above her eyebrow, gasping with her mouth open, water running down her face, blue-green light, plain dark background, no text, blank signs",
+  "face": "kalt"
+ },
+ {
+  "out": "assets/art-src/portraits/kalt_bitter.png",
+  "seed": 4215,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/kalt_bitter.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Extreme close-up head-and-shoulders portrait, the face fills the frame, cropped at the shoulders. Nerissa Kalt, a cold woman around forty-five with realistic proportions, short grey-blonde hair slicked back wet, pale ice-blue eyes, high cheekbones and thin lips, the high collar of a black neoprene wetsuit under the collar of an open dark olive oilskin coat, soaked and beaten, a cold bitter last smile, eyes looking up, water dripping from her chin, dim blue light, plain dark background, no text, blank signs",
+  "face": "kalt"
+ },
+ {
+  "out": "assets/art-src/portraits/elias_wet.png",
+  "seed": 4206,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/elias_wet.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Bust portrait of {elias}, soaked to the skin, wet dark hair plastered to his face, water dripping from his chin, cold calm stare, blue-green aquarium light, dark background, no text, blank signs",
+  "face": "elias"
+ },
+ {
+  "out": "assets/art-src/portraits/teague_helmet.png",
+  "seed": 4207,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/teague_helmet.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {teague}, the round glass faceplate of the brass diving helmet fogged at the edges, an angry scarred bearded face behind the glass, water dripping, green work lamp light, dark background, no text, blank signs"
+ }
+]

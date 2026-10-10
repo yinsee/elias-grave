@@ -26,3 +26,11 @@ Panels and portraits follow section 9 of `03-house-always-wins.md`.
 - `casino_outro_02`: the model could not draw the cut-out face or the 3:17 clock. The cut-out hole on the middle man and the clock hands are painted onto the source image by hand, and the panel is re-pixelated. If you regenerate this panel, paint them again.
 - `casino_outro_01` is a close shot of Brask's head and shoulders on the wheel. Wide shots always drew a second Brask.
 - `casino_outro_02` shows seven men in the photo, not six.
+
+## Level 4: aquarium
+
+Panels and portraits follow section 9 of `04-leviathan.md`.
+
+- `aquarium_manifest`: the model painted header words on the page. They are painted out by hand on the source image. The page and the red seal are blank, so the game must draw the manifest text.
+- `aquarium_outro_02` shows a hanging whale model, not a whale skeleton.
+- `elias_wet` is new.
