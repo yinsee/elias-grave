@@ -235,11 +235,13 @@ export function createTrain(G) {
       return;
     }
     F.t += dt;
+    if (F.out) return;   // (the fade has him: the teleport puts him back on the roof)
     ctl.x = F.x; ctl.y = F.y0 + 260 * F.t * F.t; ctl.air = true; ctl.vu = 0; ctl.spd = 0; S.prevX = ctl.x;
     if (F.t > 0.45 && !F.out) {
       F.out = true; const d = dif();
       if (D.FALL.perma[d]) { G.toast('Fallen', 'The track took him. From the last checkpoint.', false); S.fall = null; G.retry(); return; }
-      teleport(F.back, () => { hero.hp = Math.max(1, hero.hp - D.FALL.dmg[d]); G.toast('He catches the edge', `-${D.FALL.dmg[d]} · he climbs back`, true); if (S.grp === 4 && S.stub.st !== 'idle' && !S.onStub) resetStub(); });
+      const dmg = S.grp === 8 ? 35 : D.FALL.dmg[d];
+      teleport(F.back, () => { hero.hp = Math.max(1, hero.hp - dmg); G.toast('He catches the edge', `-${dmg} · he climbs back`, true); if (S.grp === 4 && S.stub.st !== 'idle' && !S.onStub) resetStub(); });
       later(() => { S.fall = null; }, 0.35);
     }
   }
