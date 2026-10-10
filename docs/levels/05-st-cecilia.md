@@ -709,13 +709,13 @@ Walls part the floors (the camera stays inside the floor the hero is on); stair 
 |---|---|---|
 | `ward` (3F) | 0-396 | Stair door x 18, payphone x 58, windows x 100 and 330, Room 314 (posts x 120 and 258), Mags's bed x 150-200, the monitor x 136, Nero x 214, the vent x 205 (y 150), nurse station x 292-352 (top y 250, the torch), the open east door x 386 |
 | `iso` (3F) | 396-1004 | Sheets x 424 and 498, walkway y 196 x 432-540 (cabinet step x 540-562), fishbowl panes x 574-750 (back lane), the gurney x 790, Ward 5's glass x 874 (room 880-962), stair door x 972, the dead lift x 990 |
-| `morgue` (B1) | 1008-1484 | Stair door x 1022, the shaft landing x 1056, drawer wall x 1068-1188 (drawers at 1084, 1128, 1172), autopsy tables, puddles, the axe case x 1246, cold room door x 1268, the Porter's arena x 1278-1478, the generator, the lever x 1468 |
+| `morgue` (B1) | 1008-1484 | The shaft landing x 1056, drawer wall x 1068-1188 (drawers at 1084, 1128, 1172), autopsy tables, puddles, the axe case x 1246, cold room door x 1268, the Porter's arena x 1278-1478, the generator x 1376-1432, the lever x 1450, the stair door x 1472 (by the lever: the D3 bark point) |
 | `er` + `bay` (G) | 1492-2062 | Stair door x 1504, triage desk (top y 248), curtain bays x 1680-1764, the security office (glass door x 1774, the machine gun), sliding doors x 1818, the bay (rain): canopy, the neon cross, the ambulance x 1960-2034 (roof y 236), the trauma lift x 2050 |
 | `theatre` (4F) | 2070-2414 | Lift exit x 2088, the Bell & Sons clock (3:17) x 2098, the scrub cabinet step, the gallery y 196 x 2132-2236 with its glass x 2238, beds A and B, the operating table x 2300-2340 (top y 250), the lamp x 2320, the breaker box x 2400, the roof stair door x 2412 |
 | `roof` (the game's "club") | 2436-2800 | The stair hut x 2440-2494 (roof y 228), the helipad, puddles x 2500-2540, 2610-2670, 2716-2752 (live), beds C and D (the wind rolls them), the mast and its dais x 2762-2784 (top y 268), the windsock |
 
 Travel: ward → wing (walk the east door) → D2 bark (stair door x 972 to the ward) → back (ward stair door) → the dead lift (↑: pry, drop) →
-morgue → the Porter → the lever → D3 bark (stair door x 1022) → the payphone (Hale) → ward stair door → ER → bay → trauma lift (↑) →
+morgue → the Porter → the lever → D3 bark (stair door x 1472, beside the lever) → the payphone (Hale) → ward stair door → ER → bay → trauma lift (↑) →
 theatre → Krieg phases 1-2 → he runs for the stair door x 2412 → the roof (phase 3).
 
 Checkpoints: `h:d1` (the torch), `h:d2` (the bark at Ward 5), `h:d3` (the bark at the generator), `h:er`, `h:theatre`, `boss` (the roof).
@@ -786,8 +786,8 @@ Caps: sedation sources 2/2/3/3 alive; Bone Surgeons 1/1/2/2. Throwers take the l
 
 ### 10.7 Not done in this pass
 
-- Defend: no "Nero, hold!" command beyond his automatic pin; no world marker over the stair door in 3D (the HUD meter and the bark
-  carry it); the Room 314 glass wall is not a breakable pane; pickups in the ward refill once (after D3), not per defend.
+- Defend: no "Nero, hold!" command beyond his automatic pin (the stair door's green lamp, glow and floor chevrons mark the way in both
+  views: see 10.8); the Room 314 glass wall is not a breakable pane; pickups in the ward refill once (after D3), not per defend.
 - Sedation slows movement only (no attack recovery or roll cooldown change); the vignette stands in for blur and muted audio.
 - No noise from shards, no extinguisher cloud, no IV stands; wheelchairs are chairs, oxygen tanks are barrels, tins are cans.
 - The fishbowl Orderlies come out as their panes break (silhouettes show in light); the gurney ride is short (the folded corridor).
@@ -795,3 +795,49 @@ Caps: sedation sources 2/2/3/3 alive; Bone Surgeons 1/1/2/2. Throwers take the l
   swing deflects), no torch-in-the-face flinch outside the stalk, no slump against the mast in the ending (a line and the outro).
 - The roof's backdrop is painted on the wall layer; in 3D the sky is the void colour behind it.
 - Level 4's results card does not lead to Chapter 5 yet (Level 4 is not in this branch).
+
+### 10.8 Clarity pass (2026-10-10)
+
+The user found the level confusing in two ways: where to go next, and the defend goal. I played it from the start on Medium with
+real keys, as a first-time player, and wrote down each moment where the next step was not clear. Each row gives the moment, what
+was wrong (the cause in the code, where there was one), and the cue that fixes it.
+
+**Where to go next**
+
+| # | Moment | What was unclear | Fix |
+|---|---|---|---|
+| R1 | Every step | The objective line named a place but often not the way; it went stale (in Ward 3 it still said "Back to Room 314"; in the wing it said "Ward 3"; after a retry or a skip it kept an old line). Each beat set it once, by hand. | One function, `route()` in `run.js`, answers "where now?" every frame from the state: the place, the next step and its side (`←`, `→`, or `↑` when he is at it). The objective line, the edge arrow, Nero's lead and the door lamps all read it. |
+| R2 | A goal off screen | Nothing pointed to it. | A small HUD arrow at the screen edge (`◀ STAIR DOOR`, `LIFT ▶`) while the goal is off screen. It is a HUD element (`.hospital-way`, made by the hospital run, not a CSS change), never over a character. |
+| R3 | The stair doors and the lifts | Every stair door looked the same (a red EXIT sign, always lit), so the player could not tell which door went somewhere. The dead lift looked like any door. | A lamp over each stair door and lift: green when it goes somewhere now, red when it is shut. The door on the way on blinks, glows green (a light) and has green chevrons on the floor. The dead lift wears hazard tape until D2 is over, and gapes open after the drop. |
+| R4 | Ward 3 between beats | The player had to find the next door alone. | Nero trots to the ward's next door (the east door, the stair door, the payphone), barks at it every few seconds, and goes back to the bed when the hero gets there. |
+| R5 | Ward 5: "ride the gurney" | The gurney's top is 24 px up; a jump reaches about 15 px, and the climb skips "box" surfaces. The ride could not start. | The gurney is a climbable surface (hold ↑, the game's climb verb). A toast and the objective say how: "hold ↑ by it to climb on, then attack". |
+| R6 | D3 bark at the generator | The only stair door in the morgue was 450 px back at the shaft landing, and the line said "the stair door by the lift shaft" (the shaft is upstairs). The plan's own rule is a stair door within 60 px of each bark. | The morgue's stair door now stands beside the lever (x 1472; the generator and the lever move 20 px west). The bark point and the door are one step apart. |
+| R7 | D3 bark | The "Nero is barking" toast showed only once per level (`say`), and the PA line was a soft toast, so at D3 no toast showed at all. | Each bark shows a hard toast with the place, the side and the time ("They are coming for Mags's bed in 16 s. Back to Ward 3: the stair door ←"); the PA line follows it. |
+| R8 | Soft toasts | Soft toasts drop when another is up or one came in the last 4 s; the defend rules, the phone and the lever toasts were lost this way. | The toasts a player needs to go on are hard (they wait their turn). |
+| R9 | After Krieg runs | Beds A and B could stand across the roof stair door; the hero pushed them and could not pass (playtest issue 14). | Once Krieg runs for the roof, the hero walks past the beds (they stand behind the fight lane), so the door stays open. |
+| R10 | The morgue | "Find the generator" had no side; a Porter's add could stay alive while the bark sent the hero upstairs. | "Find the generator →"; the D3 bark waits until the hall is clear (the plan's bark rule). |
+| R11 | The wing's first wave | A Scalpel Intern who left the walkway "dropped" to x 548, the top of the supply cabinet beside it; he stood there, never attacked and never came down, so the wave did not end and nothing said why. | A goon who leaves a ledge steps past any lower step beside it, down to the floor. |
+
+**The defend goal**
+
+| # | Moment | What was unclear | Fix |
+|---|---|---|---|
+| D1 | D1 starts | The PA line and the "Defend Mags" rules were both soft toasts; the rules were dropped, so the player never read what the goons do. | An alarm bell; the PA line, then a hard toast: "Defend Mags. They are coming for her bed. Hit anyone at the bed: it stops the needle." |
+| D2 | The HUD | "MAGS ♥♥♥ · 12s" over an unlabelled bar: what the time and the bar meant was not said. | The line says it: "MAGS ♥♥♥ · THEY COME IN 12s" (the bar is the time), "MAGS ♥♥♥ · 3 LEFT" (goons in this defend, later sub-waves included), "MAGS ♥♥♥ · NEEDLE! HIT HIM" (the bar is the needle), "MAGS ♥♥♡ · A HEART LOST" (red). |
+| D3 | A goon at the bed | He just stood there; the monitor's red trace was the only sign. | He raises the syringe high over her (a pose, `e.armUp`, with the syringe drawn in his hand and a red light on him), a red ring on the floor round the bed fills as the needle goes in, her monitor flashes red and beeps faster, and Nero barks at him. No sign over anyone. |
+| D4 | A heart lost | A soft toast that could drop. | A flat-line blip, a shake, a red flash, the HUD line in red, and a hard toast: "Mags is hurt. 2 hearts left. Hit the one at her bed." |
+| D5 | The warning (D2, D3) | It did not say where to go, and the timer was not named. | The bark toast, the objective line and the HUD name the door, its side and the seconds; the monitor beeps faster and blinks amber as the time runs out. In Ward 3 the line says "Stand by Mags's bed → · they come in 11 s". |
+| D6 | The goons arrive | Nothing marked it if the hero was still away. | An alarm bell and a hard toast: "Here they come" in Ward 3, or "They are at her bed. Back to Ward 3: the stair door ←" elsewhere. |
+| D7 | The end | D1 and D2 had short toasts; D3 had none. | "Mags is safe, for now", with the next step under it (the east door, the stair door then the dead lift, the payphone). |
+| D8 | Why go back | The reason was in one toast only. | The bark toast and the objective say it each time: they are coming for Mags's bed. |
+
+**Backtracking.** The D3 return is one step now (R6). The D2 return was already short (the stair door is 40 px from Ward 5). The walk
+back out after each defend stays: it is short, and Nero shows the door.
+
+**Difficulty.** No numbers changed: the warning times, the inject times, the hearts, the waves and Nero's pins are as before. The
+only gameplay changes are route fixes (the gurney can be climbed, the D3 door is near, the beds let him pass after Krieg runs, the D3
+bark waits for the Porter's add).
+
+**Generic hooks (small).** `src/legacy.js`: `e.armUp` (a level's held tell: the weapon hand raised high, in `poseEnemy`) and
+`G.sceneOn` (read only: the edge arrow hides during a scene). Everything else is in `src/levels/hospital/`.
+
