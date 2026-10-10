@@ -776,7 +776,7 @@ export function createTrain(G) {
         e.sp = 'lvault'; e.spT = 0; e.vT = 0.45; e.vx0 = e.x; e.vx1 = D.VROOF.x1 + 90;
         later(() => { S.plate = false; S.lgap = 30; sfx('chain_snap', D.PLATE.x0, 1); sfx('hook_clank', D.PLATE.x0, 1, 0.5); G.shakeIt(0.4, 3); for (let k = 0; k < 12; k++) G.sparks.push({ x: D.PLATE.x0 + G.simRand() * 30, y: GROUND - 2, t: 0 }); G.toast('The pin', 'Only the safety chain holds the cars. Cross on the narrow beats.', false); }, 0.5);
       }, 1.1);
-      if (dif() < 2 && !G.flags.demo) { S.ph3Ck = true; G.setCkpt('boss', 3, true); }
+      if (dif() < 3 && !G.flags.demo) { S.ph3Ck = true; G.setCkpt('boss', 3, true); }   // (Easy, Medium and Hard: a slip in phase 3 costs phase 3, not the fight; Wicked keeps the whole fight)
     }
   };
 
