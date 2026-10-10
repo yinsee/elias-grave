@@ -715,3 +715,155 @@ Character refs needed: `lenz`, `grau`, `kern`, `aldane`, `mayor` (`art/character
 - **Boss:** `sfx:metronome_tick`, `sfx:metronome_tock_accent`, `sfx:metronome_bell`, `sfx:metronome_winddown`, `sfx:sabre_draw`, `sfx:sabre_ring`, `sfx:sabre_parry`, `sfx:sabre_break`, `sfx:violin_case_latch`, `sfx:violin_harmonic`, `sfx:peg_throw`.
 - **Ending:** `sfx:gramophone_needle_drop`, `sfx:gramophone_crackle`, `sfx:clock_silence_room` (room tone without ticks), `sfx:nero_growl`.
 - **Voice:** `voice:kern_cut_01` ("Cut it! Cut us loose!"), Usher barks (`voice:usher_sandman_01`: "Sandman, car two.", `voice:usher_roof_01`: "He's on the roof."), Lenz barks (`voice:lenz_allegro`, `voice:lenz_rushing`, `voice:lenz_again`, `voice:lenz_presto`, `voice:lenz_rest`, `voice:lenz_count` for Easy), `voice:bell_gramophone_01` ("Hello, Elias. Midnight. The Spire. We'll finish the lesson.").
+
+---
+
+## 10. As built (branch `worktree-agent-ac65d69a2c43084f5`)
+
+Module: `src/levels/train/` (`data.js`, `paint.js`, `run.js`, `three.js`, `index.js`); bosses `src/bosses/grau.js` (mini-boss) and
+`src/bosses/lenz.js` (boss). Cutscenes: `assets/cutscenes/train_intro.json`, `grau_intro.json`, `board_surrender.json`,
+`lenz_intro.json`, `train_outro.json` (end panels 1-2), `train_reveal.json` (end panels 3-5).
+
+### 10.1 The fold (the plan's 3600 px into the engine's 2800 x 320 world)
+
+Each car is a camera group. The car ends are walls. Doors, the hatch, the window and the ladders (↑ by one) join the cars with a short
+fade. The boss roof is the game's club (x 2436-2800). The workshop is before the club wall: after the boss, the level leaves the club.
+
+| Section | x | Joined by |
+|---|---|---|
+| roof_front | 0-300 | the hatch (x 284, ↑ when the roof Ushers are down) |
+| baggage | 308-556 | the gangway door (x 550, ↑ when b1 and b2 are down) |
+| dining (aisle and galley) | 564-880 | the galley door (x 874, ↑ when d1 and d2 are down) |
+| sleepers | 888-1140 | the end window (x 1132, ↑: up onto the roof) |
+| roof_mid (sleeper A, the 28 px car gap, sleeper B, the tail stub) | 1148-1750 | the dome glass breaks under him (a drop) |
+| dome | 1758-2040 | the rear door (x 2034, ↑ with the vault key) |
+| vault | 2048-2200 | the ladder (x 2192, ↑ with the ledger): into the club |
+| roof_boss (club): vault roof, gangway plate, last car, rear platform | 2436-2800 | the last car's door (scripted, after the brake) |
+| workshop | 2208-2414 | the end |
+
+When a car is narrower than the view, the cars beyond its ends are drawn dark (drawFx).
+
+### 10.2 The moving train (shared code; the same pixels in 2D and 3D)
+
+- **Scroll**: `S.sc` moves at the train's speed: 600 px/s; 520 for the Board's tail; 690, 690, 780 in Lenz's phases. The brake takes
+  it to 0 in 6 s. `paint.js backPix` draws the sky and the clouds (k 0.01), the mountains (0.08), far lights (0.3), the Vargas Dam
+  (0.2, roof_mid and phase 1), telegraph poles (0.5) and, in phase 3 and the workshop, the valley and the Spire. It fills the sky of
+  the roofs and every window hole (`WINDOWS`) on the wall layer.
+- **Rail joints**: a clack every 0.43 s. **Lurches** indoors every 25-40 s: loose things slide toward the rear, a goon mid-swing
+  staggers, the hero slides 12-20 px unless he crouches. **Wind** on the roofs: a steady push toward the rear; a howl, then a gust.
+- **Sweepers** (`SWEEP` in `data.js`): gantries (a beam at y 236-262, 14 dmg) and tunnels (the mouth hits like a gantry; inside, a
+  body that stands is hit again once a second, 10 dmg). Crouch (↓), roll or lie down to pass. Warnings: the signal bell or the whistle
+  1.5 s before; the front edge of the roof flashes red (on Easy, a stripe across the whole roof). Goons duck by chance (E 40, M 60,
+  H 80, W 95 %); a goon who fails is swept off the train. Roof spawns wait while a sweeper is warned or passes. The dining car's tunnel
+  is a 2.5 s blackout. After the scripted list, a gantry comes every 16 s while the hero stays on a roof.
+- **Gaps**: the 28 px car gap, the decouple gap, the breathing gap on the boss roof. A body on the floor over a gap falls. A goon
+  leaves the train. The hero falls; on Easy and Medium he takes 30 (35 on the boss roof) and is back at the near edge; on Hard and
+  Wicked it is a retry from the checkpoint.
+- **Eject zone**: the open side door of the baggage car (x 424-462). A goon knocked down, thrown or flying into it leaves the train.
+  A Doorman's bear hug next to it throws the hero at it: he catches the frame (15 dmg) and is pulled back in.
+
+### 10.3 Set pieces
+
+- The drop from the footbridge (a slow-motion landing). Nero is in the baggage car: he follows inside the cars, waits on the roofs,
+  lies by the safe, growls at the gramophone. No "hold" command: there is no key for it.
+- **The aisle**: the diners sit; they stand when he is 40 px in. Slow motion on his first roll, shot or throw, or after 0.6 s (a "ROLL"
+  toast on Easy). The galley's Stewards come at 60 % down. Three chandeliers (a shot or a thrown thing drops one: 25 dmg and a
+  knock-down within 20 px), six window panes (shots crack and break them), the steam valve (a blow: a 2 s jet, 6 dmg every 0.25 s; it
+  blinds), the cleaver rack (a katana stands in for the long cleaver: the hero has no machete).
+- **The sleeper corridor**: the Gunner behind the luggage trolley (cover), Ushers from the compartments, compartment 3 (↑: a bandage and
+  a gold Choir coin), the shotgun in the emergency cabinet. A Gunner always drops his machine gun (60 rounds).
+- **The roof over the dam**: the Vargas tunnel, then the dam and the gantries; Ushers climb the ladders at the car ends.
+- **"Cut the car!"**: Kern on the speaker (a toast), the coupling pin, the stub drops back (the gap grows from 20 px to 100 / 120 px in
+  6 / 5 / 5 / 5 s; riders move with it). A jump from the edge while the gap is open is the slow-motion leap onto the stub (an assist
+  carries him; his gun fires in the air as usual). On the stub: the cut wave. When it is down (or after 8 s) the glass creaks twice and
+  breaks: the drop into the dome (a slow-motion landing on a table).
+- **The dome**: 12 panes overhead. Climbing rounds break them; a broken pane drops shards (a 0.5 s ring, 6 dmg) and lets the rain in.
+  The Board (the Mayor, Kern, Aldane) cower behind the bar (drawn heads that duck and peek). A Bell & Sons clock at 3:17.
+- **The Board surrenders** (portrait dialog), the vault key on the bar, the vault (the ledger in the safe, the katana, the shotgun; the
+  metronome is audible), the ladder.
+- **The ending**: the metronome winds down, end panels 1-2, he walks to the rear platform and turns the brake wheel (the speed falls
+  to 0 in 6 s, sparks), silence, the last car's door opens, the workshop (every clock at 3:17, a pipe smoking, Nero growling), the
+  needle drops (a tripwire at x 2318), panels 3-5, the results card. The ending is an in-engine cinematic (the game ignores keys during
+  an ending; Esc or Enter goes to the card), not a "hold ↑" prompt.
+
+### 10.4 The Ushers (data: `USHERS` in `data.js`)
+
+| Variant | Base | What it does | The answer |
+|---|---|---|---|
+| Usher | pistol | Paired shots; steps back when you come within 50 px | Crouch behind a vent or the trolley (cover stops shots at its height), then close in |
+| Roof Usher | pistol | Climbs over the ladders at the car ends; ducks sweepers by chance | Knock him into the path of a gantry |
+| Gunner | pistol (long gun), HP +40 %, speed 60 % | Plants (1.2 s; E 1.6, W 1.0: a drum rattle, a red stripe down the lane, a red muzzle glow), a 10-round sweep low to high, a 2.2 s reload | A heavy blow (14+) or a thrown thing stops the wind-up; roll through; punish the reload |
+| Doorman | brawler, HP +50 % | A 0.55 s reach for a bear hug, then a throw (at the side door: out of it) | Dodge the reach; keep your back away from the door |
+| Steward | knife, speed +15 % | Quick lunges (dining car and galley only) | Keep distance; hit him after the lunge |
+| Steward (plates) | thrower, 8 dmg | Thrown "plates" (the engine's thrown knives) | Close in |
+
+Fire tokens: at most 1 / 2 / 3 / 4 shooters in any 1 s window (a Gunner costs 2); a shooter without a token holds his aim.
+Reinforcements on Hard and Wicked (`b2` and `rm2` are bigger there; `s3` is the second Gunner on Wicked). No wave spawns on a ledge.
+Ambushes never open within 50 px of the hero.
+
+### 10.5 Bosses
+
+- **Head Usher Grau** (`src/bosses/grau.js`, the mini-boss slot `M.mini()`): HP 300 / 380 / 440 / 500, poise 45. Phase 1: the sweep
+  (14 rounds, a 1.0 s wind-up; the last rounds climb into the glass; a 2.2 s reload), the case guard (front blows ring off it unless
+  they do 22+ dmg or come from the axe or a thrown thing: those break the guard), the case bash (0.6 s; into the bar or a wall: a 1.5 s
+  stun). Phase 2 (50 %): he throws the empty gun (a machine gun with 30 rounds on the floor), pistol volleys (3 paired shots), the glass
+  drop (2 floor rings, 0.6 s, 10 dmg). Crew: Ushers from the rear door every 8 s, alive 1 / 2 / 2 / 3. Defeated: slow motion, the crew
+  kneel, the Board's scene.
+- **Viktor Lenz** (`src/bosses/lenz.js`, the game's boss): HP 800 / 1000 / 1150 / 1300. The run keeps the beat clock: 3 beats a bar at
+  84, 104, 126 BPM by phase; tick, tick, TOCK; the metronome on the lantern swings with it. He picks a move only on beat 1; strikes
+  land on beat 3 (a white rim light, the TOCK). Moves: lunge (a 90 px thrust; on Hard and Wicked the tell is beat 2 only), waltz (high,
+  high, low in the next bar), bow (a blow on beats 1-2 is parried and answered: riposte 14 / 22 / 26 / 30), the case throw (the case
+  stays on the roof; thrown back at him: a 1 s stun), pizzicato (pegs high, low, high), the vault (phase 2+: on a warned gantry he
+  swings over you and lands behind with a cut), cadenza (phase 3: the bell twice, six cuts on half beats, 1.6 s open after), rubato
+  (below 10 %, once: the metronome stops for a bar, then an off-beat lunge). Punish window 2 / 1.5 / 1 / 1 beats.
+  Hazards on the grid: a gantry every 8 / 6 / 4 bars, tunnels every 12 / 10 bars in phases 2 / 3 (2 bars long), each warned one bar
+  before. He ducks every warned hazard (or rides a gantry in phase 2+). Stunned, he cannot duck: a gantry then takes 12 % of his health
+  and stuns him for 2 s. Phase 2 stragglers: a roof Usher climbs a ladder every 4 bars (alive 0 / 1 / 2 / 2); he cuts down any Usher in
+  reach on beat 3; their stray shots hit him (the engine's bodies-are-cover rule; no 50 % rule). Phase 3: he leaps to the last car and
+  kicks the pin; the plate falls; the gap breathes between 30 px and 80 / 100 / 110 / 120 px over 2 bars (the chain clanks at its
+  widest); he stays on the last car and cuts thrown things out of the air on beat 3. A phase-3 checkpoint on Easy and Medium (the retry
+  starts at phase 3 with him at 30 %). Barks: "Allegro.", "You're rushing." (a parry), "Again. From the top." (he hits you), "Presto.
+  Let's lose the orchestra.", "You heard the rest." (after rubato); on Easy he counts "One. Two.".
+
+### 10.6 Chapter flow
+
+`startChapter7()` plays the intro panels, then the level. The menu item "Chapter 7: The Last Train" is locked until `progress.ch7` (the
+lock text names Commissioner Vane at the Palm House). Beating Lenz unlocks `ch8`; results key `ch8` (par 720 s). Level 6 is not in this
+branch: at merge, its results card should lead here (`else if (<level 6>() && progress.ch7) startChapter7();`). The menu index of this
+item (`menuSel` 6) assumes that Chapter 6 is not listed yet.
+
+### 10.7 Asset names (stable)
+
+- Panels: `train_intro_01`..`05`, `train_outro_01`..`05` (`assets/art/panels/train/`). Portraits: `lenz_serene`, `lenz_amused`,
+  `lenz_smiling` (`lenz_dying` is not used: panel 1 carries his last line), `grau_stern`, `grau_furious`, `kern_terrified`,
+  `kern_pointing`, `aldane_sweating`, `aldane_hollow`, `mayor_whining`, `elias_cold`, `elias_furious_quiet`.
+- Cutscene scripts: the six above. `kern_cut` is a toast, not a script.
+- Music cues (stand-ins in `src/audio/manifest.js`): `music:train`, `music:train_aisle`, `music:lenz`, `music:train_outro`. In the
+  level: `docks_explore` (calm), `boss_marchetti` (Grau, Lenz).
+- SFX: no new sounds. Stand-ins: `train_clatter` (joints, lurch), `train_horn` (the whistle), `bell_ting` (the signal bell, the
+  metronome's accent and bell), `perc_hat` / `perc_tom` (tick and TOCK), `chain_creak` (the drum rattle), `mg_burst`, `chain_snap`,
+  `hook_clank`, `glass_*`, `chandelier_*`, `douse_hiss` (steam, the brake), `door_open`, `ladder_step`, `pa_click`. Every
+  `sfx:train_*`, `sfx:metronome_*`, `sfx:gramophone_*` and `sfx:sabre_*` name in 9.5 is missing.
+- Voice ids in the scripts (none exist): `train_intro_01`, `_03`, `_04`, `elias_stay`, `grau_intro_01`, `_02`, `elias_member`,
+  `board_01`..`05`, `elias_silent`, `elias_nero`, `elias_who`, `lenz_intro_01`..`03`, `elias_move`, `elias_maestro`, `lenz_dying`,
+  `train_outro_02`, `_03`, `_05`, `bell_gramophone_01`.
+
+### 10.8 Test hooks (`?manual`)
+
+`window.__train`: `chapter()`, `start()`, `skip('baggage'|'dining'|'sleepers'|'roof'|'cut'|'dome'|'vault'|'boss')`, `toBoss()`,
+`peek()` (section, waves, sweepers, the stub, the dome, Grau, Lenz's move and the beat, the plate and the gap, the ending), `tp(x)`,
+`kill(n)`, `setDiff(i)`, `hurtBoss(n)`, `hurtMini(n)`, `hurtHero(n)`, `heal()`, `view3d(on)`, `zoom(z)`, `equip(w)`, `retry()`,
+`unlock(id)`, `progress`, `input`, `TR` (the run: `TR.sendSweep('gantry'|'tunnel')`, `TR.S`), `ENG`.
+
+### 10.9 Not done in this pass
+
+- No zoom control per section (the engine has no hook): no wide shot over the dam, no push-in in the workshop.
+- Ushers do not walk to cover by themselves (the vents and the trolley stop shots for anyone who crouches behind them, the hero too).
+- No dessert trolley that rolls in a lurch (a chair stands in), no champagne bucket, no coin cage; ledger boxes are big crates;
+  napkins and tablecloths do not fly.
+- The leap is an assist (any jump from the edge while the gap is open lands on the stub); no shotgun recoil push in the air.
+- In 3D the decouple gap on roof_mid does not open in the floor (only the boss roof's floor is drawn live in 3D); the wall layer shows
+  the stub and the chain.
+- Faction hostility: the stragglers shoot only the hero; their stray rounds hurt Lenz only as cover.
+- No hemiola on Wicked; the rubato stops the metronome, not the music track.
+- The crew kneel after Grau without a surrender animation; the Board are drawn heads, not sprites.
