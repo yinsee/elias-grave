@@ -6567,6 +6567,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // of 4 x 4 view pixels and spread back smoothly over the crisp pixels.
   const GRADE = { bloomT: 0.8, bloom: 0.55, sat: 1.12, vig: 0.28, W: [0.227, 0.195, 0.122, 0.054, 0.016] };
   const postB = { w: 0, h: 0 };
+  const bloomK = () => (LVH.bloomK && LVH.bloomK()) || 1;   // a level's bloom scale (St. Cecilia's theatre lamp, the Palm House ballroom: 0.6), both views
   function postPass() {
     const gw = Math.ceil(cam.vw / 4), gh = Math.ceil(cam.vh / 4), n = gw * gh;
     if (postB.w !== gw || postB.h !== gh) { Object.assign(postB, { w: gw, h: gh, a: new Float32Array(n * 3), b: new Float32Array(n * 3) }); }
@@ -6591,7 +6592,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       for (let y = 0; y < cam.vh; y++) for (let x = 0; x < cam.vw; x++) { const d2 = ((x + 0.5) / cam.vw * 2 - 1) ** 2 + ((y + 0.5) / cam.vh * 2 - 1) ** 2; vg[y * cam.vw + x] = d2 <= 0.35 ? 1 : 1 - GRADE.vig * ss(0.35, 1.25, d2); }
       Object.assign(postB, { cw: cam.vw, chh: cam.vh, cx: col(cam.vw), cy: col(cam.vh), vg });
     }
-    const CX = postB.cx, CY = postB.cy, bloom = GRADE.bloom, sat = GRADE.sat;
+    const CX = postB.cx, CY = postB.cy, bloom = GRADE.bloom * bloomK(), sat = GRADE.sat;
     const Sm = postB.sm && postB.sm.length === gw * gh ? postB.sm : (postB.sm = new Float32Array(gw * gh));
     for (let i = 0; i < gw * gh; i++) Sm[i] = A[i * 3] + A[i * 3 + 1] + A[i * 3 + 2];   // a cell with no glow near it skips the spread
     for (let vy = 0; vy < cam.vh; vy++) {
@@ -6837,7 +6838,12 @@ import * as SPIRE from './levels/skyscraper/index.js';
                 if (d2 < q.z) { float k = 1.0 - d2 / q.z; L += k * k * t3LC[i]; if (q.w > 0.0 && d2 < 90.0) glow += (1.0 - d2 / 90.0) * q.w; }
               }
               ${shade ? 'L *= 0.72 + 0.42 * max(dot(normalize(vT3N), vec3(0.28, 0.56, 0.78)), 0.0);' : ''}
-              diffuseColor.rgb = min(diffuseColor.rgb * L + glow / 255.0 * vec3(1.0, 0.78, 0.35), vec3(1.0));
+              diffuseColor.rgb = diffuseColor.rgb * L + glow / 255.0 * vec3(1.0, 0.78, 0.35);
+              ${shade === 2 ? `{   // [read] fighters: a soft shoulder above 0.78, so a white suit under a lamp (Brask, Lenz) keeps its folds instead of burning out flat
+                float m = max(diffuseColor.r, max(diffuseColor.g, diffuseColor.b));
+                if (m > 0.78) diffuseColor.rgb *= (0.78 + 0.17 * (1.0 - exp((0.78 - m) / 0.17))) / m;
+              }` : ''}
+              diffuseColor.rgb = min(diffuseColor.rgb, vec3(1.0));
               ${shade === 2 ? `{   // rim light: the edges facing a lamp or a neon sign catch its colour, in two hard steps (pixel-art banding)
                 vec3 N = normalize(vT3N), V = normalize(cameraPosition - vT3W); float f = 1.0 - max(dot(N, V), 0.0); f = step(0.45, f) * (0.5 + 0.5 * step(0.7, f));
                 vec3 rim = vec3(0.0);
@@ -8795,7 +8801,10 @@ import * as SPIRE from './levels/skyscraper/index.js';
     // ----- light and camera -----
     updateLights() {
       const [aR, aG, aB, ls] = lightList();
-      T3U.amb.value.set(aR, aG, aB);
+      // [read] a dark interior reads darker in 3D than in 2D (the form shading takes light off): lift its ambient by up to 0.08
+      // (a dark room full, fading out by 0.6); the street and the docks are night outdoors and keep theirs
+      const lift = isStreet() || isP9() ? 0 : 0.08 * clamp((0.6 - Math.max(aR, aG, aB)) / 0.2, 0, 1);
+      T3U.amb.value.set(aR + lift, aG + lift, aB + lift);
       for (let i = 0; i < T3.NL; i++) {
         const q = ls[i];
         if (q) {
@@ -8841,7 +8850,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
       this.postCam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
       this.postQuad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2)); this.postScene = new THREE.Scene(); this.postScene.add(this.postQuad);
       const G = GRADE, f = v => v.toFixed(4), vs = 'varying vec2 vUv; void main() { vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
-      const U = { tSrc: { value: null }, tBloom: { value: null }, gp: { value: new THREE.Vector2(1, 1) }, view: { value: new THREE.Vector2(1, 1) }, dir: { value: new THREE.Vector2(1, 0) }, fade: { value: 1 } };
+      const U = { tSrc: { value: null }, tBloom: { value: null }, gp: { value: new THREE.Vector2(1, 1) }, view: { value: new THREE.Vector2(1, 1) }, dir: { value: new THREE.Vector2(1, 0) }, fade: { value: 1 }, bloom: { value: G.bloom } };
       const mk = fs => new THREE.ShaderMaterial({ uniforms: U, vertexShader: vs, fragmentShader: fs, depthTest: false, depthWrite: false });
       this.postU = U;
       // view: the part of the render that the view fills (uv); gp: the grid size in cells
@@ -8853,11 +8862,11 @@ import * as SPIRE from './levels/skyscraper/index.js';
           vec2 g = floor(vUv * gp); vec3 c = vec3(0.0);
           for (int k = -4; k <= 4; k++) { vec2 q = clamp(g + dir * float(k), vec2(0.0), gp - 1.0); c += texture2D(tSrc, (q + 0.5) / gp).rgb * w[k < 0 ? -k : k]; }
           gl_FragColor = vec4(c, 1.0); }`);
-      this.mComp = mk(`uniform sampler2D tSrc, tBloom; uniform vec2 gp, view; uniform float fade; varying vec2 vUv;
+      this.mComp = mk(`uniform sampler2D tSrc, tBloom; uniform vec2 gp, view; uniform float fade, bloom; varying vec2 vUv;
         void main() {
           vec2 gu = vUv;
           vec3 c = texture2D(tSrc, vUv * view).rgb, b = texture2D(tBloom, vUv).rgb;
-          c += b * ${f(G.bloom)};
+          c += b * bloom;
           float l = dot(c, vec3(0.299, 0.587, 0.114)), k = smoothstep(0.2, 0.8, l);
           c = vec3(l) + (c - vec3(l)) * ${f(G.sat)} + vec3(-0.01 + 0.04 * k, 0.015 * k, 0.035 - 0.055 * k);
           vec2 v = gu * 2.0 - 1.0; float vg = 1.0 - ${f(G.vig)} * smoothstep(0.35, 1.25, dot(v, v));
@@ -8867,7 +8876,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     post() {
       const r = this.renderer, U = this.postU, gw = Math.ceil(cam.vw / 4), gh = Math.ceil(cam.vh / 4), q = this.postQuad;
       if (this.rtA.width !== gw || this.rtA.height !== gh) { this.rtA.setSize(gw, gh); this.rtB.setSize(gw, gh); }
-      U.gp.value.set(gw, gh); U.view.value.set(1, 1); U.fade.value = 1 - clamp(fade, 0, 1);
+      U.gp.value.set(gw, gh); U.view.value.set(1, 1); U.fade.value = 1 - clamp(fade, 0, 1); U.bloom.value = GRADE.bloom * bloomK();
       r.setRenderTarget(this.rtMain); r.render(this.scene, this.camera);
       const pass = (m, src, dst) => { q.material = m; U.tSrc.value = src; r.setRenderTarget(dst); r.render(this.postScene, this.postCam); };
       pass(this.mBright, this.rtMain.texture, this.rtA);

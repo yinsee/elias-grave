@@ -875,6 +875,7 @@ export function createHospital(G) {
   }
   function d2Start(quiet) { if (!G.flags.demo) G.setCkpt('h:d2', 0, quiet === true); pa('Visiting hours are over, Mr. Grave.'); defendStart('d2'); setObjective('Nero is barking', 'Back to Room 314 · the stair door (EXIT) by Ward 5'); }
   function d3Start(quiet) { if (!G.flags.demo) G.setCkpt('h:d3', 0, quiet === true); pa("Power's back. Good. I prefer to see my work."); defendStart('d3'); setObjective('Nero is barking', 'Back to Room 314 · the stair door (EXIT) by the lift shaft'); }
+  M.bloomK = () => secAt(G.P[2].x).id === 'theatre' ? 0.6 : 1;   // [read] the surgical lamp's bloom cut by 40 %: Krieg's wind-up glint reads under it
   M.lights = () => {
     const cam = G.cam, cx = cam.x + cam.vw / 2, sec = secAt(G.P[2].x), ls = [];
     let amb = ambOf(sec);
@@ -905,7 +906,7 @@ export function createHospital(G) {
     // Krieg: his headlamp (off in phase 2), the defib's arcs; saws spark
     for (const e of G.enemies) {
       if (e.dead || !e.J) continue;
-      if (e.kind === 'krieg' && (e.ph !== 2 || e.roof) && e.sp !== 'flee') add(e.J[0].x + e.face * 18, e.J[0].y + 4, 50, 1.2, 1.2, 1.1, 10, 5);
+      if (e.kind === 'krieg' && (e.ph !== 2 || e.roof) && e.sp !== 'flee') add(e.J[0].x + e.face * 18, e.J[0].y + 4, 50, 0.75, 0.75, 0.7, 6, 5);   // [read] -40 %: under the theatre lamp it blew him out to a white blob
       if (e.paddles) add(e.x, e.y - 14, 70, 0.5, 0.9, 1.6, 20, 6);
       if (e.hv === 'syringe' || e.pen) add(e.J[6].x, e.J[6].y, 28, 0.9, 0.9, 0.6, 6, 4);   // a penlight
       if (e.hv === 'anaesthetist') add(e.J[0].x + e.face * 14, e.J[0].y + 2, 40, 1.0, 1.0, 0.9, 6, 4);   // a headlamp
