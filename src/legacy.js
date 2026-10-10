@@ -8583,6 +8583,9 @@ import * as SPIRE from './levels/skyscraper/index.js';
       this.lBlade = mk(true, 0, true, '', 0, 2);       // the blade sign and the chevrons, on their boxes
       this.lRail = mk(true, 0, true, '', 0, 2);        // the fire escape's outer rail, at its front edge
       this.lClub = mk(true, 0, true, '', 0, 2);        // the club's back wall and the crowd, on the wall (not a screen-space backdrop)
+      // these layers write no depth, so they must draw after the wall they lie on: by material age alone they did only for the
+      // world built first (a level loaded later made a newer wall, drawn over them: its tanks, statues, doors were gone in 3D)
+      for (const L of [this.lWall, this.lSign, this.lBlade, this.lRail, this.lClub]) L.mesh.renderOrder = 1;
       // the club's dance floor: one fixed sheet over the whole club (not the camera window), so its edges stay out of the view
       const fw = 512, fx0 = W + 64 - fw, fd = new Uint32Array(fw * (STREET + 1)), ft = t3tex(fd, fw, STREET + 1);
       const fm = new THREE.Mesh(t3flat(fx0, fx0 + fw, T3_GROUND - 0.05, T3.ZF, T3.ZS, 0, 0, 1, 1), t3mat({ map: ft }, 0, 'floor'));
