@@ -326,7 +326,7 @@ export function installSet(X) {
   function diveDone() { S.dive = null; S.prompt = null; G.toast('The rail', 'Up the stair: the gunners are above you', true); G.emit('feat', 'raildive'); }
   X.onFall = F => {   // a set piece's own fail branch for a fall
     if (S.dive || (S.pentIn && H.grpAt(ctl.x) === 3 && !S.p2done && S.p2Started)) {
-      if (D.MG_SWEEP.second[dif()] && !S.secondUsed) { S.secondUsed = true; S.dive = null; S.prompt = null; G.heroTo(1662); hero.hp = Math.max(1, hero.hp - 20); G.toast('He catches a mullion', 'A second chance. −20', true); return true; }
+      if (D.MG_SWEEP.second[dif()] && !S.secondUsed) { S.secondUsed = true; S.dive = null; S.prompt = null; G.heroTo(1662); hero.hp = Math.max(1, hero.hp - D.VOID_FALL.dmg[dif()]); G.toast('He catches a mullion', `A second chance. −${D.VOID_FALL.dmg[dif()]}`, true); return true; }
       return false;
     }
     if (S.snap || S.lift.st === 'snap') { S.snap = null; S.prompt = null; if (D.LIFT.snapFail[dif()] >= 0) { hero.hp = Math.max(1, hero.hp - D.LIFT.snapFail[dif()]); G.placeHero(795, S.cradleS); snapDone(false); return true; } return false; }

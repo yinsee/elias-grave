@@ -240,7 +240,7 @@ export function createTrain(G) {
     if (F.t > 0.45 && !F.out) {
       F.out = true; const d = dif();
       if (D.FALL.perma[d]) { G.fallOut(); return; }   // (the game's fall rule: Hard back to the checkpoint, never healed; Wicked the Wasted card. The restart clears S.fall)
-      const dmg = S.grp === 8 ? 35 : D.FALL.dmg[d];
+      const dmg = D.FALL.dmg[d];   // (the boss's car too: one fall rule)
       teleport(F.back, () => { hero.hp = Math.max(1, hero.hp - dmg); G.toast('He catches the edge', `-${dmg} · he climbs back`, true); if (S.grp === 4 && S.stub.st !== 'idle' && !S.onStub) resetStub(); });
       later(() => { S.fall = null; }, 0.35);
     }

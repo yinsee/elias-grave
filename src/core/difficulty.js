@@ -15,6 +15,9 @@ export const DIFFS = [
   { name: 'Wicked', dmg: 1.3, ckHp: 0, A: 8, cdA: 4, regen: 0, tok: 4, swing: 3, gap: 0.25, side: 3, feint: 0.3, mix: 0.45, ender: true, readHold: 0.15, perma: true, dura: 0.5, wind: 0, rise: 0, reinf: [2, 3, 3], crew: { n: 12, alive: 3 } },
 ];
 
+// one fall rule for every level (a train gap, the Spire's voids, the cable snap): Easy and Medium: -ledge HP, back on the ledge; Hard: back
+// to the checkpoint, a second wind spent or -hard HP (G.fallOut); Wicked: the Wasted card, from the start. A fall is a rule: DIFFS.dmg does not scale it
+export const FALL = { ledge: 30, hard: 40 };
 // one boss HP curve (docs/reviews/2026-10-10-playtest.md section 4): each boss's Medium HP; Easy x0.8, Hard x1.2, Wicked x1.4.
 // A boss's phase lines are fractions of its HP, so they move with it. Marchetti: +20 % over the curve (900), the bots found him too easy
 export const HP_K = [0.8, 1, 1.2, 1.4];

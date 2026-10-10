@@ -5,7 +5,7 @@ import { WEAPONS } from './sim/weapons/defs.js';
 import { LOOT, STREET_DROPS } from './sim/weapons/drops.js';
 import { KINDS, LIFTABLE, TOSS, FLOOR_BREAK, PUSH_BREAK, KICKS } from './sim/objects/kinds.js';
 import { EPAL, BUILD, LOOK, ROLE, ZROLES, AROLES, AMIX, ETYPE, STOCKY_POISE } from './sim/enemies/roster.js';
-import { DIFFS } from './core/difficulty.js';
+import { DIFFS, FALL } from './core/difficulty.js';
 import { PAL } from './assets/palettes/base.js';
 import { mod, IDLE, GUARD, SQUAT, RISE, SITUP, PUSHUP, KNEEL, GU_T, fitPose, getupPose, K, AIR, teeterPose } from './sim/hero/poses.js';
 import { CLIMB, MOVES, keyAt, TRN, DASH, STOP, DEF, FINS, JUG, FLY, GRAB, OTG, DIVE, FOCUS, FIN, SLAM } from './sim/hero/moves.js';
@@ -5150,7 +5150,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // a lethal fall the level does not catch (a train gap, the Spire's drop): one rule for every level. Wicked: the Wasted card, from the
   // start. Hard: back to the checkpoint, never healed by it (a fall on Hard took him from 20 HP to 100): it costs a second wind if he
   // has one, else 40 HP; a fall that empties him is Wasted
-  const FALL_HP = 40;
+  const FALL_HP = FALL.hard;
   function fallOut() {
     if (flags.wasted) return;
     if (DIF().perma) { lockT = 99; hero.invT = Math.max(hero.invT, 3); showWasted('Fallen'); return; }

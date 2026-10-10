@@ -7,6 +7,7 @@
 //   workshop 2208-2414 · roof_boss (club) 2436-2800
 // The strip's x grows toward the REAR of the train; the train runs toward -x, so the backdrop scrolls toward +x and the wind blows +x.
 // All arrays "by difficulty" are [Easy, Medium, Hard, Wicked].
+import { FALL as GAME_FALL } from '../../core/difficulty.js';
 
 export const GROUND = 280;
 const hy = h => GROUND - h;
@@ -219,7 +220,7 @@ export const SWEEP = {
 // the wind on the roofs: a steady push toward +x, gusts (a howl 0.8 s first) double it
 export const WIND = { push: 10, gust: 26, every: [6, 10], warn: 0.8, t: 1.5 };
 // falls: a gap in the roof. Easy and Medium: damage and back to the near edge; Hard and Wicked: the last checkpoint
-export const FALL = { dmg: [30, 30, 35, 35], perma: [false, false, true, true] };   // perma (Hard, Wicked): the game's fall rule (G.fallOut)
+export const FALL = { dmg: [GAME_FALL.ledge, GAME_FALL.ledge, 0, 0], perma: [false, false, true, true] };   // the game's fall rule: Easy, Medium -30 and back on the roof; perma (Hard, Wicked): G.fallOut
 // the dining car's slow motion (s of sim time) and the leap's
 export const SLOW = { aisle: 1.6, leap: 1.2, landing: 0.6 };
 // lightning: the flash and its afterglow; thunder comes 0.3-2 s after
