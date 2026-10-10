@@ -9,11 +9,13 @@
 
 export const LYS = {
   kind: 'lys', name: 'Lys Moreau', title: 'The Understudy', look: 'lys',
-  hp: [240, 300, 360, 420], s: 1.0, m: 3, speed: 32, reach: 22, dmg: 10, heavyDmg: 14, poise: 12, windup: 0.3, cd: [0.8, 1.4],
+  hp: [360, 450, 540, 630], s: 1.0, m: 3,   // (x1.5: she was over in 15-30 s)
+  speed: 32, reach: 22, dmg: 10, heavyDmg: 14, poise: 12, windup: 0.3, cd: [0.8, 1.4],
   R: { w: 'cane', len: 9, off: -0.35, reach: 22 }, skin: ['#ecd2bc', '#c4a690'],
   combos: [['stab'], ['stab', 'slash'], ['slash', 'stab', 'stab']],
   fan: { n: [3, 3, 4, 5], dmg: 7, spread: 0.1, v: 250, windup: 0.45, rec: 0.6, cd: [2.4, 4], range: [50, 190] },
-  decoys: { dmgK: [0, 0.5, 0.5, 0.5], cd: [3, 5], every: 9 },
+  decoys: { dmgK: [0, 1, 1, 1],   // (a decoy's fan cuts like hers from Medium; Easy: harmless)
+    cd: [3, 5], every: 9 },
   lines: { intro: 'A gentleman looks for the one with no reflection.', wrong: 'Wrong glass, darling.', defeat: 'The Maestro... is upstairs. He wants you on time.' },
 };
 export const KESSEL = {
