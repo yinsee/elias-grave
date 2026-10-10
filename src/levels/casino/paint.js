@@ -287,13 +287,13 @@ function drawMirror(R, m, S, G, frameC) {
 }
 
 // ---- a chandelier: tiers of crystal on a gold frame; or falling; or a heap of crystal on the floor ----
-function chandelier(R, c, big) {
+export function chandelier(R, c, big, chain = true) {   // (chain: false for the 3D model, whose chain is a rod)
   const { plot, line1 } = R, t = R.t, w = big ? 26 : 16, x = c.x, y = c.y;
   if (c.st === 'gone') {   // the wreck on the floor
     for (let k = -w; k <= w; k += 2) { plot(Math.round(x + k), GROUND - 1 - ((k * 7) & 1), k % 4 ? CC.mirrorL : CC.gold); if (k % 6 === 0) plot(Math.round(x + k), GROUND - 2, CC.goldD); }
     return;
   }
-  if (c.st === 'hang' || c.st === 'warn') line1(x, 30, x, y - 8, CC.goldD);   // the chain (it shakes in the warning)
+  if (chain && (c.st === 'hang' || c.st === 'warn')) line1(x, 30, x, y - 8, CC.goldD);   // the chain (it shakes in the warning)
   const sw = c.st === 'warn' ? Math.sin(t * 40) * 1.2 : Math.sin(t * 0.8 + x) * 0.5;
   const cx = x + sw;
   for (let tier = 0; tier < 3; tier++) {
@@ -301,6 +301,20 @@ function chandelier(R, c, big) {
     for (let k = -ww; k <= ww; k++) { plot(Math.round(cx + k), Math.round(ty), CC.gold); if (k % 3 === 0) { plot(Math.round(cx + k), Math.round(ty + 1), CC.mirrorL); plot(Math.round(cx + k), Math.round(ty + 2), Math.floor(t * 3 + k) % 4 ? CC.mirrorL : C('#ffffff')); } }
   }
   for (let k = -2; k <= 2; k++) plot(Math.round(cx + k), Math.round(y + 12), CC.goldL);
+}
+
+export function drawTable(R, tb) {   // a flippable card table: upright (a round green top on a pedestal), flipped (the top faces one way: cover)
+  const { plot } = R, t = R.t, O = CC.out, x = Math.round(tb.x);
+  if (!tb.flipped) {
+    for (let k = -10; k <= 10; k++) { plot(x + k, GROUND - 15, k === -10 || k === 10 ? O : CC.feltL); plot(x + k, GROUND - 14, CC.felt); plot(x + k, GROUND - 13, CC.woodD); }
+    for (let y = GROUND - 12; y < GROUND; y++) { plot(x, y, CC.woodD); plot(x + 1, y, CC.wood); }
+    for (let k = -4; k <= 4; k++) plot(x + k, GROUND - 1, CC.woodD);
+    for (let k = 0; k < 3; k++) plot(x - 4 + k * 3, GROUND - 16, (k + Math.floor(t)) % 3 ? CC.cream : CC.red);   // cards and chips on it
+  } else {
+    const f = tb.side;   // the top faces this way (the cover is on the other side)
+    for (let y = GROUND - 22; y < GROUND; y++) for (let k = 0; k < 4; k++) plot(x + f * k, y, k === 0 ? (y === GROUND - 22 ? O : CC.woodD) : k === 3 ? O : (tb.hp < 30 && (y * 3 + k) % 7 === 0 ? CC.woodD : CC.felt));
+    for (let k = 1; k < 6; k++) plot(x - f * k, GROUND - 12 + (k >> 1), CC.woodD);   // the pedestal sticking out
+  }
 }
 
 // ---- per frame, on the wall behind everyone (both views: in 3D on the wall layer) ----
@@ -333,20 +347,7 @@ export function drawWorld(R, S, G) {
     if (!c.broken && c.flash > 0) for (let x = x0; x <= x1; x++) plot(x, y0 + 2, C('#ffffff'));
   }
   // flippable card tables: upright (a round green top on a pedestal), flipped (the top faces one way: cover), or broken
-  for (const tb of S.tables) {
-    if (!vis(tb.x - 12, tb.x + 12) || tb.broken) continue;
-    const x = Math.round(tb.x);
-    if (!tb.flipped) {
-      for (let k = -10; k <= 10; k++) { plot(x + k, GROUND - 15, k === -10 || k === 10 ? O : CC.feltL); plot(x + k, GROUND - 14, CC.felt); plot(x + k, GROUND - 13, CC.woodD); }
-      for (let y = GROUND - 12; y < GROUND; y++) { plot(x, y, CC.woodD); plot(x + 1, y, CC.wood); }
-      for (let k = -4; k <= 4; k++) plot(x + k, GROUND - 1, CC.woodD);
-      for (let k = 0; k < 3; k++) plot(x - 4 + k * 3, GROUND - 16, (k + Math.floor(t)) % 3 ? CC.cream : CC.red);   // cards and chips on it
-    } else {
-      const f = tb.side;   // the top faces this way (the cover is on the other side)
-      for (let y = GROUND - 22; y < GROUND; y++) for (let k = 0; k < 4; k++) plot(x + f * k, y, k === 0 ? (y === GROUND - 22 ? O : CC.woodD) : k === 3 ? O : (tb.hp < 30 && (y * 3 + k) % 7 === 0 ? CC.woodD : CC.felt));
-      for (let k = 1; k < 6; k++) plot(x - f * k, GROUND - 12 + (k >> 1), CC.woodD);   // the pedestal sticking out
-    }
-  }
+  if (!R.models3d) for (const tb of S.tables) if (vis(tb.x - 12, tb.x + 12) && !tb.broken) drawTable(R, tb);   // (3D: models, three.js)
   // gates between sections (shut: a door panel; open: nothing)
   for (const g of S.gates) {
     if (g.open >= 1 || !vis(g.x - 8, g.x + 8)) continue;
@@ -398,7 +399,7 @@ export function drawWorld(R, S, G) {
     }
   }
   // chandeliers (hanging, shaking, falling, wrecked)
-  for (const c of S.chands) if (vis(c.x - 30, c.x + 30)) chandelier(R, c, c.id === 'great' || c.id === 'salon');
+  if (!R.models3d) for (const c of S.chands) if (vis(c.x - 30, c.x + 30)) chandelier(R, c, c.id === 'great' || c.id === 'salon');   // (3D: models, three.js)
   // chain anchors: a gold ring on the rail (a target)
   for (const c of S.chands) if (c.anchor && c.st === 'hang' && c.armed !== false && vis(c.anchor.x - 4, c.anchor.x + 4)) { const { x, y } = c.anchor; plot(x - 1, y, CC.goldL); plot(x + 1, y, CC.goldL); plot(x, y - 1, CC.goldL); plot(x, y + 1, CC.goldL); if (c.hit > 0) plot(x, y, C('#ffffff')); }
   // the alarm light over the counting house: a red lamp that spins when the alarm is on
