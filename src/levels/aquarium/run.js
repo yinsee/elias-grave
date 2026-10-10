@@ -422,9 +422,13 @@ export function createAquarium(G) {
   // ---------------- the bloom (the rotunda's set piece) ----------------
   function bloomStep(dt) {
     const B = S.bloom, cyl = S.panes.cylinder;
-    if (!B.armed && !cyl.burst && S.w.j2.out && D.paneStage(cyl) >= 2) {
+    if (!B.hint && !B.armed && !cyl.burst && S.w.j2.out && D.paneStage(cyl) >= 1) { B.hint = true; G.toast('The jellyfish cylinder', 'Crack it with them near it', true); }
+    // (both waves down and the bloom never armed: arm it anyway, cracked or not, so the glass can burst and the 40 s fallback runs;
+    // else the right door never opens)
+    const wavesDown = S.w.j2.out && allDown('j1') && allDown('j2');
+    if (!B.armed && !cyl.burst && S.w.j2.out && (D.paneStage(cyl) >= 2 || wavesDown)) {
       const near = G.enemies.filter(e => !e.dead && Math.abs(e.x - D.CYL.x) < D.GLASS.arm.near).length;
-      if (near >= D.GLASS.arm.goons) {
+      if (near >= D.GLASS.arm.goons || wavesDown) {
         B.armed = true; B.t = 0; cyl.armed = true; sfx('glass_tink', D.CYL.x, 1, 1.3);
         G.toast('The glass is ready.', 'One shot, a thrown thing or a heavy blow bursts it', true); G.emit('bloom:armed', { x: D.CYL.x });
       }
