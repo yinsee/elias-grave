@@ -1,0 +1,213 @@
+[
+ {
+  "out": "assets/art/characters/brask/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 51,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {brask}, three-quarter view, upper body, standing in a gilded casino salon with crystal chandeliers and tall mirrors, gold and red light, a cold smug aristocratic smile, no text, blank signs"
+ },
+ {
+  "out": "assets/art/characters/cooler/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 52,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {cooler}, three-quarter view, upper body, standing in a green-painted concrete vault corridor with caged work lamps, a bored cold stare, no text, blank signs"
+ },
+ {
+  "out": "assets/art/characters/mags/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 53,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {mags}, three-quarter view, upper body, standing behind the bar of a dim old jazz bar with amber lamp light and bottles on shelves, a wry tired half-smile, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/casino/casino_intro_01.png",
+  "seed": 3101,
+  "post": {
+   "out": "assets/art/panels/casino/casino_intro_01.png"
+  },
+  "prompt": "Wide shot at night in heavy rain. A grand Belle Epoque casino palace on a river bank, its gold lights blurred by the rain and reflected in the wet street and the river. On the right a doorman in a long red coat and a top hat holds a big black umbrella. On the left {elias} walks past him, soaked, without stopping, hands empty, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/casino/casino_intro_02.png",
+  "seed": 3122,
+  "post": {
+   "out": "assets/art/panels/casino/casino_intro_02.png"
+  },
+  "prompt": "Medium close shot at night in the rain under a big black umbrella. A casino doorman in a red coat and a black top hat, wearing white gloves, holds out his open white-gloved palm. From the left edge of the frame, a bare man's hand in a black suit sleeve drops a single gold coin engraved with a tuning fork into the doorman's white glove. The doorman's face goes pale with fear, eyes wide. Gold casino lights blurred behind, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/casino/casino_intro_03.png",
+  "seed": 3103,
+  "post": {
+   "out": "assets/art/panels/casino/casino_intro_03.png"
+  },
+  "prompt": "Over-the-shoulder shot from behind a man in a black suit with shoulder-length dark wet hair, his back to the camera, looking out over a lavish casino gaming floor with crystal chandeliers, roulette tables, rich guests in evening gowns and tuxedos. In the middle distance four {house} all touch their earpieces at the same moment and stare at him. Gold and red light, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/casino/casino_intro_04.png",
+  "seed": 3124,
+  "post": {
+   "out": "assets/art/panels/casino/casino_intro_04.png"
+  },
+  "prompt": "Close-up on a green felt roulette table. The betting layout is a row of plain blank red and black rectangles with no numbers and no markings. A bare man's hand in a black suit sleeve sets a scorched silver tuning fork down on one blank red rectangle. Beside it, a croupier's long wooden rake is frozen in mid-pull through a pile of casino chips, the croupier's white cuff and red waistcoat at the edge of the frame. Warm gold chandelier light, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/casino/casino_intro_05.png",
+  "seed": 3125,
+  "post": {
+   "out": "assets/art/panels/casino/casino_intro_05.png"
+  },
+  "prompt": "Insert shot. A dark private office whose whole back wall is a grid of twelve old security monitors, every screen glowing with grainy grey-blue black-and-white footage of a casino floor. In the foreground, a hand in a white glove and a white tuxedo sleeve turns a round monocle on a thin gold chain between its fingers. On the central monitor, a tiny grainy figure of a man in a black suit stands at a roulette table. Blue monitor glow on the white glove, deep shadows, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/casino/casino_outro_01.png",
+  "seed": 3141,
+  "post": {
+   "out": "assets/art/panels/casino/casino_outro_01.png"
+  },
+  "prompt": "Overhead close shot. The head and shoulders of a beaten aristocrat with slicked silver hair and a thin silver moustache lie sideways on the polished red and black wedge-shaped pockets of a giant roulette wheel floor, his eyes half closed, blood on his lip, a cracked glass monocle on its gold chain lying on his cheek, the collar of his white tuxedo stained red. Right beside his face, a small white roulette ball rests in a single green pocket. Warm bulb light from the rim, no text, blank signs",
+  "face": "brask"
+ },
+ {
+  "out": "assets/art-src/panels/casino/casino_outro_02.png",
+  "seed": 3132,
+  "post": {
+   "out": "assets/art/panels/casino/casino_outro_02.png"
+  },
+  "prompt": "Interior of a dark wood-panelled private office at night, lit by a green desk lamp. On the wall hangs one old framed black-and-white group photograph of exactly six young men in tuxedos standing in a row. The head of the third man in the middle has been cut out of the photo with a razor, leaving a clean empty white rectangular hole where his face was. On the desk below stands a small brass and walnut mantel clock, its short hour hand pointing at the three and its long minute hand pointing between the three and the four. Rain on a dark window, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/casino/casino_outro_03.png",
+  "seed": 3133,
+  "post": {
+   "out": "assets/art/panels/casino/casino_outro_03.png"
+  },
+  "prompt": "Close medium shot at night in heavy rain. The side of an old dark green 1960s hardtop coupe car with a closed metal roof, parked at a curb. {mags} sits in the driver's seat and leans her head and arm out of the open driver's window, rain on her face, looking up at the viewer. Through the rear side window, {nero} sits in the back seat. Gold blurred lights reflected on the wet car body, dark plain background, no text, blank signs",
+  "face": "mags"
+ },
+ {
+  "out": "assets/art-src/panels/casino/casino_outro_04.png",
+  "seed": 3134,
+  "post": {
+   "out": "assets/art/panels/casino/casino_outro_04.png"
+  },
+  "prompt": "Wide shot at night in heavy rain. The grand columned portico of a casino glows gold in the background. An old dark green 1960s hardtop coupe car stands at the curb with its passenger door open. On the left, {elias} is climbing into the car through the open door, his back turned to the casino wall. On the plain stone wall behind him hangs an old black payphone with its receiver on the hook, nobody near it. Wet street, puddles, rain streaks, plain blank walls, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/portraits/brask_smug.png",
+  "seed": 3201,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/brask_smug.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {brask}, a smug superior half-smile, one white-gloved hand adjusting the monocle at his eye, tall mirrors with silver reflections behind him, cold silver light, dark background, no text, blank signs",
+  "face": "brask"
+ },
+ {
+  "out": "assets/art-src/portraits/brask_amused.png",
+  "seed": 3202,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/brask_amused.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {brask}, amused, laughing softly with his eyebrows raised, the monocle glinting, his own reflections in mirrors behind him, cold silver light, dark background, no text, blank signs",
+  "face": "brask"
+ },
+ {
+  "out": "assets/art-src/portraits/brask_smiling.png",
+  "seed": 3213,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/brask_smiling.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {brask}, the monocle is a clear transparent glass lens through which his eye is visible, a thin cruel smile, holding a fan of five playing cards with razor-sharp steel edges up beside his face, the card faces plain and blank, cold silver light, dark background, no text, blank signs",
+  "face": "brask"
+ },
+ {
+  "out": "assets/art-src/portraits/brask_furious.png",
+  "seed": 3224,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/brask_furious.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. Count Brask, a tall thin aristocrat around sixty with a thin silver moustache, a sharp hawk nose and a narrow face, both eyes bare with no monocle and no glasses, his silver hair come loose and hanging in wild strands over his forehead, in a white tuxedo jacket with a black bow tie. He screams in rage with his mouth wide open, teeth bared, brows crushed down, veins on his temple, a cut on his cheek. Red and black roulette salon light, dark background, no text, blank signs",
+  "face": "brask"
+ },
+ {
+  "out": "assets/art-src/portraits/brask_beaten.png",
+  "seed": 3205,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/brask_beaten.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {brask}, beaten and exhausted, the monocle cracked and hanging on its chain, silver hair messy, blood at the corner of his mouth, his white tuxedo stained red, a weak bitter smile, red light from below, dark background, no text, blank signs",
+  "face": "brask"
+ },
+ {
+  "out": "assets/art-src/portraits/cooler_bored.png",
+  "seed": 3206,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/cooler_bored.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {cooler}, bored heavy-lidded cold eyes, cracking the knuckles of his gold knuckle-dusters in front of his chest, green-grey concrete vault light and a red alarm light, dark background, no text, blank signs",
+  "face": "cooler"
+ },
+ {
+  "out": "assets/art-src/portraits/elias_silent.png",
+  "seed": 3227,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/elias_silent.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Bust portrait of {elias}, silent, his eyes lowered, mouth closed, quiet grief, rain, full-bleed image with no border, plain dark background with a cold silver rim light, no text, blank signs",
+  "face": "elias"
+ },
+ {
+  "out": "assets/art-src/portraits/dealer_scared.png",
+  "seed": 3218,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/dealer_scared.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. A thin adult man around thirty with realistic proportions, a narrow face with light stubble, slicked short brown hair, a casino card dealer's red waistcoat over a white shirt with a black bow tie, soaked by rain, scared wide eyes, sweat and rain on his face, a rainy night terrace with blurred river neon behind him, dark background, no text, blank signs"
+ }
+]

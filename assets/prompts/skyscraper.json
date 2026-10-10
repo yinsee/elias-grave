@@ -1,0 +1,323 @@
+[
+ {
+  "out": "assets/art/characters/lys/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 64,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {lys}, three-quarter view, upper body, standing in a mirrored marble lobby with tall mirrors and gold light, a cool amused smile, holding the fan of cards, no text, blank signs"
+ },
+ {
+  "out": "assets/art/characters/kessel/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 65,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {kessel}, three-quarter view, upper body, standing on a windy skyscraper roof garden at night in a storm, the hook chain over his shoulder, a brutal grin, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/skyscraper/spire_intro_1.png",
+  "seed": 8101,
+  "post": {
+   "out": "assets/art/panels/skyscraper/spire_intro_1.png"
+  },
+  "prompt": "Extreme low angle shot looking up at a colossal art deco skyscraper rising into black storm clouds at night. Lightning lights the giant glass clock face at its crown, the hands near twelve. At the base of the tower, a tiny man in a black suit stands in the rain with a small German shepherd dog at his heel. Rain streaks, dramatic scale, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/skyscraper/spire_intro_2.png",
+  "seed": 8102,
+  "post": {
+   "out": "assets/art/panels/skyscraper/spire_intro_2.png"
+  },
+  "prompt": "A grand mirrored marble lobby, mirrors on every wall reflecting a hundred copies of a man in a black suit with shoulder-length dark hair standing in the centre, seen from behind. Dozens of {choir} turn toward him at the same moment. Gold chandelier light, black and white marble floor, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/skyscraper/spire_intro_3.png",
+  "seed": 8103,
+  "post": {
+   "out": "assets/art/panels/skyscraper/spire_intro_3.png"
+  },
+  "prompt": "Close-up of {elias} loading a red shotgun shell into a pump shotgun, his face lowered, wet dark hair. A single raindrop falls from his hair onto the shell. Cold light, dark background, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/skyscraper/spire_intro_4.png",
+  "seed": 8134,
+  "post": {
+   "out": "assets/art/panels/skyscraper/spire_intro_4.png"
+  },
+  "prompt": "Sepia-toned flashback memory panel, faded warm brown tones. Exactly two people in an old watchmaker's workshop full of clocks on every wall. On the left, {bell} in his fifties with a short grey beard, standing, taps the raised left forearm of a serious teenage boy with long dark hair with a wooden ruler, correcting the boy's fighting guard. On the right, the boy alone holds his fists up in a boxing guard. Warm lamplight, full-bleed image with no border, no text, blank signs",
+  "face": "bell",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/skyscraper/spire_end_1.png",
+  "seed": 8141,
+  "post": {
+   "out": "assets/art/panels/skyscraper/spire_end_1.png"
+  },
+  "prompt": "Dramatic low angle shot at night in a violent storm, ninety floors above a city, full-bleed image with no border. A giant round clock face of glass, shattered, at the top of a skyscraper. {bell} hangs from the huge iron minute hand by one hand, his legs dangling over the empty void, rain lashing him, and he reaches his free hand down toward the viewer. A jeweller's loupe swings from a cord around his neck. City lights far below, lightning, no text, blank signs",
+  "face": "bell"
+ },
+ {
+  "out": "assets/art-src/panels/skyscraper/spire_end_2.png",
+  "seed": 8112,
+  "post": {
+   "out": "assets/art/panels/skyscraper/spire_end_2.png"
+  },
+  "prompt": "Medium shot at night in a storm on the stone edge of a giant broken clock face at the top of a skyscraper. {elias}, soaked by rain, looks down at {nero} who sits panting beside him. Elias does not look at the void. Lightning and rain, broken glass, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/skyscraper/spire_end_3.png",
+  "seed": 8113,
+  "post": {
+   "out": "assets/art/panels/skyscraper/spire_end_3.png"
+  },
+  "prompt": "Wide shot of a giant glowing round clock face at the crown of a skyscraper at night, both hands pointing straight up at twelve. On the stone cornice below it, two tiny figures, a man and a dog. Concentric rings of shockwave ripple through the last of the rain. Far below, the dark storm clouds swallow a tiny falling figure, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/skyscraper/epilogue_1.png",
+  "seed": 8121,
+  "post": {
+   "out": "assets/art/panels/skyscraper/epilogue_1.png"
+  },
+  "prompt": "Dawn over a city of old rooftops, the storm breaking, golden light through the clouds. Hundreds of loose paper pages fall from a tall skyscraper over the city like snow. In the foreground on a street corner, a newsboy in a cap holds up a newspaper, its front page blank. Wet streets, no rain, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/skyscraper/epilogue_2.png",
+  "seed": 8122,
+  "post": {
+   "out": "assets/art/panels/skyscraper/epilogue_2.png"
+  },
+  "prompt": "Early morning, soft dawn light, no rain. A narrow old-town street with wet cobblestones and old apartment facades. {elias} walks up the street with {nero} at his heel, seen from behind. One by one, warm yellow lights switch on in the windows above. A dark boarded-up nightclub at the end of the street, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/skyscraper/epilogue_3.png",
+  "seed": 8123,
+  "post": {
+   "out": "assets/art/panels/skyscraper/epilogue_3.png"
+  },
+  "prompt": "Interior of an old shut-down jazz bar, warm amber light, a piano in the dark corner. Behind the bar, {mags} with her left arm in a white sling puts a glass of whisky on the bar with her other hand. On the floor, {nero} drinks from a bowl of water. In the foreground on the bar, a man's hand in a black suit sleeve rests beside a neatly folded red scarf, no text, blank signs",
+  "face": "mags"
+ },
+ {
+  "out": "assets/art-src/panels/skyscraper/epilogue_4.png",
+  "seed": 8124,
+  "post": {
+   "out": "assets/art/panels/skyscraper/epilogue_4.png"
+  },
+  "prompt": "A burned old watch shop on an old-town street at dawn, its front boarded up with planks, its sign blank and charred. In the cracked shop window sits one small new silver pocket watch, its hour hand just past three and its minute hand just past seventeen. Soft morning light, wet cobbles, no rain, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/skyscraper/title_card.png",
+  "seed": 8125,
+  "post": {
+   "out": "assets/art/panels/skyscraper/title_card.png"
+  },
+  "prompt": "Almost entirely black panel with empty space in the middle for a title. Faint thin rain streaks. At the bottom, the small dark silhouette of a man in a long coat and a German shepherd dog seen from behind, walking away under a single dim streetlamp. Minimal, high contrast, no text, no letters, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/portraits/bell_warm.png",
+  "seed": 8201,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/bell_warm.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {bell}, a warm proud grandfatherly smile, wiping his jeweller's loupe with a cloth, huge brass clock gears turning behind him, warm amber light, dark background, no text, blank signs",
+  "face": "bell"
+ },
+ {
+  "out": "assets/art-src/portraits/bell_proud.png",
+  "seed": 8202,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/bell_proud.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {bell}, proud, chin raised, a gentle approving look, eyes shining, huge brass clock gears behind him, warm amber light, dark background, no text, blank signs",
+  "face": "bell"
+ },
+ {
+  "out": "assets/art-src/portraits/bell_calm.png",
+  "seed": 8203,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/bell_calm.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {bell}, calm and composed, a cherry-wood pipe in his hand, a thin curl of smoke, brass clock gears behind him, amber light, dark background, no text, blank signs",
+  "face": "bell"
+ },
+ {
+  "out": "assets/art-src/portraits/bell_regretful.png",
+  "seed": 8204,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/bell_regretful.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {bell}, regretful, his eyes lowered with sorrow, mouth tight, brass clock gears behind him, dim amber light, dark background, no text, blank signs",
+  "face": "bell"
+ },
+ {
+  "out": "assets/art-src/portraits/bell_cold.png",
+  "seed": 8205,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/bell_cold.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {bell}, cold and hard, his eyes like steel, drawing a thin sword from a black cane beside his face, brass gears behind, cold light, dark background, no text, blank signs",
+  "face": "bell"
+ },
+ {
+  "out": "assets/art-src/portraits/bell_amused.png",
+  "seed": 8206,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/bell_amused.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {bell}, amused, a small knowing chuckle, eyebrows raised, holding a gold pocket watch on a chain, amber light, dark background, no text, blank signs",
+  "face": "bell"
+ },
+ {
+  "out": "assets/art-src/portraits/bell_stern.png",
+  "seed": 8207,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/bell_stern.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {bell}, stern teacher, frowning, pointing a sword-cane like a ruler at the viewer, amber light and moving gear shadows, dark background, no text, blank signs",
+  "face": "bell"
+ },
+ {
+  "out": "assets/art-src/portraits/bell_hurt.png",
+  "seed": 8208,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/bell_hurt.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {bell}, in pain and surprise, gritting his teeth, clutching his bitten forearm, his waistcoat torn, rain and storm light, dark background, no text, blank signs",
+  "face": "bell"
+ },
+ {
+  "out": "assets/art-src/portraits/bell_hanging.png",
+  "seed": 8209,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/bell_hanging.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {bell}, soaked by the storm, hanging on with strain, reaching one hand out toward the viewer, a pleading calm look, lightning behind him, dark stormy background, no text, blank signs",
+  "face": "bell"
+ },
+ {
+  "out": "assets/art-src/portraits/elias_quiet.png",
+  "seed": 8210,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/elias_quiet.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Bust portrait of {elias}, quiet and still, soft sad eyes looking at the viewer, mouth closed, rain on his face, dim warm light, dark background, no text, blank signs",
+  "face": "elias"
+ },
+ {
+  "out": "assets/art-src/portraits/elias_grieving.png",
+  "seed": 8211,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/elias_grieving.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Bust portrait of {elias}, grieving, his eyes wet with held-back tears, brows drawn together in pain, rain running down his face, amber light from the side, dark background, no text, blank signs",
+  "face": "elias"
+ },
+ {
+  "out": "assets/art-src/portraits/lys_amused.png",
+  "seed": 8212,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/lys_amused.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {lys}, amused, a sly smile, fanning razor-edged playing cards beside her face, the card faces blank, mirrors reflecting gold light behind, dark background, no text, blank signs",
+  "face": "lys"
+ },
+ {
+  "out": "assets/art-src/portraits/lys_breathless.png",
+  "seed": 8213,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/lys_breathless.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {lys}, breathless and beaten, her black bob messy, a cut on her lip, cracked mirror glass behind her, cold light, dark background, no text, blank signs",
+  "face": "lys"
+ },
+ {
+  "out": "assets/art-src/portraits/kessel_grinning.png",
+  "seed": 8214,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/kessel_grinning.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {kessel}, a brutal wide grin, swinging a steel meat hook on a chain beside his head, storm wind and rain, night city lights far below, dark background, no text, blank signs",
+  "face": "kessel"
+ },
+ {
+  "out": "assets/art-src/portraits/kessel_fading.png",
+  "seed": 8215,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/kessel_fading.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {kessel}, beaten and fading, eyes half closed, blood in his beard, rain on his face, storm light, dark background, no text, blank signs",
+  "face": "kessel"
+ }
+]
