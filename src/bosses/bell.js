@@ -35,7 +35,7 @@ export const BELL = {
   taunt: { t: 1.2 },
   deflect: [0.4, 0.6, 0.75, 0.9],
   bite: { window: [99, 1.2, 1.0, 0.8], stun: 3.0 },
-  crew: { roles: ['chorister', 'cane', 'stiletto'], every: 14, max: 4, alive: [1, 1, 2, 2] },
+  crew: { roles: ['chorister', 'cane', 'stiletto'], every: 14, max: [0, 1, 4, 4], alive: [1, 1, 2, 2] },   // max: in all (phase 1 only); Easy none, Medium one: the gears are the fight
   secondWind: [1, 2, 2, 99],
   lines: { lesson: 'Left guard, boy.', again: 'Again. From the top.', p2: 'Come. The second movement.', pend: '...Good. You listened.', p3: 'Come outside, Elias. Let the city watch.', taunt: 'Up. I did not raise a quitter.', bite: '...Elena\'s dog.', hold: 'Hold.' },
 };

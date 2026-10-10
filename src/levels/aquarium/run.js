@@ -7,6 +7,7 @@ import * as D from './data.js';
 import * as A from './paint.js';
 import { TEAGUE, teagueThink, teagueSpecial } from '../../bosses/teague.js';
 import { KALT, kaltThink, kaltSpecial } from '../../bosses/kalt.js';
+import { crewCap } from '../../core/difficulty.js';
 
 const GROUND = D.GROUND;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -667,7 +668,7 @@ export function createAquarium(G) {
     G.enc.arena = { x0: D.TEAGUE_ARENA.x0, x1: D.TEAGUE_ARENA.x1 };
     const e = G.spawnEnemy('boss', (D.CHANNEL.x0 + D.CHANNEL.x1) / 2, 'teague', { boss: TEAGUE });
     Object.assign(e, { alert: true, face: Math.sign(ctl.x - e.x) || -1, mini: true, ancCd: 2.5, stompCd: 3, dunkCd: 4, rise: 1.0 });
-    S.teague = e; S.plate = { hp: TEAGUE.plate.hp, broken: false, spill: 0 }; S.crewT = 4;
+    S.teague = e; S.plate = { hp: TEAGUE.plate.hp, broken: false, spill: 0 }; S.crewT = 4; S.crewN = 0;
     for (let k = 0; k < 14; k++) G.particles.push({ x: e.x + (G.simRand() - 0.5) * 20, y: GROUND - 1, vx: (G.simRand() - 0.5) * 80, vy: -80 - G.simRand() * 80, life: 0.6, c: 0xffc8e8f4 });
     sfx('water_splash_body', e.x, 1); sfx('helmet_clang', e.x, 0.8);
     G.setMusic('boss_marchetti', 0.7);
@@ -715,8 +716,8 @@ export function createAquarium(G) {
     if (!T.dead && T.y < GROUND - 4 && !T.air) T.y = GROUND - 2;
     // his crew: divers out of the channel every 8 s (none on Easy)
     if (!T.dead && T.rise <= 0) {
-      const cap = TEAGUE.crew.alive[dif()], alive = G.enemies.filter(g => !g.dead && g.zone === 'teagueCrew').length;
-      if ((S.crewT -= dt) <= 0 && alive < cap) { S.crewT = TEAGUE.crew.every; const g = spawnU('diver', D.CHANNEL.x0 + 10 + G.simRand() * (D.CHANNEL.x1 - D.CHANNEL.x0 - 20), 'teagueCrew'); g.wRise = 0.8; g.wRiseX = g.x; sfx('water_splash', g.x, 0.7); }
+      const cap = crewCap(dif(), TEAGUE.crew.alive[dif()]), alive = G.enemies.filter(g => !g.dead && g.zone === 'teagueCrew').length;   // (the game's crew rule: a total cap too)
+      if ((S.crewT -= dt) <= 0 && alive < cap.alive && S.crewN < cap.n) { S.crewT = TEAGUE.crew.every; S.crewN++; const g = spawnU('diver', D.CHANNEL.x0 + 10 + G.simRand() * (D.CHANNEL.x1 - D.CHANNEL.x0 - 20), 'teagueCrew'); g.wRise = 0.8; g.wRiseX = g.x; sfx('water_splash', g.x, 0.7); }
     }
     if (T.dead && !S.teagueDone) {
       S.teagueDone = true; G.enc.arena = null; S.anchor = null; S.dunk = null;
@@ -1007,12 +1008,12 @@ export function createAquarium(G) {
     if (!B || B.dead || enc.introT >= 0 || B.ph >= 3 || !S.club || B.kind !== 'kalt') return;
     const C = KALT.crew, d = dif(), alive = G.enemies.filter(g => !g.dead && g.zone === 'arena' && g.fleeTo == null).length;
     if (B.ph === 1) {
-      if ((S.crewT -= dt) > 0 || alive >= C.alive1[d] || S.crewN >= C.max || (B.act === 'shoot' && B.shotMode === 'pin')) return;
+      if ((S.crewT -= dt) > 0 || alive >= crewCap(d, C.alive1[d]).alive || S.crewN >= crewCap(d, 9, C.max).n || (B.act === 'shoot' && B.shotMode === 'pin')) return;
       S.crewT = C.every; S.crewN++;
       const g = spawnU(S.crewN % 3 === 2 ? 'hookman' : 'smuggler', D.ENTRY + 6, 'arena'); g.cdT = Math.max(g.cdT, 0.8); S.doorFx.push({ x: D.ENTRY, t: 0.5 });
       if (G.simRand() < 0.4) G.bark(g, pickN(D.BARKS.any));
     } else if (S.p2 && !S.fo?.order.length) {
-      if ((S.crewT -= dt) > 0 || alive >= C.alive2[d] || S.crewN >= C.max + 4 || inTank()) return;
+      if ((S.crewT -= dt) > 0 || alive >= crewCap(d, C.alive2[d]).alive || S.crewN >= crewCap(d, 9, C.max + 4).n || inTank()) return;   // (the game's crew rule: both phases share the total)
       S.crewT = C.every2; S.crewN++;
       if (d >= 2 && !S.kHarp) { S.kHarp = true; const s = surfOf(D.CATWALKS[0]); if (s && ctl.surf !== s) { const g = spawnU('harpoon', D.CATWALKS[0].x0 + 20, 'arena', { y: s.y - 2 }); g.perchS = s; return; } }
       const lx = pickN(D.TANK_LADDERS), g = spawnU('diver', lx, 'arena', { y: D.TANK_FLOOR - 2 }); g.cdT = Math.max(g.cdT, 1); sfx('water_splash', lx, 0.7);

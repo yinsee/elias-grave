@@ -9,6 +9,7 @@ import * as D from './data.js';
 import * as A from './paint.js';
 import { PORTER, porterThink, porterSpecial } from '../../bosses/porter.js';
 import { KRIEG, kriegThink, kriegSpecial } from '../../bosses/krieg.js';
+import { crewCap } from '../../core/difficulty.js';
 
 const GROUND = D.GROUND;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -819,7 +820,7 @@ export function createHospital(G) {
     if (G.kos - S.kos0 >= 2) { S.kos0 = G.kos; for (const g of G.enemies) if (!g.dead && g.zone === 'kcrew') G.killEnemy(g, 1, 200, 0.4); G.ammoBoxes.push({ band: true, x: roofB ? 2470 : D.ROOF_STAIR - 10, y: GROUND - 8, vx: 0, vy: 0, life: 60 }); G.toast('Second wind', 'The crew is down. Catch your breath.', true); }
     if ((S.crewT -= dt) > 0) return;
     const alive_ = G.enemies.filter(g => !g.dead && g.zone === 'kcrew').length;
-    if (alive_ >= cap || S.crewN >= C.max || (roofB && e.hp < e.maxHp * C.stopBelow) || e.sp === 'defib' || e.sp === 'codeblue' || e.sp === 'roar') { S.crewT = 1; return; }
+    if (alive_ >= cap || S.crewN >= crewCap(d, 9, C.max).n || (roofB && e.hp < e.maxHp * C.stopBelow) || e.sp === 'defib' || e.sp === 'codeblue' || e.sp === 'roar') { S.crewT = 1; return; }
     S.crewT = C.every[ph >= 2 ? 1 : 0]; S.crewN++;
     let v, x, y = null;
     if (roofB) { v = 'scalpel'; x = (D.HUT.x0 + D.HUT.x1) / 2; y = D.HUT.top - 2; }

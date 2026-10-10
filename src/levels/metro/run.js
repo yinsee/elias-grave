@@ -7,6 +7,7 @@ import * as D from './data.js';
 import * as A from './paint.js';
 import { TINDER, tinderThink, tinderSpecial } from '../../bosses/tinder.js';
 import { SWITCH, switchThink, switchSpecial } from '../../bosses/switch.js';
+import { crewCap } from '../../core/difficulty.js';
 
 const GROUND = D.GROUND;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -773,7 +774,8 @@ export function createMetro(G) {
     }
     if (!B || B.dead || enc.introT >= 0 || B.ph >= 3 || !S.junction) return;
     const C = SWITCH.crew, d = dif(), alive = G.enemies.filter(g => !g.dead && g.zone === 'arena').length;
-    if ((S.crewT -= dt) > 0 || alive >= C.alive[d] || S.crewN >= C.max[d] || S.lockSpawn > 0 || S.trains.some(t => t.t > -3)) return;
+    const cap = crewCap(d, C.alive[d], C.max[d]);   // (the game's crew rule)
+    if ((S.crewT -= dt) > 0 || alive >= cap.alive || S.crewN >= cap.n || S.lockSpawn > 0 || S.trains.some(t => t.t > -3)) return;
     S.crewT = C.every[d]; S.crewN++;
     const roles = C.roles.filter(r => r !== 'firebug' || (d >= 3 && B.ph >= 2)), v = roles[S.crewN % roles.length];
     const x = D.CREW_DOORS[S.crewN % 2], g = spawnRat(v, x, 'arena', { noLurk: true });

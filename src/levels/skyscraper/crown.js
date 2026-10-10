@@ -8,6 +8,7 @@
 //   the epilogue panels; the final card (this run and the whole story); the credits; back to the title
 import { BELL } from '../../bosses/bell.js';
 import { C } from '../../core/color.js';
+import { crewCap } from '../../core/difficulty.js';
 
 const BEST_KEY = 'eliasgrave.best';
 
@@ -288,7 +289,7 @@ export function installCrown(X) {
     if (G.kos - S.kos0 >= B.secondWind[d]) { S.kos0 = G.kos; for (const g of G.enemies) if (!g.dead && g.zone === 'bcrew') G.killEnemy(g, 1, 200, 0.4); G.ammoBoxes.push({ band: true, x: 1880, y: GROUND - 8, vx: 0, vy: 0, life: 60 }); G.toast('Second wind', 'The crew is down. Catch your breath.', true); }
     if ((S.crewT -= dt) > 0) return;
     const n = G.enemies.filter(g => !g.dead && g.zone === 'bcrew').length;
-    if (n >= Cw.alive[d] || S.crewN >= Cw.max) { S.crewT = 2; return; }
+    if (n >= crewCap(d, Cw.alive[d]).alive || S.crewN >= crewCap(d, 9, Cw.max[d]).n) { S.crewT = 2; return; }   // (the game's crew rule)
     S.crewT = Cw.every; const v = Cw.roles[S.crewN++ % Cw.roles.length];
     const g = H.spawnChoir(v, 1872, 'bcrew'); g.cdT = 1.2; sfx('door_open', 1872, 0.7);
   }

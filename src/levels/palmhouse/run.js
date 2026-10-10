@@ -9,6 +9,7 @@ import * as A from './paint.js';
 import { installSet } from './set.js';
 import { BRANDT, brandtThink, brandtSpecial } from '../../bosses/brandt.js';
 import { VANE, vaneThink, vaneSpecial } from '../../bosses/vane.js';
+import { crewCap } from '../../core/difficulty.js';
 
 const GROUND = D.GROUND;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -435,7 +436,7 @@ export function createPalmhouse(G) {
   M.whistle = e => {
     sfx('rat_whistle_long', e.x, 1);
     const d = dif(), C = VANE.crew, aliveN = G.enemies.filter(g => !g.dead && g.zone === 'vcrew').length;
-    const room = Math.min(C.alive[d] - aliveN, C.total[d] - S.crewN);
+    const cap = crewCap(d, C.alive[d], C.total[d], 5), room = Math.min(cap.alive - aliveN, cap.n - S.crewN);   // (the game's crew rule; her yard on Wicked is the one place with 5 alive)
     if (room <= 0) { e.recT = Math.max(e.recT, 0.8); S.whDoor = null; return; }
     const roster = C.waves[Math.min(1, e.ph - 1)][d].slice(0, room), dx = S.whDoor || D.DOME_DOORS[1];
     roster.forEach((v, i) => {

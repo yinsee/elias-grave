@@ -10,6 +10,7 @@ import * as A from './paint.js';
 import { COOLER, coolerThink, coolerSpecial } from '../../bosses/cooler.js';
 import { BRASK, braskThink, braskSpecial, decoyThink } from '../../bosses/brask.js';
 import { C } from '../../core/color.js';
+import { crewCap } from '../../core/difficulty.js';
 
 const GROUND = D.GROUND;
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
@@ -483,7 +484,7 @@ export function createCasino(G) {
         later(() => G.toast('The vault rolls open', 'The weapon locker too. The service lift goes up to the Salon Privé.'), 1.6);
         G.setMusic('music:casino', 0.45);
       } else if (dif() >= 2) {   // his crew on Hard and Wicked: a Floor Man every 10 s, one at a time
-        if ((S.crewT -= dt) <= 0 && !G.enemies.some(e => !e.dead && e.zone === 'coolerCrew')) { S.crewT = COOLER.crew.every; const g = spawnHouse('tux', D.COOLER_ARENA.x0 + 8, 'coolerCrew'); g.cdT = 1; }
+        if ((S.crewT -= dt) <= 0 && !G.enemies.some(e => !e.dead && e.zone === 'coolerCrew') && S.crewN < crewCap(dif()).n) { S.crewT = COOLER.crew.every; S.crewN++; const g = spawnHouse('tux', D.COOLER_ARENA.x0 + 8, 'coolerCrew'); g.cdT = 1; }
       }
     }
   }
@@ -493,7 +494,7 @@ export function createCasino(G) {
     const e = G.spawnEnemy('boss', D.COOLER_ARENA.x1 - 40, 'cooler', { boss: COOLER });
     Object.assign(e, { alert: true, face: -1, chgCd: 3, grabCd: 4, coldT: 0, mini: true, bigBar: true });
     e.pal.glove = COOLER.gloves.gold;
-    S.cooler = e; S.crewT = COOLER.crew.every;
+    S.cooler = e; S.crewT = COOLER.crew.every; S.crewN = 0;
     G.setMusic('music:cooler', 0.7);
     if (!G.flags.demo) G.playScene('dialog', 'cooler_intro');
     say('coolerTip', 'The Cooler', 'Roll through the charge: into the vault door, he is stunned', true);
@@ -771,7 +772,8 @@ export function createCasino(G) {
     if (!G.flags.club || !B || B.dead || B.intro || G.enc.introT >= 0) return;
     const P3 = B.ph >= 3, Cw = P3 ? BRASK.crew3 : BRASK.crew2, d = dif();
     const alive = G.enemies.filter(g => !g.dead && g.zone === 'arena').length;
-    if ((S.crewT -= dt) > 0 || alive >= Cw.alive[d]) return;
+    const cap = crewCap(d, Cw.alive[d]);   // (the game's crew rule: the hall and the salon share the total)
+    if ((S.crewT -= dt) > 0 || alive >= cap.alive || S.crewN >= cap.n) return;
     S.crewT = Cw.every; S.crewN++;
     if (!P3) { const x = S.crewN % 2 ? D.RIM[0] + 4 : D.RIM[1] - 4, g = spawnHouse('rake', x, 'arena'); g.cdT = 1; G.bark(g, pickN(['Messieurs, faites vos jeux.', 'The table is closed.', 'Hold him on red!'])); }
     else {
