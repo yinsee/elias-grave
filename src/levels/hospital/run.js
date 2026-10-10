@@ -1192,10 +1192,11 @@ export function createHospital(G) {
   M.retry = C => {
     const lv = ORDER.indexOf(C.kind); if (lv < 0) return null;
     restoreTo(lv);
-    if (lv === 0) { later(() => { pa('Code Black, room three-fourteen. Thank you, team.'); defendStart('d1'); }, 2); return 250; }
-    if (lv === 1) { later(() => d2Start(true), 1); return 930; }
-    if (lv === 2) { later(() => d3Start(true), 1); return 1450; }
-    if (lv === 3) { S.grp = 2; S.erT = 1.5; return 1520; }
+    // the objective line at once (the beats below set it a second or two later; until then it showed Room 314's first line)
+    if (lv === 0) { setObjective('Code Black', 'Defend Room 314'); later(() => { pa('Code Black, room three-fourteen. Thank you, team.'); defendStart('d1'); }, 2); return 250; }
+    if (lv === 1) { setObjective('Nero is barking', 'Back to Room 314 · the stair door (EXIT) by Ward 5'); later(() => d2Start(true), 1); return 930; }
+    if (lv === 2) { setObjective('Nero is barking', 'Back to Room 314 · the stair door (EXIT) by the lift shaft'); later(() => d3Start(true), 1); return 1450; }
+    if (lv === 3) { setObjective('The ER', 'Hold the ground floor'); S.grp = 2; S.erT = 1.5; return 1520; }
     if (lv === 4) { later(() => arriveTheatre(true), 0.01); return D.LIFT_OUT; }
     return null;   // the roof: the game puts him through the door (enterClub); the boss comes on the next frame
   };

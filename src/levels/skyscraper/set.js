@@ -179,7 +179,7 @@ export function installSet(X) {
   function snap() {   // Beat 8: the cable snaps; slow motion; the jump to the window-cleaning cradle
     const L = S.lift; L.snapped = true;
     sfx('chain_snap', 680, 1); sfx('ground_slam', 680, 1, 0.6); G.shakeIt(0.6, 4);
-    G.toast('The cable!', 'A Choir man took an axe to it. JUMP → to the cradle', false);
+    G.toast('The cable!', 'Hold ↑ and → to the cradle (a tap jump falls short)', false);
     L.cradle.on = true; L.cradle.y = D.CRADLE.y;
     S.cradleS = H.addSurf({ x0: D.CRADLE.x0, x1: D.CRADLE.x1, y: D.CRADLE.y, oneWay: true });
     const pR = H.paneById('carR'); if (pR && !pR.broken) H.breakPane(pR);

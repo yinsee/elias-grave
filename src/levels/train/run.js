@@ -789,7 +789,7 @@ export function createTrain(G) {
       G.slowMo(0.5, 'landing'); later(() => startWave('r1'), 1.2);
       later(() => G.toast('The Meridian Express', 'The Board leaves with the ledgers. Fight back to the last car.', true), 0.6);
     }
-    if (S.grp === 0 && allDown('r1') && !S.hatchSaid && S.w.r1.out) { S.hatchSaid = true; G.toast('The roof hatch', '↑ by it: down into the baggage car', true); setObjective('The roof', 'The hatch ↓ into the baggage car'); }
+    if (S.grp === 0 && allDown('r1') && !S.hatchSaid && S.w.r1.out) { S.hatchSaid = true; G.toast('The roof hatch', '↑ by it: down into the baggage car', true); setObjective('The roof', 'The hatch: ↑ by it, down into the baggage car'); }   // (↑ is the key, as for every door)
     // baggage: the second wave from the gangway door when the first is half down
     if (S.w.b1.out && !S.w.b2.out && alive('b1') <= Math.ceil(S.w.b1.n / 2) && !queued('b1')) startWave('b2');
     if (S.grp === 1 && allDown('b1') && allDown('b2') && !S.bagSaid) { S.bagSaid = true; sfx('door_open', D.BAG_DOOR, 0.7); G.toast('Clear', 'The gangway door → the dining car (↑)', true); setObjective('The baggage car', 'The gangway door →'); }
