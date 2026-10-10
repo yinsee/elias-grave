@@ -6,11 +6,11 @@ import * as D from './data.js';
 
 const G = D.GROUND;
 export const aqua3d = {
-  // the named blocks: [x0, y0, x1, y1, depth from the wall, the surface it carries (its front face is where a climber hangs)]
+  // the named blocks: [x0, y0, x1, y1, depth from the wall, the surface it carries (its front face is where a climber hangs), solid]
   blocks(T3) {
     const ZF = T3.ZF, c = id => D.CATWALKS.find(q => q.id === id);
     return [
-      [D.COUNTER.x0, D.COUNTER.y, D.COUNTER.x1, G - 1, 18, D.COUNTER],
+      [D.COUNTER.x0, D.COUNTER.y, D.COUNTER.x1, G - 1, 18, D.COUNTER, true],   // (solid: its face is painted in the wainscot's colours)
       [D.KIOSK.x0, 236, D.KIOSK.x1, G - 1, 16, null],
       [D.GANTRY.x0, D.GANTRY.y - 10, D.GANTRY.x1, D.GANTRY.y + 3, 14, D.GANTRY],
       [D.STEP_HI.x0, D.STEP_HI.y, D.STEP_HI.x1, G - 1, 18, D.STEP_HI],
@@ -28,6 +28,6 @@ export const aqua3d = {
       [c('cwD').x0, c('cwD').y - 10, c('cwD').x1, c('cwD').y + 4, 16, c('cwD')],
       [c('cwB').x0, -9, c('cwB').x1, -9, 16, c('cwB')],   // (no pixels: only the depth of the hanging sections' tops: their models stand there)
       [c('cwC').x0, -9, c('cwC').x1, -9, 16, c('cwC')],
-    ].map(([x0, y0, x1, y1, d, s]) => ({ x0, y0, x1, y1, z0: ZF, z1: ZF + d, s }));
+    ].map(([x0, y0, x1, y1, d, s, solid]) => ({ x0, y0, x1, y1, z0: ZF, z1: ZF + d, s, solid }));
   },
 };

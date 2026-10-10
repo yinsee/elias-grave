@@ -7460,9 +7460,9 @@ import * as SPIRE from './levels/skyscraper/index.js';
         const d = Z.z1 - Z.z0, zc = (Z.z0 + Z.z1) / 2;
         if (d < 6) return [{ px, d, z: zc }];
         const L = PLATS.filter(s => s.x0 <= Z.x1 && s.x1 >= Z.x0 && s.y >= Z.y0 - 1 && s.y <= Z.y1);
-        // a named box (its ledge is its top: a counter, a desk, a cabinet) is solid: its face pixels painted in the wall's
-        // own colour (no prop pixels, so not in the block) are filled in where props close them in on all four sides
-        if (Z.named && L.length && Math.min(...L.map(s => s.y)) <= Z.y0 + 1) {
+        // a block named solid (three.js: a counter whose face is painted in the wall's own colour, so those pixels are no props) is
+        // filled in where its props close the face in on all four sides
+        if (Z.solid) {
           const lo = new Int16Array(w).fill(h), hi = new Int16Array(w).fill(-1), zid = this.zones.indexOf(Z);
           for (let x = 0; x < w; x++) for (let y = 0; y < h; y++) if (px[y * w + x]) { if (lo[x] === h) lo[x] = y; hi[x] = y; }
           for (let y = 0; y < h; y++) {
@@ -7844,7 +7844,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     // ----- Line Zero (src/levels/metro/three.js): its named blocks; the trains and the handcar as models clipped at the portals -----
     mZones(zone, LIFT, mkZone) {
       for (const B of L3D().blocks(T3)) {
-        const id = mkZone(B.z0, B.z1), Z = this.zones[id]; Z.named = true;
+        const id = mkZone(B.z0, B.z1), Z = this.zones[id]; Z.solid = !!B.solid;
         for (let y = Math.max(0, B.y0); y <= Math.min(GROUND - 1, B.y1); y++) for (let x = Math.max(0, B.x0); x <= Math.min(W - 1, B.x1); x++) {
           const i = y * W + x; if (!PROPS[i] || !stat[i] || zone[i] >= 0) continue;
           LIFT[i] = 1; zone[i] = id;
