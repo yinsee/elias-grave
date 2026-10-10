@@ -15,15 +15,15 @@ const hy = h => GROUND - h;
 // out: outdoors (rain, wind, sweepers); amb: ambient [r, g, b]; g: the camera group; win: window rects [x0, x1, y0, y1] (the scroll
 // shows through them); flash: lightning every [a, b] s
 export const SECTIONS = [
-  { id: 'roof_front', x0: -99, x1: 304, out: true, amb: [0.3, 0.34, 0.5], g: 0, flash: [6, 10] },
+  { id: 'roof_front', x0: -99, x1: 304, out: true, amb: [0.4, 0.44, 0.62], g: 0, flash: [6, 10] },
   { id: 'baggage', x0: 304, x1: 560, amb: [0.42, 0.4, 0.36], g: 1, flash: [8, 12] },
-  { id: 'dining', x0: 560, x1: 884, amb: [0.55, 0.42, 0.3], g: 2, flash: [8, 12] },
+  { id: 'dining', x0: 560, x1: 884, amb: [0.42, 0.33, 0.25], g: 2, flash: [8, 12] },
   { id: 'sleepers', x0: 884, x1: 1144, amb: [0.28, 0.32, 0.45], g: 3, flash: [8, 12] },
-  { id: 'roof_mid', x0: 1144, x1: 1754, out: true, amb: [0.26, 0.3, 0.46], g: 4, flash: [5, 9] },
+  { id: 'roof_mid', x0: 1144, x1: 1754, out: true, amb: [0.38, 0.42, 0.6], g: 4, flash: [5, 9] },
   { id: 'dome', x0: 1754, x1: 2044, amb: [0.36, 0.4, 0.52], g: 5, flash: [5, 9], glass: true },
   { id: 'vault', x0: 2044, x1: 2204, amb: [0.3, 0.4, 0.32], g: 6, flash: null },
   { id: 'workshop', x0: 2204, x1: 2420, amb: [0.62, 0.48, 0.32], g: 7, flash: null },
-  { id: 'roof_boss', x0: 2420, x1: 2900, out: true, amb: [0.28, 0.32, 0.5], g: 8, flash: [6, 10] },
+  { id: 'roof_boss', x0: 2420, x1: 2900, out: true, amb: [0.38, 0.42, 0.6], g: 8, flash: [6, 10] },
 ];
 export const GROUPS = [[0, 300], [308, 556], [564, 880], [888, 1140], [1148, 1750], [1758, 2040], [2048, 2200], [2208, 2414], [2436, 2800]];
 export const CEIL = hy(100);   // interiors: the car's ceiling (y 180)

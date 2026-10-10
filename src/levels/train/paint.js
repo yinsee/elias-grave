@@ -25,8 +25,8 @@ export const TC = {
   wine: C('#6a1e26'), wineD: C('#4a141a'), cream: C('#d8ccb0'), creamD: C('#b0a488'), brass: C('#c8a050'), brassD: C('#8a6a30'),
   blue: C('#28324a'), blueD: C('#1c2436'), blueL: C('#3a4662'), carpet: C('#5a1a22'), carpetL: C('#7a2a30'),
   green: C('#1e3a2a'), greenL: C('#2e5a40'), vaultW: C('#3a3e44'), vaultD: C('#2a2e34'),
-  sky0: C('#070a16'), sky1: C('#1a2038'), cloud: C('#262c44'), cloudL: C('#343c58'), mount: C('#10131e'), mountL: C('#181c2a'),
-  dam: C('#4a4e58'), damD: C('#363a44'), damL: C('#5e6270'), water: C('#0c1424'), spill: C('#9ab0c8'), lit: C('#e8c070'), pole: C('#1a1a22'),
+  sky0: C('#141a34'), sky1: C('#34406a'), cloud: C('#3e4a72'), cloudL: C('#56648e'), mount: C('#161a2a'), mountL: C('#4a5478'),
+  dam: C('#4a4e58'), damD: C('#363a44'), damL: C('#5e6270'), water: C('#0c1424'), spill: C('#9ab0c8'), lit: C('#e8c070'), pole: C('#08080c'),
   valley: C('#121820'), spire: C('#1a1e2a'), spireL: C('#f0d890'), red: C('#c02020'), white: C('#ece8e0'), glass: C('#8ab0c8'),
 };
 
@@ -55,6 +55,9 @@ function backPix(x, y, sc, set, y0) {
     }
   }
   if (set === 'ph3') { if (y > 236) c = mix(T.valley, T.mount, 0.5); }
+  // far lights (k 0.3): farms and signal lamps on the hillside
+  const fx = x - sc * 0.3, fi = Math.floor(fx / 9);
+  if (y > mh + 6 && y < mh + 9 && n1(fi) < 0.12 && ((fx % 9 + 9) % 9) < 2 && set !== 'mid') c = T.lit;
   // poles and rocks (k 0.5): telegraph poles, a wire between them
   const px = ((x - sc * 0.5) % 110 + 110) % 110;
   if (px < 2 && y > 196) c = T.pole;
@@ -222,7 +225,7 @@ export function drawWorld(R, S, M) {
   // ---- the boss roof: the gangway plate, the last car (its front edge breathes in phase 3), the lantern, the metronome, the platform ----
   if (S.grp === 8) {
     const lx = D.VROOF.x1 + (S.plate ? 0 : S.lgap);
-    roofBand(R, S.plate ? D.PLATE.x1 : lx, D.PLATFORM.x0, cam, false);
+    roofBand(R, S.plate ? D.VROOF.x1 : lx, D.PLATFORM.x0, cam, false);
     if (S.plate) rect(D.PLATE.x0, GROUND, D.PLATE.x1, GROUND + 3, (x, y) => y === GROUND ? T.steelL : T.steelD);
     else { const n = 8, sag = Math.max(0, 14 - S.lgap / 8); for (let k = 0; k <= n; k++) plot(D.VROOF.x1 + Math.round(k * S.lgap / n), GROUND + 10 + Math.round(Math.sin(k / n * Math.PI) * sag), (k % 2) ? T.steelL : T.steel); }
     // the lantern: Bell & Sons' clock behind its glass (3:17), the brass metronome on top, its pendulum on the beat
@@ -252,7 +255,8 @@ export function drawWorld(R, S, M) {
   if (S.grp === 5) {   // the Board behind the bar: three heads that duck and peek
     for (const [i, p] of D.BOARD.entries()) {
       const peek = S.board === 'talk' || S.board === 'done' ? 0 : S.board === 'scream' ? -2 : Math.round(Math.max(0, Math.sin(t * 1.3 + i * 2)) * 4);
-      const hx = p.x, hy = D.BAR.top - 5 - peek;
+      const hx = p.x, hy = D.BAR.top - 9 - peek;
+      for (let y = hy + 3; y < D.BAR.top; y++) for (let x = -5; x <= 5; x++) plot(hx + x, y, Math.abs(x) === 5 ? O : p.id === 'kern' ? C('#1a1a20') : C('#22222a'));   // shoulders: dark suits, a judge's robe
       for (let y = -3; y <= 3; y++) for (let x = -3; x <= 3; x++) if (x * x + y * y <= 9) plot(hx + x, hy + y, y < -1 ? (p.id === 'kern' ? C('#d0c8c0') : p.id === 'mayor' ? C('#3a2a20') : C('#8a8a8a')) : C('#d8b898'));
       if (p.id === 'aldane') { plot(hx - 1, hy, O); plot(hx + 1, hy, O); }   // his glasses
       if (p.id === 'kern') for (let x = -5; x <= 5; x++) plot(hx + x, hy + 4, C('#e8e0d0'));   // her fur

@@ -109,7 +109,7 @@ export function lenzBeat(M, e, n) {
     if (e.mv && e.mv.k > 9) e.mv = null;
     return;
   }
-  if (n !== 0) return;
+  if (n !== 0 || e.sp) return;   // (ducking a hazard, the roar, a lunge in flight: no new move)
   // beat 1: phase changes, desperation, then a move
   const hpK = e.hp / e.maxHp;
   if (e.ph === 1 && hpK < L.ph2.below) { M.lenzPhase(e, 2); return; }

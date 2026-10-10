@@ -320,8 +320,9 @@ export function createTrain(G) {
   // the Gunner: plants, a drum rattle and a red stripe down the lane, then 10 rounds low to high, then the reload
   M.burstRound = (e, k, dmg, v) => {
     if (e.dead || !e.J) return;
-    const h = e.J[6], mx = h.x + e.face * 8, my = h.y, d = Math.max(30, Math.abs(G.P[2].x - mx)), ty = GROUND - 3 - k * 58;
-    G.eshots.push({ k: 'b', x: mx, y: my, px: mx, py: my, vx: e.face * v, vy: (ty - my) / (d / v), life: 1.1, dmg, t: 0, by: e, mg: true });
+    const h = e.J[6], mx = h.x + e.face * 8, my = h.y, d = Math.max(30, Math.abs(G.P[2].x - mx)), ty = GROUND - 3 - Math.min(k, 0.6) / 0.6 * 44;
+    const vy = k <= 0.6 ? (ty - my) / (d / v) : -v * (0.35 + (k - 0.6) * 1.2);   // the last rounds climb: they break the glass overhead
+    G.eshots.push({ k: 'b', x: mx, y: my, px: mx, py: my, vx: e.face * v * (k <= 0.6 ? 1 : 0.8), vy, life: 1.1, dmg, t: 0, by: e, mg: true });
     e.muz = 0.06; sfx('mg_burst', e.x, 0.45, 0.8); G.emit('shot', { by: 'enemy', enemy: e, w: 'mg', x: mx, y: my, dir: e.face, pellets: 1, auto: true });
   };
   M.gunWind = (e, t) => { S.gunWarn.push({ e, t }); sfx('chain_creak', e.x, 0.8, 1.6); };
@@ -683,6 +684,8 @@ export function createTrain(G) {
       S.pend = (S.pend || 0) + 1;
       onBar(bc.n);
       lenzBeat(M, e, bc.n);
+      // a hazard crosses him in the next bar: he never strikes into it; he ducks (unless he rides it, or he is stunned: then it hits him)
+      if (bc.n === 0 && (S.warnG || S.warnT) && !(e.stunT > 0) && e.sp !== 'lduck' && e.sp !== 'lvault' && !(e.mv && e.mv.name === 'vault') && e.sp !== 'roar') { if (e.act) e.act = null; M.duck(e); }
       // the conducted kill: on beat 3 he cuts down any Usher in his reach (it costs him that bar's attack)
       if (bc.n === 2 && !e.mv && !e.act && !e.sp) for (const g of G.enemies) if (!g.dead && g.zone === 'lcrew' && Math.abs(g.x - e.x) < 36) { G.bStart(e, 'slash', 0.02, 'conduct', 0); G.killBy = 5; G.enc.eHitKind = 0; G.killEnemy(g, Math.sign(g.x - e.x) || 1, 300, 0.4); G.killBy = null; G.emit('feat', 'conducted'); break; }
     }
@@ -852,7 +855,7 @@ export function createTrain(G) {
     const lamps = S.dark <= 0;
     if (S.grp === 0) add(12, 250, 70, 1.4, 0.6, 0.15, 10, 2 + Math.sin(G.R9.t * 13) * 0.3);   // the firebox's glow
     if (S.grp === 1 && lamps) { add(360, 196, 70, 1.0, 0.9, 0.7, 6, 2); add(470 + Math.sin(G.R9.t * 2) * 6, 200, 90, 1.0, 0.9, 0.7, 10, 2); add(530, 196, 60, 1.0, 0.9, 0.7, 6, 2); }
-    if (S.grp === 2 && lamps) { for (const c of S.chand) if (c.st === 'up') add(c.x + c.sw, c.y + 6, 80, 1.3, 1.0, 0.6, 18, 3); for (const t of D.TABLES) add((t.x0 + t.x1) / 2, D.TABLE_TOP - 10, 30, 1.0, 0.7, 0.4, 4, 2); add(850, 200, 50, 1.0, 0.9, 0.8, 6, 2); }
+    if (S.grp === 2 && lamps) { for (const c of S.chand) if (c.st === 'up') add(c.x + c.sw, c.y + 6, 60, 0.75, 0.6, 0.35, 12, 3); for (const t of D.TABLES) add((t.x0 + t.x1) / 2, D.TABLE_TOP - 10, 26, 0.6, 0.45, 0.25, 4, 2); add(850, 200, 50, 1.0, 0.9, 0.8, 6, 2); }
     if (S.grp === 3 && lamps) { for (const c of D.COMPS) add(c, 200, 30, 0.4, 0.5, 0.9, 4, 1); if (S.comp3) add(D.NERO_COMP, 250, 30, 1.0, 0.7, 0.4, 4, 2); }
     if (S.grp === 5) { add(1996, 230, 60, 1.2, 0.2, 0.2, 10, 3); add(1900, 240, 90, 0.5, 0.55, 0.7, 0, 1); }
     if (S.grp === 6) add(2124, 210, 60, 0.5, 1.1, 0.6, 10, 3);
