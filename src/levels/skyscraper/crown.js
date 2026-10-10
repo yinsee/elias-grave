@@ -364,9 +364,11 @@ export function installCrown(X) {
     const t = Math.round(G.runS.t), mm = Math.floor(t / 60), ss = String(t % 60).padStart(2, '0');
     const r = G.gradeRun('ch9', { t: G.runS.t, kills: G.runS.kills, maxRank: G.styleM.maxRank, dmg: G.runS.dmg, kos: G.kos }, !G.flags.demo);
     let best = {}; try { best = JSON.parse(localStorage.getItem(BEST_KEY) || '{}') || {}; } catch (err) { best = {}; }
-    const names = [['ch1', 'The Street'], ['ch2', 'Pier 9'], ['ch3', 'Line Zero'], ['ch4', 'House Always Wins'], ['ch5', 'The Leviathan'], ['ch6', 'St. Cecilia'], ['ch7', 'The Palm House'], ['ch8', 'Last Train'], ['ch9', 'The Spire']];
+    // (the grade keys: ch1 is the tutorial, ch2..ch9 are the eight chapters of the menu; the count is of the chapters, as the menu has them)
+    const names = [['ch1', 'Tutorial: The Street'], ['ch2', 'Pier 9'], ['ch3', 'Line Zero'], ['ch4', 'House Always Wins'], ['ch5', 'Leviathan'], ['ch6', 'St. Cecilia'], ['ch7', 'The Palm House'], ['ch8', 'The Last Train'], ['ch9', 'The Spire']];
     const rows = names.filter(([k]) => best[k]), total = rows.reduce((n, [k]) => n + (best[k].score || 0), 0), secs = rows.reduce((n, [k]) => n + (best[k].t || 0), 0);
-    const story = rows.length ? `<h3>The whole story</h3><dl>${rows.map(([k, n]) => `<dt>${n}</dt><dd>${best[k].grade} · ${best[k].score}</dd>`).join('')}<dt>All chapters</dt><dd>${rows.length} of ${names.length} · ${Math.floor(secs / 60)} min · score ${total}</dd></dl>` : '';
+    const chN = rows.filter(([k]) => k !== 'ch1').length;
+    const story = rows.length ? `<h3>The whole story</h3><dl>${rows.map(([k, n]) => `<dt>${n}</dt><dd>${best[k].grade} · ${best[k].score}</dd>`).join('')}<dt>All chapters</dt><dd>${chN} of ${names.length - 1} · ${Math.floor(secs / 60)} min · score ${total}</dd></dl>` : '';
     G.dom.results.innerHTML = `<h2>The Spire cleared</h2><dl><dt>Difficulty</dt><dd>${G.DIF().name}</dd><dt>Time</dt><dd>${mm}:${ss}</dd><dt>Kills</dt><dd>${G.runS.kills}</dd>`
       + `<dt>Top style</dt><dd>${G.rankName(G.styleM.maxRank)}</dd><dt>Damage taken</dt><dd>${Math.round(G.runS.dmg)}</dd><dt>Knock-outs</dt><dd>${G.kos}</dd>`
       + `<dt>Midnight</dt><dd>The Conductor fell on the seventh strike. The rain stopped on the twelfth.</dd></dl>${G.rankHtml(r)}${story}<small>Enter: the credits</small>`;
