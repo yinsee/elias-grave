@@ -12,6 +12,12 @@ The art lead makes the comic panels, the dialog portraits and the character refe
 - **No text in the art.** Signs, labels, phone screens, notebooks, newspapers and the photo are blank. The game must draw any words in the caption boxes or as an overlay. For example: "Orfeo, Reserved: the Count", "Silence the bartender. - A.V.", "SILENT NIGHT", "Meridian Express, 23:40, Platform 9", "THE CHOIR EXPOSED", and the ELIAS GRAVE title.
 - **Faces.** ReActor puts the reference face on every panel where a recurring character's face shows, so Elias, Bell, Hale, Mags and each boss look the same in all levels.
 
+## Face-swap fix in tools/comfy.py
+
+Every character reference is called `ref.png`. `upload()` sent each one to ComfyUI under that same name and cached the name per path. In a batch that used two or more references, a later job could get the face that was uploaded last (for example, `mags_weak` came out with Hale's moustache). Now each upload has a unique name (`<folder>_<file>`). The Level 3-5 images were repaired: ReActor ran again on each finished image with the correct reference.
+
+Levels 1-2 were made with the old code. Look at the Level 1-2 panels and portraits that use two or more references in one jobs file (for example `metro.json`: Elias, Switch, Tinder, Hale) for wrong faces.
+
 ## Level 3: casino
 
 Panels and portraits follow section 9 of `03-house-always-wins.md`.

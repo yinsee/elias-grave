@@ -39,7 +39,8 @@ def upload(path):
     if path in _uploaded:
         return _uploaded[path]
     boundary = uuid.uuid4().hex
-    name = os.path.basename(path)
+    # a unique name per file: every character reference is called ref.png, and one shared name made ReActor use the last upload
+    name = '_'.join(os.path.normpath(path).split(os.sep)[-2:])
     body = (f'--{boundary}\r\nContent-Disposition: form-data; name="image"; filename="{name}"\r\n'
             f'Content-Type: {mimetypes.guess_type(name)[0] or "image/png"}\r\n\r\n').encode() + open(path, 'rb').read() + \
            f'\r\n--{boundary}\r\nContent-Disposition: form-data; name="overwrite"\r\n\r\ntrue\r\n--{boundary}--\r\n'.encode()
