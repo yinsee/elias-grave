@@ -1,0 +1,14 @@
+{
+  "id": "palmhouse_office",
+  "title": "Silent Night",
+  "_todo": "Insert panel art palmhouse_office_01 is being generated; voice line palmhouse_office_01 does not exist yet.",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:palmhouse_office_01", "minTime": 1.8,
+        "shot": "Insert: a folder on the desk stamped SILENT NIGHT: Board eyes only. Typed: 1. Leverage: the dog. 2. Remove the Maestro. 3. Sale to outside partners. Initials A.V., O.K., C.A. and the mayor's seal. The ashtray with pipe ash, a cherry tobacco tin lid (red-tinted label).",
+        "lines": [
+          { "type": "vo", "pos": "bottom", "voice": "palmhouse_office_01", "text": "Silent Night. The Board wanted the Maestro dead. And my dog was step one." }
+        ] }
+    ] }
+  ]
+}

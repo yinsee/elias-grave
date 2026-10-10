@@ -1,0 +1,16 @@
+{
+  "id": "vane_intro",
+  "title": "Commissioner Vane",
+  "music": "music:boss_vane",
+  "_todo": "Portraits vane_stern, vane_contemptuous, vane_shocked, vane_furious (being generated); elias_cold exists. Voice lines vane_intro_01..03, elias_mags, elias_silentnight do not exist yet.",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_cold" },
+  "right": { "id": "vane", "name": "COMMISSIONER AUGUSTA VANE", "role": "Bass · the Blue Choir", "portrait": "portrait:vane_stern" },
+  "lines": [
+    { "speaker": "vane", "mood": "stern", "voice": "vane_intro_01", "text": "Elias Grave. You are under arrest for every corpse from the docks to the hospital." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_mags", "text": "Mags." },
+    { "speaker": "vane", "mood": "contemptuous", "voice": "vane_intro_02", "text": "The bartender saw what she shouldn't. You put half this city to sleep, Grave. Don't lecture me." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_silentnight", "text": "Silent Night." },
+    { "speaker": "vane", "mood": "shocked", "voice": "vane_intro_03", "text": "Who told you that name?" },
+    { "speaker": "vane", "mood": "furious", "voice": "vane_intro_04", "text": "Snipers! Open fire!" }
+  ]
+}

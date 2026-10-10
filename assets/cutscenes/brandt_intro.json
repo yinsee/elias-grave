@@ -1,0 +1,12 @@
+{
+  "id": "brandt_intro",
+  "title": "The Door",
+  "_todo": "Portraits brandt_gruff and brandt_grim (being generated); elias_cold exists. Voice lines brandt_intro_01..02 and elias_retire do not exist yet.",
+  "left":  { "id": "elias", "name": "ELIAS GRAVE", "role": "The Sandman", "portrait": "portrait:elias_cold" },
+  "right": { "id": "brandt", "name": "SGT. RUUD BRANDT", "role": "\"The Door\" · Vane's riot sergeant", "portrait": "portrait:brandt_gruff" },
+  "lines": [
+    { "speaker": "brandt", "mood": "gruff", "voice": "brandt_intro_01", "text": "Twenty years I've held this door." },
+    { "speaker": "elias", "mood": "cold", "voice": "elias_retire", "text": "Retire." },
+    { "speaker": "brandt", "mood": "grim", "voice": "brandt_intro_02", "text": "Nobody passes the Door." }
+  ]
+}

@@ -1,0 +1,14 @@
+{
+  "id": "palmhouse_toast_alarm",
+  "title": "The Toast",
+  "_todo": "The alarm went off in the yard: only panel 5 plays (docs/levels/06-palm-house.md 6.2). Panel art palmhouse_toast_05 is being generated; voice line vane_toast_05 does not exist yet.",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:palmhouse_toast_05", "minTime": 1.4,
+        "shot": "Vane, from the balcony, sees the hero. She lowers her glass and touches her radio.",
+        "lines": [
+          { "type": "say", "speaker": "Vane", "pos": "bottom", "voice": "vane_toast_05", "text": "Close the doors. All units." }
+        ] }
+    ] }
+  ]
+}

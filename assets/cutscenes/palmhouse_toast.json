@@ -1,0 +1,26 @@
+{
+  "id": "palmhouse_toast",
+  "title": "The Toast",
+  "_todo": "Panel art: assets/art/panels/palmhouse/palmhouse_toast_0N.png (being generated). Voice lines vane_toast_01, palmhouse_toast_04, vane_toast_05 and the sting_cherry stinger do not exist yet.",
+  "pages": [
+    { "layout": "full", "panels": [
+      { "image": "panel:palmhouse_toast_03", "minTime": 1.6,
+        "shot": "The ballroom balcony. Commissioner Vane (silver hair, dress uniform, medals) raises a glass. Policemen line the walls. A red wax seal on the programme in a guest's hand.",
+        "lines": [
+          { "type": "say", "speaker": "Vane", "pos": "top", "voice": "vane_toast_01", "text": "To a safer Valmora. And to silence, which is the beginning of order." }
+        ] }
+    ] },
+    { "layout": "row", "panels": [
+      { "image": "panel:palmhouse_toast_04", "minTime": 1.4,
+        "shot": "Close-up. Nero lifts his nose at a door marked Private, whining and pawing. A thin curl of pipe smoke under the door.",
+        "lines": [
+          { "type": "vo", "pos": "bottom", "voice": "palmhouse_toast_04", "text": "Cherry tobacco. Bell's tobacco. The dog smelled a ghost." }
+        ] },
+      { "image": "panel:palmhouse_toast_05", "minTime": 1.4,
+        "shot": "Vane, from the balcony, sees the hero. She lowers her glass and touches her radio.",
+        "lines": [
+          { "type": "say", "speaker": "Vane", "pos": "bottom", "voice": "vane_toast_05", "text": "Close the doors. All units." }
+        ] }
+    ] }
+  ]
+}
