@@ -49,3 +49,11 @@ Panels and portraits follow section 9 of `06-palm-house.md`, without the `panel:
 - `palmhouse_office_01` and `palmhouse_outro_04`: the folder, the tobacco tin and the notebook are blank. The game must draw "SILENT NIGHT" and "Meridian Express, 23:40, Platform 9".
 - `elias_furious_quiet` is its own portrait (Level 5 has `elias_furious`). Level 7 uses it again.
 - The Lenz reference (`lenz/ref.png`) is made here, because Lenz first shows in `palmhouse_outro_03`.
+
+## Level 7: train
+
+Panels and portraits follow section 9 of `07-last-train.md`, without the `panel:` prefix.
+
+- `train_intro_01`: the platform clock is not exact (23:39). The game can put the time in the caption.
+- `train_intro_05` shows Lenz standing on the roof of the last car, with the metronome beside him.
+- `elias_cold` and `elias_furious_quiet` are shared with earlier levels.

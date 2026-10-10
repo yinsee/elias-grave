@@ -83,5 +83,35 @@
  },
  "bluechoir": {
   "desc": "corrupt riot policemen in dark navy uniforms and black riot helmets with visors"
+ },
+ "grau": {
+  "desc": "Head Usher Anton Grau, a broad stern man around fifty-five with close-cropped iron-grey hair, a heavy square jaw, a grey goatee and cold small eyes, in a grey frock coat with a white carnation and white gloves, a steel-bound ledger case chained to his left wrist, a drum-magazine machine gun",
+  "ref": "assets/art/characters/grau/ref.png"
+ },
+ "kern": {
+  "desc": "Judge Orsolya Kern, a thin elderly woman judge around seventy with a tight white hair bun, a sharp narrow face, pearl earrings and a pearl necklace, in a long silver fox fur coat over a black dress",
+  "ref": "assets/art/characters/kern/ref.png"
+ },
+ "aldane": {
+  "desc": "Cornelius Aldane, a plump balding banker around sixty with thin grey hair combed over, a round sweaty face, small round gold-rimmed glasses and a gold watch chain, in a dark pinstripe three-piece suit",
+  "ref": "assets/art/characters/aldane/ref.png"
+ },
+ "mayor": {
+  "desc": "the Mayor of Valmora, a soft paunchy man around sixty with a bald head, heavy jowls, a red nose and a grey moustache, in a black evening tailcoat with a gold mayoral chain of office across his chest",
+  "ref": "assets/art/characters/mayor/ref.png"
+ },
+ "ushers": {
+  "desc": "private guards in grey three-piece suits, grey gloves and white carnations with earpieces"
+ },
+ "lys": {
+  "desc": "Lys Moreau, an elegant dangerous woman around thirty with a sleek black bob haircut, pale skin, sharp dark eyes and dark red lipstick, in a white tuxedo jacket over a long black evening gown, a short black cane, a fan of playing cards with razor steel edges",
+  "ref": "assets/art/characters/lys/ref.png"
+ },
+ "kessel": {
+  "desc": "Bruno Kessel, a huge brutal man around forty with a shaved head, a thick black beard, a scarred heavy face and enormous bare tattooed arms, in a black tuxedo waistcoat and bow tie with the jacket sleeves torn off, a steel meat hook on a heavy chain",
+  "ref": "assets/art/characters/kessel/ref.png"
+ },
+ "choir": {
+  "desc": "elite Choir men in black tie tuxedos with small silver tuning fork lapel pins"
  }
 }

@@ -1,0 +1,273 @@
+[
+ {
+  "out": "assets/art/characters/grau/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 60,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {grau}, three-quarter view, upper body, standing in a luxurious train observation car with a glass dome roof, lightning outside, a stern cold stare, no text, blank signs"
+ },
+ {
+  "out": "assets/art/characters/kern/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 61,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {kern}, three-quarter view, upper body, sitting in a luxurious train lounge car with gold lamps and rain on the window, a cold haughty look, no text, blank signs"
+ },
+ {
+  "out": "assets/art/characters/aldane/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 62,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {aldane}, three-quarter view, upper body, in a luxurious train lounge car with gold lamps and rain on the window, a nervous sweaty look, no text, blank signs"
+ },
+ {
+  "out": "assets/art/characters/mayor/ref.png",
+  "style": "comic",
+  "lora": null,
+  "trigger": "",
+  "seed": 63,
+  "w": 832,
+  "h": 1024,
+  "prompt": "Portrait of {mayor}, three-quarter view, upper body, in a luxurious train lounge car with gold lamps and rain on the window, a self-important pompous look, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/train/train_intro_01.png",
+  "seed": 7101,
+  "post": {
+   "out": "assets/art/panels/train/train_intro_01.png"
+  },
+  "prompt": "Wide shot of a steam-filled night railway station platform. A black armoured private train with gold trim stands at the platform. A round platform clock hangs from the roof, its hour hand just before twelve and its minute hand at thirty-nine past. {ushers} load heavy iron boxes onto the train. At the far end two of them carry a long wooden crate into the last car. Rain beyond the platform roof, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/train/train_intro_02.png",
+  "seed": 7102,
+  "post": {
+   "out": "assets/art/panels/train/train_intro_02.png"
+  },
+  "prompt": "Low shot on a night station platform behind a luggage cart piled with trunks, steam and rain. {elias} kneels and tucks a pistol into his belt, then reaches toward {nero}, who sits at his side. A black armoured train in the background, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/train/train_intro_03.png",
+  "seed": 7103,
+  "post": {
+   "out": "assets/art/panels/train/train_intro_03.png"
+  },
+  "prompt": "Close medium shot on a night station platform. {nero} sits firmly and stubbornly, staring up into the face of {elias} who kneels in front of him. Elias almost smiles, a faint softening at the corner of his mouth. Steam and warm platform light, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/train/train_intro_04.png",
+  "seed": 7104,
+  "post": {
+   "out": "assets/art/panels/train/train_intro_04.png"
+  },
+  "prompt": "Dynamic action shot at night. A black armoured train pulls out of a station, steam swallowing the platform. {elias} drops from an iron footbridge down toward the roof of the car behind the locomotive, his black suit coat flying. Below him, {nero} leaps through the open sliding side door of a baggage car. Rain, steam, lamp light, no text, blank signs",
+  "face": "elias",
+  "face_index": "0"
+ },
+ {
+  "out": "assets/art-src/panels/train/train_intro_05.png",
+  "seed": 7125,
+  "post": {
+   "out": "assets/art/panels/train/train_intro_05.png"
+  },
+  "prompt": "Night, rain, side view of a speeding black train crossing dark mountains. On top of the curved metal roof of the last railway car, {lenz} sits calmly on a closed black violin case, rain making his white suit grey. Beside him on the wet car roof stands a small brass pyramid metronome. Motion blur on the trees below, storm clouds, no platform, no station, no text, blank signs",
+  "face": "lenz"
+ },
+ {
+  "out": "assets/art-src/panels/train/train_outro_01.png",
+  "seed": 7111,
+  "post": {
+   "out": "assets/art/panels/train/train_outro_01.png"
+  },
+  "prompt": "High angle shot of a wet train roof at night in the rain. {lenz} lies on his back beside a roof lantern, beaten, his white suit grey and torn, a broken thin sabre beside his hand, smiling faintly up at the viewer. Next to him a small brass pyramid metronome stands still, its pendulum stopped, no text, blank signs",
+  "face": "lenz"
+ },
+ {
+  "out": "assets/art-src/panels/train/train_outro_02.png",
+  "seed": 7112,
+  "post": {
+   "out": "assets/art/panels/train/train_outro_02.png"
+  },
+  "prompt": "Wide high angle shot at night in the rain in a mountain valley. The front part of a black train disappears into a dark tunnel, its red tail lamps going out. Beside a stopped glass-domed railway car, a row of black cars waits on a valley road with headlights on. Men in black tie lead three well-dressed people away into the rain. One of the men tips his hat, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/train/train_outro_03.png",
+  "seed": 7113,
+  "post": {
+   "out": "assets/art/panels/train/train_outro_03.png"
+  },
+  "prompt": "Interior of a railway car made into a perfect copy of an old watchmaker's workshop: warm amber lamplight, a wooden workbench with tools, the walls covered in many antique clocks, every clock's hour hand just past three and minute hand at seventeen past. In the foreground {nero} growls, hackles up, in the open doorway, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/train/train_outro_04.png",
+  "seed": 7114,
+  "post": {
+   "out": "assets/art/panels/train/train_outro_04.png"
+  },
+  "prompt": "Close-up on an antique brass gramophone with a big flared horn on a wooden workbench, the needle just dropping onto a black record. Beside it rests a cherry-wood tobacco pipe, still smoking, a thin curl of smoke. Warm amber lamplight, clocks blurred in the background, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/panels/train/train_outro_05.png",
+  "seed": 7115,
+  "post": {
+   "out": "assets/art/panels/train/train_outro_05.png"
+  },
+  "prompt": "Wide shot through a rain-streaked train window at night. Across a dark mountain valley, a colossal art deco skyscraper tower pierces black storm clouds, a giant glowing round clock face at its crown, lightning behind it, no text, blank signs"
+ },
+ {
+  "out": "assets/art-src/portraits/lenz_serene.png",
+  "seed": 7201,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/lenz_serene.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {lenz}, serene, head tilted slightly, opening a black violin case, rain on his face, lightning over a dam behind him, dark stormy background, no text, blank signs",
+  "face": "lenz"
+ },
+ {
+  "out": "assets/art-src/portraits/lenz_amused.png",
+  "seed": 7202,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/lenz_amused.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {lenz}, amused, a light smile, one finger raised as if counting a beat, rain, cold storm light, dark background, no text, blank signs",
+  "face": "lenz"
+ },
+ {
+  "out": "assets/art-src/portraits/lenz_smiling.png",
+  "seed": 7203,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/lenz_smiling.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {lenz}, a calm cold smile, drawing a thin sabre blade beside his face, the blade glinting, rain, lightning, dark background, no text, blank signs",
+  "face": "lenz"
+ },
+ {
+  "out": "assets/art-src/portraits/lenz_dying.png",
+  "seed": 7204,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/lenz_dying.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {lenz}, dying, lying back, rain on his pale face, blood at his lips, his white suit torn and grey, a faint peaceful smile, cold storm light, dark background, no text, blank signs",
+  "face": "lenz"
+ },
+ {
+  "out": "assets/art-src/portraits/grau_stern.png",
+  "seed": 7205,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/grau_stern.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {grau}, stern, raising a drum-magazine machine gun beside his face, the glass dome of a train car behind, cold light, dark background, no text, blank signs",
+  "face": "grau"
+ },
+ {
+  "out": "assets/art-src/portraits/grau_furious.png",
+  "seed": 7206,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/grau_furious.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {grau}, furious, shouting, teeth bared, veins on his neck, the glass dome of a train car behind, lightning, dark background, no text, blank signs",
+  "face": "grau"
+ },
+ {
+  "out": "assets/art-src/portraits/kern_terrified.png",
+  "seed": 7207,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/kern_terrified.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {kern}, terrified, clutching her fur coat to her throat, wide eyes, gold train-car lamp light, dark background, no text, blank signs",
+  "face": "kern"
+ },
+ {
+  "out": "assets/art-src/portraits/kern_pointing.png",
+  "seed": 7208,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/kern_pointing.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {kern}, trembling, pointing a bony finger up toward the ceiling, scared eyes, gold train-car lamp light, dark background, no text, blank signs",
+  "face": "kern"
+ },
+ {
+  "out": "assets/art-src/portraits/aldane_sweating.png",
+  "seed": 7209,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/aldane_sweating.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {aldane}, sweating heavily and wiping his round glasses with a handkerchief, nervous eyes, gold train-car lamp light, dark background, no text, blank signs",
+  "face": "aldane"
+ },
+ {
+  "out": "assets/art-src/portraits/aldane_hollow.png",
+  "seed": 7210,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/aldane_hollow.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {aldane}, a hollow bitter laugh, eyes empty, sweat on his forehead, gold train-car lamp light, dark background, no text, blank signs",
+  "face": "aldane"
+ },
+ {
+  "out": "assets/art-src/portraits/mayor_whining.png",
+  "seed": 7211,
+  "w": 832,
+  "h": 1024,
+  "post": {
+   "out": "assets/art/portraits/mayor_whining.png",
+   "w": 208,
+   "dither": 0.3
+  },
+  "prompt": "Tight close-up bust portrait cropped at the shoulders, the face fills most of the frame. {mayor}, whining, his face crumpled in self-pity, hands raised, sweating, gold train-car lamp light, dark background, no text, blank signs",
+  "face": "mayor"
+ }
+]
