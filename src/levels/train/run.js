@@ -818,7 +818,7 @@ export function createTrain(G) {
   // ---------------- the fixed step ----------------
   M.step = dt => {
     if (G.flags.club) S.grp = 8;
-    else if (!S.fade && Math.abs(ctl.x - S.prevX) > 30) { S.grp = grpAt(ctl.x); }
+    else if (!S.fade && hero.mode === 'anim' && Math.abs(ctl.x - S.prevX) > 30) { S.grp = grpAt(ctl.x); }   // (only a heroTo jumps that far on his feet: a retry, a test hook; a body in flight never changes the car)
     for (let i = S.queue.length - 1; i >= 0; i--) { const q = S.queue[i]; if ((q.t -= dt) <= 0) { S.queue.splice(i, 1); spawnOne(q); } }
     for (const dd of S.doors) dd.t += dt; while (S.doors.length && S.doors[0].t > 0.8) S.doors.shift();
     trainStep(dt); sweepStep(dt); fallStep(dt); leapStep(dt); stubStep(dt); ejectStep(dt); coverStep(); glassStep(dt); dinStep(dt);
@@ -829,6 +829,9 @@ export function createTrain(G) {
   function wallsStep() {
     const g = D.GROUPS[S.grp], lo = g[0] + 8, hi = g[1] - 8;
     if (!S.fade && !S.fall && hero.mode === 'anim' && (ctl.x < lo || ctl.x > hi)) { ctl.x = clamp(ctl.x, lo, hi); ctl.spd = 0; }
+    // a body in flight (a gantry hit, a throw, a knock-down) stops at the car end too: cars change only through doors, fades and falls
+    // (a gantry hit near the tender wall threw him into the baggage car; its wave never started and the roof Usher shot through the wall)
+    if (!S.fade && !S.fall && hero.mode !== 'anim') for (const p of G.P) { if (p.x < g[0] + 2) { p.x = g[0] + 2; p.px = Math.max(p.px, p.x); } else if (p.x > g[1] - 2) { p.x = g[1] - 2; p.px = Math.min(p.px, p.x); } }
     if (S.grp === 0 && ctl.x < D.TENDER + 8) ctl.x = D.TENDER + 8;
     for (const e of G.enemies) {
       if (e.dead || e.type !== 'goon' || e.grp == null) continue;
