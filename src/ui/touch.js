@@ -8,7 +8,6 @@ const touchy = FORCE || (typeof matchMedia === 'function' && matchMedia('(pointe
 
 const KEYS = [   // [code, label, area, aria]
   ['ArrowLeft', '◀', 'pad l', 'Left'], ['ArrowRight', '▶', 'pad r', 'Right'], ['ArrowUp', '▲', 'pad u', 'Up: jump, climb, a doorway'], ['ArrowDown', '▼', 'pad d', 'Down: squat'],
-  ['ShiftLeft', 'Walk', 'pad sh', 'Shift: walk (hold, with ◀ or ▶)'],
   ['KeyQ', 'Q', 'act q', 'Q: punch or swing (hold: heavy, or throw)'], ['KeyW', 'W', 'act w', 'W: kick (hold: heavy)'], ['Space', 'Space', 'act s', 'Space: dodge'],
   ['Escape', 'Esc', 'sys esc', 'Escape: menu'], ['Enter', 'Enter', 'sys ent', 'Enter'],
 ];

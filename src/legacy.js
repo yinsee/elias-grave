@@ -4959,7 +4959,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
   // (the grab's knee, elbow, slam and kick-away: a playtest bot spent 2 minutes on them, and the chapters never need them).
   // way: how to reach the stage from the one before (the 'Stage clear' line says it; the default is 'Walk right [→]').
   const ZONES = [
-    { x0: -99, title: '1 · Move', tasks: [['run', 'Run: [←] [→]'], ['walk', 'Walk: hold [Shift] as you move'],
+    { x0: -99, title: '1 · Move', tasks: [['run', 'Run: [←] [→]'],
       ['jump', 'Climb onto the car: jump [↑] at its side and keep [↑] held'], ['charge', 'Climb higher: hold [↑] as you jump at a roof or a scaffold'],
       ['drop', 'Drop through a roof: hold [↓] and press [Space]'], ['dodge', 'Dodge: press [Space]. Hold [←] or [→] to pick the way'], ['squatroll', 'Long roll: press [↓] as you run']] },
     { x0: 520, title: '2 · Strikes', tasks: [['lp', 'Jab: tap [Q]. Twice for both hands'], ['hp', 'Heavy punch: hold [Q]'], ['lk', 'Kick: tap [W]'], ['hk', 'Heavy kick: hold [W]'],
@@ -5244,7 +5244,6 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (enc.bossBeaten && runS.endT < 0 && endPh === 'done' && !flags.wasted && isStreet()) runS.endT = 0.4;   // (Pier 9 shows its own card after the outro)
     if (runS.endT > 0 && (runS.endT -= rdt) <= 0) { runS.endT = 0; showResults(); }   // (once: a negative endT would arm it again)
   }
-  let walkT = 0;   // s of a steady walk (the walk lesson)
   function tutTick(rdt) {
     if (cardT > 0 && (cardT -= rdt) <= 0) cardEl.hidden = true;
     if (toastT > 0 && (toastT -= rdt) <= 0) {
@@ -5256,7 +5255,6 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (isP9()) { p9Tick(rdt); return; }
     if (LVH.tick) { LVH.tick(rdt); return; }
     if (hero.mode === 'anim') {
-      walkT = ctl.spd > 5 && ctl.spd < WALK + 6 && !ctl.air ? walkT + rdt : 0; if (walkT > 0.5) emit('feat', 'walk');   // a steady walk (not the run's first strides)
       if (ctl.spd > WALK + 20 && !ctl.air) emit('feat', 'run');
       }
     // a stage goon steps out of the nearest unused house door, alley gap or parked-car door near x0; with none near (or one too close to the hero)
@@ -9394,9 +9392,8 @@ import * as SPIRE from './levels/skyscraper/index.js';
   cv.addEventListener('pointercancel', releaseGrab);
 
   // ---------- keyboard and buttons ----------
-  const keys = { left: false, right: false, shift: false }, touch = { left: false, right: false };
-  let runToggle = false;
-  const runBtn = document.getElementById('c-run'), slowBtn = document.getElementById('b-slow'), skelBtn = document.getElementById('b-skel');
+  const keys = { left: false, right: false }, touch = { left: false, right: false };
+  const slowBtn = document.getElementById('b-slow'), skelBtn = document.getElementById('b-skel');
   const zoomBtns = [...document.querySelectorAll('.zoom')];
   const takeOver = () => { if (flags.attract) endAttract(); else if (flags.demo) setDemo(false); };
   const doJump = () => { takeOver(); input.jump = true; };
@@ -9457,7 +9454,6 @@ import * as SPIRE from './levels/skyscraper/index.js';
       b.done = true; holdCancel(k === 'p' ? 'hp' : 'hk', b);   // held: the light turns into the heavy
     }
   }
-  const toggleRun = () => { takeOver(); runToggle = !runToggle; runBtn.setAttribute('aria-pressed', String(runToggle)); };   // the touch button: flips run and walk (Shift held)
   const toggleSlow = () => { timeScale = timeScale === 1 ? 0.25 : 1; slowBtn.setAttribute('aria-pressed', String(timeScale !== 1)); emit(timeScale !== 1 ? 'slowmo:start' : 'slowmo:end', { scale: timeScale }); };
   const toggleSkel = () => { showSkel = !showSkel; skelBtn.setAttribute('aria-pressed', String(showSkel)); };
   function setZoom(z) {
@@ -9476,11 +9472,10 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (flags.wasted) { if ((c === 'Enter' || c === 'KeyR') && !e.repeat) retry(); return; }   // the Wasted card: retry from the checkpoint (Wicked: a restart); Esc opens the menu above
     if (endPh === 'done' && !resultsEl.hidden) { if (!e.repeat && c === 'Enter') startChapter1(); else if (!e.repeat && c === 'KeyR') reset(); return; }   // Club cleared: Enter goes on with the story (prologue, then Pier 9), R plays the tutorial again
     if (endPh && endPh !== 'done') { if ((c === 'Escape' || c === 'Enter') && !e.repeat) { if (isP9()) p9Outro(); else if (LVH.outro) LVH.outro(); else endFinish(); } return; }   // the ending: Esc or Enter jumps to the card
-    // the keys: arrows move (up jumps, down squats; down at a run rolls), Q punches (by a beaten goon: the finisher), W kicks, Space dodges, Shift walks (runs, with run off)
+    // the keys: arrows move (up jumps, down squats; down at a run rolls), Q punches (by a beaten goon: the finisher), W kicks, Space dodges (he always runs: no walk key)
     if (c === 'ArrowLeft') { keys.left = true; takeOver(); }
     else if (c === 'ArrowRight') { keys.right = true; takeOver(); }
     else if (c === 'ArrowDown') { takeOver(); input.downHeld = true; }
-    else if (c === 'ShiftLeft' || c === 'ShiftRight') { takeOver(); keys.shift = true; }
     else if (c === 'ArrowUp') { takeOver(); input.jumpHeld = true; if (!e.repeat) doJump(); }
     else if (c === 'KeyQ') { if (!e.repeat) pressBtn('p'); }
     else if (c === 'KeyW') { if (!e.repeat) pressBtn('k'); }
@@ -9501,14 +9496,13 @@ import * as SPIRE from './levels/skyscraper/index.js';
     const c = e.code;
     if (c === 'ArrowLeft') keys.left = false;
     else if (c === 'ArrowRight') keys.right = false;
-    else if (c === 'ShiftLeft' || c === 'ShiftRight') keys.shift = false;
     else if (c === 'ArrowDown') input.downHeld = false;
     else if (c === 'KeyQ') releaseBtn('p');
     else if (c === 'KeyW') releaseBtn('k');
     else if (c === 'Space') input.dashHeld = false;
     else if (c === 'ArrowUp') { if (!flags.demo) input.jumpHeld = false; }
   });
-  addEventListener('blur', () => { btn.p.down = btn.k.down = false; input.fireHeld = false; keys.left = keys.right = keys.shift = false; touch.left = touch.right = false; input.downHeld = false; });
+  addEventListener('blur', () => { btn.p.down = btn.k.down = false; input.fireHeld = false; keys.left = keys.right = false; touch.left = touch.right = false; input.downHeld = false; });
 
   for (const [id, side] of [['c-left', 'left'], ['c-right', 'right']]) {
     const b = document.getElementById(id);
@@ -9517,7 +9511,6 @@ import * as SPIRE from './levels/skyscraper/index.js';
     b.addEventListener('pointerdown', on);
     b.addEventListener('pointerup', off); b.addEventListener('pointercancel', off); b.addEventListener('lostpointercapture', off);
   }
-  runBtn.addEventListener('click', toggleRun);
   {
     const b = document.getElementById('c-jump');
     const off = () => { input.jumpHeld = false; b.classList.remove('held'); };
@@ -10190,11 +10183,11 @@ import * as SPIRE from './levels/skyscraper/index.js';
   const loadScript = id => scripts[id] || (scripts[id] = fetch(`assets/cutscenes/${id}.json`).then(r => { if (!r.ok) throw new Error(`${r.status} ${id}`); return r.json(); }));
   async function playScene(kind, id) {
     sceneOn = true; toastEl.hidden = true; sayEl.hidden = true; objEl.hidden = true; obj.key = null;
-    keys.left = keys.right = keys.shift = false; btn.p.down = btn.k.down = false; Object.assign(input, { dir: 0, run: false, jump: false, jumpHeld: false, downHeld: false, fireHeld: false, attack: null, dash: false, dashHeld: false });
+    keys.left = keys.right = false; btn.p.down = btn.k.down = false; Object.assign(input, { dir: 0, run: false, jump: false, jumpHeld: false, downHeld: false, fireHeld: false, attack: null, dash: false, dashHeld: false });
     setTimeout(prewarm3D, 150);   // (once the first panel is up)
     try { const sc = await loadScript(id); return await (kind === 'dialog' ? playDialog : playPanels)(sc, { root: stage, audio: csAudio, bus, cps: TEXT_CPS[textSpeed][kind === 'dialog' ? 1 : 0] }); }
     catch (err) { console.warn('cutscene failed:', id, err); return { id, skipped: true }; }
-    finally { sceneOn = false; last = FIXED ? fixedT : performance.now(); keys.left = keys.right = keys.shift = false; input.dir = 0; }
+    finally { sceneOn = false; last = FIXED ? fixedT : performance.now(); keys.left = keys.right = false; input.dir = 0; }
   }
   // [perf] the 3D view's first frame in a new level builds that level's world and compiles its shaders and uploads its textures
   // (0.25-0.4 s here, more on a busy machine): one 3D frame drawn behind the cutscene panels does it there instead. The 3D frame
@@ -10288,17 +10281,14 @@ import * as SPIRE from './levels/skyscraper/index.js';
   function startTutorial() { if (!isStreet()) loadLevel('street'); if (flags.attract) endAttract(); else { hideMenu(); setDemo(false); reset(); startOpening(); } }
   function quitToTitle() { hideMenu(); if (!isStreet()) loadLevel('street'); reset(); startAttract(); }
   // ---- the menu: a console-style list down the left. It stays up on the title screen while the demo plays; in a game, Esc opens
-  // it and pauses. Settings (view, run, camera) are remembered in this browser.
-  let runAlways = true, menuShown = false, menuSel = 0, menuPauseTS = null;
+  // it and pauses. Settings (view, camera) are remembered in this browser.
+  let menuShown = false, menuSel = 0, menuPauseTS = null;
   // the cutscenes' typing speed (the menu's Text speed): [panels, dialog] characters per second
   const TEXT_SPEEDS = ['Slow', 'Normal', 'Fast'], TEXT_CPS = [[28, 27], [42, 40], [80, 76]];
   let textSpeed = 1;
   const menuEl = document.getElementById('menu'), menuList = document.getElementById('menu-list'), ccEl = document.getElementById('controls-card');
   const SETKEY = 'eliasgrave.settings', OLD_SETKEY = 'clubnoir.settings';   // (the old key: moved over once, then removed)
-  function saveSettings() { try { localStorage.setItem(SETKEY, JSON.stringify({ view3d: mode3D, run: runAlways, zoom: zoomMode, diff: diffSel, vol: gameAudio.getVolume(), text: textSpeed })); } catch (err) {} }
-  function syncRun() {   // the touch button and the controls card say what Shift does
-    runBtn.firstChild.textContent = runAlways ? 'Walk ' : 'Run '; document.getElementById('cc-run').textContent = runAlways ? 'walk (you run by default)' : 'run';
-  }
+  function saveSettings() { try { localStorage.setItem(SETKEY, JSON.stringify({ view3d: mode3D, zoom: zoomMode, diff: diffSel, vol: gameAudio.getVolume(), text: textSpeed })); } catch (err) {} }
   function loadSettings() {
     let st = null;
     try {
@@ -10307,7 +10297,6 @@ import * as SPIRE from './levels/skyscraper/index.js';
       st = JSON.parse(localStorage.getItem(SETKEY) || 'null');
     } catch (err) {}
     if (!st) return;
-    runAlways = st.run ?? true;   // (run is the default; an older save's runAlways is not read: everyone starts running)
     if (typeof st.vol === 'number') gameAudio.setVolume(st.vol);
     if (st.text >= 0 && st.text < TEXT_SPEEDS.length) textSpeed = st.text;
     if (st.diff >= 0 && st.diff < DIFFS.length) diffSel = st.diff;
@@ -10342,14 +10331,13 @@ import * as SPIRE from './levels/skyscraper/index.js';
         if (!flags.attract) { toast('Difficulty is locked during a run', 'Quit to title to change it'); return; }
         diffSel = (diffSel + d + DIFFS.length) % DIFFS.length; charge.forEach((c, w) => { charge[w] = Math.min(c, fullCharge(w)); }); saveSettings(); } },
       { label: 'View', value: () => mode3D ? '3D' : '2D', change: () => { setMode3D(!mode3D); saveSettings(); } },
-      { label: 'Shift', value: () => runAlways ? 'to walk' : 'to run', change: () => { runAlways = !runAlways; saveSettings(); syncRun(); } },
       { label: 'Camera', value: () => zoomMode === 'auto' ? 'Auto' : `${Math.round(zoomMode * 100)}%`, change: d => cycleZoom(d) },
       { label: 'Volume', value: () => `${Math.round(gameAudio.getVolume() * 100)}%`, change: d => {   // master volume in 10 % steps; it stops at 0 % and 100 % (a wrap from 0 to full volume is a nasty surprise)
         const v = clamp(Math.round(gameAudio.getVolume() * 10) + (d < 0 ? -1 : 1), 0, 10);
         gameAudio.setVolume(v / 10); gameAudio.sfx('ui_blip', { vol: 0.6 }); saveSettings(); } },
       { label: 'Text speed', value: () => TEXT_SPEEDS[textSpeed], change: d => { textSpeed = clamp(textSpeed + (d < 0 ? -1 : 1), 0, TEXT_SPEEDS.length - 1); saveSettings(); } },   // the cutscenes' typing
       { label: 'Full screen', value: () => document.fullscreenElement ? 'On' : 'Off', change: toggleFull },
-      { label: 'Controls', act: () => { document.getElementById('cc-run').textContent = runAlways ? 'walk (you run by default)' : 'run'; ccEl.hidden = false; } },
+      { label: 'Controls', act: () => { ccEl.hidden = false; } },
     ];
     if (!flags.attract) items.push({ label: 'Restart', act: () => { hideMenu(); reset(); } }, { label: 'Quit to title', act: () => { hideMenu(); reset(); startAttract(); } });
     return items;
@@ -10480,7 +10468,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     if (slowT > 0 && timeScale > 0 && (slowT -= rdt) <= 0) { slowT = 0; if (foc.t <= 0) emit('slowmo:end', { scale: 1, reason: slowWhy }); }   // a perfect dodge's (a last kill's) slow motion runs on the real clock
     if (foc.t > 0 && timeScale > 0) { foc.t -= rdt; foc.m = Math.max(0, foc.t / FOCUS.dur * FOCUS.max); if (foc.t <= 0) endFocus(); }   // Sandman time drains the meter (real clock)
     const sdt = rdt * timeScale * (slowT > 0 ? DEF.pd.slow : 1), wdt = sdt * wk; simTime += sdt;   // (wdt: the world's clock, slow in Sandman time)
-    if (!flags.demo) { input.dir = (keys.right || touch.right ? 1 : 0) - (keys.left || touch.left ? 1 : 0); input.run = (runAlways ? !keys.shift : keys.shift) !== runToggle; }   // (the menu can make running the default: Shift walks)
+    if (!flags.demo) { input.dir = (keys.right || touch.right ? 1 : 0) - (keys.left || touch.left ? 1 : 0); input.run = true; }   // the player always runs (no walk key)
     if (autoWalk) { if (flags.club || input.dir) autoWalk = false; else input.dir = 1; }   // skip-to-boss: walk the carpet in
     demoTick(sdt);
     if (openT >= 0) openTick(rdt);
@@ -10628,7 +10616,7 @@ import * as SPIRE from './levels/skyscraper/index.js';
     runAutotest(AUTOTEST, +QS.get('frames') || 1800);
     return;
   }
-  loadSettings(); syncRun();   // the view, run and camera choices from last time
+  loadSettings();   // the view and camera choices from last time
   if (DEV) { setDemo(true); skipToBoss(); }   // ?dev: open on the boss level, to test it
   else if (jumpEnd) playEnding();
   else startAttract();   // the page opens on the demo from the street start, under the title card and the menu

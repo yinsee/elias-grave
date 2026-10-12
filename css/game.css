@@ -336,7 +336,6 @@
   .touch .pad.r { left: calc(12px + 2 * var(--tk)); bottom: calc(12px + var(--tk)); }
   .touch .pad.u { left: calc(12px + var(--tk)); bottom: calc(12px + 2 * var(--tk)); }
   .touch .pad.d { left: calc(12px + var(--tk)); bottom: 12px; }
-  .touch .pad.sh { left: 12px; bottom: calc(12px + 2 * var(--tk)); height: calc(var(--tk) * .6); font: 500 11px/1 var(--mono); }
   .touch .act.q { right: calc(18px + var(--tk)); bottom: calc(18px + var(--tk) * .8); width: calc(var(--tk) * 1.1); height: calc(var(--tk) * 1.1); border-radius: 50%; font-size: 24px; }
   .touch .act.w { right: 12px; bottom: calc(24px + var(--tk) * 1.5); width: calc(var(--tk) * 1.1); height: calc(var(--tk) * 1.1); border-radius: 50%; font-size: 24px; }
   .touch .act.s { right: 12px; bottom: 12px; width: calc(var(--tk) * 1.6); height: calc(var(--tk) * .7); font-size: 14px; font-family: var(--mono); }
